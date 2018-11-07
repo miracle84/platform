@@ -2,17 +2,15 @@
 
 namespace Oro\Bundle\LocaleBundle\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Exception\LogicException;
-use Symfony\Component\OptionsResolver\Options;
-use Symfony\Component\OptionsResolver\OptionsResolver;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-
+use Oro\Bundle\FormBundle\Form\Type\OroChoiceType;
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\Manager\LocalizationManager;
 use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
 use Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\OptionsResolver\Options;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class LocalizationSelectionType extends AbstractType
 {
@@ -47,6 +45,14 @@ class LocalizationSelectionType extends AbstractType
      * {@inheritDoc}
      */
     public function getName()
+    {
+        return $this->getBlockPrefix();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getBlockPrefix()
     {
         return static::NAME;
     }
@@ -87,7 +93,12 @@ class LocalizationSelectionType extends AbstractType
                 return $this->getChoices($localizations, $options['compact']);
             },
             'compact' => false,
-            'full_localization_list' => false
+            'full_localization_list' => false,
+            'placeholder' => '',
+            'translatable_options' => false,
+            'configs' => [
+                'placeholder' => 'oro.locale.localization.form.placeholder.select_localization',
+            ],
         ]);
     }
 
@@ -115,10 +126,10 @@ class LocalizationSelectionType extends AbstractType
      */
     protected function checkLocalizations(array $localizations)
     {
-        foreach ($localizations as $id => $label) {
+        foreach ($localizations as $label => $id) {
             $localization = $this->localizationManager->getLocalization($id);
             if (!($localization instanceof Localization)) {
-                unset($localizations[$id]);
+                unset($localizations[$label]);
             }
         }
 
@@ -130,7 +141,7 @@ class LocalizationSelectionType extends AbstractType
      */
     public function getParent()
     {
-        return 'choice';
+        return OroChoiceType::class;
     }
 
     /**

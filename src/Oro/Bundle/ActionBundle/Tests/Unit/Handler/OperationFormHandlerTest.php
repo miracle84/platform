@@ -2,6 +2,14 @@
 
 namespace Oro\Bundle\ActionBundle\Handler;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Oro\Bundle\ActionBundle\Exception\ForbiddenOperationException;
+use Oro\Bundle\ActionBundle\Exception\OperationNotFoundException;
+use Oro\Bundle\ActionBundle\Helper\ContextHelper;
+use Oro\Bundle\ActionBundle\Model\ActionData;
+use Oro\Bundle\ActionBundle\Model\Operation;
+use Oro\Bundle\ActionBundle\Model\OperationDefinition;
+use Oro\Bundle\ActionBundle\Model\OperationRegistry;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
@@ -10,48 +18,34 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
 use Symfony\Component\Translation\TranslatorInterface;
 
-use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\ActionBundle\Exception\ForbiddenOperationException;
-use Oro\Bundle\ActionBundle\Exception\OperationNotFoundException;
-use Oro\Bundle\ActionBundle\Helper\ContextHelper;
-use Oro\Bundle\ActionBundle\Model\ActionData;
-use Oro\Bundle\ActionBundle\Model\Operation;
-use Oro\Bundle\ActionBundle\Model\OperationDefinition;
-use Oro\Bundle\ActionBundle\Model\OperationRegistry;
-
-class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
+class OperationFormHandlerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var FormFactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var FormFactoryInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $formFactory;
 
-    /** @var ContextHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContextHelper|\PHPUnit\Framework\MockObject\MockObject */
     private $contextHelper;
 
-    /** @var OperationRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var OperationRegistry|\PHPUnit\Framework\MockObject\MockObject */
     private $operationRegistry;
 
-    /** @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $translator;
 
     /** @var OperationFormHandler */
     private $handler;
 
-    /** @var FlashBagInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var FlashBagInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $flashBag;
 
     protected function setUp()
     {
-        $this->formFactory = $this->getMockBuilder(FormFactoryInterface::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->formFactory = $this->createMock(FormFactoryInterface::class);
 
-        $this->contextHelper = $this->getMockBuilder(ContextHelper::class)->disableOriginalConstructor()->getMock();
+        $this->contextHelper = $this->createMock(ContextHelper::class);
         $this->contextHelper->expects($this->any())->method('getActionData')->willReturn(new ActionData());
 
-        $this->operationRegistry = $this->getMockBuilder(OperationRegistry::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->operationRegistry = $this->createMock(OperationRegistry::class);
 
         $this->translator = $this->createMock(TranslatorInterface::class);
 
@@ -70,13 +64,15 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
         $actionData = $this->contextHelper->getActionData();
         $errors = new ArrayCollection();
 
-        $operation = $this->operationRetrieval('form_type', $actionData, ['formOption' => 'formOptionValue']);
+        $operation = $this->operationRetrieval('form_type', $actionData, ['formOption' => 'formOptionValue'], false);
         $operation->expects($this->once())->method('execute')->with($actionData, $errors);
 
         $request = new Request(['_wid' => 'widValue', 'fromUrl' => 'fromUrlValue']);
 
         $form = $this->formProcessing($request, $actionData, $operation);
         $formView = $this->formViewRetrieval($form);
+
+        $this->flashBag->expects($this->once())->method('all')->willReturn(['flash bag message']);
 
         $this->assertEquals(
             [
@@ -91,7 +87,9 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
                     'form' => $form
                 ],
                 'response' => [
-                    'success' => true
+                    'success' => true,
+                    'pageReload' => false,
+                    'flashMessages' => ['flash bag message']
                 ]
             ],
             $this->handler->process('operation', $request, $this->flashBag)
@@ -158,7 +156,8 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
                 'response' => [
                     'success' => true,
                     'refreshGrid' => ['refreshed-grid'],
-                    'flashMessages' => ['message1']
+                    'flashMessages' => ['message1'],
+                    'pageReload' => true
                 ]
             ],
             $this->handler->process('operation', $request, $this->flashBag)
@@ -307,16 +306,18 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
      * @param string $formType
      * @param ActionData $actionData
      * @param array $formOptions
-     * @return Operation|\PHPUnit_Framework_MockObject_MockObject
+     * @param bool $pageReload
+     * @return Operation|\PHPUnit\Framework\MockObject\MockObject
      */
-    private function operationRetrieval($formType, ActionData $actionData, array $formOptions)
+    private function operationRetrieval($formType, ActionData $actionData, array $formOptions, bool $pageReload = true)
     {
-        $definition = $this->getMockBuilder(OperationDefinition::class)->disableOriginalConstructor()->getMock();
-
-        $operation = $this->getMockBuilder(Operation::class)->disableOriginalConstructor()->getMock();
-        $operation->expects($this->once())->method('isAvailable')->with($actionData)->willReturn(true);
-        $operation->expects($this->once())->method('getDefinition')->willReturn($definition);
+        $definition = $this->createMock(OperationDefinition::class);
         $definition->expects($this->once())->method('getFormType')->willReturn($formType);
+        $definition->expects($this->any())->method('isPageReload')->willReturn($pageReload);
+
+        $operation = $this->createMock(Operation::class);
+        $operation->expects($this->once())->method('isAvailable')->with($actionData)->willReturn(true);
+        $operation->expects($this->any())->method('getDefinition')->willReturn($definition);
         $operation->expects($this->once())->method('getFormOptions')->with($actionData)->willReturn($formOptions);
 
         $this->operationRegistry->expects($this->once())
@@ -331,7 +332,7 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
      * @param Request $request
      * @param ActionData $actionData
      * @param Operation $operation
-     * @return  FormInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return  FormInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function formProcessing($request, $actionData, $operation)
     {
@@ -350,14 +351,15 @@ class OperationFormHandlerTest extends \PHPUnit_Framework_TestCase
             ->willReturn($form);
 
         $form->expects($this->once())->method('handleRequest')->with($request);
+        $form->expects($this->once())->method('isSubmitted')->willReturn(true);
         $form->expects($this->once())->method('isValid')->willReturn(true);
 
         return $form;
     }
 
     /**
-     * @param FormInterface|\PHPUnit_Framework_MockObject_MockObject $form
-     * @return FormView|\PHPUnit_Framework_MockObject_MockObject
+     * @param FormInterface|\PHPUnit\Framework\MockObject\MockObject $form
+     * @return FormView|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function formViewRetrieval($form)
     {

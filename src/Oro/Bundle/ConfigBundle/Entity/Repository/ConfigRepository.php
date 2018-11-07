@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ConfigBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\ConfigBundle\Entity\Config;
 
 class ConfigRepository extends EntityRepository
@@ -24,5 +23,21 @@ class ConfigRepository extends EntityRepository
             ->setParameter('entityId', $scopeId)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @param string $scope
+     * @param integer $scopeId
+     * @return mixed
+     */
+    public function deleteByEntity($scope, $scopeId)
+    {
+        return $this->createQueryBuilder('c')
+            ->delete()
+            ->where('c.scopedEntity = :entityName AND c.recordId = :entityId')
+            ->setParameter('entityName', $scope)
+            ->setParameter('entityId', $scopeId)
+            ->getQuery()
+            ->execute();
     }
 }

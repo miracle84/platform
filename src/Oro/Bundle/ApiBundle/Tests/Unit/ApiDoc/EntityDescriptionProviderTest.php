@@ -1,8 +1,6 @@
 <?php
 
-namespace Oro\Bundle\ApiBundle\Tests\Unit\ApiDoc\Parser;
-
-use Symfony\Component\Translation\TranslatorInterface;
+namespace Oro\Bundle\ApiBundle\Tests\Unit\ApiDoc;
 
 use Oro\Bundle\ApiBundle\ApiDoc\EntityDescriptionProvider;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
@@ -12,34 +10,32 @@ use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
+use Symfony\Component\Translation\TranslatorInterface;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
 class EntityDescriptionProviderTest extends OrmRelatedTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $entityClassNameProvider;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityClassNameProviderInterface */
+    private $entityClassNameProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $configManager;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigManager */
+    private $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $translator;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TranslatorInterface */
+    private $translator;
 
     /** @var EntityDescriptionProvider */
-    protected $entityDescriptionProvider;
+    private $entityDescriptionProvider;
 
     protected function setUp()
     {
         parent::setUp();
 
         $this->entityClassNameProvider = $this->createMock(EntityClassNameProviderInterface::class);
+        $this->configManager = $this->createMock(ConfigManager::class);
         $this->translator = $this->createMock(TranslatorInterface::class);
-
-        $this->configManager = $this->getMockBuilder(ConfigManager::class)
-            ->disableOriginalConstructor()
-            ->getMock();
 
         $this->entityDescriptionProvider = new EntityDescriptionProvider(
             $this->entityClassNameProvider,
@@ -314,7 +310,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -345,7 +341,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -353,7 +349,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -385,7 +381,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -393,7 +389,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -430,7 +426,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -438,7 +434,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -503,7 +499,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -511,7 +507,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::never())
@@ -545,7 +541,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
                 [
                     [$entityClass, null, true],
                     [Entity\Category::class, null, true],
-                    [Entity\Category::class, 'name', true],
+                    [Entity\Category::class, 'name', true]
                 ]
             );
         $this->configManager->expects(self::exactly(3))
@@ -554,7 +550,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
                 [
                     [$entityClass, null, false],
                     [Entity\Category::class, null, false],
-                    [Entity\Category::class, 'name', false],
+                    [Entity\Category::class, 'name', false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -590,7 +586,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [Entity\Category::class, null, false],
+                    [Entity\Category::class, null, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -662,7 +658,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -693,7 +689,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -701,7 +697,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -733,7 +729,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -741,7 +737,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -778,7 +774,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -786,7 +782,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, false],
+                    [$entityClass, $fieldName, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -851,7 +847,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -859,7 +855,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [$entityClass, $fieldName, true],
+                    [$entityClass, $fieldName, true]
                 ]
             );
         $this->configManager->expects(self::never())
@@ -893,7 +889,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
                 [
                     [$entityClass, null, true],
                     [Entity\Category::class, null, true],
-                    [Entity\Category::class, 'name', true],
+                    [Entity\Category::class, 'name', true]
                 ]
             );
         $this->configManager->expects(self::exactly(3))
@@ -902,7 +898,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
                 [
                     [$entityClass, null, false],
                     [Entity\Category::class, null, false],
-                    [Entity\Category::class, 'name', false],
+                    [Entity\Category::class, 'name', false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -938,7 +934,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [Entity\Category::class, null, false],
+                    [Entity\Category::class, null, false]
                 ]
             );
         $this->configManager->expects(self::once())
@@ -972,7 +968,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, true],
-                    [Entity\Category::class, null, true],
+                    [Entity\Category::class, null, true]
                 ]
             );
         $this->configManager->expects(self::exactly(2))
@@ -980,7 +976,7 @@ class EntityDescriptionProviderTest extends OrmRelatedTestCase
             ->willReturnMap(
                 [
                     [$entityClass, null, false],
-                    [Entity\Category::class, null, true],
+                    [Entity\Category::class, null, true]
                 ]
             );
 

@@ -3,7 +3,6 @@
 namespace Oro\Bundle\TranslationBundle\Tests\Functional\Provider;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationKeyRepository;
 use Oro\Bundle\TranslationBundle\Entity\TranslationKey;
@@ -11,9 +10,6 @@ use Oro\Bundle\TranslationBundle\Provider\TranslationDomainProvider;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadLanguages;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadTranslations;
 
-/**
- * @dbIsolation
- */
 class TranslationDomainProviderTest extends WebTestCase
 {
     /** @var TranslationDomainProvider */

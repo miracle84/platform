@@ -4,7 +4,7 @@ namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\FormBundle\Form\Type\LinkType;
 
-class LinkTypeTest extends \PHPUnit_Framework_TestCase
+class LinkTypeTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var LinkType
@@ -16,19 +16,14 @@ class LinkTypeTest extends \PHPUnit_Framework_TestCase
         $this->type = new LinkType();
     }
 
-    public function testGetName()
-    {
-        $this->assertInternalType('string', $this->type->getName());
-    }
-
     public function testGetParent()
     {
         $this->assertInternalType('string', $this->type->getParent());
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
 
         $resolver
             ->expects($this->once())
@@ -38,7 +33,7 @@ class LinkTypeTest extends \PHPUnit_Framework_TestCase
 
         $resolver
             ->expects($this->once())
-            ->method('setOptional')
+            ->method('setDefined')
             ->with($this->isType('array'))
             ->will($this->returnSelf());
 
@@ -49,12 +44,11 @@ class LinkTypeTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnSelf());
 
         $resolver
-            ->expects($this->once())
+            ->expects($this->exactly(3))
             ->method('setAllowedTypes')
-            ->with($this->isType('array'))
             ->will($this->returnSelf());
 
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
     }
 
     /**

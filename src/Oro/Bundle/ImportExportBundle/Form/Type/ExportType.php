@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\ImportExportBundle\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
 use Oro\Bundle\ImportExportBundle\Form\Model\ExportData;
 use Oro\Bundle\ImportExportBundle\Processor\ProcessorRegistry;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class ExportType extends AbstractType
 {
@@ -34,32 +34,50 @@ class ExportType extends AbstractType
     {
         $builder->add(
             'processorAlias',
-            'choice',
-            array(
-                'label' => 'oro.importexport.export.processor',
-                'choices' => $this->getExportProcessorsChoices($options['entityName']),
+            ChoiceType::class,
+            [
+                'label' => 'oro.importexport.export.popup.options.label',
+                'choices' => $this->getExportProcessorsChoices($options),
                 'required' => true,
                 'placeholder' => false,
-            )
+            ]
         );
     }
 
     /**
-     * @param string $entityName
+     * @param array $options
      * @return array
      */
-    protected function getExportProcessorsChoices($entityName)
+    protected function getExportProcessorsChoices($options)
     {
+        $entityName = $options['entityName'];
+        $processorAlias = $options['processorAlias'] ?? null;
+        
         $aliases = $this->processorRegistry->getProcessorAliasesByEntity(
-            ProcessorRegistry::TYPE_EXPORT,
+            $this->getProcessorType(),
             $entityName
         );
-        $result = array();
+
+        if (is_array($processorAlias) && count($processorAlias) > 0) {
+            $aliases = array_intersect($aliases, $processorAlias);
+        } elseif (is_string($processorAlias)) {
+            $aliases = array_intersect($aliases, [$processorAlias]);
+        }
+
+        $result = [];
         foreach ($aliases as $alias) {
-            $result[$alias] = $this->generateProcessorLabel($alias);
+            $result[$this->generateProcessorLabel($alias)] = $alias;
         }
 
         return $result;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getProcessorType()
+    {
+        return ProcessorRegistry::TYPE_EXPORT;
     }
 
     /**
@@ -72,21 +90,18 @@ class ExportType extends AbstractType
     }
 
     /**
-     * @param OptionsResolverInterface $resolver
+     * @param OptionsResolver $resolver
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
-        $resolver->setDefaults(
-            array(
-                'data_class' => ExportData::class,
-            )
-        );
-        $resolver->setRequired(array('entityName'));
-        $resolver->setAllowedTypes(
-            array(
-                'entityName' => 'string'
-            )
-        );
+        $resolver->setDefaults([
+            'data_class' => ExportData::class,
+            'processorAlias' => null
+        ]);
+        $resolver->setRequired(['entityName']);
+
+        $resolver->setAllowedTypes('entityName', 'string');
+        $resolver->setAllowedTypes('processorAlias', ['string', 'array', 'null']);
     }
 
     /**

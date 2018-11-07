@@ -4,37 +4,38 @@ namespace Oro\Bundle\OrganizationBundle\Entity\Manager;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\OrganizationBundle\Entity\Repository\BusinessUnitRepository;
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
 use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 
 class BusinessUnitManager
 {
     /** @var EntityManager */
     protected $em;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var AclHelper */
     protected $aclHelper;
 
     /**
-     * @param EntityManager $em
+     * @param EntityManager          $em
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param AclHelper              $aclHelper
      */
     public function __construct(
         EntityManager $em,
-        SecurityFacade $securityFacade,
+        TokenAccessorInterface $tokenAccessor,
         AclHelper $aclHelper
     ) {
         $this->em = $em;
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
         $this->aclHelper = $aclHelper;
     }
 
@@ -167,9 +168,9 @@ class BusinessUnitManager
         if (AccessLevel::SYSTEM_LEVEL === $accessLevel) {
             return true;
         } elseif (AccessLevel::LOCAL_LEVEL === $accessLevel) {
-            $businessUnits =  $treeProvider->getTree()->getUserBusinessUnitIds(
-                $this->$currentUser->getId(),
-                $organization
+            $businessUnits = $treeProvider->getTree()->getUserBusinessUnitIds(
+                $currentUser->getId(),
+                $organization->getId()
             );
         } elseif (AccessLevel::DEEP_LEVEL === $accessLevel) {
             $businessUnits = $treeProvider->getTree()->getUserSubordinateBusinessUnitIds(
@@ -177,7 +178,7 @@ class BusinessUnitManager
                 $organization->getId()
             );
         } elseif (AccessLevel::GLOBAL_LEVEL === $accessLevel) {
-            $businessUnits = $this->getBusinessUnitIds($this->getOrganizationContextId());
+            $businessUnits = $this->getBusinessUnitIds($this->tokenAccessor->getOrganizationId());
         }
 
         return in_array($entityOwner->getId(), $businessUnits, true);
@@ -234,7 +235,7 @@ class BusinessUnitManager
         $choices = [];
         $blanks  = str_repeat("&nbsp;&nbsp;&nbsp;", $level);
         foreach ($options as $option) {
-            $choices += [$option['id'] => $blanks . htmlspecialchars($option['name'])];
+            $choices += [$blanks . htmlspecialchars($option['name']) => $option['id']];
             if (isset($option['children'])) {
                 $choices += $this->getTreeOptions($option['children'], $level + 1);
             }
@@ -308,13 +309,5 @@ class BusinessUnitManager
                 return $result;
             }
         }
-    }
-
-    /**
-     * @return int
-     */
-    protected function getOrganizationContextId()
-    {
-        return $this->securityFacade->getOrganization()->getId();
     }
 }

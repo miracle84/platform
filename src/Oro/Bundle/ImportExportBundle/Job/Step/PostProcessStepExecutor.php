@@ -7,7 +7,6 @@ use Akeneo\Bundle\BatchBundle\Entity\StepExecution;
 use Akeneo\Bundle\BatchBundle\Item\ExecutionContext;
 use Akeneo\Bundle\BatchBundle\Item\InvalidItemException;
 use Akeneo\Bundle\BatchBundle\Step\StepExecutionAwareInterface;
-
 use Oro\Bundle\BatchBundle\Step\StepExecutionWarningHandlerInterface;
 use Oro\Bundle\BatchBundle\Step\StepExecutor;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
@@ -17,6 +16,9 @@ use Oro\Bundle\ImportExportBundle\Job\ContextHelper;
 use Oro\Bundle\ImportExportBundle\Job\JobExecutor;
 use Oro\Bundle\ImportExportBundle\Job\JobResult;
 
+/**
+ * Import export post process step executor
+ */
 class PostProcessStepExecutor extends StepExecutor implements StepExecutionAwareInterface
 {
     const JOB_TYPE_KEY = 'type';
@@ -167,7 +169,7 @@ class PostProcessStepExecutor extends StepExecutor implements StepExecutionAware
                 continue;
             }
 
-            if (0 === (count($value) % $this->batchSize)) {
+            if (0 === (count((array) $value) % $this->batchSize)) {
                 return true;
             }
         }

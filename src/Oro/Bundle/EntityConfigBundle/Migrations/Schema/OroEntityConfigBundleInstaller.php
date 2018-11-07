@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityConfigBundle\Migrations\Schema;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareInterface;
 use Oro\Bundle\AttachmentBundle\Migration\Extension\AttachmentExtensionAwareTrait;
 use Oro\Bundle\MigrationBundle\Migration\Installation;
@@ -22,7 +21,7 @@ class OroEntityConfigBundleInstaller implements Installation, AttachmentExtensio
      */
     public function getMigrationVersion()
     {
-        return 'v1_14';
+        return 'v1_14_2';
     }
 
     /**

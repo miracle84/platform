@@ -4,12 +4,10 @@ namespace Oro\Bundle\IntegrationBundle\Tests\Functional\DataFixtures;
 
 use Doctrine\Common\DataFixtures\AbstractFixture;
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\UserBundle\Migrations\Data\ORM\LoadAdminUserData;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class LoadChannelData extends AbstractFixture implements ContainerAwareInterface
 {
@@ -33,6 +31,12 @@ class LoadChannelData extends AbstractFixture implements ContainerAwareInterface
             'type' => 'bar',
             'enabled' => true,
             'reference' => 'oro_integration:bar_integration'
+        ],
+        [
+            'name' => 'Extended Bar Integration',
+            'type' => 'bar',
+            'enabled' => true,
+            'reference' => 'oro_integration:extended_bar_integration'
         ]
     ];
 

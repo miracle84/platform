@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout\Extension;
 
+use Oro\Bundle\LayoutBundle\Layout\Extension\ExpressionContextConfigurator;
 use Oro\Component\Layout\LayoutContext;
 
-use Oro\Bundle\LayoutBundle\Layout\Extension\ExpressionContextConfigurator;
-
-class ExpressionContextConfiguratorTest extends \PHPUnit_Framework_TestCase
+class ExpressionContextConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExpressionContextConfigurator */
     protected $contextConfigurator;

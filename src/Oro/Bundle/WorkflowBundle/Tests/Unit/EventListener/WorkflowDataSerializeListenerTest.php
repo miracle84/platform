@@ -2,15 +2,20 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\EventListener;
 
-use Doctrine\ORM\Event\OnFlushEventArgs;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\LifecycleEventArgs;
-
+use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\UnitOfWork;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
-use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
 use Oro\Bundle\WorkflowBundle\EventListener\WorkflowDataSerializeListener;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
+use Oro\Bundle\WorkflowBundle\Serializer\WorkflowAwareSerializer;
+use Oro\Component\TestUtils\Mocks\ServiceLink;
 
-class WorkflowDataSerializeListenerTest extends \PHPUnit_Framework_TestCase
+class WorkflowDataSerializeListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var WorkflowDataSerializeListener
@@ -18,22 +23,20 @@ class WorkflowDataSerializeListenerTest extends \PHPUnit_Framework_TestCase
     protected $listener;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var WorkflowAwareSerializer|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $serializer;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $doctrineHelper;
 
     protected function setUp()
     {
-        $this->serializer = $this->createMock('Oro\Bundle\WorkflowBundle\Serializer\WorkflowAwareSerializer');
-        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->listener = new WorkflowDataSerializeListener($this->serializer, $this->doctrineHelper);
+        $this->serializer = $this->createMock(WorkflowAwareSerializer::class);
+        $this->doctrineHelper = $this->createMock(DoctrineHelper::class);
+        $this->listener = new WorkflowDataSerializeListener(new ServiceLink($this->serializer), $this->doctrineHelper);
     }
 
     public function testPostLoad()
@@ -56,22 +59,9 @@ class WorkflowDataSerializeListenerTest extends \PHPUnit_Framework_TestCase
         $this->serializer->expects($this->never())->method('serialize');
         $this->serializer->expects($this->never())->method('deserialize');
 
-        $this->listener->postLoad($args);
+        $this->listener->postLoad($entity, $args);
 
         $this->assertAttributeSame($this->serializer, 'serializer', $entity);
-    }
-
-    public function testPostEntityNotSupported()
-    {
-        $em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $entity = new \stdClass();
-        $args = new LifecycleEventArgs($entity, $em);
-
-        $this->serializer->expects($this->never())->method($this->anything());
-        $this->listener->postLoad($args);
     }
 
     /**
@@ -85,6 +75,9 @@ class WorkflowDataSerializeListenerTest extends \PHPUnit_Framework_TestCase
         $definition->expects($this->any())
             ->method('getEntityAttributeName')
             ->will($this->returnValue('entity'));
+        $definition->expects($this->any())
+            ->method('getVirtualAttributes')
+            ->willReturn([]);
 
         $entity1 = new WorkflowItem();
         $entity1->setDefinition($definition);
@@ -191,9 +184,51 @@ class WorkflowDataSerializeListenerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($entity5->getData()->isModified());
     }
 
+    public function testOnFlushAndPostFlushWithAttributesthatShouldBeRemoved()
+    {
+        $virtualAttributes = [
+            'virtual_attr' => [],
+        ];
+        $configuration = [
+            'variable_definitions' => [
+                'variables' => [
+                    'var1' => [],
+                    'var2' => []
+                ]
+            ]
+        ];
+
+        /** @var WorkflowDefinition|\PHPUnit\Framework\MockObject\MockObject $definition */
+        $definition = $this->createMock(WorkflowDefinition::class);
+        $definition->expects($this->once())->method('getEntityAttributeName')->willReturn('entity_attr');
+        $definition->expects($this->once())->method('getVirtualAttributes')->willReturn($virtualAttributes);
+        $definition->expects($this->once())->method('getConfiguration')->willReturn($configuration);
+
+        $data = new WorkflowData(
+            ['virtual_attr' => 'value1', 'var1' => 'data1', 'var2' => 'data2', 'entity_attr' => 'value2']
+        );
+        $data->set('normal_attr', 'value3');
+
+        $item = new WorkflowItem();
+        $item->setData($data)->setDefinition($definition);
+
+        $uow = $this->createMock(UnitOfWork::class);
+        $uow->expects($this->once())->method('getScheduledEntityInsertions')->willReturn([$item]);
+        $uow->expects($this->once())->method('getScheduledEntityUpdates')->willReturn([]);
+
+        $em = $this->createMock(EntityManager::class);
+        $em->expects($this->once())->method('getUnitOfWork')->willReturn($uow);
+
+        $expectedData = (new WorkflowData())->set('normal_attr', 'value3');
+        $this->serializer->expects($this->once())->method('serialize')->with($expectedData);
+
+        $this->listener->onFlush(new OnFlushEventArgs($em));
+        $this->listener->postFlush(new PostFlushEventArgs($em));
+    }
+
     /**
      * @param array $uowExpectedCalls
-     * @return \PHPUnit_Framework_MockObject_MockObject|\Doctrine\ORM\EntityManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|\Doctrine\ORM\EntityManager
      */
     protected function getPostFlushEntityManagerMock(array $uowExpectedCalls)
     {

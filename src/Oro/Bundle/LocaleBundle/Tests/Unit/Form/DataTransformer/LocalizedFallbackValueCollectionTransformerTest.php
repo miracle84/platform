@@ -4,24 +4,22 @@ namespace Oro\Bundle\LocaleBundle\Tests\Unit\Form\DataTransformer;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
-
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 use Oro\Bundle\LocaleBundle\Form\DataTransformer\LocalizedFallbackValueCollectionTransformer;
 use Oro\Bundle\LocaleBundle\Form\Type\LocalizedFallbackValueCollectionType;
 use Oro\Bundle\LocaleBundle\Model\FallbackType;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyMethods)
  */
-class LocalizedFallbackValueCollectionTransformerTest extends \PHPUnit_Framework_TestCase
+class LocalizedFallbackValueCollectionTransformerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry
+     * @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry
      */
     protected $registry;
 

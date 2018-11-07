@@ -2,26 +2,24 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Controller;
 
+use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
+use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
-use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
-use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
-use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * Class ConfigGridController
  *
  * @package Oro\Bundle\EntityExtendBundle\Controller
  * @Route("/entity/extend/field")
- * TODO: Discuss ACL impl., currently acl is disabled
+ * BAP-17635 Discuss ACL impl., currently acl is disabled
  * @AclAncestor("oro_entityconfig_manage")
  */
 class ConfigFieldGridController extends Controller
@@ -82,14 +80,13 @@ class ConfigFieldGridController extends Controller
         $successMessage = $this->get('translator')->trans('oro.entity_extend.controller.config_field.message.saved');
         $formAction = $this->generateUrl('oro_entityextend_field_update', ['id' => $entity->getId()]);
 
-        return $this
-            ->get('oro_entity_config.form.handler.create_update_config_field_handler')
+        return $this->get('oro_entity_config.form.handler.create_update_config_field_handler')
             ->handleFieldSave($request, $entity, $redirectUrl, $formAction, $successMessage);
     }
 
     /**
      * @param FieldConfigModel $fieldConfigModel
-     * @throws AccessDeniedHttpException
+     * @throws AccessDeniedException
      */
     private function ensureFieldConfigModelIsCustom(FieldConfigModel $fieldConfigModel)
     {
@@ -101,7 +98,7 @@ class ConfigFieldGridController extends Controller
         );
 
         if (!$fieldConfig->is('owner', ExtendScope::OWNER_CUSTOM)) {
-            throw new AccessDeniedHttpException();
+            throw new AccessDeniedException();
         }
     }
 

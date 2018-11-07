@@ -9,7 +9,7 @@ use Oro\Component\MessageQueue\Client\Config;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
-class BuildDestinationMetaRegistryPassTest extends \PHPUnit_Framework_TestCase
+class BuildDestinationMetaRegistryPassTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithoutAnyArguments()
     {
@@ -164,5 +164,25 @@ class BuildDestinationMetaRegistryPassTest extends \PHPUnit_Framework_TestCase
         ];
 
         $this->assertEquals($expectedDestinations, $registry->getArgument(1));
+    }
+
+    public function testShouldMarkTaggedServicePublic()
+    {
+        $container = new ContainerBuilder();
+
+        $processor = new Definition(DestinationNameTopicSubscriber::class);
+        $processor->addTag('oro_message_queue.client.message_processor');
+        $processor->setPublic(false);
+        $container->setDefinition('processor-service-id', $processor);
+
+        $registry = new Definition();
+        $registry->setArguments([null, []]);
+        $container->setDefinition('oro_message_queue.client.meta.destination_meta_registry', $registry);
+
+        $pass = new BuildDestinationMetaRegistryPass();
+        $pass->process($container);
+
+
+        $this->assertTrue($processor->isPublic());
     }
 }

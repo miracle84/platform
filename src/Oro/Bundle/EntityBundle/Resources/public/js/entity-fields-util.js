@@ -6,54 +6,95 @@ define(function(require) {
     var mediator = require('oroui/js/mediator');
     var EntityError = require('./entity-error');
 
-    function Util(entity, data) {
+    /**
+     * @deprecated
+     * @param {string} entity
+     * @param {Object} data
+     * @constructor
+     */
+    function EntityFieldsUtil(entity, data) {
         this.init(entity, data);
     }
 
     /**
-     * Filters passed fields by exclude mask
+     * Filters passed fields by rules
      *
      * @param {Array} fields
-     * @param {Object} exclude
+     * @param {Object} rules
+     * @param {boolean=} [include=false]
      * @returns {Object}
      * @static
      */
-    Util.filterFields = function(fields, exclude) {
+    EntityFieldsUtil.filterFields = function(fields, rules, include) {
         fields = _.filter(fields, function(item) {
             var result;
-            result = !_.some(exclude, function(rule) {
+            result = _.some(rules, function(rule) {
                 var result;
                 var cut;
-                // exclude can be a property name
+                // rule can be a property name
                 if (_.isString(rule)) {
                     result = _.intersection(
                         [rule],
                         _.keys(item)
                     ).length > 0;
                 } else {
-                    // or exclude can be an object with data to compare
+                    // or rule can be an object with data to compare
                     cut = _.pick(item, _.keys(rule));
                     result = _.isEqual(cut, rule);
                 }
 
                 return result;
             });
-            return result;
+            return include ? result : !result;
         });
         return fields;
     };
 
-    Util.errorHandler = (function() {
+    EntityFieldsUtil.errorHandler = (function() {
         var message = __('oro.entity.not_exist');
         var handler = _.bind(mediator.execute, mediator, 'showErrorMessage', message);
         return _.throttle(handler, 100, {trailing: false});
     }());
 
-    Util.prototype = {
+    /**
+     * Converts data in proper array of fields hierarchy
+     *
+     * @param {Array} data
+     * @returns {Array}
+     * @private
+     */
+    EntityFieldsUtil.convertData = function(data) {
+        _.each(data, function(entity) {
+            entity.fieldsIndex = {};
+            _.each(entity.fields, function(field) {
+                if (field.relation_type && field.related_entity_name) {
+                    field.related_entity = data[field.related_entity_name];
+                    delete field.related_entity_name;
+                }
+                field.entity = entity;
+                entity.fieldsIndex[field.name] = field;
+            });
+        });
+        return data;
+    };
+
+    EntityFieldsUtil.prototype = {
 
         init: function(entity, data) {
             this.entity = entity;
             this.data = data || {};
+        },
+
+        /**
+         *
+         * @returns {Array.<Object>}
+         */
+        getEntityRoutes: function() {
+            if (!this.data[this.entity]) {
+                return {};
+            }
+
+            return this.data[this.entity].routes || {};
         },
 
         /**
@@ -140,7 +181,7 @@ define(function(require) {
                     }
                 });
             } catch (e) {
-                Util.errorHandler();
+                EntityFieldsUtil.errorHandler();
                 throw new EntityError('Can not build entity chain by given path "' + path + '"');
             }
 
@@ -195,7 +236,7 @@ define(function(require) {
                     return result;
                 });
             } catch (e) {
-                Util.errorHandler();
+                EntityFieldsUtil.errorHandler();
                 chain = [];
             }
 
@@ -231,7 +272,7 @@ define(function(require) {
                 result = {
                     parent_entity: null,
                     entity: entity.field.entity.name,
-                    field:  entity.field.name
+                    field: entity.field.name
                 };
                 if (chain.length > 2) {
                     result.parent_entity = chain[chain.length - 2].field.entity.name;
@@ -318,12 +359,12 @@ define(function(require) {
 
                 fieldIdParts.push(pathData[pathData.length - 1]);
             } catch (e) {
-                Util.errorHandler();
+                EntityFieldsUtil.errorHandler();
                 throw new EntityError('Can not define entity path by given property path "' + pathData + '"');
             }
             return fieldIdParts.join('::');
         }
     };
 
-    return Util;
+    return EntityFieldsUtil;
 });

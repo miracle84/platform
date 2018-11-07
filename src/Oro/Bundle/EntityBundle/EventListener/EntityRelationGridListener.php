@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EntityBundle\EventListener;
 
-use Symfony\Component\HttpFoundation\Request;
-
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Doctrine\ORM\Query\Expr\Join;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Event\BuildAfter;
 use Oro\Bundle\DataGridBundle\Event\BuildBefore;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
-use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 
 class EntityRelationGridListener
 {
@@ -19,9 +18,6 @@ class EntityRelationGridListener
     /** @var DoctrineHelper */
     protected $doctrineHelper;
 
-    /** @var Request */
-    protected $request;
-
     /**
      * @param ConfigManager  $configManager
      * @param DoctrineHelper $doctrineHelper
@@ -30,16 +26,6 @@ class EntityRelationGridListener
     {
         $this->configManager  = $configManager;
         $this->doctrineHelper = $doctrineHelper;
-    }
-
-    /**
-     * @param Request $request
-     */
-    public function setRequest(Request $request = null)
-    {
-        if ($request instanceof Request) {
-            $this->request = $request;
-        }
     }
 
     /**
@@ -71,16 +57,34 @@ class EntityRelationGridListener
             $extendEntityConfig = $extendConfigProvider->getConfig($entityClassName);
             $relations          = $extendEntityConfig->get('relation');
             $relation           = $relations[$extendFieldConfig->get('relation_key')];
-            $targetFieldName    = $relation['target_field_id']->getFieldName();
             $fieldType          = $extendFieldConfig->getId()->getFieldType();
             $operator           = $fieldType === RelationType::ONE_TO_MANY ? '=' : 'MEMBER OF';
-            $whenExpr           = sprintf(
-                '(:relation %s o.%s OR o.%s IN (:data_in)) AND o.%s NOT IN (:data_not_in)',
-                $operator,
-                $targetFieldName,
-                $targetIdField,
-                $targetIdField
-            );
+            $relationHasInverseSide = $relation['target_field_id'] !== false;
+            if ($relationHasInverseSide) {
+                $targetFieldName = $relation['target_field_id']->getFieldName();
+                $whenExpr       = sprintf(
+                    '(:relation %s o.%s OR o.%s IN (:data_in)) AND o.%s NOT IN (:data_not_in)',
+                    $operator,
+                    $targetFieldName,
+                    $targetIdField,
+                    $targetIdField
+                );
+            } else {
+                $fieldName = $relation['field_id']->getFieldName();
+                $config->getOrmQuery()
+                    ->addLeftJoin(
+                        $entityClassName,
+                        'e',
+                        Join::WITH,
+                        sprintf('o MEMBER OF e.%s AND e.id = :relation', $fieldName)
+                    );
+                $whenExpr = sprintf(
+                    '(e.%s IS NOT NULL OR o.%s IN (:data_in)) AND o.%s NOT IN (:data_not_in)',
+                    $extendEntityConfig->get('pk_columns', false, ['id'])[0],
+                    $targetIdField,
+                    $targetIdField
+                );
+            }
         } else {
             $whenExpr = sprintf('o.%s IN (:data_in) AND o.%s NOT IN (:data_not_in)', $targetIdField, $targetIdField);
         }

@@ -2,21 +2,19 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Security;
 
+use Oro\Bundle\UserBundle\Entity\UserManager;
+use Oro\Bundle\UserBundle\Security\DisabledLoginSubscriber;
+use Oro\Bundle\UserBundle\Tests\Unit\Stub\UserStub as User;
+use Oro\Component\Testing\Unit\Entity\Stub\StubEnumValue;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
-use Oro\Component\Testing\Unit\Entity\Stub\StubEnumValue;
-
-use Oro\Bundle\UserBundle\Entity\UserManager;
-use Oro\Bundle\UserBundle\Tests\Unit\Stub\UserStub as User;
-use Oro\Bundle\UserBundle\Security\DisabledLoginSubscriber;
-
-class DisabledLoginSubscriberTest extends \PHPUnit_Framework_TestCase
+class DisabledLoginSubscriberTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var  TokenInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  TokenInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $token;
 
-    /** @var TokenStorageInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TokenStorageInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $tokenStorage;
 
     /** @var User */

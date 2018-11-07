@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\CronBundle\Filter;
 
-use Symfony\Component\Form\FormFactoryInterface;
-
 use Oro\Bundle\CronBundle\ORM\CommandArgsTokenizer;
-use Oro\Bundle\EntityBundle\ORM\QueryUtils;
-use Oro\Bundle\FilterBundle\Filter\StringFilter;
-use Oro\Bundle\FilterBundle\Filter\FilterUtility;
-use Oro\Bundle\FilterBundle\Form\Type\Filter\TextFilterType;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
+use Oro\Bundle\FilterBundle\Filter\FilterUtility;
+use Oro\Bundle\FilterBundle\Filter\StringFilter;
+use Oro\Bundle\FilterBundle\Form\Type\Filter\TextFilterType;
+use Oro\Component\DoctrineUtils\ORM\DqlUtil;
+use Symfony\Component\Form\FormFactoryInterface;
 
 class CommandWithArgsFilter extends StringFilter
 {
@@ -100,7 +99,7 @@ class CommandWithArgsFilter extends StringFilter
             case TextFilterType::TYPE_CONTAINS:
             case TextFilterType::TYPE_NOT_CONTAINS:
                 // CONTAINS and NOT CONTAINS should search in all field
-                return QueryUtils::buildConcatExpr($dataName);
+                return DqlUtil::buildConcatExpr($dataName);
             default:
                 // other comparisons should work only for the first column
                 return reset($dataName);

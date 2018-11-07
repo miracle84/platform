@@ -36,6 +36,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function NotesView() {
+            NotesView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
 
@@ -115,6 +122,7 @@ define(function(require) {
                         });
                         this._hideLoading();
                     }, this),
+                    errorHandlerMessage: false,
                     error: _.bind(function(collection, response) {
                         this._showLoadItemsError(response.responseJSON || {});
                     }, this)
@@ -159,6 +167,7 @@ define(function(require) {
                         this._hideLoading();
                         mediator.execute('showFlashMessage', 'success', this._getMessage('itemRemoved'));
                     }, this),
+                    errorHandlerMessage: false,
                     error: _.bind(function(model, response) {
                         if (!_.isUndefined(response.status) && response.status === 403) {
                             this._showForbiddenError(response.responseJSON || {});
@@ -194,16 +203,16 @@ define(function(require) {
         _openItemEditForm: function(title, url) {
             if (!this.itemEditDialog) {
                 this.itemEditDialog = new DialogWidget({
-                    'url': url,
-                    'title': title,
-                    'regionEnabled': false,
-                    'incrementalPosition': false,
-                    'dialogOptions': {
-                        'modal': true,
-                        'resizable': false,
-                        'width': 675,
-                        'autoResize': true,
-                        'close': _.bind(function() {
+                    url: url,
+                    title: title,
+                    regionEnabled: false,
+                    incrementalPosition: false,
+                    dialogOptions: {
+                        modal: true,
+                        resizable: false,
+                        width: 675,
+                        autoResize: true,
+                        close: _.bind(function() {
                             delete this.itemEditDialog;
                         }, this)
                     }

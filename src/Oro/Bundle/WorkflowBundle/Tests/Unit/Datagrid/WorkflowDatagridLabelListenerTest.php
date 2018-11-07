@@ -2,21 +2,19 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Datagrid;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-
 use Oro\Bundle\WorkflowBundle\Datagrid\WorkflowDatagridLabelListener;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
 use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowDefinitionSelectType;
 use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowStepSelectType;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class WorkflowDatagridLabelListenerTest extends \PHPUnit_Framework_TestCase
+class WorkflowDatagridLabelListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $translator;
 
@@ -79,7 +77,7 @@ class WorkflowDatagridLabelListenerTest extends \PHPUnit_Framework_TestCase
                 'type' => 'entity',
                 'data_name' => 't4.id',
                 'options' => [
-                    'field_type' => WorkflowStepSelectType::NAME,
+                    'field_type' => WorkflowStepSelectType::class,
                     'field_options' => [
                         'workflow_entity_class' => 'SomeEntity',
                         'multiple' => true
@@ -109,7 +107,7 @@ class WorkflowDatagridLabelListenerTest extends \PHPUnit_Framework_TestCase
                 'type' => 'entity',
                 'data_name' => 't5.name',
                 'options' => [
-                    'field_type' => WorkflowDefinitionSelectType::NAME,
+                    'field_type' => WorkflowDefinitionSelectType::class,
                     'field_options' => [
                         'workflow_entity_class' => 'SomeEntity',
                         'multiple' => true

@@ -2,19 +2,18 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Extension;
 
+use Oro\Bundle\FormBundle\Form\Extension\TooltipFormExtension;
 use Symfony\Component\Form\FormView;
 
-use Oro\Bundle\FormBundle\Form\Extension\TooltipFormExtension;
-
-class TooltipFormExtensionTest extends \PHPUnit_Framework_TestCase
+class TooltipFormExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $form;
 
     protected function setUp()
@@ -36,12 +35,12 @@ class TooltipFormExtensionTest extends \PHPUnit_Framework_TestCase
             ->getMock();
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolverInterface')
+        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->getMock();
         $resolver->expects($this->once())
-            ->method('setOptional')
+            ->method('setDefined')
             ->with(
                 array(
                     'tooltip',
@@ -54,7 +53,7 @@ class TooltipFormExtensionTest extends \PHPUnit_Framework_TestCase
             );
 
         $extension = new TooltipFormExtension($this->configProvider, $this->translator);
-        $extension->setDefaultOptions($resolver);
+        $extension->configureOptions($resolver);
     }
 
     public function testBuildView()
@@ -113,7 +112,7 @@ class TooltipFormExtensionTest extends \PHPUnit_Framework_TestCase
      * @param string $tooltip
      * @param string $expectedTooltip
      * @param bool $isEmptyViewTooltip
-     * @dataProvider testModifyEntityConfigTooltipFieldProvider
+     * @dataProvider modifyEntityConfigTooltipFieldProvider
      */
     public function testModifyEntityConfigTooltipField(
         $iteration,
@@ -184,7 +183,7 @@ class TooltipFormExtensionTest extends \PHPUnit_Framework_TestCase
     /**
      * @return array
      */
-    public function testModifyEntityConfigTooltipFieldProvider()
+    public function modifyEntityConfigTooltipFieldProvider()
     {
         return [
             'Test entity config field with messages domain' => [

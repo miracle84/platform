@@ -5,9 +5,10 @@ namespace Oro\Bundle\EntityExtendBundle\Tools\GeneratorExtensions;
 use CG\Generator\PhpClass;
 use CG\Generator\PhpParameter;
 use CG\Generator\PhpProperty;
-
 use Doctrine\Common\Inflector\Inflector;
-use Symfony\Component\PropertyAccess\StringUtil;
+use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
+use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Symfony\Component\Inflector\Inflector as SymfonyIflector;
 
 /**
  * The main extension of the entity generator. This extension is responsible for generate extend entity skeleton
@@ -111,8 +112,13 @@ class ExtendEntityGeneratorExtension extends AbstractEntityGeneratorExtension
     protected function generateProperties($propertyType, array $schema, PhpClass $class)
     {
         foreach ($schema[$propertyType] as $fieldName => $config) {
-            $class->setProperty(PhpProperty::create($fieldName)->setVisibility('protected'));
+            if ($propertyType === 'relation') {
+                if (!$this->isSupportedRelation($schema, $fieldName)) {
+                    continue;
+                }
+            }
 
+            $class->setProperty(PhpProperty::create($fieldName)->setVisibility('protected'));
             $isPrivate = is_array($config) && isset($config['private']) && $config['private'];
             if (!$isPrivate) {
                 $class
@@ -131,6 +137,34 @@ class ExtendEntityGeneratorExtension extends AbstractEntityGeneratorExtension
                     );
             }
         }
+    }
+
+    /**
+     * @param array  $schema
+     * @param string $fieldName
+     *
+     * @return bool
+     */
+    protected function isSupportedRelation($schema, $fieldName)
+    {
+        $isSupportedRelation = true;
+
+        if (isset($schema['relationData'])) {
+            foreach ($schema['relationData'] as $relationData) {
+                /** @var FieldConfigId $fieldId */
+                $fieldId = $relationData['field_id'];
+                if ($fieldId instanceof FieldConfigId && $fieldId->getFieldName() === $fieldName) {
+                    $isSupportedRelation = !in_array(
+                        $relationData['state'],
+                        [ExtendScope::STATE_NEW, ExtendScope::STATE_DELETE],
+                        true
+                    );
+                    break;
+                }
+            }
+        }
+
+        return $isSupportedRelation;
     }
 
     /**
@@ -307,7 +341,7 @@ METHOD_BODY;
      */
     protected function getSingular($fieldName)
     {
-        $singular = StringUtil::singularify(Inflector::classify($fieldName));
+        $singular = SymfonyIflector::singularize(Inflector::classify($fieldName));
         if (is_array($singular)) {
             $singular = reset($singular);
         }

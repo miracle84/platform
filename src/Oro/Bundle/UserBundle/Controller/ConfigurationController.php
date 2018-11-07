@@ -76,7 +76,7 @@ class ConfigurationController extends Controller
 
         list($activeGroup, $activeSubGroup) = $provider->chooseActiveGroups($activeGroup, $activeSubGroup);
 
-        $tree = $provider->getTree();
+        $jsTree = $provider->getJsTree();
         $form = false;
 
         if ($activeSubGroup !== null) {
@@ -84,7 +84,7 @@ class ConfigurationController extends Controller
 
             if ($this->get('oro_config.form.handler.config')
                 ->setConfigManager($manager)
-                ->process($form, $this->getRequest())
+                ->process($form, $this->get('request_stack')->getCurrentRequest())
             ) {
                 $this->get('session')->getFlashBag()->add(
                     'success',
@@ -93,9 +93,10 @@ class ConfigurationController extends Controller
 
                 // outdate content tags, it's only special case for generation that are not covered by NavigationBundle
                 $taggableData = ['name' => 'user_configuration', 'params' => [$activeGroup, $activeSubGroup]];
-                $sender       = $this->get('oro_sync.content.topic_sender');
+                $tagGenerator = $this->get('oro_sync.content.tag_generator');
+                $dataUpdateTopicSender = $this->get('oro_sync.content.data_update_topic_sender');
 
-                $sender->send($sender->getGenerator()->generate($taggableData));
+                $dataUpdateTopicSender->send($tagGenerator->generate($taggableData));
             }
         }
         //revert previous scope id
@@ -103,7 +104,7 @@ class ConfigurationController extends Controller
 
         return [
             'entity'         => $entity,
-            'data'           => $tree,
+            'data'           => $jsTree,
             'form'           => $form ? $form->createView() : null,
             'activeGroup'    => $activeGroup,
             'activeSubGroup' => $activeSubGroup,

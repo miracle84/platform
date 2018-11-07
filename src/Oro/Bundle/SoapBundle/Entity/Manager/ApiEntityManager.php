@@ -3,25 +3,25 @@
 namespace Oro\Bundle\SoapBundle\Entity\Manager;
 
 use Doctrine\Common\Collections\Criteria;
-use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\Mapping\ClassMetadata;
+use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
-use Oro\Component\DoctrineUtils\ORM\SqlQueryBuilder;
-use Oro\Component\EntitySerializer\EntitySerializer;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\EntityBundle\ORM\QueryUtils;
 use Oro\Bundle\EntityBundle\Tools\EntityClassNameHelper;
 use Oro\Bundle\SearchBundle\Query\Query as SearchQuery;
 use Oro\Bundle\SoapBundle\Event\FindAfter;
 use Oro\Bundle\SoapBundle\Event\GetListBefore;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+use Oro\Component\DoctrineUtils\ORM\SqlQueryBuilder;
+use Oro\Component\EntitySerializer\EntitySerializer;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
+/**
+ * Provides an entity manager to work from the old REST API
+ */
 class ApiEntityManager
 {
     /** @var string */
@@ -137,7 +137,7 @@ class ApiEntityManager
     /**
      * Get entity metadata
      *
-     * @return ClassMetadata|ClassMetadataInfo
+     * @return ClassMetadata|ClassMetadataInfo|null
      */
     public function getMetadata()
     {
@@ -212,28 +212,6 @@ class ApiEntityManager
     }
 
     /**
-     * Returns array of item matching filtering criteria
-     *
-     * In case when limit and offset set to null QueryBuilder instance will be returned.
-     *
-     * @deprecated since 1.4.1 use getListQueryBuilder instead
-     * @param int        $limit
-     * @param int        $page
-     * @param array      $criteria
-     * @param array|null $orderBy
-     *
-     * @return \Traversable
-     */
-    public function getList($limit = 10, $page = 1, $criteria = [], $orderBy = null)
-    {
-        $criteria = $this->prepareQueryCriteria($limit, $page, $criteria, $orderBy);
-
-        return $this->getRepository()
-            ->matching($criteria)
-            ->toArray();
-    }
-
-    /**
      * Returns query builder that could be used for fetching data based on given filtering criteria
      *
      * @param int   $limit
@@ -254,6 +232,24 @@ class ApiEntityManager
         $qb->addCriteria($criteria);
 
         return $qb;
+    }
+
+    /**
+     * Returns array of item matching filtering criteria
+     *
+     * @param int $limit
+     * @param int $page
+     * @param array $criteria
+     * @param array|null $orderBy
+     * @param array $joins
+     *
+     * @return array
+     */
+    public function getList($limit = 10, $page = 1, $criteria = [], $orderBy = null, $joins = [])
+    {
+        return $this->getListQueryBuilder($limit, $page, $criteria, $orderBy, $joins)
+            ->getQuery()
+            ->getArrayResult();
     }
 
     /**
@@ -389,7 +385,7 @@ class ApiEntityManager
      */
     protected function normalizeCriteria($criteria)
     {
-        return QueryUtils::normalizeCriteria($criteria);
+        return QueryBuilderUtil::normalizeCriteria($criteria);
     }
 
     /**
@@ -400,7 +396,7 @@ class ApiEntityManager
      */
     protected function applyJoins($qb, $joins)
     {
-        QueryUtils::applyJoins($qb, $joins);
+        QueryBuilderUtil::applyJoins($qb, $joins);
     }
 
     /**
@@ -424,7 +420,7 @@ class ApiEntityManager
      */
     protected function getOffset($page, $limit)
     {
-        return QueryUtils::getPageOffset($page, $limit);
+        return QueryBuilderUtil::getPageOffset($page, $limit);
     }
 
     /**

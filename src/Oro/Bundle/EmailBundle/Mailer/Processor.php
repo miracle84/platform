@@ -3,10 +3,6 @@
 namespace Oro\Bundle\EmailBundle\Mailer;
 
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
-
 use Oro\Bundle\EmailBundle\Builder\EmailEntityBuilder;
 use Oro\Bundle\EmailBundle\Decoder\ContentDecoder;
 use Oro\Bundle\EmailBundle\Entity\Email;
@@ -26,12 +22,12 @@ use Oro\Bundle\EmailBundle\Tools\EmailOriginHelper;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
-use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
+use Oro\Bundle\SecurityBundle\Encoder\SymmetricCrypterInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
- * Class Processor
- *
- * @package Oro\Bundle\EmailBundle\Mailer
+ * This class process emails
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -56,7 +52,7 @@ class Processor
     /** @var EventDispatcherInterface */
     protected $eventDispatcher;
 
-    /** @var Mcrypt */
+    /** @var SymmetricCrypterInterface */
     protected $encryptor;
 
     /** @var EmailOriginHelper */
@@ -69,7 +65,7 @@ class Processor
      * @param EmailEntityBuilder       $emailEntityBuilder
      * @param EmailActivityManager     $emailActivityManager
      * @param EventDispatcherInterface $eventDispatcher
-     * @param Mcrypt                   $encryptor
+     * @param SymmetricCrypterInterface $encryptor
      * @param EmailOriginHelper        $emailOriginHelper
      */
     public function __construct(
@@ -79,7 +75,7 @@ class Processor
         EmailEntityBuilder $emailEntityBuilder,
         EmailActivityManager $emailActivityManager,
         EventDispatcherInterface $eventDispatcher,
-        Mcrypt $encryptor,
+        SymmetricCrypterInterface $encryptor,
         EmailOriginHelper $emailOriginHelper
     ) {
         $this->doctrineHelper       = $doctrineHelper;
@@ -208,7 +204,7 @@ class Processor
         $messageId = $message->getId();
 
         if (!$this->mailer->send($message)) {
-            throw new \Swift_SwiftException('An email was not delivered.');
+            throw new \Swift_SwiftException('The email was not delivered.');
         }
 
         /**

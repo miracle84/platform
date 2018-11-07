@@ -5,23 +5,23 @@ namespace Oro\Bundle\EntityConfigBundle\Datagrid;
 use Doctrine\ORM\EntityManager;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class AttributeFamilyActionsConfiguration
 {
-    /** @var SecurityFacade */
-    private $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    private $authorizationChecker;
 
     /** @var EntityManager */
     private $entityManager;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param EntityManager $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param EntityManager                 $entityManager
      */
-    public function __construct(SecurityFacade $securityFacade, EntityManager $entityManager)
+    public function __construct(AuthorizationCheckerInterface $authorizationChecker, EntityManager $entityManager)
     {
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
         $this->entityManager = $entityManager;
     }
 
@@ -36,7 +36,7 @@ class AttributeFamilyActionsConfiguration
         return [
             'view' => true,
             'edit' => true,
-            'delete' => $this->securityFacade->isGranted('delete', $attributeFamily)
+            'delete' => $this->authorizationChecker->isGranted('delete', $attributeFamily)
         ];
     }
 }

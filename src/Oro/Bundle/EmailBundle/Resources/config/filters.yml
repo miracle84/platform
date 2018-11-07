@@ -4,7 +4,7 @@ parameters:
 
 services:
     oro_email_filter.filter_origin_folder:
-        class: %oro_email_filter.filter_origin_folder.class%
+        class: '%oro_email_filter.filter_origin_folder.class%'
         arguments:
             - '@form.factory'
             - '@oro_filter.filter_utility'
@@ -12,10 +12,19 @@ services:
             - { name: oro_filter.extension.orm_filter.filter, type: multiselect-originfolder }
 
     oro_email_filter.filter_massage_type:
-        class: %oro_email_filter.filter_massage_type.class%
+        class: '%oro_email_filter.filter_massage_type.class%'
         arguments:
             - '@form.factory'
             - '@oro_filter.filter_utility'
             - '@oro_email.email.owner.provider.storage'
         tags:
             - { name: oro_filter.extension.orm_filter.filter, type: multiselect-messagetype }
+
+    oro_email_filter.filter_email_string:
+        class: 'Oro\Bundle\EmailBundle\Filter\EmailStringFilter'
+        arguments:
+            - '@form.factory'
+            - '@oro_filter.filter_utility'
+            - '@oro_email.email.owner.provider.storage'
+        tags:
+            - { name: oro_filter.extension.orm_filter.filter, type: email-string }

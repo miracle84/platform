@@ -6,7 +6,7 @@ use Oro\Bundle\ConfigBundle\Entity\Config;
 use Oro\Bundle\ConfigBundle\Entity\ConfigValue;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 
-class ConfigValueTest extends \PHPUnit_Framework_TestCase
+class ConfigValueTest extends \PHPUnit\Framework\TestCase
 {
     public function testIdGetter()
     {
@@ -40,6 +40,9 @@ class ConfigValueTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($value, $accessor->getValue($obj, $property));
     }
 
+    /**
+     * @return array
+     */
     public function propertiesDataProvider()
     {
         return [

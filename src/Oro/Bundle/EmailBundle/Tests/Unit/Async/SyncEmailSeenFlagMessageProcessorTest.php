@@ -3,9 +3,7 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EmailBundle\Async\SyncEmailSeenFlagMessageProcessor;
-
 use Oro\Bundle\EmailBundle\Async\Topics;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailUserRepository;
@@ -15,7 +13,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -32,7 +30,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[SyncEmailSeenFlagMessageProcessor] Got invalid message: "{"seen":true}"')
+            ->with('Got invalid message')
         ;
 
         $processor = new SyncEmailSeenFlagMessageProcessor(
@@ -57,7 +55,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[SyncEmailSeenFlagMessageProcessor] Got invalid message: "{"id":123}"')
+            ->with('Got invalid message')
         ;
 
         $processor = new SyncEmailSeenFlagMessageProcessor(
@@ -82,7 +80,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('error')
-            ->with('[SyncEmailSeenFlagMessageProcessor] UserEmail was not found. id: "123"')
+            ->with('UserEmail was not found. id: "123"')
         ;
 
         $repository = $this->createEmailUserRepositoryMock();
@@ -243,7 +241,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -251,7 +249,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EntityManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|EntityManager
      */
     private function createEntityManagerMock()
     {
@@ -259,7 +257,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EmailUserRepository
+     * @return \PHPUnit\Framework\MockObject\MockObject|EmailUserRepository
      */
     private function createEmailUserRepositoryMock()
     {
@@ -267,7 +265,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EmailFlagManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|EmailFlagManager
      */
     private function createEmailFlagManagerMock()
     {
@@ -275,7 +273,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|Registry
+     * @return \PHPUnit\Framework\MockObject\MockObject|Registry
      */
     private function createDoctrineMock()
     {
@@ -283,7 +281,7 @@ class SyncEmailSeenFlagMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {

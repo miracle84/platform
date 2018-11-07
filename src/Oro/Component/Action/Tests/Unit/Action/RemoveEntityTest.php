@@ -3,15 +3,13 @@
 namespace Oro\Component\Action\Tests\Unit\Action;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
+use Oro\Component\Action\Action\ActionInterface;
+use Oro\Component\Action\Action\RemoveEntity;
+use Oro\Component\ConfigExpression\ContextAccessor;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-use Oro\Component\ConfigExpression\ContextAccessor;
-use Oro\Component\Action\Action\ActionInterface;
-use Oro\Component\Action\Action\RemoveEntity;
-
-class RemoveEntityTest extends \PHPUnit_Framework_TestCase
+class RemoveEntityTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ContextAccessor
@@ -19,7 +17,7 @@ class RemoveEntityTest extends \PHPUnit_Framework_TestCase
     protected $contextAccessor;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry
+     * @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry
      */
     protected $registry;
 

@@ -2,19 +2,18 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Datagrid\Filter\Adapter;
 
-use Symfony\Component\Form\FormFactoryInterface;
-
-use Oro\Bundle\SearchBundle\Query\SearchQueryInterface;
-use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
-use Oro\Bundle\SearchBundle\Datagrid\Filter\SearchStringFilter;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\TextFilterType;
 use Oro\Bundle\SearchBundle\Datagrid\Filter\Adapter\SearchFilterDatasourceAdapter;
+use Oro\Bundle\SearchBundle\Datagrid\Filter\SearchStringFilter;
+use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Query;
+use Oro\Bundle\SearchBundle\Query\SearchQueryInterface;
+use Symfony\Component\Form\FormFactoryInterface;
 
-class SearchFilterDatasourceAdapterTest extends \PHPUnit_Framework_TestCase
+class SearchFilterDatasourceAdapterTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var SearchQueryInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var SearchQueryInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $searchQuery;
 
     protected function setUp()
@@ -108,6 +107,7 @@ class SearchFilterDatasourceAdapterTest extends \PHPUnit_Framework_TestCase
         $stringFilter->init('test', [
             FilterUtility::DATA_NAME_KEY => 'foo',
             FilterUtility::MIN_LENGTH_KEY => 0,
+            FilterUtility::MAX_LENGTH_KEY => 100,
             FilterUtility::FORCE_LIKE_KEY => false,
         ]);
 

@@ -3,11 +3,10 @@
 namespace Oro\Bundle\ConfigBundle\Tests\Unit\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\ConfigBundle\Entity\Config;
 use Oro\Bundle\ConfigBundle\Entity\ConfigValue;
 
-class ConfigTest extends \PHPUnit_Framework_TestCase
+class ConfigTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var Config

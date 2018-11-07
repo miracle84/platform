@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\GoogleIntegrationBundle\DependencyInjection;
 
+use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-
-use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
 
 class Configuration implements ConfigurationInterface
 {
@@ -28,6 +27,10 @@ class Configuration implements ConfigurationInterface
                 'value' => null,
                 'type'  => 'text',
             ],
+            'google_api_key' => [
+                'value' => null,
+                'type'  => 'text',
+            ]
         ]);
 
         return $treeBuilder;

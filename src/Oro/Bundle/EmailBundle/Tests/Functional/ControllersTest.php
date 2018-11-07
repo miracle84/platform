@@ -3,12 +3,8 @@
 namespace Oro\Bundle\EmailBundle\Tests\Functional;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class ControllersTest extends WebTestCase
 {
     /**

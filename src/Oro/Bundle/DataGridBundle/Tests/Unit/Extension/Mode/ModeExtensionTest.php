@@ -4,9 +4,10 @@ namespace Oro\Bundle\DataGridBundle\Tests\Unit\Extension\Mode;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
+use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
 use Oro\Bundle\DataGridBundle\Extension\Mode\ModeExtension;
 
-class ModeExtensionTest extends \PHPUnit_Framework_TestCase
+class ModeExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ModeExtension
@@ -16,6 +17,7 @@ class ModeExtensionTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         $this->extension = new ModeExtension();
+        $this->extension->setParameters(new ParameterBag());
     }
 
     /**

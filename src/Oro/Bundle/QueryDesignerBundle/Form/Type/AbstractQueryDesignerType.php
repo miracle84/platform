@@ -2,24 +2,28 @@
 
 namespace Oro\Bundle\QueryDesignerBundle\Form\Type;
 
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormEvents;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Form\FormFactoryInterface;
-
+use Oro\Bundle\EntityBundle\Form\Type\EntityFieldSelectType;
 use Oro\Bundle\QueryDesignerBundle\Model\AbstractQueryDesigner;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 abstract class AbstractQueryDesignerType extends AbstractType
 {
+    const DATE_GROUPING_FORM_NAME = 'dateGrouping';
+
     /**
      * {@inheritdoc}
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('definition', 'hidden', array('required' => false));
+            ->add('definition', HiddenType::class, array('required' => false));
 
         $factory = $builder->getFormFactory();
         $that    = $this;
@@ -55,6 +59,14 @@ abstract class AbstractQueryDesignerType extends AbstractType
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function configureOptions(OptionsResolver $resolver)
+    {
+        $resolver->setRequired(['query_type']);
+    }
+
+    /**
      * Gets the default options for this type.
      *
      * @return array
@@ -63,9 +75,11 @@ abstract class AbstractQueryDesignerType extends AbstractType
     {
         return
             array(
-                'grouping_column_choice_type' => 'hidden',
-                'column_column_choice_type'   => 'hidden',
-                'filter_column_choice_type'   => 'oro_entity_field_select'
+                'grouping_column_choice_type'        => HiddenType::class,
+                'column_column_choice_type'          => HiddenType::class,
+                'filter_column_choice_type'          => EntityFieldSelectType::class,
+                'date_grouping_choice_type'          => EntityFieldSelectType::class,
+                'column_column_field_choice_options' => [],
             );
     }
 
@@ -85,7 +99,7 @@ abstract class AbstractQueryDesignerType extends AbstractType
             $form->add(
                 $factory->createNamed(
                     'grouping',
-                    'oro_query_designer_grouping',
+                    GroupingType::class,
                     null,
                     array(
                         'mapped'             => false,
@@ -102,13 +116,15 @@ abstract class AbstractQueryDesignerType extends AbstractType
             $form->add(
                 $factory->createNamed(
                     'column',
-                    'oro_query_designer_column',
+                    ColumnType::class,
                     null,
                     array(
-                        'mapped'             => false,
-                        'column_choice_type' => $columnChoiceType,
-                        'entity'             => $entity,
-                        'auto_initialize'    => false
+                        'mapped'               => false,
+                        'column_choice_type'   => $columnChoiceType,
+                        'entity'               => $entity,
+                        'auto_initialize'      => false,
+                        'field_choice_options' => $config->getOption('column_column_field_choice_options'),
+                        'query_type'           => $config->getOption('query_type'),
                     )
                 )
             );
@@ -119,7 +135,7 @@ abstract class AbstractQueryDesignerType extends AbstractType
             $form->add(
                 $factory->createNamed(
                     'filter',
-                    'oro_query_designer_filter',
+                    FilterType::class,
                     null,
                     array(
                         'mapped'             => false,
@@ -127,6 +143,23 @@ abstract class AbstractQueryDesignerType extends AbstractType
                         'entity'             => $entity,
                         'auto_initialize'    => false
                     )
+                )
+            );
+        }
+
+        $dateGroupingChoiceType = $config->getOption('date_grouping_choice_type');
+        if ($dateGroupingChoiceType) {
+            $form->add(
+                $factory->createNamed(
+                    AbstractQueryDesignerType::DATE_GROUPING_FORM_NAME,
+                    DateGroupingType::class,
+                    null,
+                    [
+                        'mapped' => false,
+                        'column_choice_type' => $dateGroupingChoiceType,
+                        'entity' => $entity,
+                        'auto_initialize' => false
+                    ]
                 )
             );
         }

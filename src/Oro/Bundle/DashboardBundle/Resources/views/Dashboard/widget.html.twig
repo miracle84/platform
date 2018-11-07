@@ -12,7 +12,7 @@
     {% endif %}
 {% endif %}
 
-<div id="{{ widgetContentId }}" class="invisible widget-content {{ widgetType }}-widget-content {{ widgetClass }}-widget-content">
+<div id="{{ widgetContentId }}" class="invisible widget-content {{ widgetType }}-widget-content {{ widgetClass }}-widget-content" data-widget-title="{{ widgetTitle }}">
     {% block content %}
     {% endblock %}
     {% if widgetConfiguration is defined %}
@@ -28,9 +28,15 @@
                     {% else %}
                         {% set label = configName %}
                     {% endif %}
+                    {% set value = null %}
                     {% if config.options is defined and config.options.choices is defined %}
-                        {% set value = config.options.choices[config.value]|trans %}
-                    {% else %}
+                        {% for choiceLabel, choiceValue in config.options.choices %}
+                            {% if config.value == choiceValue %}
+                                {% set value = choiceLabel|trans %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {% if value is null %}
                         {% set value = config.value %}
                     {% endif %}
                     <div class="widget-config-data"><stong>{{ label|trans }}</stong>: {{ value }}</div>
@@ -59,14 +65,4 @@
             {% endif %}
         </div>
     {% endblock %}
-    <script type="text/javascript">
-        require(['jquery', 'underscore', 'oroui/js/widget-manager'],
-        function($, _, widgetManager){
-            widgetManager.getWidgetInstance({{ widgetId|json_encode|raw }}, function(widget) {
-                {% if widgetTitle is not empty %}
-                widget.setTitle({{ widgetTitle|json_encode|raw }});
-                {% endif %}
-            });
-        });
-    </script>
 </div>

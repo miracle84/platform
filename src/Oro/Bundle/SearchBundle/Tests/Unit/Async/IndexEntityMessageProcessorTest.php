@@ -12,7 +12,7 @@ use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class IndexEntityMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredAttributes()
     {
@@ -50,10 +50,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
             ->expects($this->once())
             ->method('error')
             ->with(
-                'Message is invalid. Class was not found.',
-                [
-                    'message' => $message
-                ]
+                'Message is invalid. Class was not found.'
             )
         ;
 
@@ -81,8 +78,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
             ->expects($this->once())
             ->method('error')
             ->with(
-                'Message is invalid. Id was not found.',
-                ['message' => $message]
+                'Message is invalid. Id was not found.'
             )
         ;
 
@@ -238,7 +234,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EntityManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|EntityManager
      */
     protected function createEntityRepositoryMock()
     {
@@ -246,7 +242,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EntityManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|EntityManager
      */
     protected function createEntityManagerMock()
     {
@@ -254,7 +250,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     protected function createSessionMock()
     {
@@ -262,7 +258,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|IndexerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|IndexerInterface
      */
     protected function createIndexerMock()
     {
@@ -270,7 +266,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|RegistryInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|RegistryInterface
      */
     protected function createDoctrineMock()
     {
@@ -278,7 +274,7 @@ class IndexEntityMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     protected function createLoggerMock()
     {

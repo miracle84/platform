@@ -2,26 +2,27 @@
 
 namespace Oro\Bundle\EmailBundle\Form\Handler;
 
-use Psr\Log\LoggerInterface;
-
-use Symfony\Component\Form\FormError;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
 use Oro\Bundle\EmailBundle\Form\Model\Email;
 use Oro\Bundle\EmailBundle\Mailer\Processor;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class EmailHandler
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var Processor
@@ -35,18 +36,18 @@ class EmailHandler
 
     /**
      * @param FormInterface   $form
-     * @param Request         $request
+     * @param RequestStack    $requestStack
      * @param Processor       $emailProcessor
      * @param LoggerInterface $logger
      */
     public function __construct(
         FormInterface $form,
-        Request $request,
+        RequestStack $requestStack,
         Processor $emailProcessor,
         LoggerInterface $logger
     ) {
         $this->form                = $form;
-        $this->request             = $request;
+        $this->requestStack        = $requestStack;
         $this->emailProcessor      = $emailProcessor;
         $this->logger              = $logger;
     }
@@ -61,15 +62,14 @@ class EmailHandler
     {
         $this->form->setData($model);
 
-        if (in_array($this->request->getMethod(), ['POST', 'PUT'])) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
 
             if ($this->form->isValid()) {
                 try {
-                    $this->emailProcessor->process(
-                        $model,
-                        $this->emailProcessor->getEmailOrigin($model->getFrom(), $model->getOrganization())
-                    );
+                    $this->emailProcessor->process($model, $model->getOrigin());
+
                     return true;
                 } catch (\Exception $ex) {
                     $this->logger->error('Email sending failed.', ['exception' => $ex]);

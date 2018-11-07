@@ -2,49 +2,42 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\EventListener;
 
-use Doctrine\Common\Collections\Criteria;
-
-use Symfony\Component\HttpFoundation\Request;
-
+use Oro\Bundle\SecurityBundle\Authorization\RequestAuthorizationChecker;
 use Oro\Bundle\SecurityBundle\EventListener\ApiEventListener;
-use Oro\Bundle\SecurityBundle\Annotation\Acl;
-
+use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 use Oro\Bundle\SoapBundle\Event\FindAfter;
-use Oro\Bundle\SoapBundle\Event\GetListBefore;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class ApiEventListenerTest extends \PHPUnit_Framework_TestCase
+class ApiEventListenerTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var ApiEventListener
-     */
+    /** @var ApiEventListener */
     protected $listener;
 
-    /**
-     * @var Request
-     */
+    /** @var Request */
     protected $request;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $requestAuthorizationChecker;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $aclHelper;
+
+    /** @var RequestStack */
+    protected $requestStack;
 
     public function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->aclHelper = $this->getMockBuilder('Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-
+        $this->requestAuthorizationChecker = $this->createMock(RequestAuthorizationChecker::class);
+        $this->aclHelper = $this->createMock(AclHelper::class);
         $this->request = new Request();
-        $this->listener = new ApiEventListener($this->securityFacade, $this->aclHelper);
+        $this->requestStack = new RequestStack();
+
+        $this->listener = new ApiEventListener(
+            $this->requestAuthorizationChecker,
+            $this->aclHelper,
+            $this->requestStack
+        );
     }
 
     /**
@@ -52,9 +45,9 @@ class ApiEventListenerTest extends \PHPUnit_Framework_TestCase
      */
     public function testOnFindAfter($isGranted, $throwException)
     {
-        $this->listener->setRequest($this->request);
+        $this->requestStack->push($this->request);
         $object = new \stdClass();
-        $this->securityFacade->expects($this->once())
+        $this->requestAuthorizationChecker->expects($this->once())
             ->method('isRequestObjectIsGranted')
             ->with($this->request, $object)
             ->will($this->returnValue($isGranted));
@@ -77,7 +70,7 @@ class ApiEventListenerTest extends \PHPUnit_Framework_TestCase
 
     public function testOnFindAfterNoRequest()
     {
-        $this->securityFacade->expects($this->never())
+        $this->requestAuthorizationChecker->expects($this->never())
             ->method($this->anything());
 
         $object = new \stdClass();

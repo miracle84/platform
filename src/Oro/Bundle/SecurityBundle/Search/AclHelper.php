@@ -3,37 +3,47 @@
 namespace Oro\Bundle\SecurityBundle\Search;
 
 use Doctrine\Common\Collections\Expr\CompositeExpression;
-
 use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
+use Oro\Bundle\SearchBundle\Query\Criteria\ExpressionBuilder;
 use Oro\Bundle\SearchBundle\Query\Query;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\EventListener\SearchListener;
-use Oro\Bundle\SecurityBundle\ORM\Walker\OwnershipConditionDataBuilder;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SecurityBundle\ORM\Walker\AclConditionDataBuilderInterface;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
 
+/**
+ * Applies ACL check to search index queries
+ */
 class AclHelper
 {
     /** @var SearchMappingProvider */
     protected $mappingProvider;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
-    /** @var OwnershipConditionDataBuilder */
+    /** @var AclConditionDataBuilderInterface */
     protected $ownershipDataBuilder;
+
+    /** @var OwnershipMetadataProviderInterface */
+    protected $metadataProvider;
 
     /**
      * @param SearchMappingProvider         $mappingProvider
-     * @param SecurityFacade                $securityFacade
-     * @param OwnershipConditionDataBuilder $ownershipDataBuilder
+     * @param TokenAccessorInterface        $tokenAccessor
+     * @param AclConditionDataBuilderInterface $ownershipDataBuilder
+     * @param OwnershipMetadataProviderInterface $metadataProvider
      */
     public function __construct(
         SearchMappingProvider $mappingProvider,
-        SecurityFacade $securityFacade,
-        OwnershipConditionDataBuilder $ownershipDataBuilder
+        TokenAccessorInterface $tokenAccessor,
+        AclConditionDataBuilderInterface $ownershipDataBuilder,
+        OwnershipMetadataProviderInterface $metadataProvider
     ) {
-        $this->securityFacade       = $securityFacade;
-        $this->mappingProvider      = $mappingProvider;
+        $this->tokenAccessor = $tokenAccessor;
+        $this->mappingProvider = $mappingProvider;
         $this->ownershipDataBuilder = $ownershipDataBuilder;
+        $this->metadataProvider = $metadataProvider;
     }
 
     /**
@@ -55,9 +65,11 @@ class AclHelper
             foreach ($querySearchAliases as $entityAlias) {
                 $className = $this->mappingProvider->getEntityClass($entityAlias);
                 if ($className) {
-                    $ownerField = sprintf('%s_owner', $entityAlias);
+                    $metadata = $this->metadataProvider->getMetadata($className);
+                    $ownerField = sprintf('%s_%s', $entityAlias, $metadata->getOwnerFieldName());
+
                     $condition  = $this->ownershipDataBuilder->getAclConditionData($className, $permission);
-                    if (count($condition) === 0 || !($condition[0] === null && $condition[3] === null)) {
+                    if (count($condition) === 0 || !($condition[0] === null && $condition[2] === null)) {
                         $allowedAliases[] = $entityAlias;
 
                         // in case if we should not limit data for entity
@@ -84,7 +96,8 @@ class AclHelper
         }
 
         if (count($ownerExpressions) !== 0) {
-            $query->getCriteria()->andWhere(new CompositeExpression(CompositeExpression::TYPE_OR, $ownerExpressions));
+            $orExpression = new CompositeExpression(CompositeExpression::TYPE_OR, $ownerExpressions);
+            $query->getCriteria()->andWhere($orExpression);
         }
         $query->from($allowedAliases);
 
@@ -98,12 +111,12 @@ class AclHelper
      */
     protected function getOrganizationId()
     {
-        return $this->securityFacade->getOrganizationId();
+        return $this->tokenAccessor->getOrganizationId();
     }
 
     /**
      * @param Query $query
-     * @param $expr
+     * @param ExpressionBuilder $expr
      */
     protected function addOrganizationLimits(Query $query, $expr)
     {

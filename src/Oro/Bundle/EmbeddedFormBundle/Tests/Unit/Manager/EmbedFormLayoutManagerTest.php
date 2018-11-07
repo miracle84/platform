@@ -2,28 +2,27 @@
 
 namespace Oro\Bundle\EmbeddedFormBundle\Tests\Unit\Manager;
 
-use Symfony\Component\Form\Test\FormInterface;
-
+use Oro\Bundle\EmbeddedFormBundle\Entity\EmbeddedForm;
+use Oro\Bundle\EmbeddedFormBundle\Layout\Form\FormAccessor;
+use Oro\Bundle\EmbeddedFormBundle\Manager\EmbeddedFormManager;
+use Oro\Bundle\EmbeddedFormBundle\Manager\EmbedFormLayoutManager;
+use Oro\Bundle\EmbeddedFormBundle\Manager\SessionIdProviderInterface;
 use Oro\Component\Layout\LayoutBuilderInterface;
 use Oro\Component\Layout\LayoutContext;
 use Oro\Component\Layout\LayoutManager;
-use Oro\Bundle\EmbeddedFormBundle\Entity\EmbeddedForm;
-use Oro\Bundle\EmbeddedFormBundle\Manager\SessionIdProviderInterface;
-use Oro\Bundle\EmbeddedFormBundle\Manager\EmbeddedFormManager;
-use Oro\Bundle\EmbeddedFormBundle\Manager\EmbedFormLayoutManager;
-use Oro\Bundle\EmbeddedFormBundle\Layout\Form\FormAccessor;
+use Symfony\Component\Form\Test\FormInterface;
 
-class EmbedFormLayoutManagerTest extends \PHPUnit_Framework_TestCase
+class EmbedFormLayoutManagerTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_SESSION_FIELD_NAME = 'test_session_field';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $layoutManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $formManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $sessionIdProvider;
 
     /** @var EmbedFormLayoutManager */

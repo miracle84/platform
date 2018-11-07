@@ -1,14 +1,11 @@
-define([
-    'underscore',
-    'backbone',
-    'backgrid',
-    '../actions-panel',
-    'oroui/js/app/views/base/view'
-], function(_, Backbone, Backgrid, ActionsPanel, BaseView) {
+define(function(require) {
     'use strict';
 
     var ActionHeaderCell;
-    var $ = Backbone.$;
+    var Backgrid = require('backgrid');
+    var ActionsPanel = require('../actions-panel');
+    var BaseView = require('oroui/js/app/views/base/view');
+    var template = require('tpl!orodatagrid/templates/datagrid/action-header-cell.html');
 
     /**
      *
@@ -26,10 +23,21 @@ define([
         tagName: 'th',
 
         /** @property */
-        template: '#template-datagrid-action-header-cell',
+        template: template,
 
+        /** @property */
+        actionsPanel: ActionsPanel,
+
+        /** @property */
         options: {
             controls: '[data-toggle=dropdown]'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActionHeaderCell() {
+            ActionHeaderCell.__super__.constructor.apply(this, arguments);
         },
 
         initialize: function(options) {
@@ -57,6 +65,7 @@ define([
             }
             delete this.column;
             ActionHeaderCell.__super__.dispose.apply(this, arguments);
+            delete this.actionsPanel;
         },
 
         createActionsPanel: function() {
@@ -73,17 +82,17 @@ define([
                 );
             });
 
-            this.subview('actionsPanel', new ActionsPanel({'actions': actions}));
+            this.subview('actionsPanel', new this.actionsPanel({actions: actions}));
         },
 
         render: function() {
             var panel = this.subview('actionsPanel');
             this.$el.empty();
             if (panel.haveActions()) {
-                this.$el.append($(this.template).text());
+                this.$el.append(this.getTemplateFunction()(this.getTemplateData()));
                 panel.setElement(this.$('[data-action-panel]'));
                 panel.render();
-                panel.$el.children().wrap('<li/>');
+                panel.$el.children().addClass('dropdown-item').wrap('<li/>');
             }
             return this;
         },

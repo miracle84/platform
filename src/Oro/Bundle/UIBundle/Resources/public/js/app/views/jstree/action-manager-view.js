@@ -4,14 +4,32 @@ define(function(require) {
     var ActionManagerView;
     var $ = require('jquery');
     var _ = require('underscore');
-    var tools = require('oroui/js/tools');
+    var ActionManager = require('oroui/js/jstree-action-manager');
     var BaseView = require('oroui/js/app/views/base/view');
+    var config = require('module').config();
+    config = _.extend({
+        inlineActionsCount: null
+    }, config);
 
     ActionManagerView = BaseView.extend({
         /**
+         * @property {Function}
+         */
+        template: require('tpl!oroui/templates/jstree-actions-wrapper.html'),
+
+        /**
+         * @property {Function}
+         */
+        inlineTemplate: require('tpl!oroui/templates/jstree-inline-actions-wrapper.html'),
+
+        /**
          * @property {Object}
          */
-        options: {},
+        options: {
+            actions: {},
+            inlineActionsCount: config.inlineActionsCount,
+            inlineActionsElement: null
+        },
 
         /**
          * @property {Object}
@@ -25,6 +43,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function ActionManagerView() {
+            ActionManagerView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = $.extend(true, {}, this.options, options);
             this.options.$tree = this.$el.closest(this.elements.wrapper)
@@ -32,36 +57,44 @@ define(function(require) {
 
             ActionManagerView.__super__.initialize.apply(this, arguments);
 
-            this._loadModules();
+            this.options.$tree.one('ready.jstree.actions', _.bind(this.collectActions, this));
         },
 
-        /**
-         * Loads modules for each action
-         * */
-        _loadModules: function() {
-            var modules = {};
-            _.each(this.options.actions, function(action, key) {
-                modules[key] = action.view;
-            });
-            var self = this;
-            tools.loadModules(modules, function(modules) {
-                _.each(modules, function(View, key) {
-                    var options = _.extend({
-                        $tree: self.options.$tree,
-                        action: key
-                    }, _.omit(self.options.actions[key], 'view'));
-                    self.subview(key, new View(options));
+        collectActions: function() {
+            _.each(ActionManager.getActions(this.options), function(action) {
+                var options = _.extend({}, this.options.actions[action.name] || {}, {
+                    $tree: this.options.$tree,
+                    action: action.name
                 });
-                self.render();
-            });
+                this.subview(action.name, new action.view(options));
+            }, this);
+
+            this.render();
         },
 
         render: function() {
+            var template;
+            if (this.options.inlineActionsCount && this.subviews.length <= this.options.inlineActionsCount) {
+                template = 'inlineTemplate';
+            }
+            if (this.options.inlineActionsElement) {
+                this.setElement($(this.options.inlineActionsElement));
+            }
+
+            this.$el.append(this.getTemplateFunction(template)(this.getTemplateData()));
+
             var $actions = this.$el.find(this.elements.actions);
             _.each(this.subviews, function(subview) {
                 $actions.append(subview.render().$el);
             }, this);
+
             return this;
+        },
+
+        getTemplateData: function() {
+            return _.extend({}, this.options, {
+                subviewsCount: this.subviews.length
+            });
         },
 
         /**

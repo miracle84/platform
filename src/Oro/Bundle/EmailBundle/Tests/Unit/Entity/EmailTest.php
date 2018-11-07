@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Entity;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-
+use Oro\Bundle\ConfigBundle\Config\Tree\GroupNodeDefinition;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
 use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
-use Oro\Bundle\ConfigBundle\Config\Tree\GroupNodeDefinition;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 
 /**
  * Class EmailTest
@@ -18,7 +17,7 @@ use Oro\Bundle\UserBundle\Entity\User;
  *
  * @SuppressWarnings(PHPMD.TooManyMethods)
  */
-class EmailTest extends \PHPUnit_Framework_TestCase
+class EmailTest extends \PHPUnit\Framework\TestCase
 {
     public function testIdGetter()
     {

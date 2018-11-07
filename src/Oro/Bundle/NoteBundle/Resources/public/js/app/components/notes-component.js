@@ -27,6 +27,16 @@ define(function(require) {
             modules: {}
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function NotesComponent() {
+            NotesComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             options = options || {};
             this.processOptions(options);
@@ -52,7 +62,7 @@ define(function(require) {
             // map item routes to action url function
             _.each(options.notesOptions.routes, function(route, name) {
                 options.notesOptions.urls[name + 'Item'] = function(model) {
-                    return routing.generate(route, {'id': model.get('id')});
+                    return routing.generate(route, {id: model.get('id')});
                 };
             });
 
@@ -79,7 +89,7 @@ define(function(require) {
             notesOptions.collection = collection;
 
             // bind template for item view
-            notesOptions.itemView = notesOptions.itemView.extend({
+            notesOptions.itemView = notesOptions.itemView.extend({// eslint-disable-line oro/named-constructor
                 template: _.template($(notesOptions.itemTemplate).html())
             });
 
@@ -90,6 +100,9 @@ define(function(require) {
         registerWidget: function(options) {
             var list = this.list;
             mediator.execute('widgets:getByIdAsync', options.widgetId, function(widget) {
+                widget.getAction('expand_all', 'adopted', function(action) {
+                    action.on('click', _.bind(list.expandAll, list));
+                });
                 widget.getAction('collapse_all', 'adopted', function(action) {
                     action.on('click', _.bind(list.collapseAll, list));
                 });

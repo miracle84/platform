@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\SecurityBundle\Acl\Extension;
 
-use Symfony\Component\Security\Acl\Model\ObjectIdentityInterface;
-use Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException;
-use Symfony\Component\Security\Acl\Voter\FieldVote;
-use Symfony\Component\Security\Acl\Util\ClassUtils;
-
 use Oro\Bundle\SecurityBundle\Acl\Domain\DomainObjectWrapper;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdAccessor;
 use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
+use Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException;
+use Symfony\Component\Security\Acl\Model\ObjectIdentityInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Security\Acl\Voter\FieldVote;
 
 /**
  * This class provides a functionality to find ACL extension
@@ -123,7 +122,7 @@ class AclExtensionSelector
     /**
      * @param object $object
      *
-     * @return array
+     * @return array [id, type, field name]
      */
     protected function parseObject($object)
     {
@@ -136,17 +135,22 @@ class AclExtensionSelector
             $object = $object->getObjectIdentity();
         }
         if ($object instanceof ObjectIdentityInterface) {
-            $type = $object->getType();
             $id = $object->getIdentifier();
+            $type = $object->getType();
         } elseif ($object instanceof AclAnnotation) {
+            $id = $object->getType();
             $type = $object->getClass();
             if (empty($type)) {
                 $type = $object->getId();
             }
-            $id = $object->getType();
         } else {
-            $type = ClassUtils::getRealClass($object);
-            $id = $this->objectIdAccessor->getId($object);
+            try {
+                $id = $this->objectIdAccessor->getId($object);
+                $type = ClassUtils::getRealClass($object);
+            } catch (InvalidDomainObjectException $e) {
+                $id = null;
+                $type = null;
+            }
         }
 
         return [$id, $type, $fieldName];

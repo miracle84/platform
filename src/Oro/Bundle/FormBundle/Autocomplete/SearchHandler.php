@@ -6,12 +6,10 @@ use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
 use Oro\Bundle\SearchBundle\Engine\Indexer;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 class SearchHandler implements SearchHandlerInterface
 {
@@ -166,7 +164,7 @@ class SearchHandler implements SearchHandlerInterface
         }
 
         foreach ($this->getProperties() as $property) {
-            $result[$property] = $this->getPropertyValue($property, $item);
+            $result[$property] = (string)$this->getPropertyValue($property, $item);
         }
 
         return $result;

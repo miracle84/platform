@@ -1,22 +1,36 @@
 <?php
 
-namespace Oro\Component\Config\Tests\Unit;
+namespace Oro\Component\Layout\Tests\Unit\Config\Loader;
 
 use Oro\Component\Config\CumulativeResource;
 use Oro\Component\Config\Loader\CumulativeResourceLoaderCollection;
-use Oro\Component\Config\Loader\FolderContentCumulativeLoader;
 use Oro\Component\Layout\Config\Loader\LayoutUpdateCumulativeResourceLoader;
 use Oro\Component\Layout\Tests\Unit\Fixtures\Bundle\TestBundle\TestBundle;
+use Oro\Component\Testing\TempDirExtension;
 
-class LayoutUpdateCumulativeResourceLoaderTest extends \PHPUnit_Framework_TestCase
+class FolderContentsCumulativeLoaderTest extends \PHPUnit\Framework\TestCase
 {
+    use TempDirExtension;
+
+    /** @var string */
+    private $bundleDir;
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function setUp()
+    {
+        $tmpDir = $this->copyToTempDir('test_data', realpath(__DIR__ . '/../../Fixtures'));
+        $this->bundleDir = $tmpDir . DIRECTORY_SEPARATOR . 'Bundle' . DIRECTORY_SEPARATOR . 'TestBundle';
+    }
+
     public function testIsResourceFreshFileWasAdded()
     {
         $loader = new LayoutUpdateCumulativeResourceLoader('Resources/tmp/', -1, false);
 
         $bundle = new TestBundle();
         $bundleClass = get_class($bundle);
-        $bundleDir = dirname((new \ReflectionClass($bundle))->getFileName());
+        $bundleDir = $this->bundleDir;
         $appDir = $bundleDir . '/../../app';
         $appRootDir = realpath($appDir);
         $bundleAppDir = $appRootDir . '/Resources/TestBundle';
@@ -44,7 +58,7 @@ class LayoutUpdateCumulativeResourceLoaderTest extends \PHPUnit_Framework_TestCa
 
         $bundle = new TestBundle();
         $bundleClass = get_class($bundle);
-        $bundleDir = dirname((new \ReflectionClass($bundle))->getFileName());
+        $bundleDir = $this->bundleDir;
         $appDir = $bundleDir . '/../../app';
         $appRootDir = realpath($appDir);
         $bundleAppDir = $appRootDir . '/Resources/TestBundle';
@@ -74,7 +88,7 @@ class LayoutUpdateCumulativeResourceLoaderTest extends \PHPUnit_Framework_TestCa
 
         $bundle = new TestBundle();
         $bundleClass = get_class($bundle);
-        $bundleDir = dirname((new \ReflectionClass($bundle))->getFileName());
+        $bundleDir = $this->bundleDir;
         $appDir = $bundleDir . '/../../app';
         $appRootDir = realpath($appDir);
         $bundleAppDir = $appRootDir . '/Resources/TestBundle';

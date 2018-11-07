@@ -3,9 +3,10 @@
 namespace Oro\Bundle\ImportExportBundle\Tests\Unit\Reader;
 
 use Akeneo\Bundle\BatchBundle\Entity\StepExecution;
+use Oro\Bundle\ImportExportBundle\Context\ContextRegistry;
 use Oro\Bundle\ImportExportBundle\Reader\CsvFileReader;
 
-class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
+class CsvFileReaderTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var CsvFileReader
@@ -13,27 +14,54 @@ class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
     protected $reader;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var ContextRegistry|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $contextRegistry;
 
     protected function setUp()
     {
-        $this->contextRegistry = $this->getMockBuilder('Oro\Bundle\ImportExportBundle\Context\ContextRegistry')
+        $this->contextRegistry = $this->getMockBuilder(ContextRegistry::class)
             ->disableOriginalConstructor()
-            ->setMethods(array('getByStepExecution'))
+            ->setMethods(['getByStepExecution'])
             ->getMock();
 
         $this->reader = new CsvFileReader($this->contextRegistry);
     }
 
     /**
+     * @dataProvider readSeveralEntitiesProvider
+     *
+     * @param array $options
+     * @param array $expected
+     */
+    public function testEnsureThatHeaderIsCleared(array $options, array $expected)
+    {
+        $context = $this->getContextWithOptionsMock($options);
+        $stepExecution = $this->getMockStepExecution($context);
+        $this->reader->setStepExecution($stepExecution);
+        $this->reader->initializeByContext($context);
+
+        $stepExecution->expects($this->never())
+            ->method('addReaderWarning');
+        $data = [];
+        //ensure that header is cleared before read
+        $this->assertNull($this->reader->getHeader());
+
+        while (($dataRow = $this->reader->read($stepExecution)) !== null) {
+            $data[] = $dataRow;
+        }
+        
+        $this->assertNull($this->reader->getHeader()); //ensured that previous data was cleared
+        $this->assertEquals($expected, $data);
+    }
+
+    /**
      * @expectedException \Oro\Bundle\ImportExportBundle\Exception\InvalidConfigurationException
-     * @expectedExceptionMessage Configuration of CSV reader must contain "filePath".
+     * @expectedExceptionMessage Configuration of reader must contain "filePath".
      */
     public function testSetStepExecutionNoFileException()
     {
-        $context = $this->getContextWithOptionsMock(array());
+        $context = $this->getContextWithOptionsMock([]);
         $this->reader->setStepExecution($this->getMockStepExecution($context));
     }
 
@@ -43,24 +71,24 @@ class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
      */
     public function testUnknownFileException()
     {
-        $context = $this->getContextWithOptionsMock(array('filePath' => 'unknown_file.csv'));
+        $context = $this->getContextWithOptionsMock(['filePath' => 'unknown_file.csv']);
         $this->reader->setStepExecution($this->getMockStepExecution($context));
     }
 
     public function testSetStepExecution()
     {
-        $options = array(
+        $options = [
             'filePath' => __DIR__ . '/fixtures/import_correct.csv',
             'delimiter' => ',',
             'enclosure' => "'''",
             'escape' => ';',
             'firstLineIsHeader' => false,
-            'header' => array('one', 'two')
-        );
+            'header' => ['one', 'two']
+        ];
 
         $this->assertAttributeEquals(',', 'delimiter', $this->reader);
         $this->assertAttributeEquals('"', 'enclosure', $this->reader);
-        $this->assertAttributeEquals('\\', 'escape', $this->reader);
+        $this->assertAttributeEquals(chr(0), 'escape', $this->reader);
         $this->assertAttributeEquals(true, 'firstLineIsHeader', $this->reader);
         $this->assertAttributeEmpty('header', $this->reader);
 
@@ -72,6 +100,35 @@ class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
         $this->assertAttributeEquals($options['escape'], 'escape', $this->reader);
         $this->assertAttributeEquals($options['firstLineIsHeader'], 'firstLineIsHeader', $this->reader);
         $this->assertAttributeEquals($options['header'], 'header', $this->reader);
+    }
+
+    /** @return array */
+    public function readSeveralEntitiesProvider()
+    {
+        return [
+            [
+
+                'option' => ['filePath' => __DIR__ . '/fixtures/import_correct.csv'],
+                'expected' => [
+                    [
+                        'field_one' => '1',
+                        'field_two' => '2',
+                        'field_three' => '3',
+                    ],
+                    [
+                        'field_one' => 'test1',
+                        'field_two' => 'test2',
+                        'field_three' => 'test3',
+                    ],
+                    [],
+                    [
+                        'field_one' => 'after_new1',
+                        'field_two' => 'after_new2',
+                        'field_three' => 'after_new3',
+                    ],
+                ],
+            ]
+        ];
     }
 
     /**
@@ -90,7 +147,7 @@ class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
             ->method('incrementReadCount');
         $stepExecution->expects($this->never())
             ->method('addReaderWarning');
-        $data = array();
+        $data = [];
         while (($dataRow = $this->reader->read($stepExecution)) !== null) {
             $data[] = $dataRow;
         }
@@ -99,88 +156,105 @@ class CsvFileReaderTest extends \PHPUnit_Framework_TestCase
 
     public function optionsDataProvider()
     {
-        return array(
-            array(
-                array('filePath' => __DIR__ . '/fixtures/import_correct.csv'),
-                array(
-                    array(
+        return [
+            [
+                ['filePath' => __DIR__ . '/fixtures/import_correct.csv'],
+                [
+                    [
                         'field_one' => '1',
                         'field_two' => '2',
                         'field_three' => '3',
-                    ),
-                    array(
+                    ],
+                    [
                         'field_one' => 'test1',
                         'field_two' => 'test2',
                         'field_three' => 'test3',
-                    ),
-                    array(),
-                    array(
+                    ],
+                    [],
+                    [
                         'field_one' => 'after_new1',
                         'field_two' => 'after_new2',
                         'field_three' => 'after_new3',
-                    ),
-                )
-            ),
-            array(
-                array(
+                    ],
+                ]
+            ],
+            [
+                [
                     'filePath' => __DIR__ . '/fixtures/import_correct.csv',
-                    'header' => array('h1', 'h2', 'h3')
-                ),
-                array(
-                    array(
+                    'header' => ['h1', 'h2', 'h3']
+                ],
+                [
+                    [
                         'h1' => 'field_one',
                         'h2' => 'field_two',
                         'h3' => 'field_three'
-                    ),
-                    array(
+                    ],
+                    [
                         'h1' => '1',
                         'h2' => '2',
                         'h3' => '3',
-                    ),
-                    array(
+                    ],
+                    [
                         'h1' => 'test1',
                         'h2' => 'test2',
                         'h3' => 'test3',
-                    ),
-                    array(),
-                    array(
+                    ],
+                    [],
+                    [
                         'h1' => 'after_new1',
                         'h2' => 'after_new2',
                         'h3' => 'after_new3',
-                    ),
-                )
-            ),
-            array(
-                array(
+                    ],
+                ]
+            ],
+            [
+                [
                     'filePath' => __DIR__ . '/fixtures/import_correct.csv',
                     'firstLineIsHeader' => false
-                ),
-                array(
-                    array('field_one', 'field_two', 'field_three'),
-                    array('1', '2', '3'),
-                    array('test1', 'test2', 'test3'),
-                    array(),
-                    array('after_new1', 'after_new2', 'after_new3'),
-                )
-            )
-        );
+                ],
+                [
+                    ['field_one', 'field_two', 'field_three'],
+                    ['1', '2', '3'],
+                    ['test1', 'test2', 'test3'],
+                    [],
+                    ['after_new1', 'after_new2', 'after_new3'],
+                ]
+            ]
+        ];
+    }
+
+    public function testReadWithBackslashes()
+    {
+        $context = $this->getContextWithOptionsMock([
+            'filePath' => __DIR__ . '/fixtures/import_with_backslashes.csv',
+            'firstLineIsHeader' => false
+        ]);
+        $stepExecution = $this->getMockStepExecution($context);
+        $this->reader->setStepExecution($stepExecution);
+        $data = [];
+        $row = null;
+        while (($dataRow = $this->reader->read($stepExecution)) !== null) {
+            $data[] = $row = $dataRow;
+        }
+        $this->assertEquals([['\\', 'other field', '\\\\', '\\notquote', 'back \\slash inside', '\"quoted\"']], $data);
     }
 
     /**
-     * @expectedException Akeneo\Bundle\BatchBundle\Item\InvalidItemException
-     * @expectedExceptionMessage Expecting to get 3 columns, actually got 2
+     * @expectedException \Akeneo\Bundle\BatchBundle\Item\InvalidItemException
+     * @expectedExceptionMessage Expecting to get 3 columns, actually got 2.
+     * Message also contains additional rows info but it is not possible to add it in annotation
      */
     public function testReadError()
     {
-        $context = $this->getContextWithOptionsMock(array('filePath' => __DIR__ . '/fixtures/import_incorrect.csv'));
+        $context = $this->getContextWithOptionsMock(['filePath' => __DIR__ . '/fixtures/import_incorrect.csv']);
         $stepExecution = $this->getMockStepExecution($context);
         $this->reader->setStepExecution($stepExecution);
         $this->reader->read($stepExecution);
     }
 
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject $context
-     * @return \PHPUnit_Framework_MockObject_MockObject|StepExecution
+     * @param \PHPUnit\Framework\MockObject\MockObject $context
+     * @return \PHPUnit\Framework\MockObject\MockObject|StepExecution
      */
     protected function getMockStepExecution($context)
     {

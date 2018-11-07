@@ -17,20 +17,33 @@ define(function(require) {
         },
 
         options: {
-            workflow: null,
             template: null,
             data: {
-                'label': null,
-                'property_path': null,
-                'required': false
+                label: null,
+                property_path: null,
+                required: false
             }
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function AttributeFormOptionRowView() {
+            AttributeFormOptionRowView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             var template = this.options.template || $('#attribute-form-option-row-template').html();
             this.template = _.template(template);
-            this.options.data.view_id = this.cid;
+        },
+
+        update: function(data) {
+            this.options.data = data;
+            this.render();
         },
 
         triggerEdit: function(e) {
@@ -46,16 +59,12 @@ define(function(require) {
             });
             confirm.on('ok', _.bind(function() {
                 this.trigger('removeFormOption', this.options.data);
-                this.remove();
             }, this));
             confirm.open();
         },
 
-        render: function() {
-            var rowHtml = $(this.template(this.options.data));
-            this.$el.html(rowHtml);
-
-            return this;
+        getTemplateData: function() {
+            return this.options.data;
         }
     });
 

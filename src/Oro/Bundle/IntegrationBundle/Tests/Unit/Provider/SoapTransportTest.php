@@ -2,23 +2,22 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Provider;
 
-use Symfony\Component\HttpFoundation\ParameterBag;
-
 use Oro\Bundle\IntegrationBundle\Entity\Transport;
 use Oro\Bundle\IntegrationBundle\Provider\SOAPTransport;
+use Symfony\Component\HttpFoundation\ParameterBag;
 
-class SoapTransportTest extends \PHPUnit_Framework_TestCase
+class SoapTransportTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var SOAPTransport|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var SOAPTransport|\PHPUnit\Framework\MockObject\MockObject */
     protected $transport;
 
-    /** @var Transport|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Transport|\PHPUnit\Framework\MockObject\MockObject */
     protected $transportEntity;
 
     /** @var ParameterBag */
     protected $settings;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $soapClientMock;
 
     /**

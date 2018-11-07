@@ -1,5 +1,3 @@
-/*jslint nomen:true*/
-/*global define*/
 define(function(require) {
     'use strict';
 
@@ -26,6 +24,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function WorkflowActivateBtnView() {
+            WorkflowActivateBtnView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             WorkflowActivateBtnView.__super__.initialize.apply(this, arguments);
 
@@ -35,6 +40,24 @@ define(function(require) {
         delegateEvents: function() {
             WorkflowActivateBtnView.__super__.delegateEvents.apply(this, arguments);
             this.$el.on('click' + this.eventNamespace(), this.options.selectors.button, $.proxy(this.onClick, this));
+            this.$el.on({
+                activation_success: this.onActivationSuccess
+            }, this.options.selectors.button);
+        },
+
+        /**
+         * @param {jQuery.Event} e
+         * @param {Object} response
+         */
+        onActivationSuccess: function(e, response) {
+            mediator.once('page:afterChange', function() {
+                messenger.notificationFlashMessage('success', response.message);
+
+                if (response.deactivatedMessage) {
+                    messenger.notificationFlashMessage('info', response.deactivatedMessage);
+                }
+            });
+            mediator.execute('refreshPage');
         },
 
         /**
@@ -42,20 +65,7 @@ define(function(require) {
          */
         onClick: function(e) {
             e.preventDefault();
-
             var el = this.$el.find(this.options.selectors.button);
-
-            el.on('activation_success', function(e, response) {
-                mediator.once('page:afterChange', function() {
-                    messenger.notificationFlashMessage('success', response.message);
-
-                    if (response.deactivatedMessage) {
-                        messenger.notificationFlashMessage('info', response.deactivatedMessage);
-                    }
-                });
-                mediator.execute('refreshPage');
-            });
-
             activationHandler.call(el, el.prop('href'), el.data('name'), el.data('label'));
         },
 
@@ -65,6 +75,7 @@ define(function(require) {
             }
 
             this.$el.off('click' + this.eventNamespace());
+            this.$el.off('activation_success');
 
             WorkflowActivateBtnView.__super__.dispose.apply(this, arguments);
         }

@@ -7,12 +7,12 @@ use Oro\Bundle\ActionBundle\Model\Assembler\AttributeAssembler;
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\ActionBundle\Model\AttributeGuesser;
 
-class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
+class AttributeAssemblerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ActionData */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ActionData */
     protected $actionData;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|AttributeGuesser */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AttributeGuesser */
     protected $attributeGuesser;
 
     /** @var AttributeAssembler */
@@ -178,7 +178,7 @@ class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
         $attributeConfiguration = current($configuration);
         if ($guessedParameters && array_key_exists('property_path', $attributeConfiguration)) {
             $this->attributeGuesser->expects($this->any())
-                ->method('guessAttributeParameters')
+                ->method('guessParameters')
                 ->with('stdClass', $attributeConfiguration['property_path'])
                 ->willReturn($guessedParameters);
         }

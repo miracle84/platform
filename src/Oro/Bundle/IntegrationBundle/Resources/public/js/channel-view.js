@@ -8,12 +8,14 @@ define([
 ], function($, Backbone, _, __, mediator, DeleteConfirmation) {
     'use strict';
 
+    var ChanelView;
+
     /**
      * @export  orointegration/js/channel-view
      * @class   orointegration.channelView
      * @extends Backbone.View
      */
-    return Backbone.View.extend({
+    ChanelView = Backbone.View.extend({
         /**
          * @const
          */
@@ -24,11 +26,18 @@ define([
          * Depends on what exact field changed
          */
         fieldsSets: {
-            type:          [],
+            type: [],
             transportType: []
         },
 
         requiredOptions: ['transportTypeSelector', 'typeSelector', 'fieldsSets', 'formSelector'],
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ChanelView() {
+            ChanelView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @param options Object
@@ -72,8 +81,8 @@ define([
                 var prevVal = $el.data('current');
                 if (!this.isEmpty()) {
                     var confirm = new DeleteConfirmation({
-                        title:   __('oro.integration.change_type'),
-                        okText:  __('Yes'),
+                        title: __('oro.integration.change_type'),
+                        okText: __('Yes'),
                         content: __('oro.integration.submit')
                     });
                     confirm.on('ok', _.bind(function() {
@@ -143,4 +152,6 @@ define([
             $el.data('current', $el.val());
         }
     });
+
+    return ChanelView;
 });

@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\SearchBundle\Migrations\Schema\v1_0;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class OroSearchBundle implements Migration, ContainerAwareInterface
 {
@@ -105,7 +104,7 @@ class OroSearchBundle implements Migration, ContainerAwareInterface
 
         /** Generate table oro_search_index_text **/
         $table = $schema->createTable('oro_search_index_text');
-        $table->addOption('engine' , 'MyISAM');
+        $table->addOption('engine', 'MyISAM');
         $table->addColumn('id', 'integer', ['autoincrement' => true]);
         $table->addColumn('item_id', 'integer', []);
         $table->addColumn('field', 'string', ['length' => 250]);

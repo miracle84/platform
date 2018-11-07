@@ -2,11 +2,10 @@
 namespace Oro\Bundle\InstallerBundleTests\Unit;
 
 use Oro\Bundle\InstallerBundle\ScriptManager;
-
 use Oro\Bundle\InstallerBundle\Tests\Unit\Fixture\src\TestPackage\src\Test1Bundle\TestPackageTest1Bundle;
 use Oro\Bundle\InstallerBundle\Tests\Unit\Fixture\src\TestPackage\src\Test2Bundle\TestPackageTest2Bundle;
 
-class ScriptManagerTest extends \PHPUnit_Framework_TestCase
+class ScriptManagerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ScriptManager

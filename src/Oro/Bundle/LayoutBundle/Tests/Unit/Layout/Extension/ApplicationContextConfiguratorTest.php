@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout\Extension;
 
+use Oro\Bundle\LayoutBundle\Layout\Extension\ApplicationContextConfigurator;
 use Oro\Component\Layout\LayoutContext;
 
-use Oro\Bundle\LayoutBundle\Layout\Extension\ApplicationContextConfigurator;
-
-class ApplicationContextConfiguratorTest extends \PHPUnit_Framework_TestCase
+class ApplicationContextConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $kernel;
 
     /** @var ApplicationContextConfigurator */

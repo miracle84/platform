@@ -2,14 +2,16 @@
 
 namespace Oro\Bundle\BatchBundle\ORM\QueryBuilder;
 
+use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query\Expr;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\BatchBundle\Event\CountQueryOptimizationEvent;
+use Oro\Bundle\EntityBundle\Helper\RelationHelper;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
+ * This class optimizes query builder for count calculation
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class CountQueryBuilderOptimizer
@@ -19,6 +21,9 @@ class CountQueryBuilderOptimizer
 
     /** @var EventDispatcherInterface */
     protected $eventDispatcher;
+
+    /** @var RelationHelper */
+    protected $relationHelper;
 
     /** @var QueryOptimizationContext */
     protected $context;
@@ -42,6 +47,14 @@ class CountQueryBuilderOptimizer
     public function setEventDispatcher(EventDispatcherInterface $eventDispatcher)
     {
         $this->eventDispatcher = $eventDispatcher;
+    }
+
+    /**
+     * @param RelationHelper $relationHelper
+     */
+    public function setRelationHelper(RelationHelper $relationHelper)
+    {
+        $this->relationHelper = $relationHelper;
     }
 
     /**
@@ -86,6 +99,7 @@ class CountQueryBuilderOptimizer
         $originalQueryParts = $this->context->getOriginalQueryBuilder()->getDQLParts();
 
         $fieldsToSelect = [];
+        $usedAliases = [];
         if ($originalQueryParts['groupBy']) {
             $groupBy            = (array)$originalQueryParts['groupBy'];
             $groupByFields      = $this->getSelectFieldFromGroupBy($groupBy);
@@ -94,6 +108,7 @@ class CountQueryBuilderOptimizer
                 $alias                = '_groupByPart' . $key;
                 $usedGroupByAliases[] = $alias;
                 $fieldsToSelect[]     = $groupByField . ' as ' . $alias;
+                $usedAliases[$groupByField] = $alias;
             }
             $optimizedQueryBuilder->groupBy(implode(', ', $usedGroupByAliases));
         } elseif (!$originalQueryParts['where'] && $originalQueryParts['having']) {
@@ -104,8 +119,10 @@ class CountQueryBuilderOptimizer
         }
 
         if ($originalQueryParts['having']) {
+            $having = $this->qbTools->replaceAliasesWithFields($originalQueryParts['having']);
+
             $optimizedQueryBuilder->having(
-                $this->qbTools->replaceAliasesWithFields($originalQueryParts['having'])
+                $this->prepareHavingClause($optimizedQueryBuilder, $usedAliases, $having)
             );
         }
 
@@ -126,6 +143,31 @@ class CountQueryBuilderOptimizer
         $this->qbTools->fixUnusedParameters($optimizedQueryBuilder);
 
         return $optimizedQueryBuilder;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param array $usedAliases
+     * @param string $having
+     * @return string
+     */
+    private function prepareHavingClause(QueryBuilder $qb, array $usedAliases, $having)
+    {
+        $platform = $qb->getEntityManager()
+            ->getConnection()
+            ->getDatabasePlatform();
+
+        if ($platform instanceof MySqlPlatform) {
+            $fields = $this->qbTools->getFieldsWithoutAggregateFunctions($having);
+
+            foreach ($fields as $field) {
+                if (isset($usedAliases[$field])) {
+                    $having = str_replace($field, $usedAliases[$field], $having);
+                }
+            }
+        }
+
+        return $having;
     }
 
     /**
@@ -196,6 +238,15 @@ class CountQueryBuilderOptimizer
                 $groupByAliases,
                 $useNonSymmetricJoins
             );
+            $relationJoinAliases = $this->addRequiredJoins(
+                $requiredJoinAliases,
+                $fromQueryPart,
+                $this->removeAliasesFromQueryJoinParts($joinQueryPart, $collectedAliases),
+                $groupByAliases,
+                false
+            );
+
+            $joinAliases = array_unique(array_merge($joinAliases, $relationJoinAliases));
         }
 
         foreach ($rootAliases as $rootAlias) {
@@ -414,11 +465,16 @@ class CountQueryBuilderOptimizer
     {
         $associations = $this->context->getClassMetadata($entityClass)
             ->getAssociationsByTargetClass($targetEntityClass);
-        if (!array_key_exists($associationName, $associations)) {
-            return 0;
+
+        if (array_key_exists($associationName, $associations)) {
+            return $associations[$associationName]['type'];
         }
 
-        return $associations[$associationName]['type'];
+        if ($this->relationHelper && $this->relationHelper->hasVirtualRelations($entityClass)) {
+            return $this->relationHelper->getMetadataTypeForVirtualJoin($entityClass, $targetEntityClass);
+        }
+
+        return 0;
     }
 
     /**

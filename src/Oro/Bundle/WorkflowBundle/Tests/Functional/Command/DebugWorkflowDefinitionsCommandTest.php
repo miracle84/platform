@@ -2,21 +2,16 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Functional\Command;
 
-use Symfony\Component\Translation\TranslatorInterface;
-use Symfony\Component\Yaml\Yaml;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
 use Oro\Bundle\WorkflowBundle\Command\DebugWorkflowDefinitionsCommand;
 use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowDefinitionRepository;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadWorkflowDefinitions;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadWorkflowDefinitionsWithGroups;
+use Symfony\Component\Translation\TranslatorInterface;
+use Symfony\Component\Yaml\Yaml;
 
-/**
- * @dbIsolation
- */
 class DebugWorkflowDefinitionsCommandTest extends WebTestCase
 {
     protected function setUp()
@@ -33,7 +28,7 @@ class DebugWorkflowDefinitionsCommandTest extends WebTestCase
     {
         $workflows = $this->getWorkflowDefinitionRepository()->findAll();
 
-        $result = $this->runCommand(DebugWorkflowDefinitionsCommand::NAME, ['--no-ansi']);
+        $result = $this->runCommand(DebugWorkflowDefinitionsCommand::NAME);
 
         /** @var TranslatorInterface $translator */
         $translator = $this->getContainer()->get('translator');
@@ -64,7 +59,7 @@ class DebugWorkflowDefinitionsCommandTest extends WebTestCase
         /** @var WorkflowDefinition $initialWorkflow */
         $initialWorkflow = $this->getWorkflowDefinitionRepository()->findOneBy(['name' => $workflowName]);
 
-        $result = $this->runCommand(DebugWorkflowDefinitionsCommand::NAME, [$workflowName, '--no-ansi']);
+        $result = $this->runCommand(DebugWorkflowDefinitionsCommand::NAME, [$workflowName], false);
 
         if ($exists) {
             $this->assertNotContains('No workflow definitions found.', $result);

@@ -2,40 +2,40 @@
 
 namespace Oro\Bundle\OrganizationBundle\Form\Extension;
 
+use Doctrine\Common\Util\ClassUtils;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\EntityConfigBundle\Tools\ConfigHelper;
+use Oro\Bundle\FormBundle\Form\DataTransformer\EntityToIdTransformer;
+use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
+use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
+use Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\OrganizationBundle\Entity\Repository\BusinessUnitRepository;
+use Oro\Bundle\OrganizationBundle\Form\EventListener\OwnerFormSubscriber;
+use Oro\Bundle\OrganizationBundle\Form\Type\BusinessUnitSelectAutocomplete;
+use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
+use Oro\Bundle\SecurityBundle\Acl\Domain\OneShotIsGrantedObserver;
+use Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SecurityBundle\Owner\EntityOwnerAccessor;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataInterface;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
+use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Bundle\UserBundle\Form\Type\UserAclSelectType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractTypeExtension;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilder;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormError;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
-
-use Doctrine\Common\Util\ClassUtils;
-
-use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
-use Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\OrganizationBundle\Form\EventListener\OwnerFormSubscriber;
-
-use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
-use Oro\Bundle\SecurityBundle\Acl\Domain\OneShotIsGrantedObserver;
-use Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\SecurityBundle\Owner\EntityOwnerAccessor;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataInterface;
-use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
-
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\EntityConfigBundle\Tools\ConfigHelper;
-
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\FormBundle\Form\DataTransformer\EntityToIdTransformer;
-use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
  * Class OwnerFormExtension
@@ -48,14 +48,17 @@ class OwnerFormExtension extends AbstractTypeExtension
     /** @var DoctrineHelper */
     protected $doctrineHelper;
 
-    /** @var OwnershipMetadataProvider */
+    /** @var OwnershipMetadataProviderInterface */
     protected $ownershipMetadataProvider;
 
     /** @var BusinessUnitManager */
     protected $businessUnitManager;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var string */
     protected $fieldName;
@@ -85,30 +88,33 @@ class OwnerFormExtension extends AbstractTypeExtension
     protected $entityOwnerAccessor;
 
     /**
-     * @param DoctrineHelper            $doctrineHelper
-     * @param OwnershipMetadataProvider $ownershipMetadataProvider
-     * @param BusinessUnitManager       $businessUnitManager
-     * @param SecurityFacade            $securityFacade
-     * @param AclVoter                  $aclVoter
-     * @param OwnerTreeProvider         $treeProvider
-     * @param EntityOwnerAccessor       $entityOwnerAccessor
+     * @param DoctrineHelper                     $doctrineHelper
+     * @param OwnershipMetadataProviderInterface $ownershipMetadataProvider
+     * @param BusinessUnitManager                $businessUnitManager
+     * @param AuthorizationCheckerInterface      $authorizationChecker
+     * @param TokenAccessorInterface             $tokenAccessor
+     * @param AclVoter                           $aclVoter
+     * @param OwnerTreeProvider                  $treeProvider
+     * @param EntityOwnerAccessor                $entityOwnerAccessor
      */
     public function __construct(
         DoctrineHelper $doctrineHelper,
-        OwnershipMetadataProvider $ownershipMetadataProvider,
+        OwnershipMetadataProviderInterface $ownershipMetadataProvider,
         BusinessUnitManager $businessUnitManager,
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor,
         AclVoter $aclVoter,
         OwnerTreeProvider $treeProvider,
         EntityOwnerAccessor $entityOwnerAccessor
     ) {
-        $this->doctrineHelper            = $doctrineHelper;
+        $this->doctrineHelper = $doctrineHelper;
         $this->ownershipMetadataProvider = $ownershipMetadataProvider;
-        $this->businessUnitManager       = $businessUnitManager;
-        $this->securityFacade            = $securityFacade;
-        $this->aclVoter                  = $aclVoter;
-        $this->treeProvider              = $treeProvider;
-        $this->entityOwnerAccessor       = $entityOwnerAccessor;
+        $this->businessUnitManager = $businessUnitManager;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
+        $this->aclVoter = $aclVoter;
+        $this->treeProvider = $treeProvider;
+        $this->entityOwnerAccessor = $entityOwnerAccessor;
     }
 
     /**
@@ -143,7 +149,7 @@ class OwnerFormExtension extends AbstractTypeExtension
         }
 
         $metadata = $this->getMetadata($dataClassName);
-        if (!$metadata || $metadata->isGlobalLevelOwned()) {
+        if (!$metadata || $metadata->isOrganizationOwned()) {
             return;
         }
 
@@ -152,10 +158,10 @@ class OwnerFormExtension extends AbstractTypeExtension
         $this->checkIsGranted('CREATE', 'entity:' . $dataClassName);
         $defaultOwner = null;
 
-        if ($metadata->isBasicLevelOwned() && $this->isAssignGranted) {
+        if ($metadata->isUserOwned() && $this->isAssignGranted) {
             $this->addUserOwnerField($builder, $dataClassName);
             $defaultOwner = $user;
-        } elseif ($metadata->isLocalLevelOwned()) {
+        } elseif ($metadata->isBusinessUnitOwned()) {
             $this->addBusinessUnitOwnerField($builder, $user, $dataClassName);
             if (!$this->checkIsBusinessUnitEntity($dataClassName)) {
                 $defaultOwner = $this->getCurrentBusinessUnit(
@@ -186,7 +192,7 @@ class OwnerFormExtension extends AbstractTypeExtension
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
@@ -239,7 +245,7 @@ class OwnerFormExtension extends AbstractTypeExtension
             $metadata = $this->getMetadata($form->getNormData());
             if ($metadata instanceof OwnershipMetadata) {
                 $isCorrect = true;
-                if ($metadata->isBasicLevelOwned()) {
+                if ($metadata->isUserOwned()) {
                     $isCorrect = $this->businessUnitManager->canUserBeSetAsOwner(
                         $this->getCurrentUser(),
                         $newOwner,
@@ -247,7 +253,7 @@ class OwnerFormExtension extends AbstractTypeExtension
                         $this->treeProvider,
                         $this->getOrganization()
                     );
-                } elseif ($metadata->isLocalLevelOwned()) {
+                } elseif ($metadata->isBusinessUnitOwned()) {
                     $isCorrect = $this->isBusinessUnitAvailableForCurrentUser($newOwner);
                 }
 
@@ -289,9 +295,9 @@ class OwnerFormExtension extends AbstractTypeExtension
                     $form->remove($this->fieldName);
                 }
                 if ($this->isAssignGranted) {
-                    if ($metadata->isBasicLevelOwned()) {
+                    if ($metadata->isUserOwned()) {
                         $this->addUserOwnerField($form, $dataClassName, $permission, $owner, $entity->getId());
-                    } elseif ($metadata->isLocalLevelOwned()) {
+                    } elseif ($metadata->isBusinessUnitOwned()) {
                         $this->addBusinessUnitOwnerField($form, $this->getCurrentUser(), $dataClassName);
                     }
                 }
@@ -343,7 +349,7 @@ class OwnerFormExtension extends AbstractTypeExtension
 
             $builder->add(
                 $this->fieldName,
-                'oro_user_acl_select',
+                UserAclSelectType::class,
                 $options
             );
         }
@@ -395,15 +401,15 @@ class OwnerFormExtension extends AbstractTypeExtension
              * If assign permission is granted, and user able to see business units, showing all available.
              * If not able to see, render default in hidden field.
              */
-            if ($this->securityFacade->isGranted('VIEW', 'entity:' . BusinessUnit::class)) {
+            if ($this->authorizationChecker->isGranted('VIEW', 'entity:' . BusinessUnit::class)) {
                 $builder->add(
                     $this->fieldName,
-                    'oro_type_business_unit_select_autocomplete',
+                    BusinessUnitSelectAutocomplete::class,
                     [
                         'required' => false,
                         'label' => $this->fieldLabel,
                         'autocomplete_alias' => 'business_units_owner_search_handler',
-                        'empty_value' => $emptyValueLabel,
+                        'placeholder' => $emptyValueLabel,
                         'configs' => [
                             'multiple' => false,
                             'allowClear'  => false,
@@ -432,12 +438,18 @@ class OwnerFormExtension extends AbstractTypeExtension
             if (count($businessUnits)) {
                 $builder->add(
                     $this->fieldName,
-                    'entity',
+                    EntityType::class,
                     array_merge(
                         [
-                            'class'                => 'OroOrganizationBundle:BusinessUnit',
+                            'class'                => BusinessUnit::class,
                             'property'             => 'name',
-                            'choices'              => $businessUnits,
+                            'query_builder'        => function (BusinessUnitRepository $repository) use ($user) {
+                                $qb = $repository->createQueryBuilder('bu');
+                                $qb->andWhere($qb->expr()->isMemberOf(':user', 'bu.users'));
+                                $qb->setParameter('user', $user);
+
+                                return $qb;
+                            },
                             'mapped'               => true,
                             'label'                => $this->fieldLabel,
                             'translatable_options' => false
@@ -487,7 +499,7 @@ class OwnerFormExtension extends AbstractTypeExtension
     protected function getCurrentUser()
     {
         if (null === $this->currentUser) {
-            $user = $this->securityFacade->getLoggedUser();
+            $user = $this->tokenAccessor->getUser();
             if ($user && is_object($user) && $user instanceof User) {
                 $this->currentUser = $user;
             }
@@ -527,7 +539,7 @@ class OwnerFormExtension extends AbstractTypeExtension
     {
         $observer = new OneShotIsGrantedObserver();
         $this->aclVoter->addOneShotIsGrantedObserver($observer);
-        $this->isAssignGranted = $this->securityFacade->isGranted($permission, $object);
+        $this->isAssignGranted = $this->authorizationChecker->isGranted($permission, $object);
         $this->accessLevel = $observer->getAccessLevel();
     }
 
@@ -592,12 +604,12 @@ class OwnerFormExtension extends AbstractTypeExtension
     }
 
     /**
-     * Get organization from security facade
+     * Gets organization from the current security token
      *
      * @return bool|Organization
      */
     protected function getOrganization()
     {
-        return $this->securityFacade->getOrganization();
+        return $this->tokenAccessor->getOrganization();
     }
 }

@@ -5,49 +5,52 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Form\Type;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr;
-
-use Symfony\Component\Form\ChoiceList\View\ChoiceView;
-use Symfony\Component\Form\FormView;
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-use Symfony\Component\Translation\TranslatorInterface;
-
+use Oro\Bundle\TranslationBundle\Translation\Translator;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
-use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Form\Type\WorkflowStepSelectType;
+use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\ChoiceList\View\ChoiceView;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
+use Symfony\Component\Translation\MessageCatalogueInterface;
 
 class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|WorkflowRegistry */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|WorkflowRegistry */
     protected $workflowRegistry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EntityRepository */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityRepository */
     protected $repository;
 
     /** @var WorkflowStepSelectType */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|Translator */
     protected $translator;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject|MessageCatalogueInterface */
+    protected $translatorCatalogue;
 
     protected function setUp()
     {
-        $this->workflowRegistry = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->workflowRegistry = $this->createMock(WorkflowRegistry::class);
 
-        $this->translator = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
+        $this->translatorCatalogue = $this->createMock(MessageCatalogueInterface::class);
+
+        $this->translator = $this->createMock(Translator::class);
+        $this->translator->expects($this->any())->method('getCatalogue')->willReturn($this->translatorCatalogue);
         $this->translator->expects($this->any())->method('trans')->willReturnCallback(
             function ($label) {
                 return 'transtaled_' . $label;
             }
         );
 
-        $this->repository = $this->getMockBuilder('Doctrine\ORM\EntityRepository')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->repository = $this->createMock(EntityRepository::class);
 
         $this->type = new WorkflowStepSelectType($this->workflowRegistry, $this->translator);
 
@@ -86,7 +89,15 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
             ->getMock();
         $mockEntityType->expects($this->any())->method('getName')->willReturn('entity');
 
-        return [new PreloadedExtension([$mockEntityType->getName() => $mockEntityType], [])];
+        return [
+            new PreloadedExtension(
+                [
+                    $this->type,
+                    EntityType::class => $mockEntityType
+                ],
+                []
+            )
+        ];
     }
 
     public function testGetName()
@@ -96,7 +107,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
 
     public function testGetParent()
     {
-        $this->assertEquals('entity', $this->type->getParent());
+        $this->assertEquals(EntityType::class, $this->type->getParent());
     }
 
     /**
@@ -109,7 +120,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
      */
     public function testNormalizersException(array $options)
     {
-        $this->factory->create($this->type, null, $options);
+        $this->factory->create(WorkflowStepSelectType::class, null, $options);
     }
 
     public function testNormalizersByWorkflowName()
@@ -124,7 +135,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
 
         $this->assertQueryBuilderCalled();
 
-        $this->factory->create($this->type, null, $options);
+        $this->factory->create(WorkflowStepSelectType::class, null, $options);
     }
 
     public function testNormalizersByEntityClass()
@@ -139,18 +150,20 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
 
         $this->assertQueryBuilderCalled();
 
-        $this->factory->create($this->type, null, $options);
+        $this->factory->create(WorkflowStepSelectType::class, null, $options);
     }
 
     public function testFinishViewWithOneWorkflow()
     {
-        $step1 = $this->getWorkflowDefinitionAwareClassMock('Oro\Bundle\WorkflowBundle\Entity\WorkflowStep');
-        $step2 = $this->getWorkflowDefinitionAwareClassMock('Oro\Bundle\WorkflowBundle\Entity\WorkflowStep');
+        $step1 = $this->getWorkflowDefinitionAwareClassMock(WorkflowStep::class);
+        $step2 = $this->getWorkflowDefinitionAwareClassMock(WorkflowStep::class);
+        $step3 = $this->getWorkflowDefinitionAwareClassMock(WorkflowStep::class);
 
         $view = new FormView();
         $view->vars['choices'] = [
             new ChoiceView($step1, 'step1', 'step1label'),
             new ChoiceView($step2, 'step2', 'step2label'),
+            new ChoiceView($step3, 'step3', 'step3label')
         ];
 
         $this->workflowRegistry->expects($this->once())
@@ -158,14 +171,21 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
             ->with('test')
             ->willReturn(new \stdClass());
 
-        $this->type->finishView(
-            $view,
-            $this->createMock('Symfony\Component\Form\Test\FormInterface'),
-            ['workflow_name' => 'test']
-        );
+        $this->translatorCatalogue->expects($this->exactly(3))
+            ->method('has')
+            ->willReturnMap(
+                [
+                    ['step1label', WorkflowTranslationHelper::TRANSLATION_DOMAIN, true],
+                    ['step2label', WorkflowTranslationHelper::TRANSLATION_DOMAIN, false],
+                    ['step3label', WorkflowTranslationHelper::TRANSLATION_DOMAIN, true]
+                ]
+            );
+
+        $this->type->finishView($view, $this->createMock(FormInterface::class), ['workflow_name' => 'test']);
 
         $this->assertEquals('transtaled_step1label', $view->vars['choices'][0]->label);
-        $this->assertEquals('transtaled_step2label', $view->vars['choices'][1]->label);
+        $this->assertEquals('step2label', $view->vars['choices'][1]->label);
+        $this->assertEquals('transtaled_step3label', $view->vars['choices'][2]->label);
     }
 
     public function testFinishViewWithMoreThanOneWorkflow()
@@ -183,6 +203,8 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
             ->method('getActiveWorkflowsByEntityClass')
             ->with('\stdClass')
             ->willReturn(new ArrayCollection([new \stdClass(), new \stdClass()]));
+
+        $this->translatorCatalogue->expects($this->any())->method('has')->willReturn(true);
 
         $this->type->finishView(
             $view,
@@ -211,7 +233,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
      * @param string $class
      * @param string $definitionLabel
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject|Workflow|WorkflowStep
+     * @return \PHPUnit\Framework\MockObject\MockObject|Workflow|WorkflowStep
      */
     protected function getWorkflowDefinitionAwareClassMock($class, $definitionLabel = null)
     {
@@ -230,7 +252,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
     {
         $func = new Expr\Func('ws.definition IN', ':workflowDefinitions');
 
-        /** @var Expr|\PHPUnit_Framework_MockObject_MockObject $expr */
+        /** @var Expr|\PHPUnit\Framework\MockObject\MockObject $expr */
         $expr = $this->getMockBuilder('Doctrine\ORM\Query\Expr')->disableOriginalConstructor()->getMock();
         $expr->expects($this->once())
             ->method('in')
@@ -272,7 +294,7 @@ class WorkflowStepSelectTypeTest extends FormIntegrationTestCase
             [
                 [
                     'class' => 'OroWorkflowBundle:WorkflowStep',
-                    'property' => 'label'
+                    'choice_label' => 'label'
                 ]
             ]
         ];

@@ -3,7 +3,6 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 
 use Oro\Bundle\EmailBundle\Async\Manager\AssociationManager;
 use Oro\Bundle\EmailBundle\Async\Topics;
-
 use Oro\Bundle\EmailBundle\Async\UpdateEmailOwnerAssociationMessageProcessor;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Job\JobRunner;
@@ -11,7 +10,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -28,7 +27,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[UpdateEmailOwnerAssociationMessageProcessor] Got invalid message: "{"ownerId":[1]}"')
+            ->with('Got invalid message')
         ;
 
         $message = new NullMessage();
@@ -53,7 +52,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[UpdateEmailOwnerAssociationMessageProcessor] Got invalid message: "{"ownerClass":"class"}"')
+            ->with('Got invalid message')
         ;
 
         $message = new NullMessage();
@@ -128,7 +127,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -136,7 +135,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|AssociationManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|AssociationManager
      */
     private function createAssociationManagerMock()
     {
@@ -144,7 +143,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -152,7 +151,7 @@ class UpdateEmailOwnerAssociationMessageProcessorTest extends \PHPUnit_Framework
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {

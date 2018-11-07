@@ -1,43 +1,70 @@
 <% obj.attributesTemplate = function(attributes) {
     _.each(attributes, function(attribute, name) { %>
-        <%= name %><% if (!_.isNull(attribute)) { %>="<%= attribute %>"<% } %>
+        <%- name %><% if (!_.isNull(attribute)) { %>="<%- attribute %>"<% } %>
     <% });
 } %>
 
+<%
+    actionClassNames = [];
+    actionClassNames.push('action');
+    if (className) {
+        actionClassNames.push(className);
+    }
+    if (launcherMode == 'icon-only') {
+        actionClassNames.push('btn-icon');
+    }
+    if (!enabled) {
+        actionClassNames.push('disabled');
+    }
+    if (launcherMode != '') {
+        actionClassNames.push('mode-' +  launcherMode);
+    }
+    if (links) {
+        actionClassNames.push('dropdown-toggle');
+    }
+%>
+
+<% var togglerId = _.uniqueId('dropdown-') %>
+
 <% if (links) { %><div class="btn-group"><% } %>
 
-<<%= tagName %>
+<<%- tagName %>
     <% if (tagName == "a") { %> href="<%= link %>"<% } %>
-    class="action
-        <%= className ? " " + className : "" %>
-        <%= !enabled ? " disabled" : "" %>
-        <% if (links) { %> dropdown-toggle<% } %>
-    "
+    class="<%= actionClassNames.join(' ') %>"
+    title="<%- title %>"
     <% attributesTemplate(attributes) %>
-    title="<%= title %>"
-    <% if (links) { %> data-toggle="dropdown"<% } %>>
-    <% if (icon) { %>
-        <i class="fa-<%= icon %> hide-text"><%= label %></i><% if (!iconHideText) { %><%= label %><% } %>
-    <% } else { %>
-        <% if (iconClassName) { %><i class="<%= iconClassName %>"></i><% } %>
-        <%= label %>
+    <% if (links) { %> data-toggle="dropdown" role="button" id="<%- togglerId %>"
+        aria-haspopup="true" aria-expanded="false" aria-label="<%- label %>"<% } %>>
+
+    <% if (launcherMode == 'icon-text') { %>
+        <span class="icon <%- iconClassName ? iconClassName : 'fa-' + icon %>" aria-hidden="true"></span>
+        <%- label %>
+    <% } else if (launcherMode == 'icon-only') { %>
+        <span class="icon <%- iconClassName ? iconClassName : 'fa-' + icon %>" aria-hidden="true"></span>
+    <% } else if (launcherMode == 'text-only') { %>
+        <% if (iconClassName) { %><span class="icon <%- iconClassName %>" aria-hidden="true"></span><% } %>
+        <%- label %>
     <% } %>
-    <% if (links) { %><i class="caret"></i><% } %>
 </<%= tagName %>>
 
 <% if (links) { %>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu" aria-labelledby="<%- togglerId %>">
     <% _.each(links, function(item, index) { %>
-        <li><a href="<%= link %>" data-index="<%= index %>" title="<%= item.label %>"
+        <li>
+            <a href="<%- link %>" class="dropdown-item" data-index="<%- index %>" title="<%- item.label %>"
             <% if (item.attributes) { attributesTemplate(item.attributes); } %>
-            data-key="<%= item.key %>">
-        <% if (item.icon) { %>
-            <i class="fa-<%= item.icon %> hide-text"><%= item.label %></i><% if (!iconHideText) { %><%= item.label %><% } %>
-        <% } else { %>
-            <% if (item.iconClassName) { %><i class="<%= item.iconClassName %>"></i><% } %>
-            <%= item.label %>
-        <% } %>
-        </a></li>
+            data-key="<%- item.key %>">
+                <% if (launcherMode == 'icon-text') { %>
+                    <span class="icon <%- iconClassName ? iconClassName : 'fa-' + icon %>" aria-hidden="true"></span>
+                    <%- item.label %>
+                <% } else if (launcherMode == 'icon-only') { %>
+                    <span class="icon <%- iconClassName ? iconClassName : 'fa-' + icon %>" aria-hidden="true"></span>
+                <% } else if (launcherMode == 'text-only') { %>
+                    <% if (iconClassName) { %><span class="icon <%- iconClassName %>" aria-hidden="true"></span><% } %>
+                    <%- item.label %>
+                <% } %>
+            </a>
+        </li>
     <% }) %>
     </ul>
 </div>

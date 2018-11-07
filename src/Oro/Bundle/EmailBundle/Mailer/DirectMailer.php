@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\EmailBundle\Mailer;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\IntrospectableContainerInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
+use Monolog\Logger;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
-use Oro\Bundle\EmailBundle\Exception\NotSupportedException;
 use Oro\Bundle\EmailBundle\Event\SendEmailTransport;
+use Oro\Bundle\EmailBundle\Exception\NotSupportedException;
 use Oro\Bundle\EmailBundle\Form\Model\SmtpSettings;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * The goal of this class is to send an email directly, not using a mail spool
@@ -27,6 +27,12 @@ class DirectMailer extends \Swift_Mailer
     /** @var ContainerInterface */
     protected $container;
 
+    /** @var ServiceLink  */
+    protected $loggerLink;
+
+    /** @var \Swift_Transport */
+    private $transport;
+
     /**
      * Constructor
      *
@@ -39,24 +45,22 @@ class DirectMailer extends \Swift_Mailer
     ) {
         $this->baseMailer = $baseMailer;
         $this->container  = $container;
+    }
 
-        $transport = $this->baseMailer->getTransport();
-        if ($transport instanceof \Swift_Transport_SpoolTransport) {
-            $transport = $this->findRealTransport();
-            if (!$transport) {
-                $transport = \Swift_NullTransport::newInstance();
-            }
-        }
+    /**
+     * @param ServiceLink $loggerLink
+     */
+    public function setLogger(ServiceLink $loggerLink)
+    {
+        $this->loggerLink = $loggerLink;
+    }
 
-        if ($transport instanceof \Swift_Transport_EsmtpTransport) {
-            $this->addXOAuth2Authenticator($transport);
-        }
-
-        if ($transport instanceof \Swift_Transport_AbstractSmtpTransport) {
-            $this->configureTransportLocalDomain($transport);
-        }
-
-        parent::__construct($transport);
+    /**
+     * @return Logger
+     */
+    protected function getLogger()
+    {
+        return $this->loggerLink->getService();
     }
 
     /**
@@ -121,7 +125,7 @@ class DirectMailer extends \Swift_Mailer
         $port = $smtpSettings->getPort();
         $encryption = $smtpSettings->getEncryption();
 
-        if ($transport instanceof \Swift_SmtpTransport) {
+        if ($transport instanceof \Swift_Transport_EsmtpTransport) {
             $transport->setHost($host);
             $transport->setPort($port);
             $transport->setEncryption($encryption);
@@ -148,7 +152,35 @@ class DirectMailer extends \Swift_Mailer
         if ($this->smtpTransport) {
             return $this->smtpTransport;
         }
-        return parent::getTransport();
+
+        if (!$this->transport) {
+            $transport = $this->baseMailer->getTransport();
+            if ($transport instanceof \Swift_Transport_SpoolTransport) {
+                $transport = $this->findRealTransport();
+                if (!$transport) {
+                    $transport = \Swift_NullTransport::newInstance();
+                }
+            }
+
+            $this->transport = $transport;
+
+            // replacing the original transport with SMTP transport
+            // which configured with parameters from the System Configuration -> SMTP Settings
+            $this->prepareSmtpTransport(null);
+            if ($this->smtpTransport) {
+                $this->transport = $this->smtpTransport;
+            }
+
+            if ($this->transport instanceof \Swift_Transport_EsmtpTransport) {
+                $this->addXOAuth2Authenticator($this->transport);
+            }
+
+            if ($this->transport instanceof \Swift_Transport_AbstractSmtpTransport) {
+                $this->configureTransportLocalDomain($this->transport);
+            }
+        }
+
+        return $this->transport;
     }
 
     /**
@@ -189,8 +221,20 @@ class DirectMailer extends \Swift_Mailer
             if ($this->smtpTransport) {
                 $result = $this->smtpTransport->send($message, $failedRecipients);
             } else {
-                $result = parent::send($message, $failedRecipients);
+                $mailerInstance = new \Swift_Mailer($this->getTransport());
+                $result = $mailerInstance->send($message, $failedRecipients);
             }
+        } catch (\Swift_TransportException $transportException) {
+            $logger = $this->getLogger();
+
+            $logger->crit(sprintf("Mail message: %s", $message));
+            $logger->crit(sprintf("Mail recipients: %s", implode(',', $failedRecipients)));
+            $logger->crit(
+                sprintf("Error message: %s", $transportException->getMessage()),
+                ['exception' => $transportException]
+            );
+
+            $sendException = $transportException;
         } catch (\Exception $unexpectedEx) {
             $sendException = $unexpectedEx;
         }
@@ -220,8 +264,7 @@ class DirectMailer extends \Swift_Mailer
         $realTransport = null;
         $mailers       = array_keys($this->container->getParameter('swiftmailer.mailers'));
         foreach ($mailers as $name) {
-            if ($this->container instanceof IntrospectableContainerInterface
-                && !$this->container->initialized(sprintf('swiftmailer.mailer.%s', $name))
+            if (!$this->container->initialized(sprintf('swiftmailer.mailer.%s', $name))
             ) {
                 continue;
             }
@@ -270,9 +313,13 @@ class DirectMailer extends \Swift_Mailer
      */
     protected function configureTransportLocalDomain(\Swift_Transport_AbstractSmtpTransport $transport)
     {
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
+        $host = $this->container->get('request_stack')->getCurrentRequest()->server->get('HTTP_HOST');
         // fix local domain when wild-card vhost is used and auto-detection fails
-        if (0 === strpos($transport->getLocalDomain(), '*') && !empty($_SERVER['HTTP_HOST'])) {
-            $transport->setLocalDomain($_SERVER['HTTP_HOST']);
+        if (0 === strpos($transport->getLocalDomain(), '*') && !empty($host)) {
+            $transport->setLocalDomain($host);
         }
     }
 }

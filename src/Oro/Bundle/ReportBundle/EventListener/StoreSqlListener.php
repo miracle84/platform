@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\ReportBundle\EventListener;
 
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
-
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
 use Oro\Bundle\DataGridBundle\Event\OrmResultAfter;
 use Oro\Bundle\ReportBundle\Grid\StoreSqlExtension;
+use Oro\Component\DoctrineUtils\ORM\QueryUtil;
 
 class StoreSqlListener
 {
@@ -23,7 +22,7 @@ class StoreSqlListener
         if ($config->offsetGetByPath($path, false)) {
             $config->offsetAddToArrayByPath(
                 StoreSqlExtension::STORED_SQL_PATH,
-                [StoreSqlExtension::SQL => QueryUtils::getExecutableSql($event->getQuery())]
+                [StoreSqlExtension::SQL => QueryUtil::getExecutableSql($event->getQuery())]
             );
         }
     }

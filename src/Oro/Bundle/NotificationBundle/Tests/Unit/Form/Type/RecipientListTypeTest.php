@@ -2,59 +2,42 @@
 
 namespace Oro\Bundle\NotificationBundle\Tests\Unit\Form\Type;
 
+use Doctrine\ORM\EntityManager;
 use Oro\Bundle\NotificationBundle\Form\Type\RecipientListType;
+use Symfony\Component\Form\FormBuilder;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class RecipientListTypeTest extends \PHPUnit_Framework_TestCase
+class RecipientListTypeTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var RecipientListType
-     */
+    /** @var RecipientListType */
     protected $type;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityManager;
-
 
     protected function setUp()
     {
-        $this->entityManager = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->entityManager = $this->createMock(EntityManager::class);
         $this->type = new RecipientListType($this->entityManager);
-    }
-
-    protected function tearDown()
-    {
-        unset($this->type);
-        unset($this->entityManager);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_notification_recipient_list', $this->type->getName());
     }
 
     public function testBuildForm()
     {
-        $builder = $this->getMockBuilder('Symfony\Component\Form\FormBuilder')
-            ->disableOriginalConstructor()
-            ->getMock();
+        /** @var FormBuilder|\PHPUnit\Framework\MockObject\MockObject $builder */
+        $builder = $this->createMock(FormBuilder::class);
+        $builder->expects($this->exactly(3))->method('add');
 
-        $builder->expects($this->exactly(4))
-            ->method('add');
-
-        $this->type->buildForm($builder, array());
+        $this->type->buildForm($builder, []);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        /** @var OptionsResolver|\PHPUnit\Framework\MockObject\MockObject $resolver */
+        $resolver = $this->createMock(OptionsResolver::class);
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
 
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
     }
 }

@@ -3,7 +3,8 @@
 namespace Oro\Bundle\OrganizationBundle\Form\Type;
 
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Translation\TranslatorInterface;
 
 class OwnershipType extends AbstractType
@@ -15,15 +16,21 @@ class OwnershipType extends AbstractType
     const OWNER_TYPE_BUSINESS_UNIT = 'BUSINESS_UNIT';
     const OWNER_TYPE_ORGANIZATION = 'ORGANIZATION';
 
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    /**
+     * {@inheritdoc}
+     */
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
-            array(
-                'choices' => $this->getOwnershipsArray()
-            )
+            [
+                'choices' => array_flip($this->getOwnershipsArray()),
+            ]
         );
     }
 
+    /**
+     * @return array
+     */
     public function getOwnershipsArray()
     {
         return  array(
@@ -34,11 +41,17 @@ class OwnershipType extends AbstractType
         );
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getParent()
     {
-        return 'choice';
+        return ChoiceType::class;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getName()
     {
         return $this->getBlockPrefix();

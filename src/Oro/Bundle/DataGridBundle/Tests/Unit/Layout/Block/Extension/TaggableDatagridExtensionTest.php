@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\DataGridBundle\Tests\Unit\Layout\Block\Extension;
 
-use Oro\Component\Layout\BlockInterface;
-use Oro\Component\Layout\BlockView;
+use Oro\Bundle\DataGridBundle\Layout\Block\Extension\TaggableDatagridExtension;
 use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
 use Oro\Component\Layout\Block\Type\Options;
+use Oro\Component\Layout\BlockInterface;
+use Oro\Component\Layout\BlockView;
 
-use Oro\Bundle\DataGridBundle\Layout\Block\Extension\TaggableDatagridExtension;
-
-class TaggableDatagridExtensionTest extends \PHPUnit_Framework_TestCase
+class TaggableDatagridExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TaggableDatagridExtension */
     protected $extension;
@@ -29,7 +28,7 @@ class TaggableDatagridExtensionTest extends \PHPUnit_Framework_TestCase
      * @param array $options
      * @param array $expectedOptions
      */
-    public function testSetDefaultOptions(array $options, array $expectedOptions)
+    public function testConfigureOptions(array $options, array $expectedOptions)
     {
         $resolver = new OptionsResolver();
         $this->extension->configureOptions($resolver);

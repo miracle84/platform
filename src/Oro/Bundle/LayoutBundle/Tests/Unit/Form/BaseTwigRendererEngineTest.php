@@ -2,14 +2,14 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Form;
 
-use Symfony\Component\Form\FormView;
-
 use Oro\Bundle\LayoutBundle\Form\BaseTwigRendererEngine;
+use Symfony\Component\Form\FormView;
+use Twig\Environment;
 
 class BaseTwigRendererEngineTest extends RendererEngineTest
 {
     /**
-     * @var \Twig_Environment|\PHPUnit_Framework_MockObject_MockObject
+     * @var Environment|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $environment;
 
@@ -20,10 +20,8 @@ class BaseTwigRendererEngineTest extends RendererEngineTest
 
     protected function setUp()
     {
-        $this->environment = $this->createMock('\Twig_Environment');
-
+        $this->environment = $this->createMock(Environment::class);
         $this->engine = $this->createRendererEngine();
-        $this->engine->setEnvironment($this->environment);
     }
 
     public function testRenderBlock()
@@ -34,7 +32,7 @@ class BaseTwigRendererEngineTest extends RendererEngineTest
         $template = $this->createTheme($blockName);
         $resource = [$template, $blockName];
 
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
+        /** @var FormView|\PHPUnit\Framework\MockObject\MockObject $view */
         $view = $this->createMock('Symfony\Component\Form\FormView');
         $view->vars['cache_key'] = $cacheKey;
 
@@ -58,7 +56,7 @@ class BaseTwigRendererEngineTest extends RendererEngineTest
         $firstTheme = $this->createTheme($blockName);
         $secondTheme = $this->createTheme($blockName);
 
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
+        /** @var FormView|\PHPUnit\Framework\MockObject\MockObject $view */
         $view = $this->createMock('Symfony\Component\Form\FormView');
         $view->vars['cache_key'] = $cacheKey;
 
@@ -76,94 +74,52 @@ class BaseTwigRendererEngineTest extends RendererEngineTest
 
     public function testGetResourceHierarchyLevel()
     {
-        $cacheKey = '_main_menu_main_menu';
-        $blockName = 'main_menu';
-        $blockNameHierarchy = ['block', 'container', $blockName];
-        $firstTheme = $this->createTheme('container');
-        $secondTheme = $this->createTheme('block');
-        $thirdTheme = $this->createTheme($blockName);
-        $fourthTheme = $this->createTheme($blockName);
+        $blockNameHierarchy = [
+            'block',
+            'container',
+            'datagrid',
+            '__datagrid__datagrid',
+        ];
 
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
+        /** @var FormView|\PHPUnit\Framework\MockObject\MockObject $view */
         $view = $this->createMock('Symfony\Component\Form\FormView');
-        $view->vars['cache_key'] = $cacheKey;
+        $view->vars['cache_key'] = '_customer_role_datagrid';
 
-        $this->engine->addDefaultThemes([$firstTheme, $secondTheme, $thirdTheme, $fourthTheme]);
+        $this->engine->addDefaultThemes([
+            $this->createTheme('block'),
+            $this->createTheme('container'),
+            $this->createTheme('datagrid'),
+            $this->createTheme('__datagrid__datagrid'),
+            $this->createTheme('__datagrid__datagrid'),
+        ]);
 
         $this->environment->expects($this->any())
             ->method('mergeGlobals')
             ->willReturn([]);
+
+        //switch to next parent resource on the same hierarchy level
+        $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 3);
+        $this->assertEquals(3, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 3));
+
+        $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 3);
+        $this->engine->switchToNextParentResource($view, $blockNameHierarchy, 3);
+        $this->assertEquals(3, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 3));
 
         $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 2);
         $this->assertEquals(2, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 2));
 
-        $this->engine->switchToNextParentResource($view, $blockNameHierarchy);
-        $this->assertEquals(2, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 2));
-
         $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 1);
-        $this->engine->switchToNextParentResource($view, $blockNameHierarchy);
         $this->assertEquals(1, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 1));
-    }
 
-    public function testSwitchToNextParentResource()
-    {
-        $cacheKey = '_root_root';
-        $blockName = 'root';
-        $blockNameHierarchy = ['block', $blockName];
-        $firstTheme = $this->createTheme($blockName);
-        $secondTheme = $this->createTheme('_main_menu');
-        $thirdTheme = $this->createTheme($blockName);
-
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
-        $view = $this->createMock('Symfony\Component\Form\FormView');
-        $view->vars['cache_key'] = $cacheKey;
-
-        $this->engine->addDefaultThemes([$firstTheme, $secondTheme, $thirdTheme]);
-
-        $this->environment->expects($this->any())
-            ->method('mergeGlobals')
-            ->willReturn([]);
-
+        //switch to next parent resource on the previous hierarchy level
         $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 1);
-        $this->assertSame([$thirdTheme, $blockName], $this->engine->getResourceForBlockName($view, $blockName));
-
-        $this->engine->switchToNextParentResource($view, $blockNameHierarchy);
-        $this->assertSame([$firstTheme, $blockName], $this->engine->getResourceForBlockName($view, $blockName));
-
-        $this->assertEquals(1, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 1));
-    }
-
-    public function testSwitchToNextParentResourceForParentBlockType()
-    {
-        $cacheKey = '_main_menu_main_menu';
-        $blockName = 'main_menu';
-        $blockNameHierarchy = ['block', 'container', $blockName];
-        $firstTheme = $this->createTheme('container');
-        $secondTheme = $this->createTheme('block');
-        $thirdTheme = $this->createTheme($blockName);
-
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
-        $view = $this->createMock('Symfony\Component\Form\FormView');
-        $view->vars['cache_key'] = $cacheKey;
-
-        $this->engine->addDefaultThemes([$firstTheme, $secondTheme, $thirdTheme]);
-
-        $this->environment->expects($this->any())
-            ->method('mergeGlobals')
-            ->willReturn([]);
-
-        $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, 2);
-        $this->assertSame([$thirdTheme, $blockName], $this->engine->getResourceForBlockName($view, $blockName));
-
-        $this->engine->switchToNextParentResource($view, $blockNameHierarchy);
-        $this->assertSame([$firstTheme, 'container'], $this->engine->getResourceForBlockName($view, $blockName));
-
-        $this->assertEquals(1, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 2));
+        $this->engine->switchToNextParentResource($view, $blockNameHierarchy, 1);
+        $this->assertEquals(0, $this->engine->getResourceHierarchyLevel($view, $blockNameHierarchy, 1));
     }
 
     /**
      * @param string $blockName
-     * @return \Twig_Template|\PHPUnit_Framework_MockObject_MockObject
+     * @return \Twig_Template|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function createTheme($blockName)
     {
@@ -183,6 +139,6 @@ class BaseTwigRendererEngineTest extends RendererEngineTest
      */
     public function createRendererEngine()
     {
-        return new BaseTwigRendererEngine();
+        return new BaseTwigRendererEngine([], $this->environment);
     }
 }

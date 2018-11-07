@@ -1,27 +1,20 @@
 <?php
 namespace Oro\Bundle\DataAuditBundle\Tests\Functional;
 
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataChild;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataOwner;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataChild;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataOwner;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
+/**
+ * @dbIsolationPerTest
+ */
 class SendCollectionsChangesToMessageQueueTest extends WebTestCase
 {
     use SendChangedEntitiesToMessageQueueExtensionTrait;
     
     protected function setUp()
     {
-        parent::setUp();
-
-        $this->initClient([], [], true);
-        $this->startTransaction();
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
+        $this->initClient();
     }
 
     public function testShouldSendCollectionUpdateWhenNewChildAddedToNewOwner()
@@ -55,6 +48,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $childId,
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
             'deleted' => [],
@@ -88,6 +82,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $child->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'deleted' => [],
@@ -120,6 +115,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $child->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'deleted' => [],
@@ -152,6 +148,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $child->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'deleted' => [],
@@ -187,6 +184,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $child->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'inserted' => [],
@@ -224,6 +222,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $childId,
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'inserted' => [],
@@ -260,6 +259,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataChild::class,
                     'entity_id' => $child->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ]
             ],
             'deleted' => [],
@@ -279,7 +279,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(2, $message);
         $this->assertEntitiesUpdatedInMessageCount(0, $message);
@@ -297,6 +297,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
         ], $insertedEntity['change_set']);
@@ -313,7 +314,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(1, $message);
         $this->assertEntitiesUpdatedInMessageCount(1, $message);
@@ -331,6 +332,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
         ], $updatedEntity['change_set']);
@@ -346,7 +348,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(0, $message);
         $this->assertEntitiesUpdatedInMessageCount(1, $message);
@@ -361,6 +363,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
         ], $updatedEntity['change_set']);
@@ -376,7 +379,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(0, $message);
         $this->assertEntitiesUpdatedInMessageCount(1, $message);
@@ -391,6 +394,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
         ], $updatedEntity['change_set']);
@@ -410,7 +414,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(0, $message);
         $this->assertEntitiesUpdatedInMessageCount(1, $message);
@@ -424,6 +428,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
                 null,
             ],
@@ -446,7 +451,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(1, $message);
         $this->assertEntitiesInsertedInMessageCount(0, $message);
         $this->assertEntitiesUpdatedInMessageCount(0, $message);
@@ -473,7 +478,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
         $this->getEntityManager()->flush();
 
         $message = $this->getFirstEntitiesChangedMessage();
-        $this->assertCollectionsUpdatedInMessageCount(0, $message);
+        $this->assertCollectionsUpdatedInMessageCount(1, $message);
         $this->assertEntitiesDeletedInMessageCount(0, $message);
         $this->assertEntitiesInsertedInMessageCount(0, $message);
         $this->assertEntitiesUpdatedInMessageCount(1, $message);
@@ -488,6 +493,7 @@ class SendCollectionsChangesToMessageQueueTest extends WebTestCase
                     'entity_class' => TestAuditDataOwner::class,
                     'entity_id' => $owner->getId(),
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
             ],
         ], $insertedEntity['change_set']);

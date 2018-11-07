@@ -4,7 +4,7 @@ namespace Oro\Bundle\TagBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\TagBundle\Form\Type\TagType;
 
-class TagTypeTest extends \PHPUnit_Framework_TestCase
+class TagTypeTest extends \PHPUnit\Framework\TestCase
 {
 
     /**
@@ -22,19 +22,14 @@ class TagTypeTest extends \PHPUnit_Framework_TestCase
         unset($this->type);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
 
-        $this->type->setDefaultOptions($resolver);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_tag_tag', $this->type->getName());
+        $this->type->configureOptions($resolver);
     }
 
     public function testBuildForm()

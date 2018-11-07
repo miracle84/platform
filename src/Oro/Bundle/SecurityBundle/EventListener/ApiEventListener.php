@@ -2,48 +2,37 @@
 
 namespace Oro\Bundle\SecurityBundle\EventListener;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
-use Oro\Bundle\SoapBundle\Event\FindAfter;
-use Oro\Bundle\SoapBundle\Event\GetListBefore;
-
+use Oro\Bundle\SecurityBundle\Authorization\RequestAuthorizationChecker;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SoapBundle\Event\FindAfter;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 class ApiEventListener
 {
-    /**
-     * @var Request
-     */
-    protected $request;
+    /** @var RequestStack */
+    protected $requestStack;
 
-    /**
-     * @var SecurityFacade
-     */
-    protected $securityFacade;
+    /** @var RequestAuthorizationChecker */
+    protected $requestAuthorizationChecker;
 
-    /**
-     * @var AclHelper
-     */
+    /** @var AclHelper */
     protected $aclHelper;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param AclHelper      $aclHelper
+     * @param RequestAuthorizationChecker $requestAuthorizationChecker
+     * @param AclHelper                   $aclHelper
+     * @param RequestStack                $requestStack
      */
-    public function __construct(SecurityFacade $securityFacade, AclHelper $aclHelper)
-    {
-        $this->securityFacade = $securityFacade;
+    public function __construct(
+        RequestAuthorizationChecker $requestAuthorizationChecker,
+        AclHelper $aclHelper,
+        RequestStack $requestStack
+    ) {
+        $this->requestAuthorizationChecker = $requestAuthorizationChecker;
         $this->aclHelper = $aclHelper;
-    }
-
-    /**
-     * @param Request|null $request
-     */
-    public function setRequest(Request $request = null)
-    {
-        $this->request = $request;
+        $this->requestStack = $requestStack;
     }
 
     /**
@@ -53,20 +42,24 @@ class ApiEventListener
      */
     public function onFindAfter(FindAfter $event)
     {
-        if (!$this->request) {
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request) {
             return;
         }
 
-        $this->checkObjectAccess($event->getEntity());
+        $this->checkObjectAccess($event->getEntity(), $request);
     }
 
     /**
-     * @param $object
+     * @param mixed $object
+     * @param Request $request
      * @throws AccessDeniedException
      */
-    protected function checkObjectAccess($object)
+    protected function checkObjectAccess($object, Request $request)
     {
-        if (is_object($object) && $this->securityFacade->isRequestObjectIsGranted($this->request, $object) === -1) {
+        if (is_object($object)
+            && $this->requestAuthorizationChecker->isRequestObjectIsGranted($request, $object) === -1
+        ) {
             throw new AccessDeniedException();
         }
     }

@@ -3,16 +3,15 @@
 namespace Oro\Bundle\EntityBundle\Tests\Unit\Form\EntityField\Handler;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
-
 use Oro\Bundle\EntityBundle\Form\EntityField\Handler\EntityApiBaseHandler;
 use Oro\Bundle\EntityBundle\Form\EntityField\Handler\Processor\EntityApiHandlerProcessor;
 use Oro\Bundle\EntityBundle\Tests\Unit\Fixtures\Stub\SomeEntity;
 use Oro\Bundle\EntityBundle\Tools\EntityClassNameHelper;
 
-class EntityApiBaseHandlerTest extends \PHPUnit_Framework_TestCase
+class EntityApiBaseHandlerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var EntityApiHandlerProcessor|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityApiHandlerProcessor|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $processor;
 
@@ -22,12 +21,12 @@ class EntityApiBaseHandlerTest extends \PHPUnit_Framework_TestCase
     protected $handler;
 
     /**
-     * @var Registry|\PHPUnit_Framework_MockObject_MockObject
+     * @var Registry|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $registry;
 
     /**
-     * @var EntityClassNameHelper|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityClassNameHelper|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityClassNameHelper;
 

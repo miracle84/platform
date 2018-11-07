@@ -3,14 +3,12 @@
 namespace Oro\Bundle\FilterBundle\Filter;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
+use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
+use Oro\Bundle\FilterBundle\Event\ChoiceTreeFilterLoadDataEvent;
+use Oro\Bundle\FilterBundle\Form\Type\Filter\ChoiceTreeFilterType;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Routing\RouterInterface;
-
-use Oro\Bundle\FilterBundle\Event\ChoiceTreeFilterLoadDataEvent;
-use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
-use Oro\Bundle\FilterBundle\Form\Type\Filter\ChoiceTreeFilterType;
 
 class ChoiceTreeFilter extends AbstractFilter
 {
@@ -50,7 +48,7 @@ class ChoiceTreeFilter extends AbstractFilter
      */
     protected function getFormType()
     {
-        return ChoiceTreeFilterType::NAME;
+        return ChoiceTreeFilterType::class;
     }
 
     /**

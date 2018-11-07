@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\DataGridBundle\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
+use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class OroDataGridExtension extends Extension
 {
@@ -27,6 +27,11 @@ class OroDataGridExtension extends Extension
         $loader->load('mass_actions.yml');
         $loader->load('importexport.yml');
         $loader->load('layouts.yml');
+        $loader->load('datagrid_state.yml');
+
+        if ($container->getParameter('kernel.debug')) {
+            $loader->load('debug.yml');
+        }
 
         $container->prependExtensionConfig($this->getAlias(), array_intersect_key($config, array_flip(['settings'])));
     }

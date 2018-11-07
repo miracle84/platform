@@ -3,12 +3,12 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Owner;
 
 use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
-use Oro\Bundle\SecurityBundle\Tests\Unit\Stub\OwnershipMetadataProviderStub;
-use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\BusinessUnit;
+use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\User;
+use Oro\Bundle\SecurityBundle\Tests\Unit\Stub\OwnershipMetadataProviderStub;
 
-abstract class AbstractCommonEntityOwnershipDecisionMakerTest extends \PHPUnit_Framework_TestCase
+abstract class AbstractCommonEntityOwnershipDecisionMakerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var OwnerTree */
     protected $tree;

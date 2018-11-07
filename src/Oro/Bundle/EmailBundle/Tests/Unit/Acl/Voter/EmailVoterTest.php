@@ -2,38 +2,28 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Acl\Voter;
 
-use Symfony\Component\DependencyInjection\Container;
-
+use Oro\Bundle\EmailBundle\Acl\Voter\EmailVoter;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
 use Oro\Bundle\EmailBundle\Entity\EmailBody;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
-use Oro\Bundle\EmailBundle\Acl\Voter\EmailVoter;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Symfony\Component\DependencyInjection\Container;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class EmailVoterTest extends \PHPUnit_Framework_TestCase
+class EmailVoterTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var EmailVoter
-     */
+    /** @var EmailVoter */
     protected $emailVoter;
 
-    /**
-     * @var Container|\PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var Container|\PHPUnit\Framework\MockObject\MockObject */
     protected $container;
 
-    /**
-     * @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject
-     */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->setMethods(['isGranted'])
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
 
         $this->container = $this->getMockBuilder('Symfony\Component\DependencyInjection\Container')
             ->setMethods(['get'])
@@ -41,52 +31,10 @@ class EmailVoterTest extends \PHPUnit_Framework_TestCase
 
         $this->container->expects($this->any())
             ->method('get')
-            ->with('oro_security.security_facade')
-            ->willReturn($this->securityFacade);
+            ->with('security.authorization_checker')
+            ->willReturn($this->authorizationChecker);
 
         $this->emailVoter = new EmailVoter($this->container);
-    }
-
-    /**
-     * @param $attribute
-     * @param $isSupported
-     * @dataProvider attributeProvider
-     */
-    public function testSupportsAttribute($attribute, $isSupported)
-    {
-        $this->assertEquals($isSupported, $this->emailVoter->supportsAttribute($attribute));
-    }
-
-    public function attributeProvider()
-    {
-        return [
-            ['VIEW', true],
-            ['EDIT', true],
-            ['CREATE', false],
-            ['DELETE', false],
-        ];
-    }
-
-    /**
-     * @param $class
-     * @param $isSupported
-     * @dataProvider classProvider
-     */
-    public function testSupportsClass($class, $isSupported)
-    {
-        $this->assertEquals($isSupported, $this->emailVoter->supportsClass($class));
-    }
-
-    public function classProvider()
-    {
-        return [
-            ['Oro\Bundle\EmailBundle\Entity\Email', true],
-            ['Oro\Bundle\EmailBundle\Entity\EmailBody', true],
-            ['Oro\Bundle\EmailBundle\Entity\EmailAttachment', true],
-            [EmailBody::CLASS_NAME, true],
-            [EmailAttachment::CLASS_NAME, true],
-            ['Some\Unsupported\Class', false]
-        ];
     }
 
     /**
@@ -106,7 +54,7 @@ class EmailVoterTest extends \PHPUnit_Framework_TestCase
         $attributes = ['VIEW'];
 
         if ($atLeastOneGranted) {
-            $this->securityFacade->expects($this->once())
+            $this->authorizationChecker->expects($this->once())
                 ->method('isGranted')
                 ->with('VIEW', ${'emailUser' . mt_rand(1, 3)})
                 ->willReturn(true);

@@ -1,11 +1,11 @@
-define([
-    'oroui/js/mediator',
-    'oroui/js/app/views/base/page-region-view'
-], function(mediator, PageRegionView) {
+define(function(require) {
     'use strict';
 
     var BookmarkButtonView;
+    var mediator = require('oroui/js/mediator');
+    var PageRegionView = require('oroui/js/app/views/base/page-region-view');
     var document = window.document;
+    var titleRendered = null;
 
     BookmarkButtonView = PageRegionView.extend({
         pageItems: ['navigationElements', 'titleShort', 'titleSerialized'],
@@ -19,7 +19,7 @@ define([
         navigationElementType: null,
 
         events: {
-            'click': 'onToggle'
+            click: 'onToggle'
         },
 
         listen: {
@@ -28,12 +28,27 @@ define([
             'reset collection': 'updateState'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function BookmarkButtonView() {
+            BookmarkButtonView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             if (!options.navigationElementType) {
                 throw new Error('"navigationItemElementType" is required option for bookmark button');
             }
 
             this.navigationElementType = options.navigationElementType;
+
+            // handles page update
+            mediator.on('page:update', function(page, args) {
+                titleRendered = page.title;
+            });
         },
 
         render: function() {
@@ -90,7 +105,7 @@ define([
             var title = this.$el.data('title');
             return {
                 url: mediator.execute('currentUrl'),
-                title_rendered: document.title,
+                title_rendered: titleRendered || this.$el.data('title-rendered'),
                 title_rendered_short: this.$el.data('title-rendered-short') || document.title,
                 title: title ? JSON.stringify(title) : '{"template": "' + document.title + '"}'
             };

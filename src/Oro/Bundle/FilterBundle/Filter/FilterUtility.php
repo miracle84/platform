@@ -16,10 +16,14 @@ class FilterUtility
     const DATA_NAME_KEY     = 'data_name';
     const TRANSLATABLE_KEY  = 'translatable';
     const MIN_LENGTH_KEY    = 'min_length';
+    const MAX_LENGTH_KEY    = 'max_length';
     const FORCE_LIKE_KEY    = 'force_like';
     const FORM_OPTIONS_KEY  = 'options';
+    const DIVISOR_KEY       = 'divisor';
     const TYPE_EMPTY        = 'filter_empty_option';
     const TYPE_NOT_EMPTY    = 'filter_not_empty_option';
+    const CASE_INSENSITIVE_KEY = 'case_insensitive';
+    const VALUE_CONVERSION_KEY = 'value_conversion';
 
     public function getParamMap()
     {

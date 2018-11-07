@@ -3,99 +3,65 @@
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Provider;
 
 use Oro\Bundle\ApiBundle\Provider\ConfigBag;
+use Oro\Bundle\ApiBundle\Provider\ConfigCache;
 use Oro\Bundle\ApiBundle\Request\Version;
-use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
-class ConfigBagTest extends \PHPUnit_Framework_TestCase
+class ConfigBagTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ConfigBag */
-    protected $configBag;
+    private $configBag;
 
     protected function setUp()
     {
         $config = [];
         foreach (['metadata', 'entities', 'relations'] as $section) {
             $config[$section] = [
-                /* @todo: API version is not supported for now
                 'Test\Class1' => [
-                    '0' => ['fields' => ['class1_v0' => []]],
+                    'fields' => ['class1_v0' => []]
                 ],
                 'Test\Class2' => [
-                    '0'   => ['fields' => ['class2_v0' => []]],
-                    '1.0' => ['fields' => ['class2_v1.0' => []]],
-                    '1.5' => ['fields' => ['class2_v1.5' => []]],
-                    '2.0' => ['fields' => ['class2_v2.0' => []]],
-                ],
-                */
-                'Test\Class1' => [
-                    'fields' => ['class1_v0' => []],
-                ],
-                'Test\Class2' => [
-                    'fields' => ['class2_v2.0' => []],
-                ],
+                    'fields' => ['class2_v2.0' => []]
+                ]
             ];
         }
 
-        $this->configBag = new ConfigBag($config);
+        $configFile = 'api.yml';
+        $configCache = $this->createMock(ConfigCache::class);
+        $configCache->expects(self::once())
+            ->method('getConfig')
+            ->with($configFile)
+            ->willReturn($config);
+        $this->configBag = new ConfigBag($configCache, $configFile);
     }
 
-    /**
-     * @dataProvider getConfigsProvider
-     */
-    public function testGetConfigs($version, $expectedConfig)
+    public function testGetClassNames()
     {
-        $this->assertEquals(
-            $expectedConfig,
-            $this->configBag->getConfigs($version)
-        );
+        $version = Version::LATEST;
+        $expectedEntityClasses = ['Test\Class1', 'Test\Class2'];
+
+        self::assertEquals($expectedEntityClasses, $this->configBag->getClassNames($version));
+        // test that data is cached in memory
+        self::assertEquals($expectedEntityClasses, $this->configBag->getClassNames($version));
     }
 
-    public function getConfigsProvider()
+    public function testNoConfig()
     {
-        return [
-            /* @todo: API version is not supported for now. Add data to test versioning here */
-            [
-                '1.0',
-                [
-                    'Test\Class1' => ['fields' => ['class1_v0' => []]],
-                    'Test\Class2' => ['fields' => ['class2_v2.0' => []]],
-                ]
-            ],
-            [
-                Version::LATEST,
-                [
-                    'Test\Class1' => ['fields' => ['class1_v0' => []]],
-                    'Test\Class2' => ['fields' => ['class2_v2.0' => []]],
-                ]
-            ],
-        ];
+        $className = 'Test\UnknownClass';
+        $version = Version::LATEST;
+
+        self::assertNull($this->configBag->getConfig($className, $version));
+        // test that data is cached in memory
+        self::assertNull($this->configBag->getConfig($className, $version));
     }
 
-    /**
-     * @dataProvider noConfigProvider
-     */
-    public function testNoConfig($className, $version)
+    public function testNoRelationConfig()
     {
-        $this->assertNull(
-            $this->configBag->getConfig($className, $version)
-        );
-    }
+        $className = 'Test\UnknownClass';
+        $version = Version::LATEST;
 
-    /**
-     * @dataProvider noConfigProvider
-     */
-    public function testNoRelationConfig($className, $version)
-    {
-        $this->assertNull(
-            $this->configBag->getRelationConfig($className, $version)
-        );
-    }
-
-    public function noConfigProvider()
-    {
-        return [
-            ['Test\UnknownClass', Version::LATEST]
-        ];
+        self::assertNull($this->configBag->getRelationConfig($className, $version));
+        // test that data is cached in memory
+        self::assertNull($this->configBag->getRelationConfig($className, $version));
     }
 
     /**
@@ -103,7 +69,12 @@ class ConfigBagTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetConfig($className, $version, $expectedConfig)
     {
-        $this->assertEquals(
+        self::assertEquals(
+            $expectedConfig,
+            $this->configBag->getConfig($className, $version)
+        );
+        // test that data is cached in memory
+        self::assertEquals(
             $expectedConfig,
             $this->configBag->getConfig($className, $version)
         );
@@ -114,7 +85,12 @@ class ConfigBagTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetRelationConfig($className, $version, $expectedConfig)
     {
-        $this->assertEquals(
+        self::assertEquals(
+            $expectedConfig,
+            $this->configBag->getRelationConfig($className, $version)
+        );
+        // test that data is cached in memory
+        self::assertEquals(
             $expectedConfig,
             $this->configBag->getRelationConfig($className, $version)
         );
@@ -123,22 +99,8 @@ class ConfigBagTest extends \PHPUnit_Framework_TestCase
     public function getConfigProvider()
     {
         return [
-            /* @todo: API version is not supported for now
-            ['Test\Class1', '0', ['fields' => ['class1_v0' => []]]],
             ['Test\Class1', '1.0', ['fields' => ['class1_v0' => []]]],
-            ['Test\Class1', Version::LATEST, ['fields' => ['class1_v0' => []]]],
-            ['Test\Class2', '0', ['fields' => ['class2_v0' => []]]],
-            ['Test\Class2', '0.5', ['fields' => ['class2_v0' => []]]],
-            ['Test\Class2', '1.0', ['fields' => ['class2_v1.0' => []]]],
-            ['Test\Class2', '1.4', ['fields' => ['class2_v1.0' => []]]],
-            ['Test\Class2', '1.5', ['fields' => ['class2_v1.5' => []]]],
-            ['Test\Class2', '1.6', ['fields' => ['class2_v1.5' => []]]],
-            ['Test\Class2', '2.0', ['fields' => ['class2_v2.0' => []]]],
-            ['Test\Class2', '2.1', ['fields' => ['class2_v2.0' => []]]],
-            ['Test\Class2', Version::LATEST, ['fields' => ['class2_v2.0' => []]]],
-            */
-            ['Test\Class1', '1.0', ['fields' => ['class1_v0' => []]]],
-            ['Test\Class2', Version::LATEST, ['fields' => ['class2_v2.0' => []]]],
+            ['Test\Class2', Version::LATEST, ['fields' => ['class2_v2.0' => []]]]
         ];
     }
 }

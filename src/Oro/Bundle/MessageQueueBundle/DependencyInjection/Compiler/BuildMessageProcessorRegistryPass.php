@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Bundle\MessageQueueBundle\DependencyInjection\Compiler;
 
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
@@ -15,7 +16,7 @@ class BuildMessageProcessorRegistryPass implements CompilerPassInterface
         $processorTagName = 'oro_message_queue.client.message_processor';
         $processorRegistryId = 'oro_message_queue.client.message_processor_registry';
 
-        if (false == $container->hasDefinition($processorRegistryId)) {
+        if (!$container->hasDefinition($processorRegistryId)) {
             return;
         }
 
@@ -30,7 +31,7 @@ class BuildMessageProcessorRegistryPass implements CompilerPassInterface
         }
 
         $processorRegistryDef = $container->getDefinition($processorRegistryId);
-        $processorRegistryDef->setArguments([$processorIds]);
+        $processorRegistryDef->replaceArgument(0, $processorIds);
     }
 
     /**
@@ -65,7 +66,7 @@ class BuildMessageProcessorRegistryPass implements CompilerPassInterface
     protected function addConfigsFromTags(&$processorIds, $tagAttributes, $serviceId, $processorTagName)
     {
         foreach ($tagAttributes as $tagAttribute) {
-            if (false == isset($tagAttribute['topicName']) || false == $tagAttribute['topicName']) {
+            if (!isset($tagAttribute['topicName']) || !$tagAttribute['topicName']) {
                 throw new \LogicException(sprintf(
                     'Topic name is not set but it is required. service: "%s", tag: "%s"',
                     $serviceId,

@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\CurrencyBundle\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
+use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class OroCurrencyExtension extends Extension
 {
@@ -21,6 +21,7 @@ class OroCurrencyExtension extends Extension
         $loader->load('services.yml');
         $loader->load('form_types.yml');
         $loader->load('formatters.yml');
+        $loader->load('importexport.yml');
 
         $container->prependExtensionConfig($this->getAlias(), $config);
     }

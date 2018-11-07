@@ -7,7 +7,7 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Process\ProcessBuilder;
 
 /**
- * This is the class that validates and merges configuration from your app/config files
+ * This is the class that validates and merges configuration from your config files
  */
 class Configuration implements ConfigurationInterface
 {
@@ -33,10 +33,11 @@ class Configuration implements ConfigurationInterface
                         ->scalarNode('scriptType')->cannotBeEmpty()->end()
                     ->end()
                 ->end()
-                ->scalarNode('web_root')->defaultValue('%kernel.root_dir%/../web')->end()
+                ->scalarNode('web_root')->defaultValue('%kernel.project_dir%/public')->end()
                 ->scalarNode('js_engine')->defaultNull()->end()
                 ->scalarNode('build_path')->defaultValue('js/app.min.js')->end()
                 ->integerNode('building_timeout')->min(1)->defaultValue(60)->end()
+                ->booleanNode('build_logger')->defaultValue(false)->end()
                 ->arrayNode('build')
                     ->addDefaultsIfNotSet()
                     ->children()

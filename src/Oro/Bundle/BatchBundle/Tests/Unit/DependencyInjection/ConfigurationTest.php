@@ -2,13 +2,13 @@
 
 namespace Oro\Bundle\BatchBundle\Tests\Unit\DependencyInjection;
 
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Oro\Bundle\BatchBundle\DependencyInjection\Configuration;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
 /**
  * Test related class
  */
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+class ConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * Test related method

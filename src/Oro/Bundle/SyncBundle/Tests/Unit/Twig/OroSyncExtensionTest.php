@@ -2,32 +2,72 @@
 
 namespace Oro\Bundle\SyncBundle\Tests\Unit\Twig;
 
+use Oro\Bundle\SyncBundle\Client\ConnectionChecker;
+use Oro\Bundle\SyncBundle\Content\TagGeneratorInterface;
 use Oro\Bundle\SyncBundle\Twig\OroSyncExtension;
+use Oro\Component\Testing\Unit\TwigExtensionTestCaseTrait;
 
-class OroSyncExtensionTest extends \PHPUnit_Framework_TestCase
+class OroSyncExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    private $extension;
+    use TwigExtensionTestCaseTrait;
+
+    /** @var ConnectionChecker|\PHPUnit\Framework\MockObject\MockObject */
+    protected $connectionChecker;
+
+    /** @var TagGeneratorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $tagGenerator;
+
+    /** @var OroSyncExtension */
+    protected $extension;
 
     protected function setUp()
     {
-        $topicPublisher = $this->createMock('Oro\Bundle\SyncBundle\Wamp\TopicPublisher');
-        $this->extension = new OroSyncExtension($topicPublisher);
+        $this->connectionChecker = $this->createMock(ConnectionChecker::class);
+        $this->tagGenerator = $this->createMock(TagGeneratorInterface::class);
+
+        $container = self::getContainerBuilder()
+            ->add('oro_sync.client.connection_checker', $this->connectionChecker)
+            ->add('oro_sync.content.tag_generator', $this->tagGenerator)
+            ->getContainer($this);
+
+        $this->extension = new OroSyncExtension($container);
     }
 
-    protected function tearDown()
-    {
-        unset($this->extension);
-    }
     public function testGetName()
     {
         $this->assertEquals('sync_extension', $this->extension->getName());
     }
 
-    public function testGetFunctions()
+    public function testGenerate()
     {
-        $functions = $this->extension->getFunctions();
-        $this->assertCount(1, $functions);
-        $function = reset($functions);
-        $this->assertEquals('check_ws', $function->getName());
+        $data = 'string';
+        $tags = ['string_tag'];
+
+        $this->tagGenerator->expects($this->once())->method('generate')
+            ->with($this->equalTo($data), $this->equalTo(false))
+            ->will($this->returnValue($tags));
+
+        $this->assertSame(
+            $tags,
+            self::callTwigFunction($this->extension, 'oro_sync_get_content_tags', [$data])
+        );
+    }
+
+    public function testCheckWsConnected()
+    {
+        $this->connectionChecker->expects($this->once())
+            ->method('checkConnection')
+            ->willReturn(true);
+
+        $this->assertTrue(self::callTwigFunction($this->extension, 'check_ws', []));
+    }
+
+    public function testWsConnectedFail()
+    {
+        $this->connectionChecker->expects($this->once())
+            ->method('checkConnection')
+            ->willReturn(false);
+
+        $this->assertFalse(self::callTwigFunction($this->extension, 'check_ws', []));
     }
 }

@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\IntegrationBundle\Manager;
 
-use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\IntegrationBundle\Exception\LogicException;
+use Doctrine\Common\Util\ClassUtils;
 use Oro\Bundle\IntegrationBundle\Entity\Transport;
+use Oro\Bundle\IntegrationBundle\Exception\LogicException;
 use Oro\Bundle\IntegrationBundle\Provider\ChannelInterface as IntegrationInterface;
 use Oro\Bundle\IntegrationBundle\Provider\ConnectorInterface;
 use Oro\Bundle\IntegrationBundle\Provider\DefaultOwnerTypeAwareInterface;
@@ -61,6 +60,25 @@ class TypesRegistry
     }
 
     /**
+     * @param string $typeName
+     *
+     * @return IntegrationInterface
+     */
+    public function getIntegrationByType($typeName)
+    {
+        if ($this->integrationTypes->containsKey($typeName)) {
+            return $this->integrationTypes->get($typeName);
+        } else {
+            throw new LogicException(
+                sprintf(
+                    'Integration type "%s" not found.',
+                    $typeName
+                )
+            );
+        }
+    }
+
+    /**
      * Collect available types for choice field
      *
      * @return array
@@ -69,14 +87,14 @@ class TypesRegistry
     {
         /** @var ArrayCollection $types */
         $types  = $this->getAvailableIntegrationTypes();
-        $keys   = $types->getKeys();
-        $values = $types->map(
+        $values = $types->getKeys();
+        $labels = $types->map(
             function (IntegrationInterface $type) {
                 return $type->getLabel();
             }
         )->toArray();
 
-        return array_combine($keys, $values);
+        return array_combine($labels, $values);
     }
 
     /**
@@ -258,6 +276,7 @@ class TypesRegistry
      * @param string $type
      *
      * @return ConnectorInterface
+     *
      * @throws LogicException
      */
     public function getConnectorType($integrationType, $type)

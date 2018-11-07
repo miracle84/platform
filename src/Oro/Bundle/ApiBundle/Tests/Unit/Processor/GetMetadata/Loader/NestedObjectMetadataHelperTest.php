@@ -11,25 +11,21 @@ use Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader\MetadataHelper;
 use Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader\NestedObjectMetadataHelper;
 use Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader\ObjectMetadataFactory;
 
-class NestedObjectMetadataHelperTest extends \PHPUnit_Framework_TestCase
+class NestedObjectMetadataHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $metadataHelper;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|MetadataHelper */
+    private $metadataHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $objectMetadataFactory;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ObjectMetadataFactory */
+    private $objectMetadataFactory;
 
     /** @var NestedObjectMetadataHelper */
-    protected $nestedObjectMetadataHelper;
+    private $nestedObjectMetadataHelper;
 
     protected function setUp()
     {
-        $this->metadataHelper = $this->getMockBuilder(MetadataHelper::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->objectMetadataFactory = $this->getMockBuilder(ObjectMetadataFactory::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->metadataHelper = $this->createMock(MetadataHelper::class);
+        $this->objectMetadataFactory = $this->createMock(ObjectMetadataFactory::class);
 
         $this->nestedObjectMetadataHelper = new NestedObjectMetadataHelper(
             $this->metadataHelper,
@@ -39,6 +35,8 @@ class NestedObjectMetadataHelperTest extends \PHPUnit_Framework_TestCase
 
     public function testAddNestedObjectAssociation()
     {
+        $config = new EntityDefinitionConfig();
+
         $entityMetadata = new EntityMetadata();
         $entityClass = 'Test\Class';
         $fieldName = 'testField';
@@ -57,6 +55,7 @@ class NestedObjectMetadataHelperTest extends \PHPUnit_Framework_TestCase
             ->with(
                 self::identicalTo($entityMetadata),
                 $entityClass,
+                self::identicalTo($config),
                 $fieldName,
                 self::identicalTo($field),
                 $targetAction,
@@ -71,6 +70,7 @@ class NestedObjectMetadataHelperTest extends \PHPUnit_Framework_TestCase
         $result = $this->nestedObjectMetadataHelper->addNestedObjectAssociation(
             $entityMetadata,
             $entityClass,
+            $config,
             $fieldName,
             $field,
             $targetAction

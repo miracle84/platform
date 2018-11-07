@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Permission;
 
-use Oro\Bundle\SecurityBundle\Acl\Permission\PermissionMap;
 use Oro\Bundle\SecurityBundle\Acl\Extension\ActionMaskBuilder;
-use Oro\Bundle\SecurityBundle\Tests\Unit\TestHelper;
+use Oro\Bundle\SecurityBundle\Acl\Permission\PermissionMap;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\TestEntity;
+use Oro\Bundle\SecurityBundle\Tests\Unit\TestHelper;
 
-class PermissionMapTest extends \PHPUnit_Framework_TestCase
+class PermissionMapTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var PermissionMap

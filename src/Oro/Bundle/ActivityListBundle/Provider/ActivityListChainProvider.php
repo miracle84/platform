@@ -3,9 +3,6 @@
 namespace Oro\Bundle\ActivityListBundle\Provider;
 
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListDateProviderInterface;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListGroupProviderInterface;
@@ -18,8 +15,14 @@ use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureToggleableInterface;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Translation\TranslatorInterface;
 
 /**
+ * Provides information required to build the activity list, delegating the retrieving of this information
+ * to providers registered for each of activity entity.
+ *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
@@ -49,22 +52,28 @@ class ActivityListChainProvider
     /** @var string[] */
     protected $ownerActivities;
 
+    /** @var TokenAccessorInterface */
+    private $tokenAccessor;
+
     /**
-     * @param DoctrineHelper      $doctrineHelper
-     * @param ConfigManager       $configManager
-     * @param TranslatorInterface $translator
-     * @param EntityRoutingHelper $routingHelper
+     * @param DoctrineHelper         $doctrineHelper
+     * @param ConfigManager          $configManager
+     * @param TranslatorInterface    $translator
+     * @param EntityRoutingHelper    $routingHelper
+     * @param TokenAccessorInterface $tokenAccessor
      */
     public function __construct(
         DoctrineHelper $doctrineHelper,
         ConfigManager $configManager,
         TranslatorInterface $translator,
-        EntityRoutingHelper $routingHelper
+        EntityRoutingHelper $routingHelper,
+        TokenAccessorInterface $tokenAccessor
     ) {
         $this->doctrineHelper = $doctrineHelper;
         $this->configManager  = $configManager;
         $this->translator     = $translator;
         $this->routingHelper  = $routingHelper;
+        $this->tokenAccessor  = $tokenAccessor;
     }
 
     /**
@@ -310,7 +319,6 @@ class ActivityListChainProvider
                 'icon'         => $entityConfig->get('icon'),
                 'label'        => $this->translator->trans($entityConfig->get('label')),
                 'template'     => $template,
-                'routes'       => $provider->getRoutes(),
                 'has_comments' => $hasComment,
             ];
         }
@@ -427,10 +435,13 @@ class ActivityListChainProvider
             $list->setOwner($provider->getOwner($entity));
             if ($provider instanceof ActivityListUpdatedByProviderInterface) {
                 $list->setUpdatedBy($provider->getUpdatedBy($entity));
+            } else {
+                $updatedByUser = $this->tokenAccessor->getUser();
+                if ($updatedByUser instanceof User) {
+                    $list->setUpdatedBy($updatedByUser);
+                }
             }
-            if ($provider instanceof ActivityListGroupProviderInterface) {
-                $list->setHead($provider->isHead($entity));
-            }
+
             $list->setVerb($verb);
 
             if ($verb === ActivityList::VERB_UPDATE) {

@@ -2,13 +2,11 @@
 
 namespace Oro\Bundle\ActionBundle\Helper;
 
-use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
 use Doctrine\Common\Util\ClassUtils;
-
 use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 class ContextHelper
 {
@@ -118,7 +116,7 @@ class ContextHelper
                 );
             }
 
-            $data = ['data' => $entity];
+            $data = ['data' => $entity, ActionData::OPERATION_TOKEN => $hash];
 
             if ($context[self::DATAGRID_PARAM]) {
                 $data['gridName'] = $context[self::DATAGRID_PARAM];

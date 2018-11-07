@@ -15,7 +15,7 @@ define(function(require) {
     var WidgetPickerComponent = require('oroui/js/app/components/widget-picker-component');
 
     WidgetPickerModal = Modal.extend({
-        className: 'modal oro-modal-normal widget-picker-modal',
+        className: 'modal oro-modal-normal widget-picker__modal  modal--fullscreen-small-device',
 
         options: {
             /**
@@ -28,6 +28,13 @@ define(function(require) {
          * @property {WidgetPickerComponent}
          */
         component: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function WidgetPickerModal() {
+            WidgetPickerModal.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc

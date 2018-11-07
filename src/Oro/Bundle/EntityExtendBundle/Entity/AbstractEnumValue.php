@@ -3,10 +3,8 @@
 namespace Oro\Bundle\EntityExtendBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
 use Gedmo\Mapping\Annotation as Gedmo;
 use Gedmo\Translatable\Translatable;
-
 use Oro\Bundle\FormBundle\Entity\PriorityItem;
 
 /**
@@ -161,6 +159,6 @@ abstract class AbstractEnumValue implements Translatable, PriorityItem
      */
     public function __toString()
     {
-        return $this->name;
+        return (string)$this->name;
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Oro\Bundle\EmailBundle\Builder;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailAddress;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
@@ -12,48 +14,59 @@ use Oro\Bundle\EmailBundle\Entity\EmailRecipient;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Entity\Mailbox;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailAddressManager;
+use Oro\Bundle\EmailBundle\Exception\EmailAddressParseException;
 use Oro\Bundle\EmailBundle\Exception\UnexpectedTypeException;
 use Oro\Bundle\EmailBundle\Model\FolderType;
 use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\EmailBundle\Tools\EmailBodyHelper;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
 use Oro\Bundle\UserBundle\Entity\User;
+use Psr\Log\LoggerInterface;
 
+/**
+ * The builder that simplifies creation of the email related entities.
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class EmailEntityBuilder
 {
-    /**
-     * @var EmailEntityBatchProcessor
-     */
+    /** @var EmailEntityBatchProcessor */
     private $batch;
 
-    /**
-     * @var EmailAddressManager
-     */
+    /** @var EmailAddressManager */
     private $emailAddressManager;
 
-    /**
-     * @var EmailAddressHelper
-     */
+    /** @var EmailAddressHelper */
     private $emailAddressHelper;
 
     /** @var EmailBodyHelper */
     private $emailBodyHelper;
 
+    /** @var ManagerRegistry */
+    private $doctrine;
+
+    /** @var array [entity class => [field name => length, ...], ...] */
+    private $fieldLength = [];
+
     /**
-     * Constructor
-     *
      * @param EmailEntityBatchProcessor $batch
      * @param EmailAddressManager       $emailAddressManager
      * @param EmailAddressHelper        $emailAddressHelper
+     * @param ManagerRegistry           $doctrine
+     * @param LoggerInterface           $logger
      */
     public function __construct(
         EmailEntityBatchProcessor $batch,
         EmailAddressManager $emailAddressManager,
-        EmailAddressHelper $emailAddressHelper
+        EmailAddressHelper $emailAddressHelper,
+        ManagerRegistry $doctrine,
+        LoggerInterface $logger
     ) {
-        $this->batch               = $batch;
+        $this->batch = $batch;
         $this->emailAddressManager = $emailAddressManager;
-        $this->emailAddressHelper  = $emailAddressHelper;
+        $this->emailAddressHelper = $emailAddressHelper;
+        $this->doctrine = $doctrine;
+        $this->logger = $logger;
     }
 
     /**
@@ -98,6 +111,7 @@ class EmailEntityBuilder
         $email = $this->email($subject, $from, $to, $sentAt, $internalDate, $importance, $cc, $bcc);
         $emailUser->setReceivedAt($receivedAt);
         $emailUser->setEmail($email);
+        $email->addEmailUser($emailUser);
         if ($owner !== null) {
             if ($owner instanceof User) {
                 $emailUser->setOwner($owner);
@@ -148,7 +162,7 @@ class EmailEntityBuilder
         $result = new Email();
         $result
             ->setSubject($subject)
-            ->setFromName($from)
+            ->setFromName($this->truncateFullEmailAddress($from, Email::class, 'fromName'))
             ->setFromEmailAddress($this->address($from))
             ->setSentAt($sentAt)
             ->setInternalDate($internalDate)
@@ -172,10 +186,10 @@ class EmailEntityBuilder
     {
         if (!empty($email)) {
             if (is_string($email)) {
-                $obj->addRecipient($this->recipient($type, $email));
+                $this->addRecipient($obj, $type, $email);
             } elseif (is_array($email) || $email instanceof \Traversable) {
                 foreach ($email as $e) {
-                    $obj->addRecipient($this->recipient($type, $e));
+                    $this->addRecipient($obj, $type, $e);
                 }
             }
         }
@@ -191,6 +205,7 @@ class EmailEntityBuilder
     public function address($email)
     {
         $pureEmail = $this->emailAddressHelper->extractPureEmailAddress($email);
+        $this->validateEmailAddress($pureEmail);
         $result    = $this->batch->getAddress($pureEmail);
         if ($result === null) {
             $result = $this->emailAddressManager->newEmailAddress()
@@ -199,6 +214,23 @@ class EmailEntityBuilder
         }
 
         return $result;
+    }
+
+    /**
+     * Check is email address valid
+     *
+     * @param $email
+     */
+    private function validateEmailAddress($email)
+    {
+        $atPos = strrpos($email, '@');
+        if ($atPos === false) {
+            throw new EmailAddressParseException(sprintf('Not valid email address: %s', $email));
+        }
+
+        if (strlen($email) > 255) {
+            throw new EmailAddressParseException(sprintf('Email address is too long: %s', $email));
+        }
     }
 
     /**
@@ -429,7 +461,7 @@ class EmailEntityBuilder
 
         return $result
             ->setType($type)
-            ->setName($email)
+            ->setName($this->truncateFullEmailAddress($email, EmailRecipient::class, 'name'))
             ->setEmailAddress($this->address($email));
     }
 
@@ -483,6 +515,16 @@ class EmailEntityBuilder
     }
 
     /**
+     * Get full class name of the EmailAddress entity
+     *
+     * @return string
+     */
+    public function getEmailAddressEntityClass()
+    {
+        return $this->emailAddressManager->getEmailAddressProxyClass();
+    }
+
+    /**
      * @return EmailBodyHelper
      */
     protected function getEmailBodyHelper()
@@ -492,5 +534,63 @@ class EmailEntityBuilder
         }
 
         return $this->emailBodyHelper;
+    }
+
+    /**
+     * @param string $email
+     * @param string $entityClass
+     * @param string $fieldName
+     *
+     * @return string
+     */
+    private function truncateFullEmailAddress($email, $entityClass, $fieldName)
+    {
+        return $this->emailAddressHelper->truncateFullEmailAddress(
+            $email,
+            $this->getFieldLength($entityClass, $fieldName)
+        );
+    }
+
+    /**
+     * @param string $entityClass
+     * @param string $fieldName
+     *
+     * @return int
+     */
+    private function getFieldLength($entityClass, $fieldName)
+    {
+        if (!isset($this->fieldLength[$entityClass][$fieldName])) {
+            /** @var ClassMetadata $metadata */
+            $metadata = $this->doctrine
+                ->getManagerForClass($entityClass)
+                ->getClassMetadata($entityClass);
+            $mapping = $metadata->getFieldMapping($fieldName);
+            $this->fieldLength[$entityClass][$fieldName] = $mapping['length'];
+        }
+
+        return $this->fieldLength[$entityClass][$fieldName];
+    }
+
+    /**
+     * Add recipient to the Email object
+     *
+     * @param Email  $object The Email object recipients is added to
+     * @param string $type   The recipient type. Can be to, cc or bcc
+     * @param string $email  The email address, for example: john@example.com or "John Smith" <john@example.com>
+     */
+    private function addRecipient(Email $object, $type, $email)
+    {
+        try {
+            $object->addRecipient($this->recipient($type, $email));
+        } catch (EmailAddressParseException $e) {
+            /**
+             * An invalid email address should be ignored as well as mailing groups,
+             * such as "<undisclosed-recipients:;>" or "<nobody:;>"
+             */
+            $this->logger->warning(
+                'An invalid recipient address has been ignored',
+                ['exception' => $e->getMessage()]
+            );
+        }
     }
 }

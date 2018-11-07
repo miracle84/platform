@@ -6,9 +6,6 @@ use Oro\Bundle\ReportBundle\Entity\CalendarDate;
 use Oro\Bundle\ReportBundle\Entity\Repository\CalendarDateRepository;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class CalendarDateRepositoryTest extends WebTestCase
 {
     /**
@@ -43,9 +40,12 @@ class CalendarDateRepositoryTest extends WebTestCase
 
     public function testGetDateWithNotExistingArgument()
     {
-        $lastDate = $this->getLastCalendarDate()->getDate()->modify('+1 day');
+        $lastDate = clone $this->getLastCalendarDate()->getDate();
+        $lastDate->modify('+1 day');
         $this->assertNull($this->getRepository()->getDate($lastDate));
-        $firstDate = $this->getFirstCalendarDate()->getDate()->modify('-1 day');
+
+        $firstDate = clone $this->getFirstCalendarDate()->getDate();
+        $firstDate->modify('-1 day');
         $this->assertNull($this->getRepository()->getDate($firstDate));
     }
 

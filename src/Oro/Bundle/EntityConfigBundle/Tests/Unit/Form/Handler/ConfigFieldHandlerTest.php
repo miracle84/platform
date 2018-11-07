@@ -6,13 +6,12 @@ use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Form\Handler\ConfigFieldHandler;
 use Oro\Bundle\EntityConfigBundle\Form\Handler\ConfigHelperHandler;
 use Oro\Component\Testing\Unit\EntityTrait;
-
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-class ConfigFieldHandlerTest extends \PHPUnit_Framework_TestCase
+class ConfigFieldHandlerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
@@ -20,17 +19,17 @@ class ConfigFieldHandlerTest extends \PHPUnit_Framework_TestCase
     const SAMPLE_SUCCESS_MESSAGE = 'Entity config was successfully saved';
 
     /**
-     * @var ConfigHelperHandler|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigHelperHandler|\PHPUnit\Framework\MockObject\MockObject
      */
     private $configHelperHandler;
 
     /**
-     * @var RequestStack|\PHPUnit_Framework_MockObject_MockObject
+     * @var RequestStack|\PHPUnit\Framework\MockObject\MockObject
      */
     private $requestStack;
 
     /**
-     * @var FieldConfigModel|\PHPUnit_Framework_MockObject_MockObject
+     * @var FieldConfigModel|\PHPUnit\Framework\MockObject\MockObject
      */
     private $fieldConfigModel;
 
@@ -59,7 +58,7 @@ class ConfigFieldHandlerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param bool $isFormValid
-     * @return FormInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return FormInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     private function expectsFormCreationSubmissionAndValidation($isFormValid)
     {
@@ -96,6 +95,11 @@ class ConfigFieldHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('showSuccessMessageAndRedirect')
             ->with($this->fieldConfigModel, $successMessage)
             ->willReturn($response);
+
+        $this->configHelperHandler
+            ->expects($this->once())
+            ->method('showClearCacheMessage')
+            ->willReturn($this->configHelperHandler);
 
         $formAction = 'formAction';
         $this->assertEquals(

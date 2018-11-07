@@ -2,6 +2,7 @@ define(function(require) {
     'use strict';
 
     var FiltersManager;
+    var template = require('tpl!orofilter/templates/filters-container.html');
     var $ = require('jquery');
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
@@ -12,6 +13,7 @@ define(function(require) {
     var filterWrapper = require('./datafilter-wrapper');
     var FiltersStateView = require('./app/views/filters-state-view');
     var persistentStorage = require('oroui/js/persistent-storage');
+    var FilterDialogWidget = require('orofilter/js/app/views/filter-dialog-widget');
 
     /**
      * View that represents all grid filters
@@ -34,14 +36,9 @@ define(function(require) {
         filters: null,
 
         /**
-         * Template selector
-         */
-        templateSelector: '#filter-container',
-
-        /**
          * Template
          */
-        template: null,
+        template: template,
 
         /**
          * Mode of filters displaying
@@ -59,6 +56,12 @@ define(function(require) {
         filterSelector: '[data-action=add-filter-select]',
 
         /**
+         *  Is used in template for render additional html
+         * @property {String} 'collapse-mode' | 'toggle-mode'
+         */
+        renderMode: '',
+
+        /**
          * Add filter button hint
          *
          * @property
@@ -66,11 +69,39 @@ define(function(require) {
         addButtonHint: __('oro_datagrid.label_add_filter'),
 
         /**
+         * Set label for reset button
+         *
+         * @property
+         */
+        multiselectResetButtonLabel: __('oro_datagrid.label_reset_button'),
+
+        /**
+         * Set title for dialog widget with filters
+         *
+         * @property
+         */
+        filterDialogTitle: __('oro.filter.dialog.filter_results'),
+
+        /**
          * Select widget object
          *
          * @property {oro.MultiselectDecorator}
          */
         selectWidget: null,
+
+        /**
+         * Select widget constructor
+         *
+         * @property
+         */
+        MultiselectDecorator: MultiselectDecorator,
+
+        /**
+         *  Parameters Select widget constructor
+         *
+         * @property
+         */
+        multiselectParameters: {},
 
         /**
          * ImportExport button selector
@@ -86,11 +117,34 @@ define(function(require) {
          */
         dropdownContainer: 'body',
 
+        /**
+         * Flag for close previous open filters
+         *
+         * @property
+         */
+        hidePreviousOpenFilters: true,
+
         /** @property */
         events: {
             'change [data-action=add-filter-select]': '_onChangeFilterSelect',
             'click .reset-filter-button': '_onReset',
-            'click a[data-name="filters-dropdown"]': '_onDropdownToggle'
+            'click a[data-name="filters-dropdown"]': '_onDropdownToggle',
+            'click [data-role="reset-filters"], [data-role="reset-all-filters"]': '_onReset'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        listen: {
+            'filters:update mediator': '_onChangeFilterSelect',
+            'filters:reset mediator': '_onReset'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function FiltersManager() {
+            FiltersManager.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -101,20 +155,21 @@ define(function(require) {
          * @param {String} [options.addButtonHint]
          */
         initialize: function(options) {
-            this.template = _.template($(this.templateSelector).html());
-
+            var prop = ['addButtonHint', 'multiselectResetButtonLabel', 'stateViewElement', 'viewMode'];
+            this.template = this.getTemplateFunction();
             this.filters = {};
 
-            _.extend(this, _.pick(options, ['addButtonHint', 'stateViewElement', 'viewMode']));
+            _.extend(this, _.pick(options, prop));
 
             if (options.filters) {
                 _.extend(this.filters, options.filters);
             }
 
             var filterListeners = {
-                'update': this._onFilterUpdated,
-                'disable': this._onFilterDisabled,
-                'showCriteria': this._onFilterShowCriteria
+                update: this._onFilterUpdated,
+                change: this._onFilterChanged,
+                disable: this._onFilterDisabled,
+                showCriteria: this._onFilterShowCriteria
             };
 
             if (tools.isMobile()) {
@@ -127,11 +182,10 @@ define(function(require) {
                 if (filter.wrappable) {
                     _.extend(filter, filterWrapper);
                 }
-
                 this.listenTo(filter, filterListeners);
             }, this);
 
-            if ('filtersStateElement' in options) {
+            if (this.isFiltersStateViewNeeded(options)) {
                 var $container = this.$el.closest('body, .ui-dialog');
                 var filtersStateView = new FiltersStateView({
                     el: $container.find(options.filtersStateElement).first(),
@@ -145,6 +199,61 @@ define(function(require) {
             }
 
             FiltersManager.__super__.initialize.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
+        delegateListeners: function() {
+            if (!_.isEmpty(this.filters)) {
+                this.listenTo(mediator, 'datagrid:metadata-loaded', this.updateFilters);
+            }
+
+            return FiltersManager.__super__.delegateListeners.apply(this, arguments);
+        },
+
+        /**
+         * @param {orodatagrid.datagrid.Grid} grid
+         */
+        updateFilters: function(grid) {
+            _.each(grid.metadata.filters, function(metadata) {
+                if (this.filters[metadata.name]) {
+                    this.filters[metadata.name].trigger('metadata-loaded', metadata);
+                }
+            }, this);
+
+            this.checkFiltersVisibility();
+        },
+
+        checkFiltersVisibility: function() {
+            var filterSelector = this.$(this.filterSelector);
+            if (!filterSelector.length) {
+                return;
+            }
+            _.each(this.filters, function(filter) {
+                var option = filterSelector.find('option[value="' + filter.name + '"]');
+                if (filter.visible && option.hasClass('hidden')) {
+                    option.removeClass('hidden');
+
+                    if (filter.enabled) {
+                        this._renderFilter(filter).show();
+                    }
+                } else if (!filter.visible && !option.hasClass('hidden')) {
+                    option.addClass('hidden');
+
+                    filter.hide();
+                }
+            }, this);
+
+            this._refreshSelectWidget();
+        },
+
+        /**
+         * @param {object} options
+         * @returns {boolean}
+         */
+        isFiltersStateViewNeeded: function(options) {
+            return 'filtersStateElement' in options;
         },
 
         /**
@@ -175,6 +284,18 @@ define(function(require) {
         _onFilterUpdated: function(filter) {
             this._resetHintContainer();
             this.trigger('updateFilter', filter);
+            this._publishCountSelectedFilters();
+        },
+
+        /**
+         * Triggers when filter DOM Value is changed
+         *
+         * @param {oro.filter.AbstractFilter} filter
+         * @protected
+         */
+        _onFilterChanged: function() {
+            this._publishCountChangedFilters();
+            this._publishCountSelectedFilters();
         },
 
         /**
@@ -187,14 +308,21 @@ define(function(require) {
             this.trigger('disableFilter', filter);
             this.disableFilter(filter);
             this.trigger('afterDisableFilter', filter);
+
+            this._publishCountSelectedFilters();
+            this._publishCountChangedFilters();
         },
 
         _onFilterShowCriteria: function(shownFilter) {
-            _.each(this.filters, function(filter) {
-                if (filter !== shownFilter) {
-                    _.result(filter, 'ensurePopupCriteriaClosed');
-                }
-            });
+            if (this.hidePreviousOpenFilters) {
+                _.each(this.filters, function(filter) {
+                    if (filter !== shownFilter) {
+                        _.result(filter, 'ensurePopupCriteriaClosed');
+                    }
+                });
+            }
+
+            this._publishCountSelectedFilters();
         },
 
         /**
@@ -225,11 +353,12 @@ define(function(require) {
         /**
          * Triggers when filter select is changed
          *
+         * @param {Array} filters
          * @protected
          */
-        _onChangeFilterSelect: function() {
+        _onChangeFilterSelect: function(filters) {
             this.trigger('updateList', this);
-            this._processFilterStatus();
+            this._processFilterStatus(filters);
             this.trigger('afterUpdateList', this);
         },
 
@@ -266,17 +395,16 @@ define(function(require) {
             var optionsSelectors = [];
 
             _.each(filters, function(filter) {
-                if (filter.visible && !filter.isRendered()) {
-                    var oldEl = filter.$el;
-                    // filter rendering process replaces $el
-                    filter.render();
-                    // so we need to replace element which keeps place in DOM with actual filter $el after rendering
-                    oldEl.replaceWith(filter.$el);
-                    filter.rendered();
+                this._renderFilter(filter);
+                if (filter.visible) {
+                    filter.enable();
                 }
-                filter.enable();
                 optionsSelectors.push('option[value="' + filter.name + '"]:not(:selected)');
             }, this);
+
+            if (!this.$(this.filterSelector).length) {
+                return;
+            }
 
             var options = this.$(this.filterSelector).find(optionsSelectors.join(','));
             if (options.length) {
@@ -284,7 +412,7 @@ define(function(require) {
             }
 
             if (optionsSelectors.length) {
-                this.selectWidget.multiselect('refresh');
+                this._refreshSelectWidget();
             }
 
             return this;
@@ -307,6 +435,9 @@ define(function(require) {
                 optionsSelectors.push('option[value="' + filter.name + '"]:selected');
             }, this);
 
+            if (!this.$(this.filterSelector).length) {
+                return;
+            }
             var options = this.$(this.filterSelector).find(optionsSelectors.join(','));
             if (options.length) {
                 options.prop('selected', false);
@@ -320,14 +451,44 @@ define(function(require) {
         },
 
         /**
+         * @param {oro.filter.AbstractFilter} filter
+         * @returns {oro.filter.AbstractFilter}
+         */
+        _renderFilter: function(filter) {
+            if (!filter.isRendered()) {
+                var oldEl = filter.$el;
+                filter.setRenderMode(this.renderMode);
+                // filter rendering process replaces $el
+                filter.render();
+                // so we need to replace element which keeps place in DOM with actual filter $el after rendering
+                oldEl.replaceWith(filter.$el);
+                filter.rendered();
+
+                if (!filter.visible) {
+                    filter.hide();
+                }
+            }
+
+            return filter;
+        },
+
+        getTemplateData: function() {
+            return {
+                filters: this.filters,
+                renderMode: this.renderMode
+            };
+        },
+
+        /**
          * Render filter list
          *
          * @return {*}
          */
         render: function() {
-            this.$el.html(
-                this.template({filters: this.filters})
+            this.setElement(
+                $(this.template(this.getTemplateData()))
             );
+
             this.dropdownContainer = this.$el.find('.filter-container');
             var $filterItems = this.dropdownContainer.find('.filter-items');
 
@@ -341,10 +502,11 @@ define(function(require) {
                     $filterItems.append(filter.$el);
                     return;
                 }
+
+                filter.setRenderMode(this.renderMode);
                 filter.render();
                 $filterItems.append(filter.$el);
                 filter.rendered();
-
             }, this);
 
             this.trigger('rendered');
@@ -363,8 +525,70 @@ define(function(require) {
                     this.$el.hide();
                 }
             }
-
             return this;
+        },
+
+        /**
+         * @param {Number} [count]
+         * @private
+         */
+        _publishCountSelectedFilters: function(count) {
+            var countFilters = (!_.isUndefined(count) && _.isNumber(count)) ? count : this._calculateSelectedFilters();
+
+            mediator.trigger(
+                'filterManager:selectedFilters:count:' + this.collection.options.gridName,
+                countFilters
+            );
+
+            this.$('a[data-name="filters-dropdown"]').toggleClass('filters-exist', countFilters > 0);
+        },
+
+        /**
+         * @param {Number} [count]
+         * @private
+         */
+        _publishCountChangedFilters: function(count) {
+            var countFilters = (!_.isUndefined(count) && _.isNumber(count)) ? count : this._calculateChangedFilters();
+
+            mediator.trigger(
+                'filterManager:changedFilters:count:' + this.collection.options.gridName,
+                countFilters
+            );
+        },
+
+        /**
+         * @returns {Number} count of selected filters
+         * @private
+         */
+        _calculateSelectedFilters: function() {
+            return _.reduce(this.filters, function(memo, filter) {
+                var num = (
+                    filter.enabled &&
+                    !filter.isEmptyValue() &&
+                    !_.isEqual(filter.emptyValue, filter.value)
+                ) ? 1 : 0;
+
+                return memo + num;
+            }, 0);
+        },
+
+        /**
+         * @returns {Number} count of selected filters
+         * @private
+         */
+        _calculateChangedFilters: function() {
+            return _.reduce(this.filters, function(memo, filter) {
+                var domVal = filter._readDOMValue();
+
+                var num = (filter.enabled &&
+                   !_.isEqual(filter.value, domVal) &&
+                   !_.isEqual(filter.emptyValue, domVal) &&
+                   !_.isUndefined(domVal.type) &&
+                   !_.isEmpty(domVal.value)
+                ) ? 1 : 0;
+
+                return memo + num;
+            }, 0);
         },
 
         _resetHintContainer: function() {
@@ -381,6 +605,8 @@ define(function(require) {
             } else {
                 $container.hide();
             }
+
+            this._publishCountSelectedFilters();
         },
 
         /**
@@ -390,31 +616,98 @@ define(function(require) {
          */
         _initializeSelectWidget: function() {
             var $button;
-            this.selectWidget = new MultiselectDecorator({
-                element: this.$(this.filterSelector),
-                parameters: {
-                    multiple: true,
-                    selectedList: 0,
+            var multiselectDefaults = {
+                multiple: true,
+                selectedList: 0,
+                classes: 'select-filter-widget',
+                position: {
+                    my: 'left top+2',
+                    at: 'left bottom'
+                }
+            };
+            var options = _.extend(
+                multiselectDefaults,
+                {
                     selectedText: this.addButtonHint,
-                    classes: 'select-filter-widget',
-                    position: {
-                        my: 'left top+2',
-                        at: 'left bottom'
-                    },
-                    open: $.proxy(function() {
+                    beforeopen: _.bind(function() {
+                        _.each(this.filters, function(filter) {
+                            filter.close();
+                        });
+                        this.selectWidget.onBeforeOpenDropdown();
+                    }, this),
+                    open: _.bind(function() {
                         this.selectWidget.onOpenDropdown();
                         this._setDropdownWidth();
                     }, this),
+                    refresh: _.bind(function() {
+                        this.selectWidget.onRefresh();
+                    }, this),
                     appendTo: this.dropdownContainer
-                }
+                },
+                this.multiselectParameters
+            );
+
+            if (!this.$(this.filterSelector).length) {
+                return;
+            }
+
+            this.selectWidget = new this.MultiselectDecorator({
+                element: this.$(this.filterSelector),
+                parameters: options
             });
 
             this.selectWidget.setViewDesign(this);
             $button = this.selectWidget.multiselect('instance').button;
-            $button.find('span:first').replaceWith(
-                '<a class="add-filter-button" href="javascript:void(0);">' + this.addButtonHint +
-                    '<span class="caret"></span></a>'
+            this._setButtonDesign($button);
+            this._setButtonReset();
+        },
+
+        /**
+         * Refresh multiselect widget
+         *
+         * @protected
+         */
+        _refreshSelectWidget: function() {
+            if (!this.selectWidget) {
+                return;
+            }
+            this.selectWidget.multiselect('refresh');
+        },
+
+        /**
+         * Set design for filter manager button
+         *
+         * @protected
+         */
+        _setButtonDesign: function($button) {
+            $button.addClass('dropdown-toggle');
+        },
+
+        /**
+         *  Create html node
+         *
+         * @returns {*|jQuery|HTMLElement}
+         * @private
+         */
+        _createButtonReset: function() {
+            return $(
+                '<div class="ui-multiselect-footer">' +
+                    '<a href="javascript:void(0);" class="ui-multiselect-reset" data-role="reset-filters">' +
+                        '<i class="fa-refresh"></i>' + this.multiselectResetButtonLabel + '' +
+                    '</a>' +
+                '</div>'
             );
+        },
+
+        /**
+         * Set button for reset filters
+         *
+         * @protected
+         */
+        _setButtonReset: function() {
+            var $footerContainer = this._createButtonReset();
+            var instance = this.selectWidget.multiselect('instance');
+            instance.menu.append($footerContainer);
         },
 
         /**
@@ -426,16 +719,18 @@ define(function(require) {
             var widget = this.selectWidget.getWidget();
             var requiredWidth = this.selectWidget.getMinimumDropdownWidth() + 24;
             widget.width(requiredWidth).css('min-width', requiredWidth + 'px');
-            widget.find('input[type="search"]').width(requiredWidth - 30);
         },
 
         /**
          * Activate/deactivate all filter depends on its status
          *
+         * @param {Array} activeFilters
          * @protected
          */
-        _processFilterStatus: function() {
-            var activeFilters = this.$(this.filterSelector).val();
+        _processFilterStatus: function(activeFilters) {
+            if (!_.isArray(activeFilters)) {
+                activeFilters = this.$(this.filterSelector).val();
+            }
 
             _.each(this.filters, function(filter, name) {
                 if (!filter.enabled && _.indexOf(activeFilters, name) !== -1) {
@@ -448,11 +743,13 @@ define(function(require) {
 
         /**
          * Reset button click handler
+         * @param {jQuery.Event} e
          */
-        _onReset: function() {
+        _onReset: function(e) {
+            e.stopPropagation();
             this.collection.state.filters = {};
             this.collection.trigger('updateState', this.collection);
-            mediator.trigger('datagrid:doRefresh:' + this.collection.inputName);
+            mediator.trigger('datagrid:doRefresh:' + this.collection.inputName, true);
         },
 
         /**
@@ -462,7 +759,12 @@ define(function(require) {
          */
         _onDropdownToggle: function(e) {
             e.preventDefault();
-            this.$('.filter-box > .dropdown').toggleClass('open');
+            var dialogWidget = new FilterDialogWidget({
+                title: this.filterDialogTitle,
+                content: this.dropdownContainer
+            });
+
+            dialogWidget.render();
         },
 
         /**
@@ -515,6 +817,15 @@ define(function(require) {
             this.viewMode = mode;
             persistentStorage.setItem(FiltersManager.STORAGE_KEY, mode);
             this.trigger('changeViewMode', mode);
+        },
+
+        getChangedFilters: function() {
+            return _.filter(this.filters, function(filter) {
+                return (
+                    filter.enabled &&
+                    filter._isDOMValueChanged()
+                );
+            });
         }
     });
 

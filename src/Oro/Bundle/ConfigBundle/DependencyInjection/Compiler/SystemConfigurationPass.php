@@ -2,6 +2,10 @@
 
 namespace Oro\Bundle\ConfigBundle\DependencyInjection\Compiler;
 
+use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
+use Oro\Bundle\ConfigBundle\DependencyInjection\SystemConfiguration\ProcessorDecorator;
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -9,12 +13,6 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Symfony\Component\DependencyInjection\Reference;
-
-use Oro\Bundle\ConfigBundle\DependencyInjection\SystemConfiguration\ProcessorDecorator;
-use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
-
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 
 class SystemConfigurationPass implements CompilerPassInterface
 {
@@ -135,11 +133,35 @@ class SystemConfigurationPass implements CompilerPassInterface
                     throw new \LogicException('Direct passed "settings" are not allowed');
                 }
 
-                $settings[$name] = $config['settings'];
+                $settings[$name] = $this->replaceServiceIdsWithDefinitions($container, $config['settings']);
             }
         }
 
         return $settings;
+    }
+
+    /**
+     * @param ContainerBuilder $containerBuilder
+     * @param array            $configSettings
+     *
+     * @return array
+     */
+    protected function replaceServiceIdsWithDefinitions(ContainerBuilder $containerBuilder, array $configSettings)
+    {
+        foreach ($configSettings as &$configSetting) {
+            if (isset($configSetting['value'])
+                && is_string($configSetting['value'])
+                && strpos($configSetting['value'], '@') === 0
+            ) {
+                $serviceId = substr($configSetting['value'], 1);
+
+                if ($containerBuilder->hasDefinition($serviceId)) {
+                    $configSetting['value'] = $containerBuilder->getDefinition($serviceId);
+                }
+            }
+        }
+
+        return $configSettings;
     }
 
     /**

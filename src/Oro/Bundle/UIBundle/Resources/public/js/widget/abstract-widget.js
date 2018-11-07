@@ -1,7 +1,7 @@
 define(function(require) {
     'use strict';
 
-    var AbstractWidget;
+    var AbstractWidgetView;
     var document = window.document;
     var $ = require('jquery');
     var _ = require('underscore');
@@ -10,17 +10,20 @@ define(function(require) {
     var mediator = require('oroui/js/mediator');
     var LoadingMask = require('oroui/js/app/views/loading-mask-view');
     var __ = require('orotranslation/js/translator');
+    var errorHandler = require('oroui/js/error');
+    var messenger = require('oroui/js/messenger');
     require('jquery.form');
 
     /**
      * @export  oroui/js/widget/abstract-widget
-     * @class   oroui.widget.AbstractWidget
+     * @class   oroui.widget.AbstractWidgetView
      * @extends oroui.app.views.BaseView
      */
-    AbstractWidget = BaseView.extend({
+    AbstractWidgetView = BaseView.extend({
         options: {
             type: 'widget',
             actionsEl: '.widget-actions',
+            moveAdoptedActions: true,
             url: false,
             elementFirst: true,
             title: '',
@@ -33,7 +36,8 @@ define(function(require) {
             container: null,
             submitHandler: function() {
                 this.trigger('adoptedFormSubmit', this.form, this);
-            }
+            },
+            initLayoutOptions: null
         },
 
         loadingElement: null,
@@ -49,6 +53,13 @@ define(function(require) {
 
         listen: {
             renderComplete: '_initSectionActions'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function AbstractWidgetView() {
+            AbstractWidgetView.__super__.constructor.apply(this, arguments);
         },
 
         initialize: function(options) {
@@ -81,7 +92,7 @@ define(function(require) {
                 // If remove method was called directly -- execute dispose first
                 this.dispose();
             } else {
-                AbstractWidget.__super__.remove.call(this);
+                AbstractWidgetView.__super__.remove.call(this);
             }
         },
 
@@ -113,7 +124,7 @@ define(function(require) {
             }
             this.trigger('widgetRemoved');
 
-            AbstractWidget.__super__.dispose.call(this);
+            AbstractWidgetView.__super__.dispose.call(this);
         },
 
         /**
@@ -298,7 +309,9 @@ define(function(require) {
                     }
                     self.actions.adopted[actionId] = $action;
                 });
-                adoptedActionsContainer.remove();
+                if (this.options.moveAdoptedActions) {
+                    adoptedActionsContainer.remove();
+                }
             }
         },
 
@@ -342,11 +355,9 @@ define(function(require) {
             if (form.find('[type="file"]').length) {
                 this.trigger('beforeContentLoad', this);
                 form.ajaxSubmit({
-                    data: {
-                        '_widgetContainer': this.options.type,
-                        '_wid': this.getWid()
-                    },
+                    data: this._getWidgetData(),
                     success: _.bind(this._onContentLoad, this),
+                    errorHandlerMessage: false,
                     error: _.bind(this._onContentLoadFail, this)
                 });
                 this.loading = form.data('jqxhr');
@@ -540,20 +551,22 @@ define(function(require) {
          * @private
          */
         _renderActions: function() {
-            var self = this;
             this._clearActionsContainer();
             var container = this.getActionsElement();
 
             if (container) {
                 _.each(this.actions, function(actions, section) {
-                    var sectionContainer = self._createWidgetActionsSection(section);
+                    var sectionContainer = this._createWidgetActionsSection(section);
+                    var move = section === 'adopted' ? this.options.moveAdoptedActions : true;
                     _.each(actions, function(action, key) {
-                        self._initActionEvents(action);
-                        self._appendActionElement(sectionContainer, action);
-                        self.trigger('widget:add:action:' + section + ':' + key, $(action));
-                    });
+                        this._initActionEvents(action);
+                        if (move) {
+                            this._appendActionElement(sectionContainer, action);
+                        }
+                        this.trigger('widget:add:action:' + section + ':' + key, $(action));
+                    }, this);
                     container.append(sectionContainer);
-                });
+                }, this);
             }
         },
 
@@ -674,12 +687,26 @@ define(function(require) {
             var options = {
                 url: url,
                 type: method,
-                data: data === void 0 ? '' : data + '&'
+                data: data === void 0 ? '' : data + '&',
+                errorHandlerMessage: false
             };
 
-            options.data += '_widgetContainer=' + this.options.type + '&_wid=' + this.getWid();
+            options.data += $.param(this._getWidgetData());
 
             return options;
+        },
+
+        _getWidgetData: function() {
+            var data = {
+                _widgetContainer: this.options.type,
+                _wid: this.getWid()
+            };
+
+            if (this.options.widgetTemplate) {
+                data._widgetContainerTemplate = this.options.widgetTemplate;
+            }
+
+            return data;
         },
 
         /**
@@ -697,10 +724,14 @@ define(function(require) {
 
             if (jqxhr.status === 403) {
                 message = __('oro.ui.forbidden_error');
+            } else if (jqxhr.status === 404) {
+                mediator.trigger('widget:notFound');
+                mediator.execute('refreshPage');
+                return;
             }
 
             var failContent = '<div class="widget-content">' +
-                '<div class="alert alert-error">' + message + '</div>' +
+                '<div class="alert alert-error" role="alert">' + message + '</div>' +
                 '</div>';
 
             this._onContentLoad(failContent);
@@ -713,18 +744,111 @@ define(function(require) {
          * @private
          */
         _onContentLoad: function(content) {
+            var json = this._getJson(content);
+
+            if (json) {
+                content = '<div class="widget-content"></div>'; // set empty response to cover base functionality
+            }
+
             delete this.loading;
             this.disposePageComponents();
             this.setContent(content, true);
             if (this.deferredRender) {
                 this.deferredRender
                     .done(_.bind(this._triggerContentLoadEvents, this, content))
-                    .fail(function() {
-                        throw new Error('Widget rendering failed');
-                    });
+                    .fail(_.bind(function(error) {
+                        if (!this.disposing && !this.disposed) {
+                            errorHandler.showErrorInConsole(error || new Error('Widget rendering failed'));
+                            this._triggerContentLoadEvents();
+                        }
+                    }, this));
             } else {
                 this._triggerContentLoadEvents();
             }
+
+            if (json) {
+                this._onJsonContentResponse(json);
+            }
+        },
+
+        /**
+         * @param {String} content
+         * @returns {json|null}
+         * @private
+         */
+        _getJson: function(content) {
+            if (_.isObject(content)) {
+                return content; // return application/json content
+            }
+
+            try {
+                return $.parseJSON(content);
+            } catch (e) {}
+
+            return null;
+        },
+
+        /**
+         * Handle returned json response
+         *
+         * @param {Object} content
+         * @private
+         */
+        _onJsonContentResponse: function(content) {
+            var widgetResponse = content.widget || {};
+
+            if (_.has(widgetResponse, 'message')) {
+                var message = widgetResponse.message;
+
+                if (_.isString(message)) {
+                    message = {type: 'success', text: message};
+                }
+
+                if (_.has(widgetResponse, 'messageAfterPageChange') && widgetResponse.messageAfterPageChange === true) {
+                    mediator.once('page:afterChange', function() {
+                        messenger.notificationFlashMessage(message.type, message.text);
+                    });
+                } else {
+                    messenger.notificationFlashMessage(message.type, message.text);
+                }
+            }
+
+            if (_.has(widgetResponse, 'trigger')) {
+                var events = widgetResponse.trigger;
+
+                if (!_.isObject(events)) {
+                    events = [events];
+                }
+
+                _.each(events, function(event) {
+                    var eventBroker = this._getEventBroker(event);
+                    var eventFunction = this._getEventFunction(event);
+
+                    if (_.isObject(event)) {
+                        var args = [event.name].concat(event.args);
+                        eventBroker[eventFunction].apply(eventBroker, args);
+                    } else {
+                        eventBroker[eventFunction](event);
+                    }
+                }, this);
+            }
+
+            if (_.has(widgetResponse, 'triggerSuccess') && widgetResponse.triggerSuccess) {
+                mediator.trigger('widget_success:' + this.getAlias());
+                mediator.trigger('widget_success:' + this.getWid());
+            }
+
+            if (_.has(widgetResponse, 'remove') && widgetResponse.remove) {
+                this.remove();
+            }
+        },
+
+        _getEventBroker: function(event) {
+            return event.eventBroker === 'widget' ? this : mediator;
+        },
+
+        _getEventFunction: function(event) {
+            return event.eventFunction === 'execute' ? 'execute' : 'trigger';
         },
 
         _triggerContentLoadEvents: function(content) {
@@ -751,7 +875,8 @@ define(function(require) {
             this.show();
             this._renderInContainer();
             this.trigger('renderComplete', this.$el, this);
-            this.initLayout()
+            this.getLayoutElement().attr('data-layout', 'separate');
+            this.initLayout(this.options.initLayoutOptions || {})
                 .done(_.bind(this._afterLayoutInit, this));
         },
 
@@ -801,5 +926,5 @@ define(function(require) {
         }
     });
 
-    return AbstractWidget;
+    return AbstractWidgetView;
 });

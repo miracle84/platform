@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\SearchBundle\Query\Expression;
 
-use Doctrine\Common\Collections\Expr\CompositeExpression;
 use Doctrine\Common\Collections\Expr\Comparison;
-
+use Doctrine\Common\Collections\Expr\CompositeExpression;
 use Oro\Bundle\SearchBundle\Exception\ExpressionSyntaxError;
 use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Criteria\ExpressionBuilder;
@@ -26,6 +25,7 @@ class Parser
         Query::KEYWORD_SELECT,
         Query::KEYWORD_FROM,
         Query::KEYWORD_WHERE,
+        Query::KEYWORD_AGGREGATE,
 
         Query::KEYWORD_AND,
         Query::KEYWORD_OR,
@@ -51,6 +51,7 @@ class Parser
         Query::OPERATOR_NOT_CONTAINS,
         Query::OPERATOR_STARTS_WITH,
         Query::OPERATOR_LIKE,
+        Query::OPERATOR_NOT_LIKE,
     ];
 
     /** @var array */
@@ -74,6 +75,7 @@ class Parser
             Query::OPERATOR_EXISTS,
             Query::OPERATOR_NOT_EXISTS,
             Query::OPERATOR_LIKE,
+            Query::OPERATOR_NOT_LIKE,
         ],
         Query::TYPE_INTEGER  => [
             Query::OPERATOR_GREATER_THAN,
@@ -111,6 +113,15 @@ class Parser
             Query::OPERATOR_EXISTS,
             Query::OPERATOR_NOT_EXISTS,
         ]
+    ];
+
+    /** @var array */
+    protected $aggregatingFunctions = [
+        Query::AGGREGATE_FUNCTION_COUNT,
+        Query::AGGREGATE_FUNCTION_SUM,
+        Query::AGGREGATE_FUNCTION_MAX,
+        Query::AGGREGATE_FUNCTION_MIN,
+        Query::AGGREGATE_FUNCTION_AVG,
     ];
 
     /** @var array */
@@ -171,6 +182,9 @@ class Parser
                 break;
             case Query::KEYWORD_WHERE:
                 $this->parseWhereExpression();
+                break;
+            case Query::KEYWORD_AGGREGATE:
+                $this->parseAggregateExpression();
                 break;
             case Query::KEYWORD_OFFSET:
                 $this->parseOffsetExpression();
@@ -275,6 +289,44 @@ class Parser
             $token = $this->stream->current;
             $exit = $this->parseToken($token);
         }
+    }
+
+    /**
+     * Parse aggregate expression from string query
+     */
+    protected function parseAggregateExpression()
+    {
+        /** @var Criteria $criteria */
+        $criteria = $this->query->getCriteria();
+
+        // skip AGGREGATE keyword
+        $this->stream->expect(Token::KEYWORD_TYPE, Query::KEYWORD_AGGREGATE);
+
+        // parse field name
+        $fieldTypeToken = $this->stream->expect(Token::STRING_TYPE, $this->types, null, false);
+        $field = $criteria->implodeFieldTypeName(
+            $fieldTypeToken ? $fieldTypeToken->value : Query::TYPE_TEXT,
+            $this->stream->expect(Token::STRING_TYPE, null, 'Aggregating field is expected')->value
+        );
+
+        // parse function
+        $functionToken = $this->stream->expect(
+            Token::STRING_TYPE,
+            $this->aggregatingFunctions,
+            'Aggregating function expected'
+        );
+        $function = $functionToken->value;
+
+        // skip optional AS keyword
+        if ($this->stream->current->test(Token::KEYWORD_TYPE, Query::KEYWORD_AS)) {
+            $this->stream->next();
+        }
+
+        // parse aggregating name
+        $nameToken = $this->stream->expect(Token::STRING_TYPE, null, 'Aggregating name is expected');
+        $name = $nameToken->value;
+
+        $this->query->addAggregate($name, $field, $function);
     }
 
     /**
@@ -547,11 +599,11 @@ class Parser
                 }
                 break;
             case Token::STRING_TYPE:
-                list ($type, $expr) = $this->parseSimpleCondition();
+                list($type, $expr) = $this->parseSimpleCondition();
                 $this->query->getCriteria()->{$type}($expr);
                 break;
             case Token::OPERATOR_TYPE && in_array($token->value, [Query::KEYWORD_AND, Query::KEYWORD_OR]):
-                list ($type, $expr) = $this->parseSimpleCondition($token->value);
+                list($type, $expr) = $this->parseSimpleCondition($token->value);
                 $this->query->getCriteria()->{$type}($expr);
                 break;
             case Token::KEYWORD_TYPE:
@@ -575,7 +627,6 @@ class Parser
      */
     private function getComparisonForOtherOperators(Token $operatorToken, ExpressionBuilder $expr, $fieldName)
     {
-
         switch ($operatorToken->value) {
             case Query::OPERATOR_CONTAINS:
                 $expr = $expr->contains($fieldName, $this->stream->current->value);
@@ -586,6 +637,10 @@ class Parser
 
             case Query::OPERATOR_LIKE:
                 $expr = $expr->like($fieldName, $this->stream->current->value);
+                break;
+
+            case Query::OPERATOR_NOT_LIKE:
+                $expr = $expr->notLike($fieldName, $this->stream->current->value);
                 break;
 
             case Query::OPERATOR_EQUALS:

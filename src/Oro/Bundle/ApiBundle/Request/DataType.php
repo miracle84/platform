@@ -3,13 +3,16 @@
 namespace Oro\Bundle\ApiBundle\Request;
 
 /**
- * All the supported data-types of an incoming values which are implemented "out of the box".
+ * Provides a list of all the supported data-types of an incoming values which are implemented "out of the box".
  * New data-types can be added by implementing a value normalization processors.
- * @see Oro\Bundle\ApiBundle\Request\ValueNormalizer
+ * @see \Oro\Bundle\ApiBundle\Request\ValueNormalizer
+ * Also provides a set of methods to simplify work with definition of complex data-types,
+ * like nested and extended associations.
  */
 final class DataType
 {
     const INTEGER          = 'integer';
+    const SMALLINT         = 'smallint';
     const BIGINT           = 'bigint';
     const UNSIGNED_INTEGER = 'unsignedInteger';
     const STRING           = 'string';
@@ -17,9 +20,21 @@ final class DataType
     const DECIMAL          = 'decimal';
     const FLOAT            = 'float';
     const DATETIME         = 'datetime';
+    const DATE             = 'date';
+    const TIME             = 'time';
+    const PERCENT          = 'percent';
+    const MONEY            = 'money';
+    const DURATION         = 'duration';
+    const GUID             = 'guid';
     const ENTITY_TYPE      = 'entityType';
     const ENTITY_CLASS     = 'entityClass';
     const ORDER_BY         = 'orderBy';
+
+    private const NESTED_OBJECT                   = 'nestedObject';
+    private const NESTED_ASSOCIATION              = 'nestedAssociation';
+    private const EXTENDED_ASSOCIATION_PREFIX     = 'association';
+    private const EXTENDED_ASSOCIATION_MARKER     = 'association:';
+    private const ASSOCIATION_AS_FIELD_DATA_TYPES = ['array', 'object', 'scalar', 'nestedObject'];
 
     /**
      * Checks whether the field represents a nested object.
@@ -30,7 +45,7 @@ final class DataType
      */
     public static function isNestedObject($dataType)
     {
-        return 'nestedObject' === $dataType;
+        return self::NESTED_OBJECT === $dataType;
     }
 
     /**
@@ -42,7 +57,7 @@ final class DataType
      */
     public static function isNestedAssociation($dataType)
     {
-        return 'nestedAssociation' === $dataType;
+        return self::NESTED_ASSOCIATION === $dataType;
     }
 
     /**
@@ -52,9 +67,9 @@ final class DataType
      * and "object" or "scalar" data-type is used for "to-one" associations.
      * The "object" is usually used if a value of such field contains several properties.
      * The "scalar" is usually used if a value of such field contains a scalar value.
-     * Also "nestedObject" data-type, that is used to group several fields in one object, is classified
-     * as an association that should be represented as a field because the behaviour
-     * of the nested object is the same.
+     * Also "nestedObject" data-type, that is used to group several fields in one object,
+     * is classified as an association that should be represented as a field because the behaviour
+     * of it is the same.
      *
      * @param string $dataType
      *
@@ -62,11 +77,7 @@ final class DataType
      */
     public static function isAssociationAsField($dataType)
     {
-        return in_array(
-            $dataType,
-            ['array', 'object', 'scalar', 'nestedObject'],
-            true
-        );
+        return \in_array($dataType, self::ASSOCIATION_AS_FIELD_DATA_TYPES, true);
     }
 
     /**
@@ -79,7 +90,7 @@ final class DataType
      */
     public static function isExtendedAssociation($dataType)
     {
-        return 0 === strpos($dataType, 'association:');
+        return 0 === \strpos($dataType, self::EXTENDED_ASSOCIATION_MARKER);
     }
 
     /**
@@ -94,10 +105,10 @@ final class DataType
      */
     public static function parseExtendedAssociation($dataType)
     {
-        list($prefix, $type, $kind) = array_pad(explode(':', $dataType, 3), 3, null);
-        if ('association' !== $prefix || empty($type) || '' === $kind) {
+        list($prefix, $type, $kind) = \array_pad(\explode(':', $dataType, 3), 3, null);
+        if (self::EXTENDED_ASSOCIATION_PREFIX !== $prefix || empty($type) || '' === $kind) {
             throw new \InvalidArgumentException(
-                sprintf('Expected a string like "association:type[:kind]", "%s" given.', $dataType)
+                \sprintf('Expected a string like "association:type[:kind]", "%s" given.', $dataType)
             );
         }
 

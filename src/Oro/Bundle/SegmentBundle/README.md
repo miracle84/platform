@@ -1,9 +1,8 @@
-OroSegmentBundle
-===============
+# OroSegmentBundle
 
-The goal of OroSegmentBundle is to provide entities segmentation, that can be used for further processing.
+OroSegmentBundle provides GUI for application users to create named sets of entity records called Segments. It also enables the application of existing segments as filtering conditions in [query designers](https://github.com/oroinc/platform/tree/master/src/Oro/Bundle/QueryDesignerBundle).
 
-##Table of Contents
+## Table of Contents
  - [Overview](#overview)
  - [Frontend implementation](#frontend-implementation)
  - [Backend implementation](#backend-implementation)

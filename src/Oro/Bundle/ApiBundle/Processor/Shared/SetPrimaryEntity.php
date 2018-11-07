@@ -2,9 +2,9 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
+use Oro\Bundle\ApiBundle\Processor\FormContext;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Processor\FormContext;
 
 /**
  * Sets the primary entity to the collection of included entities
@@ -32,7 +32,7 @@ class SetPrimaryEntity implements ProcessorInterface
 
         $primaryEntity = $context->getResult();
         if (null !== $primaryEntity) {
-            $includedEntities->setPrimaryEntity($primaryEntity);
+            $includedEntities->setPrimaryEntity($primaryEntity, $context->getMetadata());
         }
     }
 }

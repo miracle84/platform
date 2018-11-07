@@ -4,18 +4,17 @@ namespace Oro\Bundle\OrganizationBundle\Form\Type;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\PersistentCollection;
-
+use Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager;
-use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class OrganizationsSelectType extends AbstractType
 {
@@ -25,28 +24,28 @@ class OrganizationsSelectType extends AbstractType
     /** @var BusinessUnitManager */
     protected $buManager;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * @param EntityManager       $em
-     * @param BusinessUnitManager $buManager
-     * @param SecurityFacade      $securityFacade
+     * @param EntityManager          $em
+     * @param BusinessUnitManager    $buManager
+     * @param TokenAccessorInterface $tokenAccessor
      */
     public function __construct(
         EntityManager $em,
         BusinessUnitManager $buManager,
-        SecurityFacade $securityFacade
+        TokenAccessorInterface $tokenAccessor
     ) {
-        $this->em              = $em;
-        $this->buManager       = $buManager;
-        $this->securityFacade  = $securityFacade;
+        $this->em = $em;
+        $this->buManager = $buManager;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
@@ -90,7 +89,12 @@ class OrganizationsSelectType extends AbstractType
 
                 if (!empty($data['organizations'])) {
                     $organizations = json_decode(reset($data['organizations']), true);
-                    $data['organizations'] = $organizations['organizations'];
+
+                    if (!$organizations['organizations'] && !empty($data['businessUnits'])) {
+                        $data['organizations'] = [$this->tokenAccessor->getOrganizationId()];
+                    } else {
+                        $data['organizations'] = $organizations['organizations'];
+                    }
                 }
 
                 $event->setData($data);
@@ -100,7 +104,7 @@ class OrganizationsSelectType extends AbstractType
         $this->addOrganizationsField($builder);
         $builder->add(
             'businessUnits',
-            'oro_type_business_unit_select_autocomplete',
+            BusinessUnitSelectAutocomplete::class,
             [
                 'required' => false,
                 'label' => 'oro.user.form.business_units.label',
@@ -122,7 +126,7 @@ class OrganizationsSelectType extends AbstractType
     public function buildView(FormView $view, FormInterface $form, array $options)
     {
         $buTree = $this->buManager->getBusinessUnitRepo()->getOrganizationBusinessUnitsTree(
-            $this->securityFacade->getOrganizationId()
+            $this->tokenAccessor->getOrganizationId()
         );
 
         $view->vars['organization_tree_ids'] = $buTree;
@@ -137,8 +141,8 @@ class OrganizationsSelectType extends AbstractType
             )->getValues();
         }
 
-        $view->vars['default_organization'] = $this->securityFacade->getOrganizationId();
-        $view->vars['selected_organizations']  = [$this->securityFacade->getOrganizationId()];
+        $view->vars['default_organization'] = $this->tokenAccessor->getOrganizationId();
+        $view->vars['selected_organizations']  = [$this->tokenAccessor->getOrganizationId()];
         $view->vars['selected_business_units'] = $businessUnitData;
         $view->vars['accordion_enabled'] = $this->buManager->getTreeNodesCount($buTree) > 1000;
     }
@@ -152,10 +156,10 @@ class OrganizationsSelectType extends AbstractType
     {
         $builder->add(
             'organizations',
-            'entity',
+            EntityType::class,
             [
                 'class'    => 'OroOrganizationBundle:Organization',
-                'property' => 'name',
+                'choice_label' => 'name',
                 'multiple' => true
             ]
         );
@@ -166,6 +170,6 @@ class OrganizationsSelectType extends AbstractType
      */
     protected function getLoggedInUser()
     {
-        return $this->securityFacade->getLoggedUser();
+        return $this->tokenAccessor->getUser();
     }
 }

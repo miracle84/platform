@@ -5,12 +5,14 @@ namespace Oro\Bundle\SearchBundle\Engine;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query\Expr\OrderBy;
-
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\SearchBundle\Query\Mode;
 
+/**
+ * Abstract indexer for standard search engine
+ */
 abstract class AbstractIndexer implements IndexerInterface
 {
     const BATCH_SIZE = 1000;
@@ -53,8 +55,8 @@ abstract class AbstractIndexer implements IndexerInterface
         if (false == $class) {
             return $this->mapper->getEntities([Mode::NORMAL, Mode::WITH_DESCENDANTS]);
         } else {
-            $entityNames = [$class];
-            
+            $entityNames = (array)$class;
+
             $mode = $this->mapper->getEntityModeConfig($class);
 
             if ($mode === Mode::WITH_DESCENDANTS) {
@@ -73,14 +75,11 @@ abstract class AbstractIndexer implements IndexerInterface
     public function reindex($class = null, array $context = [])
     {
         if (false == $class) {
-            $this->resetIndex();
             $entityNames = $this->getClassesForReindex();
+            $this->resetIndex();
         } else {
             $entityNames = $this->getClassesForReindex($class);
-
-            foreach ($entityNames as $class) {
-                $this->resetIndex($class);
-            }
+            $this->resetIndex($entityNames);
         }
 
         // index data by mapping config
@@ -117,7 +116,7 @@ abstract class AbstractIndexer implements IndexerInterface
             ->orderBy($orderingsExpr)
         ;
         
-        $iterator = new BufferedQueryResultIterator($queryBuilder);
+        $iterator = new BufferedIdentityQueryResultIterator($queryBuilder);
         $iterator->setBufferSize(static::BATCH_SIZE);
 
         $itemsCount = 0;
@@ -166,5 +165,13 @@ abstract class AbstractIndexer implements IndexerInterface
         }
 
         return is_array($entity) ? $entity : [$entity];
+    }
+
+    /**
+     * @return int
+     */
+    public function getBatchSize()
+    {
+        return self::BATCH_SIZE;
     }
 }

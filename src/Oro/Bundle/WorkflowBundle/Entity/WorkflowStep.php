@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 
 /**
@@ -16,7 +15,7 @@ use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
  *          @ORM\Index(name="oro_workflow_step_name_idx", columns={"name"})
  *      }
  * )
- * @ORM\Entity
+ * @ORM\Entity(repositoryClass="Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowStepRepository")
  * @Config(
  *      defaultValues={
  *          "note"={
@@ -203,6 +202,6 @@ class WorkflowStep
      */
     public function __toString()
     {
-        return $this->label;
+        return (string)$this->label;
     }
 }

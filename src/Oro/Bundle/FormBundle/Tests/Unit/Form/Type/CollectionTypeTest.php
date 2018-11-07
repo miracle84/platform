@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType as BaseCollectionType;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\FormBundle\Form\Type\CollectionType;
-
-class CollectionTypeTest extends \PHPUnit_Framework_TestCase
+class CollectionTypeTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var CollectionType
@@ -36,8 +36,10 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @dataProvider buildViewDataProvider
+     * @param array $options
+     * @param array $expectedVars
      */
-    public function testBuildView($options, $expectedVars)
+    public function testBuildView(array $options, array $expectedVars)
     {
         $form = $this->createMock('Symfony\Component\Form\Test\FormInterface');
         $view = new FormView();
@@ -50,6 +52,9 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @return array
+     */
     public function buildViewDataProvider()
     {
         return [
@@ -94,33 +99,32 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @expectedException \Symfony\Component\OptionsResolver\Exception\MissingOptionsException
-     * @expectedExceptionMessage The required option "type" is missing.
+     * @expectedExceptionMessage The required option "entry_type" is missing.
      */
-    public function testSetDefaultOptionsWithoutType()
+    public function testConfigureOptionsWithoutType()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
         $resolver->resolve([]);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options = [
-            'type' => 'test_type'
+            'entry_type' => 'test_type'
         ];
         $resolvedOptions = $resolver->resolve($options);
         $this->assertEquals(
             [
-                'type'                 => 'test_type',
+                'entry_type'           => 'test_type',
                 'allow_add'            => true,
                 'allow_delete'         => true,
                 'by_reference'         => false,
                 'prototype'            => true,
                 'prototype_name'       => '__name__',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
                 'handle_primary'       => true,
                 'show_form_when_empty' => true,
                 'add_label'            => '',
@@ -132,25 +136,24 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testSetDefaultOptionsDisableAdd()
+    public function testConfigureOptionsDisableAdd()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options = [
-            'type'      => 'test_type',
+            'entry_type' => 'test_type',
             'allow_add' => false
         ];
         $resolvedOptions = $resolver->resolve($options);
         $this->assertEquals(
             [
-                'type'                 => 'test_type',
+                'entry_type'           => 'test_type',
                 'allow_add'            => false,
                 'allow_delete'         => true,
                 'by_reference'         => false,
                 'prototype'            => true,
                 'prototype_name'       => '__name__',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
                 'handle_primary'       => true,
                 'show_form_when_empty' => false,
                 'add_label'            => '',
@@ -162,25 +165,24 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testSetDefaultOptionsDisableShowFormWhenEmpty()
+    public function testConfigureOptionsDisableShowFormWhenEmpty()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options = [
-            'type'                 => 'test_type',
+            'entry_type'           => 'test_type',
             'show_form_when_empty' => false
         ];
         $resolvedOptions = $resolver->resolve($options);
         $this->assertEquals(
             [
-                'type'                 => 'test_type',
+                'entry_type'           => 'test_type',
                 'allow_add'            => true,
                 'allow_delete'         => true,
                 'by_reference'         => false,
                 'prototype'            => true,
                 'prototype_name'       => '__name__',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
                 'handle_primary'       => true,
                 'show_form_when_empty' => false,
                 'add_label'            => '',
@@ -192,25 +194,24 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testSetDefaultOptionsCustomAddLabel()
+    public function testConfigureOptionsCustomAddLabel()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options = [
-            'type'                 => 'test_type',
+            'entry_type'           => 'test_type',
             'add_label'            => 'Test Label'
         ];
         $resolvedOptions = $resolver->resolve($options);
         $this->assertEquals(
             [
-                'type'                 => 'test_type',
+                'entry_type'           => 'test_type',
                 'allow_add'            => true,
                 'allow_delete'         => true,
                 'by_reference'         => false,
                 'prototype'            => true,
                 'prototype_name'       => '__name__',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
                 'handle_primary'       => true,
                 'show_form_when_empty' => true,
                 'add_label'            => 'Test Label',
@@ -224,7 +225,7 @@ class CollectionTypeTest extends \PHPUnit_Framework_TestCase
 
     public function testGetParent()
     {
-        $this->assertEquals('collection', $this->type->getParent());
+        $this->assertEquals(BaseCollectionType::class, $this->type->getParent());
     }
 
     public function testGetName()

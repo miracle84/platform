@@ -1,5 +1,5 @@
 <?php
-namespace Oro\Component\MessageQueue\Tests\Unit\Consumption\Dbal\Extension;
+namespace Oro\Component\MessageQueue\Tests\Unit\Consumption\DBAL\Extension;
 
 use Oro\Component\MessageQueue\Consumption\Context;
 use Oro\Component\MessageQueue\Consumption\Dbal\Extension\RejectMessageOnExceptionDbalExtension;
@@ -8,7 +8,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit_Framework_TestCase
+class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeCreatedWithRequiredArguments()
     {
@@ -49,12 +49,16 @@ class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit_Framework_TestC
     public function testShouldRejectMessage()
     {
         $message = new NullMessage();
+        $message->setMessageId(123);
 
         $logger = $this->createLoggerMock();
         $logger
             ->expects($this->once())
             ->method('debug')
-            ->with('[RejectMessageOnExceptionDbalExtension] Execution was interrupted and message was rejected')
+            ->with(
+                'Execution was interrupted and message was rejected. {id}',
+                ['id' => '123']
+            )
         ;
 
         $consumer = $this->createMessageConsumerMock();
@@ -75,7 +79,7 @@ class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit_Framework_TestC
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     private function createMessageConsumerMock()
     {
@@ -83,7 +87,7 @@ class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit_Framework_TestC
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -91,7 +95,7 @@ class RejectMessageOnExceptionDbalExtensionTest extends \PHPUnit_Framework_TestC
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {

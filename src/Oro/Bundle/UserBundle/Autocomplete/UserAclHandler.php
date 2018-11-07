@@ -5,29 +5,24 @@ namespace Oro\Bundle\UserBundle\Autocomplete;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Security\Core\SecurityContextInterface;
-
 use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
+use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 use Oro\Bundle\FormBundle\Autocomplete\SearchHandlerInterface;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\SecurityBundle\Acl\Domain\OneShotIsGrantedObserver;
 use Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\ORM\Walker\OwnershipConditionDataBuilder;
 use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * Autocomplete search handler for users with ACL access level protection
- *
- * Class UserAclHandler
- *
- * @package Oro\Bundle\UserBundle\Autocomplete
  */
 class UserAclHandler implements SearchHandlerInterface
 {
@@ -46,40 +41,52 @@ class UserAclHandler implements SearchHandlerInterface
     /** @var EntityNameResolver */
     protected $entityNameResolver;
 
-    /** @var AclVoter */
+    /** @var EntityRoutingHelper */
+    protected $entityRoutingHelper;
+
+    /** @var AclVoter|null */
     protected $aclVoter;
 
     /** @var OwnershipConditionDataBuilder */
     protected $builder;
 
-    /** @var ServiceLink */
-    protected $securityContextLink;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var OwnerTreeProvider */
     protected $treeProvider;
 
     /**
-     * @param EntityManager     $em
-     * @param AttachmentManager $attachmentManager
-     * @param string            $className
-     * @param ServiceLink       $securityContextLink
-     * @param OwnerTreeProvider $treeProvider
-     * @param AclVoter          $aclVoter
+     * @param EntityManager                 $em
+     * @param AttachmentManager             $attachmentManager
+     * @param string                        $className
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenAccessorInterface        $tokenAccessor
+     * @param OwnerTreeProvider             $treeProvider
+     * @param EntityRoutingHelper $entityRoutingHelper
+     * @param AclVoter|null                 $aclVoter
      */
     public function __construct(
         EntityManager $em,
         AttachmentManager $attachmentManager,
         $className,
-        ServiceLink $securityContextLink,
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor,
         OwnerTreeProvider $treeProvider,
+        EntityRoutingHelper $entityRoutingHelper,
         AclVoter $aclVoter = null
     ) {
-        $this->em                  = $em;
-        $this->attachmentManager   = $attachmentManager;
-        $this->className           = $className;
-        $this->aclVoter            = $aclVoter;
-        $this->securityContextLink = $securityContextLink;
-        $this->treeProvider        = $treeProvider;
+        $this->em = $em;
+        $this->attachmentManager = $attachmentManager;
+        $this->className = $className;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
+        $this->treeProvider = $treeProvider;
+        $this->entityRoutingHelper = $entityRoutingHelper;
+        $this->aclVoter = $aclVoter;
     }
 
     /**
@@ -89,8 +96,8 @@ class UserAclHandler implements SearchHandlerInterface
      */
     public function search($query, $page, $perPage, $searchById = false)
     {
-        list ($search, $entityClass, $permission, $entityId, $excludeCurrentUser) = explode(';', $query);
-        $entityClass = $this->decodeClassName($entityClass);
+        list($search, $entityClass, $permission, $entityId, $excludeCurrentUser) = explode(';', $query);
+        $entityClass = $this->entityRoutingHelper->resolveEntityClass($entityClass);
 
         $hasMore  = false;
         $object   = $entityId
@@ -98,7 +105,7 @@ class UserAclHandler implements SearchHandlerInterface
             : 'entity:' . $entityClass;
         $observer = new OneShotIsGrantedObserver();
         $this->aclVoter->addOneShotIsGrantedObserver($observer);
-        if ($this->getSecurityContext()->isGranted($permission, $object)) {
+        if ($this->authorizationChecker->isGranted($permission, $object)) {
             if ($searchById) {
                 $results = $this->searchById($search);
             } else {
@@ -107,8 +114,8 @@ class UserAclHandler implements SearchHandlerInterface
                 $firstResult = ($page - 1) * $perPage;
                 $perPage += 1;
 
-                $user         = $this->getSecurityContext()->getToken()->getUser();
-                $organization = $this->getSecurityContext()->getToken()->getOrganizationContext();
+                $user = $this->tokenAccessor->getUser();
+                $organization = $this->tokenAccessor->getOrganization();
                 $queryBuilder = $this->createQueryBuilder();
                 $this->addSearchCriteria($queryBuilder, $search);
                 if ((boolean)$excludeCurrentUser) {
@@ -293,7 +300,8 @@ class UserAclHandler implements SearchHandlerInterface
                         ),
                         '?1'
                     ),
-                    $queryBuilder->expr()->like($queryBuilder->expr()->lower('user.username'), '?1')
+                    $queryBuilder->expr()->like($queryBuilder->expr()->lower('user.username'), '?1'),
+                    $queryBuilder->expr()->like($queryBuilder->expr()->lower('user.email'), '?1')
                 )
             )
             ->setParameter(1, '%' . str_replace(' ', '%', strtolower($search)) . '%');
@@ -324,10 +332,12 @@ class UserAclHandler implements SearchHandlerInterface
     protected function applyAcl(QueryBuilder $queryBuilder, $accessLevel, User $user, Organization $organization)
     {
         if ($accessLevel == AccessLevel::BASIC_LEVEL) {
-            $queryBuilder->andWhere($queryBuilder->expr()->in('user.id', [$user->getId()]));
+            $queryBuilder->andWhere($queryBuilder->expr()->eq('user.id', ':aclUserId'))
+                ->setParameter('aclUserId', $user->getId());
         } elseif ($accessLevel == AccessLevel::GLOBAL_LEVEL) {
             $queryBuilder->join('user.organizations', 'org')
-                ->andWhere($queryBuilder->expr()->in('org.id', [$organization->getId()]));
+                ->andWhere($queryBuilder->expr()->eq('org.id', ':aclOrganizationId'))
+                ->setParameter('aclOrganizationId', $organization->getId());
         } elseif ($accessLevel !== AccessLevel::SYSTEM_LEVEL) {
             if ($accessLevel == AccessLevel::LOCAL_LEVEL) {
                 $resultBuIds = $this->treeProvider->getTree()->getUserBusinessUnitIds(
@@ -335,25 +345,22 @@ class UserAclHandler implements SearchHandlerInterface
                     $organization->getId()
                 );
             } else {
-            // AccessLevel::DEEP_LEVEL
+                // AccessLevel::DEEP_LEVEL
                 $resultBuIds = $this->treeProvider->getTree()->getUserSubordinateBusinessUnitIds(
                     $user->getId(),
                     $organization->getId()
                 );
             }
-            $queryBuilder->join('user.businessUnits', 'bu')
-                ->andWhere($queryBuilder->expr()->in('bu.id', $resultBuIds));
+            $queryBuilder->join('user.businessUnits', 'bu');
+            if ($resultBuIds) {
+                $queryBuilder->andWhere($queryBuilder->expr()->in('bu.id', ':resultBuIds'))
+                    ->setParameter('resultBuIds', $resultBuIds);
+            } else {
+                $queryBuilder->andWhere('1 = 0');
+            }
         }
 
         return $queryBuilder->getQuery();
-    }
-
-    /**
-     * @return SecurityContextInterface
-     */
-    protected function getSecurityContext()
-    {
-        return $this->securityContextLink->getService();
     }
 
     /**
@@ -366,25 +373,5 @@ class UserAclHandler implements SearchHandlerInterface
     {
         $queryBuilder->andWhere('user.id != :userId');
         $queryBuilder->setParameter('userId', $user->getId());
-    }
-
-    /**
-     * Decodes the given string into the class name
-     *
-     * @param string $className The encoded class name
-     *
-     * @return string The class name
-     *
-     * @deprecated since 1.6. Will be removed in 2.0. Use oro_entity.routing_helper->resolveEntityClass($entityName);
-     */
-    public function decodeClassName($className)
-    {
-        $result = str_replace('_', '\\', $className);
-        if (strpos($result, ExtendHelper::ENTITY_NAMESPACE) === 0) {
-            // a custom entity can contain _ in class name
-            $result = ExtendHelper::ENTITY_NAMESPACE . substr($className, strlen(ExtendHelper::ENTITY_NAMESPACE));
-        }
-
-        return $result;
     }
 }

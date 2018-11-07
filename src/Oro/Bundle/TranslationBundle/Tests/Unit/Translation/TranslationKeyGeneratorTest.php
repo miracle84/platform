@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Translation;
 
-use Oro\Bundle\TranslationBundle\Translation\TranslationKeySourceInterface;
 use Oro\Bundle\TranslationBundle\Translation\TranslationKeyGenerator;
+use Oro\Bundle\TranslationBundle\Translation\TranslationKeySourceInterface;
 
-class TranslationKeyGeneratorTest extends \PHPUnit_Framework_TestCase
+class TranslationKeyGeneratorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TranslationKeyGenerator */
     protected $generator;
 
-    /** @var TranslationKeySourceInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationKeySourceInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $keySource;
 
     protected function setUp()

@@ -5,11 +5,10 @@ namespace Oro\Bundle\LocaleBundle\Tests\Unit\Tools\GeneratorExtensions;
 use CG\Generator\PhpClass;
 use CG\Generator\PhpMethod;
 use CG\Generator\PhpParameter;
-
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\Tools\GeneratorExtensions\DefaultFallbackGeneratorExtension;
 
-class DefaultFallbackGeneratorExtensionTest extends \PHPUnit_Framework_TestCase
+class DefaultFallbackGeneratorExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /** @var DefaultFallbackGeneratorExtension */
     protected $extension;

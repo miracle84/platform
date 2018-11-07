@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\WorkflowBundle\Model;
 
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
+use Psr\Log\LoggerInterface;
 
 class ProcessLogger
 {
@@ -20,6 +19,11 @@ class ProcessLogger
     protected $logger;
 
     /**
+     * @var bool
+     */
+    protected $enabled = true;
+
+    /**
      * @param DoctrineHelper $doctrineHelper
      * @param LoggerInterface $logger
      */
@@ -30,12 +34,23 @@ class ProcessLogger
     }
 
     /**
+     * @param bool $enabled
+     */
+    public function setEnabled($enabled)
+    {
+        $this->enabled = $enabled;
+    }
+
+    /**
      * @param string $message
      * @param ProcessTrigger $trigger
      * @param ProcessData $data
      */
     public function debug($message, ProcessTrigger $trigger, ProcessData $data)
     {
+        if (!$this->enabled) {
+            return;
+        }
         if ($this->logger) {
             $context = ['definition' => $trigger->getDefinition()->getName()];
             if ($trigger->getEvent()) {

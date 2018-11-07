@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\UserBundle\DependencyInjection\Compiler\PrivilegeCategoryPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\UserBundle\DependencyInjection\Compiler\PrivilegeCategoryPass;
-
-class PrivilegeCategoryPassTest extends \PHPUnit_Framework_TestCase
+class PrivilegeCategoryPassTest extends \PHPUnit\Framework\TestCase
 {
     /** @var PrivilegeCategoryPass */
     protected $compilerPass;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContainerBuilder */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ContainerBuilder */
     protected $container;
 
     protected function setUp()

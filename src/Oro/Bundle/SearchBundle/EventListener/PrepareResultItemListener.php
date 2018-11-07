@@ -3,32 +3,36 @@
 namespace Oro\Bundle\SearchBundle\EventListener;
 
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Routing\Router;
-
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\SearchBundle\Engine\ObjectMapper;
 use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\Router;
+use Symfony\Component\Translation\TranslatorInterface;
 
+/**
+ * Designed to extend data that presents in search results
+ */
 class PrepareResultItemListener
 {
-    /**
-     * @var Router
-     */
+    /** @var Router */
     protected $router;
 
-    /**
-     * @var ObjectMapper
-     */
+    /** @var ObjectMapper */
     protected $mapper;
 
-    /**
-     * @var EntityManager
-     */
+    /** @var EntityManager */
     protected $em;
 
     /** @var EntityNameResolver */
     protected $entityNameResolver;
+
+    /** @var ConfigManager */
+    private $configManager;
+
+    /** @var TranslatorInterface */
+    private $translator;
 
     /**
      * Constructor
@@ -37,17 +41,23 @@ class PrepareResultItemListener
      * @param ObjectMapper $mapper
      * @param EntityManager $em
      * @param EntityNameResolver $entityNameResolver
+     * @param ConfigManager $configManager
+     * @param TranslatorInterface $translator
      */
     public function __construct(
         Router $router,
         ObjectMapper $mapper,
         EntityManager $em,
-        EntityNameResolver $entityNameResolver
+        EntityNameResolver $entityNameResolver,
+        ConfigManager $configManager,
+        TranslatorInterface $translator
     ) {
         $this->router = $router;
         $this->mapper = $mapper;
         $this->em = $em;
         $this->entityNameResolver = $entityNameResolver;
+        $this->configManager = $configManager;
+        $this->translator = $translator;
     }
 
     /**
@@ -67,6 +77,12 @@ class PrepareResultItemListener
         if (!$item->getRecordTitle()) {
             $item->setRecordTitle($this->getEntityTitle($entity, $item));
         }
+
+        if (!$item->getEntityLabel()) {
+            $className = $item->getEntityName();
+            $label = $this->configManager->getEntityConfig('entity', $className)->get('label');
+            $item->setEntityLabel($this->translator->trans($label));
+        }
     }
 
     /**
@@ -85,7 +101,7 @@ class PrepareResultItemListener
 
         if ($this->mapper->getEntityMapParameter($name, 'route')) {
             $routeParameters = $this->mapper->getEntityMapParameter($name, 'route');
-            $routeData = array();
+            $routeData = [];
 
             if ($this->isParametersDefined($routeParameters)) {
                 /**
@@ -114,7 +130,7 @@ class PrepareResultItemListener
             return $this->router->generate(
                 $routeParameters['name'],
                 $routeData,
-                true
+                UrlGeneratorInterface::ABSOLUTE_URL
             );
         }
 

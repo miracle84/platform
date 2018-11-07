@@ -24,6 +24,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function NumberCell() {
+            NumberCell.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, options);
             NumberCell.__super__.initialize.apply(this, arguments);
@@ -54,7 +61,7 @@ define([
          * @inheritDoc
          */
         enterEditMode: function() {
-            if (this.column.get('editable')) {
+            if (this.isEditableColumn()) {
                 NumberCell.__super__.enterEditMode.apply(this, arguments);
             }
         },
@@ -63,7 +70,7 @@ define([
          * @inheritDoc
          */
         exitEditMode: function() {
-            if (!this.column.get('editable')) {
+            if (!this.isEditableColumn()) {
                 NumberCell.__super__.exitEditMode.apply(this, arguments);
             }
         }

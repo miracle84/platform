@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\TagBundle\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\PersistentCollection;
-use Doctrine\Common\Collections\ArrayCollection;
-
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\TagBundle\Model\ExtendTag;
 use Oro\Bundle\TagBundle\Model\ExtendTaxonomy;
 use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 
 /**
  * Taxonomy
@@ -66,7 +65,7 @@ use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
  *              "immutable"=true
  *          },
  *          "form"={
- *              "form_type"="oro_taxonomy_select",
+ *              "form_type"="Oro\Bundle\TagBundle\Form\Type\TaxonomySelectType",
  *              "grid_name"="taxonomy-select-grid",
  *          },
  *      }

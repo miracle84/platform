@@ -2,10 +2,6 @@
 
 namespace Oro\Component\Layout\Tests\Unit\ExpressionLanguage;
 
-use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
-use Symfony\Component\ExpressionLanguage\Node\ConstantNode;
-use Symfony\Component\ExpressionLanguage\ParsedExpression;
-
 use Oro\Component\Layout\Action;
 use Oro\Component\Layout\ExpressionLanguage\Encoder\ExpressionEncoderRegistry;
 use Oro\Component\Layout\ExpressionLanguage\Encoder\JsonExpressionEncoder;
@@ -13,13 +9,16 @@ use Oro\Component\Layout\ExpressionLanguage\ExpressionManipulator;
 use Oro\Component\Layout\ExpressionLanguage\ExpressionProcessor;
 use Oro\Component\Layout\LayoutContext;
 use Oro\Component\Layout\OptionValueBag;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\ExpressionLanguage\Node\ConstantNode;
+use Symfony\Component\ExpressionLanguage\ParsedExpression;
 
-class ExpressionProcessorTest extends \PHPUnit_Framework_TestCase
+class ExpressionProcessorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ExpressionLanguage|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ExpressionLanguage|\PHPUnit\Framework\MockObject\MockObject */
     protected $expressionLanguage;
 
-    /** @var JsonExpressionEncoder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var JsonExpressionEncoder|\PHPUnit\Framework\MockObject\MockObject */
     protected $encoder;
 
     /** @var ExpressionProcessor */
@@ -29,7 +28,7 @@ class ExpressionProcessorTest extends \PHPUnit_Framework_TestCase
     {
         $this->expressionLanguage = new ExpressionLanguage();
 
-        /** @var ExpressionEncoderRegistry|\PHPUnit_Framework_MockObject_MockObject $encoderRegistry */
+        /** @var ExpressionEncoderRegistry|\PHPUnit\Framework\MockObject\MockObject $encoderRegistry */
         $encoderRegistry = $this->createMock(ExpressionEncoderRegistry::class);
 
         $this->encoder = new JsonExpressionEncoder(new ExpressionManipulator());

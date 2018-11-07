@@ -5,20 +5,18 @@ namespace Oro\Bundle\EmailBundle\Sync;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\ORMException;
-
-use Oro\Component\MessageQueue\Client\MessageProducerInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
-use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\NullLogger;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Exception\SyncFolderTimeoutException;
 use Oro\Bundle\EmailBundle\Sync\Model\SynchronizationProcessorSettings;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Authentication\Token\OrganizationToken;
+use Oro\Component\MessageQueue\Client\MessageProducerInterface;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -33,7 +31,7 @@ abstract class AbstractEmailSynchronizer implements EmailSynchronizerInterface, 
     const SYNC_CODE_IN_PROCESS_FORCE = 4;
 
     /** @var string */
-    static protected $messageQueueTopic;
+    protected static $messageQueueTopic;
 
     /** @var ManagerRegistry */
     protected $doctrine;
@@ -464,7 +462,7 @@ abstract class AbstractEmailSynchronizer implements EmailSynchronizerInterface, 
         //   the next sync is performed only after 30 minutes)
         // - "In Process" items are moved at the end
         $repo   = $this->getEntityManager()->getRepository($this->getEmailOriginClass());
-        $query = $repo->createQueryBuilder('o')
+        $queryBuilder = $repo->createQueryBuilder('o')
             ->select(
                 'o'
                 . ', CASE WHEN o.syncCode = :inProcess OR o.syncCode = :inProcessForce THEN 0 ELSE 1 END AS HIDDEN p1'
@@ -481,11 +479,12 @@ abstract class AbstractEmailSynchronizer implements EmailSynchronizerInterface, 
             ->setParameter('min', $min)
             ->setParameter('border', $border)
             ->setParameter('timeShift', $timeShift)
-            ->setMaxResults($maxConcurrentTasks + 1)
-            ->getQuery();
+            ->setMaxResults($maxConcurrentTasks + 1);
+
+        $this->addOwnerFilter($queryBuilder);
 
         /** @var EmailOrigin[] $origins */
-        $origins = $query->getResult();
+        $origins = $queryBuilder->getQuery()->getResult();
         $result = null;
         foreach ($origins as $origin) {
             $syncCode = $origin->getSyncCode();
@@ -508,6 +507,30 @@ abstract class AbstractEmailSynchronizer implements EmailSynchronizerInterface, 
     }
 
     /**
+     * Modifies QueryBuilder to filter origins by enabled owner
+     *
+     * @param QueryBuilder $queryBuilder
+     */
+    protected function addOwnerFilter(QueryBuilder $queryBuilder)
+    {
+        $expr = $queryBuilder->expr();
+
+        $queryBuilder->leftJoin('o.owner', 'owner')
+            ->andWhere(
+                $expr->orX(
+                    $expr->andX(
+                        $expr->isNull('owner.id')
+                    ),
+                    $expr->andX(
+                        $expr->isNotNull('owner.id'),
+                        $expr->eq('owner.enabled', ':isOwnerEnabled')
+                    )
+                )
+            )
+            ->setParameter('isOwnerEnabled', true);
+    }
+
+    /**
      * Finds active email origin by its id
      *
      * @param int $originId
@@ -518,13 +541,15 @@ abstract class AbstractEmailSynchronizer implements EmailSynchronizerInterface, 
         $this->logger->info(sprintf('Finding an email origin (id: %d) ...', $originId));
 
         $repo  = $this->getEntityManager()->getRepository($this->getEmailOriginClass());
-        $query = $repo->createQueryBuilder('o')
+        $queryBuilder = $repo->createQueryBuilder('o')
             ->where('o.isActive = :isActive AND o.id = :id')
             ->setParameter('isActive', true)
             ->setParameter('id', $originId)
-            ->setMaxResults(1)
-            ->getQuery();
-        $origins = $query->getResult();
+            ->setMaxResults(1);
+
+        $this->addOwnerFilter($queryBuilder);
+
+        $origins = $queryBuilder->getQuery()->getResult();
 
         /** @var EmailOrigin $result */
         $result = !empty($origins) ? $origins[0] : null;

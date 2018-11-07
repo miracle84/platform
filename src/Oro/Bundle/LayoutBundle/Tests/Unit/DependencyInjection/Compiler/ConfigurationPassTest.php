@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\LayoutBundle\DependencyInjection\Compiler\ConfigurationPass;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\LayoutBundle\DependencyInjection\Compiler\ConfigurationPass;
-
-class ConfigurationPassTest extends \PHPUnit_Framework_TestCase
+class ConfigurationPassTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
@@ -111,11 +110,11 @@ class ConfigurationPassTest extends \PHPUnit_Framework_TestCase
             ->will(
                 $this->returnValueMap(
                     [
-                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, $blockTypeServiceIds],
-                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, $blockTypeExtensionServiceIds],
-                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, $layoutUpdateServiceIds],
-                        [ConfigurationPass::CONTEXT_CONFIGURATOR_TAG_NAME, $contextConfiguratorServiceIds],
-                        [ConfigurationPass::DATA_PROVIDER_TAG_NAME, $dataProviderServiceIds]
+                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, false, $blockTypeServiceIds],
+                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, false, $blockTypeExtensionServiceIds],
+                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, false, $layoutUpdateServiceIds],
+                        [ConfigurationPass::CONTEXT_CONFIGURATOR_TAG_NAME, false, $contextConfiguratorServiceIds],
+                        [ConfigurationPass::DATA_PROVIDER_TAG_NAME, false, $dataProviderServiceIds]
                     ]
                 )
             );
@@ -245,8 +244,8 @@ class ConfigurationPassTest extends \PHPUnit_Framework_TestCase
             ->will(
                 $this->returnValueMap(
                     [
-                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, []],
-                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, $serviceIds]
+                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, false, []],
+                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, false, $serviceIds]
                     ]
                 )
             );
@@ -290,9 +289,9 @@ class ConfigurationPassTest extends \PHPUnit_Framework_TestCase
             ->will(
                 $this->returnValueMap(
                     [
-                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, []],
-                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, []],
-                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, $serviceIds]
+                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, false, []],
+                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, false, []],
+                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, false, $serviceIds]
                     ]
                 )
             );
@@ -336,11 +335,11 @@ class ConfigurationPassTest extends \PHPUnit_Framework_TestCase
             ->will(
                 $this->returnValueMap(
                     [
-                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, []],
-                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, []],
-                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, []],
-                        [ConfigurationPass::CONTEXT_CONFIGURATOR_TAG_NAME, []],
-                        [ConfigurationPass::DATA_PROVIDER_TAG_NAME, $serviceIds]
+                        [ConfigurationPass::BLOCK_TYPE_TAG_NAME, false, []],
+                        [ConfigurationPass::BLOCK_TYPE_EXTENSION_TAG_NAME, false, []],
+                        [ConfigurationPass::LAYOUT_UPDATE_TAG_NAME, false, []],
+                        [ConfigurationPass::CONTEXT_CONFIGURATOR_TAG_NAME, false, []],
+                        [ConfigurationPass::DATA_PROVIDER_TAG_NAME, false, $serviceIds]
                     ]
                 )
             );

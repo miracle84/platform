@@ -5,7 +5,6 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Functional\Controller\Api\Rest;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\ActionBundle\Button\ButtonSearchContext;
 use Oro\Bundle\TestFrameworkBundle\Entity\WorkflowAwareEntity;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
@@ -14,9 +13,6 @@ use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowManager;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadWorkflowDefinitions;
 
-/**
- * @dbIsolation
- */
 class WorkflowControllerTest extends WebTestCase
 {
     /** @var string */
@@ -139,7 +135,7 @@ class WorkflowControllerTest extends WebTestCase
      */
     protected function getWorkflowManager()
     {
-        return $this->client->getContainer()->get('oro_workflow.manager');
+        return $this->client->getContainer()->get('oro_workflow.manager.system');
     }
 
     /**

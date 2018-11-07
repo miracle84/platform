@@ -2,8 +2,10 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\Test\TypeTestCase;
 use Oro\Bundle\EmailBundle\Form\Type\EmailAddressType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Test\TypeTestCase;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class EmailAddressTypeTest extends TypeTestCase
 {
@@ -11,8 +13,7 @@ class EmailAddressTypeTest extends TypeTestCase
     {
         $formData = ' John Smith <john@example.com> ';
 
-        $type = new EmailAddressType();
-        $form = $this->factory->create($type);
+        $form = $this->factory->create(EmailAddressType::class);
 
         $form->submit($formData);
 
@@ -29,8 +30,7 @@ class EmailAddressTypeTest extends TypeTestCase
     {
         $formData = ' John Smith 1 <john1@example.com> ;; ; "John Smith 2" <john2@example.com>; john3@example.com';
 
-        $type = new EmailAddressType();
-        $form = $this->factory->create($type, null, array('multiple' => true));
+        $form = $this->factory->create(EmailAddressType::class, null, array('multiple' => true));
 
         $form->submit($formData);
 
@@ -46,9 +46,10 @@ class EmailAddressTypeTest extends TypeTestCase
         $this->assertEquals(trim($formData), $view->vars['value']);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        /** @var OptionsResolver|\PHPUnit\Framework\MockObject\MockObject $resolver */
+        $resolver = $this->createMock(OptionsResolver::class);
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with(
@@ -58,18 +59,12 @@ class EmailAddressTypeTest extends TypeTestCase
             );
 
         $type = new EmailAddressType(array());
-        $type->setDefaultOptions($resolver);
-    }
-
-    public function testGetName()
-    {
-        $type = new EmailAddressType(array());
-        $this->assertEquals('oro_email_email_address', $type->getName());
+        $type->configureOptions($resolver);
     }
 
     public function testGetParent()
     {
         $type = new EmailAddressType(array());
-        $this->assertEquals('text', $type->getParent());
+        $this->assertEquals(TextType::class, $type->getParent());
     }
 }

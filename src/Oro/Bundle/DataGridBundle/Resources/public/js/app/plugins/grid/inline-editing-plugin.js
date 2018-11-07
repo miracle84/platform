@@ -100,7 +100,6 @@ define(function(require) {
                 content: __('oro.ui.leave_page_with_unsaved_data_confirm'),
                 okText: __('OK, got it.'),
                 className: 'modal modal-primary',
-                okButtonClass: 'btn-primary btn-large',
                 cancelText: __('Cancel')
             });
             var deferredConfirmation = $.Deferred();
@@ -129,7 +128,6 @@ define(function(require) {
             } else {
                 this.removeActiveEditorComponents();
             }
-
         },
 
         beforeRedirectTo: function(queue) {
@@ -167,27 +165,29 @@ define(function(require) {
                     this.column = options.column;
                     Cell.apply(this, arguments);
                 },
-                className: _.isFunction(oldClassName) ?
-                    function() {
+                className: _.isFunction(oldClassName)
+                    ? function() {
                         var calculatedClassName = oldClassName.call(this);
-                        var addClassName = inlineEditingPlugin.isEditable(this) ?
-                            'editable view-mode prevent-text-selection-on-dblclick' :
-                            '';
+                        var addClassName = inlineEditingPlugin.isEditable(this)
+                            ? 'editable view-mode prevent-text-selection-on-dblclick' : '';
                         return (calculatedClassName ? calculatedClassName + ' ' : '') + addClassName;
-                    } :
-                    function() {
-                        var addClassName = inlineEditingPlugin.isEditable(this) ?
-                            'editable view-mode prevent-text-selection-on-dblclick' :
-                            '';
+                    }
+                    : function() {
+                        var addClassName = inlineEditingPlugin.isEditable(this)
+                            ? 'editable view-mode prevent-text-selection-on-dblclick' : '';
                         return (oldClassName ? oldClassName + ' ' : '') + addClassName;
                     },
                 events: splitEventsList.generateDeclaration(),
 
                 delayedIconRender: function() {
-                    if (!this.$el.find('> [data-role="edit"]').length) {
-                        this.$el.append('<i data-role="edit" ' +
-                            'class="fa-pencil skip-row-click hide-text inline-editor__edit-action"' +
-                            'title="' + __('Edit') + '">' + __('Edit') + '</i>');
+                    if (!this.$('[data-role="edit"]').length) {
+                        this.$el.append('<span class="inline-editor-edit-action">' +
+                            '<button data-role="edit" ' +
+                                    'class="inline-actions-btn skip-row-click hide-text"' +
+                                    'title="' + __('Edit') + '">' +
+                                '<span class="fa-pencil" aria-hidden="true"></span>' +
+                            '</button>' +
+                        '</span>');
                         this.$el.attr('title', inlineEditingPlugin.helpMessage);
                     }
                 },
@@ -228,7 +228,7 @@ define(function(require) {
 
         isEditable: function(cell) {
             var columnMetadata = cell.column.get('metadata');
-            if (!columnMetadata || !cell.column.get('renderable')) {
+            if (!columnMetadata || !cell.model || !cell.column.get('renderable')) {
                 return false;
             }
             var fieldName = cell.column.get('name');
@@ -238,10 +238,10 @@ define(function(require) {
             if (fullRestriction) {
                 return false;
             }
-            return columnMetadata.inline_editing && columnMetadata.inline_editing.enable ?
-                this.getCellEditorOptions(cell)
-                    .save_api_accessor.validateUrlParameters(cell.model.toJSON()) :
-                false;
+            return columnMetadata.inline_editing && columnMetadata.inline_editing.enable
+                ? this.getCellEditorOptions(cell)
+                    .save_api_accessor.validateUrlParameters(cell.model.toJSON())
+                : false;
         },
 
         getCellEditorOptions: function(cell) {
@@ -401,9 +401,6 @@ define(function(require) {
                 _this.enterEditMode(cell, fromPreviousCell);
                 _this.trigger('lockUserActions', false);
             }).fail(function(obj, status) {
-                if (status !== 'abort') {
-                    mediator.execute('showFlashMessage', 'error', __('oro.ui.unexpected_error'));
-                }
                 _this.trigger('lockUserActions', false);
             });
         },

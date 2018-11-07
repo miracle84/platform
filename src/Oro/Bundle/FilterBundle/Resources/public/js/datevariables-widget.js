@@ -14,13 +14,13 @@ define([
         options: {
             onSelect: $.noop,
             value: null,
-            part:  'value',
+            part: 'value',
             dateParts: null,
             dateVars: null,
-            tooltipTemplate: '<i class="fa-info-circle" data-content="<%- content %>"' +
+            tooltipTemplate: '<i class="fa-info-circle fa--offset-l fa--x-large" data-content="<%- content %>"' +
                 ' data-placement="top" data-toggle="popover" data-original-title="<%- title %>"></i>',
             htmlTemplate: '<div class="ui-datevariables-div <%- attributes %>">' +
-                '<b><%- title %></b><%= tooltipHTML %><ul>' +
+                '<span class="datevariables-title"><%- title %></span> <%= tooltipHTML %><ul>' +
                 '<% _.each(dateVars, function(dateVariable, varCode) { %>' +
                 '<li><a class="ui_date_variable" href="#" data-code="<%- varCode %>"><%- dateVariable %></a></li>' +
                 '<% }); %>' +
@@ -63,13 +63,13 @@ define([
             var htmlTemplate = _.template(o.htmlTemplate);
 
             var $dv = $(htmlTemplate({
-                attributes:  '',
-                title:       __('oro.filter.date.variable.title'),
+                attributes: '',
+                title: __('oro.filter.date.variable.title'),
                 tooltipHTML: tooltipTemplate({
                     content: __('oro.filter.date.variable.tooltip'),
-                    title:   __('oro.filter.date.variable.tooltip_title')
+                    title: __('oro.filter.date.variable.tooltip_title')
                 }),
-                dateVars:    dateVars
+                dateVars: dateVars
             }));
 
             this.element.html($dv);

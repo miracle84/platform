@@ -2,13 +2,14 @@
 
 namespace Oro\Bundle\UserBundle\Form\Type;
 
+use Oro\Bundle\UserBundle\Form\EventListener\ChangePasswordSubscriber;
+use Oro\Bundle\UserBundle\Form\Provider\PasswordFieldOptionsProvider;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
-
-use Oro\Bundle\UserBundle\Form\EventListener\ChangePasswordSubscriber;
-use Oro\Bundle\UserBundle\Form\Provider\PasswordFieldOptionsProvider;
 
 class ChangePasswordType extends AbstractType
 {
@@ -39,7 +40,7 @@ class ChangePasswordType extends AbstractType
         $builder
             ->add(
                 'currentPassword',
-                'password',
+                PasswordType::class,
                 [
                     'required' => false,
                     'label' => $options['current_password_label'],
@@ -51,10 +52,10 @@ class ChangePasswordType extends AbstractType
             )
             ->add(
                 'plainPassword',
-                'repeated',
+                RepeatedType::class,
                 [
                     'required' => false,
-                    'type' => 'password',
+                    'type' => PasswordType::class,
                     'invalid_message' => $options['plain_password_invalid_message'],
                     'options' => [
                         'attr' => [
@@ -71,7 +72,6 @@ class ChangePasswordType extends AbstractType
                     'second_options' => ['label' => $options['second_options_label'],
                     ],
                     'mapped' => false,
-                    'cascade_validation' => true,
                 ]
             );
     }
@@ -100,7 +100,6 @@ class ChangePasswordType extends AbstractType
         $resolver->setDefaults(
             [
                 'inherit_data' => true,
-                'cascade_validation' => true,
                 'current_password_label' => 'oro.user.password.label',
                 'plain_password_invalid_message' => 'oro.user.message.password_mismatch',
                 'first_options_label' => 'oro.user.new_password.label',

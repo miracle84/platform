@@ -1,44 +1,32 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Job;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query\Parameter;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\UnitOfWork;
 
 class JobStorage
 {
-    /**
-     * @var ManagerRegistry
-     */
+    /** @var ManagerRegistry */
     private $doctrine;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $entityClass;
 
-    /**
-     * @var EntityManager
-     */
-    private $em;
-
-    /**
-     * @var EntityRepository
-     */
-    private $repository;
-
-    /**
-     * @var string
-     */
+    /** @var string */
     private $uniqueTableName;
 
     /**
      * @param ManagerRegistry $doctrine
-     * @param string $entityClass
-     * @param string $uniqueTableName
+     * @param string          $entityClass
+     * @param string          $uniqueTableName
      */
     public function __construct(ManagerRegistry $doctrine, $entityClass, $uniqueTableName)
     {
@@ -50,50 +38,54 @@ class JobStorage
     /**
      * @param int $id
      *
-     * @return Job
+     * @return Job|null
      */
     public function findJobById($id)
     {
-        $qb = $this->getEntityRepository()->createQueryBuilder('job');
-
-        return $qb
+        return $this->createJobQueryBuilder('job')
             ->addSelect('rootJob')
             ->leftJoin('job.rootJob', 'rootJob')
             ->where('job = :id')
             ->setParameter('id', $id)
-            ->getQuery()->getOneOrNullResult();
-    }
-
-    /**
-     * @param Job $job
-     * @param float $progress
-     * @return Job
-     */
-    public function updateJobProgress(Job $job, $progress)
-    {
-        $job->setJobProgress($progress);
-        $this->forceSaveJob($job);
-
-        return $job;
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     /**
      * @param string $ownerId
      * @param string $jobName
      *
-     * @return Job
+     * @return Job|null
      */
     public function findRootJobByOwnerIdAndJobName($ownerId, $jobName)
     {
-        $qb = $this->getEntityRepository()->createQueryBuilder('job');
-
-        return $qb
+        return $this->createJobQueryBuilder('job')
             ->where('job.ownerId = :ownerId AND job.name = :jobName')
-            ->setParameters([
-                'ownerId' => $ownerId,
-                'jobName' => $jobName,
-            ])
-            ->getQuery()->getOneOrNullResult();
+            ->andWhere('job.rootJob is NULL')
+            ->setParameter('ownerId', $ownerId)
+            ->setParameter('jobName', $jobName)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Finds root non interrupted job by name and given statuses.
+     *
+     * @param string $jobName
+     * @param array  $statuses
+     *
+     * @return Job|null
+     */
+    public function findRootJobByJobNameAndStatuses($jobName, array $statuses)
+    {
+        return $this->createJobQueryBuilder('job')
+            ->where('job.rootJob is NULL and job.name = :jobName and job.status in (:statuses)')
+            ->andWhere('job.interrupted != true')
+            ->setParameter('jobName', $jobName)
+            ->setParameter('statuses', $statuses)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     /**
@@ -104,15 +96,72 @@ class JobStorage
      */
     public function findChildJobByName($name, Job $rootJob)
     {
-        $qb = $this->getEntityRepository()->createQueryBuilder('job');
-
-        return $qb
+        return $this->createJobQueryBuilder('job')
             ->addSelect('rootJob')
             ->leftJoin('job.rootJob', 'rootJob')
             ->where('rootJob = :rootJob AND job.name = :name')
             ->setParameter('rootJob', $rootJob)
             ->setParameter('name', $name)
-            ->getQuery()->getOneOrNullResult();
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param Job $rootJob
+     *
+     * @return []
+     */
+    public function getChildStatusesWithJobCountByRootJob(Job $rootJob)
+    {
+        $rawChildStatusesWithJobCount = $this->createJobQueryBuilder('job')
+            ->select('COUNT(job.id) AS childCount', 'job.status')
+            ->where('job.rootJob = :rootJob')
+            ->groupBy('job.status')
+            ->setParameter('rootJob', $rootJob)
+            ->getQuery()
+            ->getScalarResult();
+
+        $childStatusesWithJobCount = [];
+        foreach ($rawChildStatusesWithJobCount as $childStatusWithJobCount) {
+            $childStatusesWithJobCount[$childStatusWithJobCount['status']] = $childStatusWithJobCount['childCount'];
+        }
+
+        return $childStatusesWithJobCount;
+    }
+
+    /**
+     * Be warned that
+     * In PGSQL function returns array of ids in DESC order, every id has integer type,
+     * But in MYSQL it will be array of ids in ASC order, every id has string type
+     *
+     * @param Job    $rootJob
+     * @param string $status
+     *
+     * @return array
+     */
+    public function getChildJobIdsByRootJobAndStatus(Job $rootJob, $status)
+    {
+        $qb = $this->createJobQueryBuilder('job');
+        $rawChildJobIds = $qb
+            ->select('job.id')
+            ->where(
+                $qb->expr()->andX(
+                    'job.rootJob = :rootJob',
+                    'job.status = :status'
+                )
+            )
+            ->setParameters(
+                new ArrayCollection(
+                    [
+                        new Parameter('rootJob', $rootJob),
+                        new Parameter('status', $status),
+                    ]
+                )
+            )
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_column($rawChildJobIds, 'id');
     }
 
     /**
@@ -120,9 +169,20 @@ class JobStorage
      */
     public function createJob()
     {
-        $class = $this->getEntityRepository()->getClassName();
+        return new $this->entityClass;
+    }
 
-        return new $class;
+    /**
+     * @param string $alias
+     *
+     * @return QueryBuilder
+     */
+    public function createJobQueryBuilder($alias)
+    {
+        return $this->getEntityManager()
+            ->createQueryBuilder()
+            ->select($alias)
+            ->from($this->entityClass, $alias);
     }
 
     /**
@@ -133,53 +193,45 @@ class JobStorage
      */
     public function saveJob(Job $job, \Closure $lockCallback = null)
     {
-        $class = $this->getEntityRepository()->getClassName();
-        if (! $job instanceof $class) {
-            throw new \LogicException(sprintf(
-                'Got unexpected job instance: expected: "%s", actual" "%s"',
-                $class,
+        if (!$job instanceof $this->entityClass) {
+            throw new \InvalidArgumentException(sprintf(
+                'Expected job instance of "%s", given "%s".',
+                $this->entityClass,
                 get_class($job)
             ));
         }
 
         if ($lockCallback) {
-            if (! $job->getId()) {
+            if (!$job->getId()) {
                 throw new \LogicException('Is not possible to create new job with lock, only update is allowed');
             }
 
-            $this->getEntityManager()->transactional(function (EntityManager $em) use ($job, $lockCallback) {
+            $em = $this->getEntityManager(true);
+            $em->getConnection()->transactional(function (Connection $connection) use ($em, $job, $lockCallback) {
                 /** @var Job $job */
-                $job = $this->getEntityRepository()->find($job->getId(), LockMode::PESSIMISTIC_WRITE);
+                $job = $em->find($this->entityClass, $job->getId(), LockMode::PESSIMISTIC_WRITE);
 
                 $lockCallback($job);
+                $em->flush($job);
 
                 if ($job->getStoppedAt()) {
-                    $this->getEntityManager()->getConnection()->delete($this->uniqueTableName, [
-                        'name' => $job->getOwnerId(),
-                    ]);
-
+                    $connection->delete($this->uniqueTableName, ['name' => $job->getOwnerId()]);
                     if ($job->isUnique()) {
-                        $this->getEntityManager()->getConnection()->delete($this->uniqueTableName, [
-                            'name' => $job->getName(),
-                        ]);
+                        $connection->delete($this->uniqueTableName, ['name' => $job->getName()]);
                     }
                 }
             });
         } else {
-            if (! $job->getId() && $job->isRoot()) {
+            if (!$job->getId() && $job->isRoot()) {
                 // Dbal transaction is used here because Doctrine closes EntityManger any time
-                // exception occurs but UniqueConstraintViolationException here is expected here
+                // exception occurs but UniqueConstraintViolationException is expected here
                 // and we should keep EntityManager in open state.
-                $this->getEntityManager()->getConnection()->transactional(function (Connection $connection) use ($job) {
+                $em = $this->getEntityManager(true);
+                $em->getConnection()->transactional(function (Connection $connection) use ($job, $em) {
                     try {
-                        $connection->insert($this->uniqueTableName, [
-                            'name' => $job->getOwnerId()
-                        ]);
-
+                        $connection->insert($this->uniqueTableName, ['name' => $job->getOwnerId()]);
                         if ($job->isUnique()) {
-                            $connection->insert($this->uniqueTableName, [
-                                'name' => $job->getName(),
-                            ]);
+                            $connection->insert($this->uniqueTableName, ['name' => $job->getName()]);
                         }
                     } catch (UniqueConstraintViolationException $e) {
                         throw new DuplicateJobException(sprintf(
@@ -188,53 +240,74 @@ class JobStorage
                             $job->getName()
                         ));
                     }
-                    $this->forceSaveJob($job);
+                    $this->flushJob($em, $job);
                 });
             } else {
-                $this->forceSaveJob($job);
+                $this->flushJob($this->getEntityManager(true), $job);
             }
         }
     }
 
     /**
-     * @param Job $job
+     * @param EntityManager $em
+     * @param Job           $job
      */
-    private function forceSaveJob(Job $job)
+    private function flushJob(EntityManager $em, Job $job)
     {
-        if (! $this->getEntityManager()->isOpen()) {
-            $em = $this->getEntityManager()->create(
-                $this->getEntityManager()->getConnection(),
-                $this->getEntityManager()->getConfiguration()
-            );
-            $em->merge($job);
-            $em->flush();
-        } else {
-            $this->getEntityManager()->persist($job);
-            $this->getEntityManager()->flush();
+        if (!$job->getId()) {
+            $em->persist($job);
+        } elseif (UnitOfWork::STATE_DETACHED === $em->getUnitOfWork()->getEntityState($job)) {
+            $job = $em->merge($job);
         }
+
+        $em->flush($job);
     }
 
     /**
-     * @return EntityRepository
-     */
-    private function getEntityRepository()
-    {
-        if (! $this->repository) {
-            $this->repository = $this->getEntityManager()->getRepository($this->entityClass);
-        }
-
-        return $this->repository;
-    }
-
-    /**
+     * @param bool $force Set TRUE if you need to get the open entity manager
+     *                    even if the current entity manager is closed
+     *
      * @return EntityManager
      */
-    private function getEntityManager()
+    private function getEntityManager($force = false)
     {
-        if (! $this->em) {
-            $this->em = $this->doctrine->getManagerForClass($this->entityClass);
+        /** @var EntityManager $em */
+        $em = $this->doctrine->getManagerForClass($this->entityClass);
+        if ($force) {
+            if (!$em->isOpen()) {
+                $this->resetEntityManager();
+                $em = $this->doctrine->getManagerForClass($this->entityClass);
+            } else {
+                /**
+                 * ensure that the transaction is fully rolled back
+                 * in case if a nested transaction is rolled back but the entity manager is not closed
+                 * this may happen if the EntityManager::rollback() method is called
+                 * without the call of EntityManager::close() method
+                 * @link http://docs.doctrine-project.org/projects/doctrine-orm/en/latest/reference/transactions-and-concurrency.html#exception-handling
+                 */
+                $connection = $em->getConnection();
+                if ($connection->getTransactionNestingLevel() > 0 && $connection->isRollbackOnly()) {
+                    while ($connection->getTransactionNestingLevel() > 0) {
+                        $connection->rollBack();
+                    }
+                }
+            }
         }
 
-        return $this->em;
+        return $em;
+    }
+
+    /**
+     * Replaces the closed entity manager with new instance of entity manager.
+     */
+    private function resetEntityManager()
+    {
+        $managers = $this->doctrine->getManagers();
+        foreach ($managers as $name => $manager) {
+            if (!$manager->getMetadataFactory()->isTransient($this->entityClass)) {
+                $this->doctrine->resetManager($name);
+                break;
+            }
+        }
     }
 }

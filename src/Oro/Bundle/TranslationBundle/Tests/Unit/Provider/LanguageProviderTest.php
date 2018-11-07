@@ -2,21 +2,26 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Provider;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 use Oro\Bundle\TranslationBundle\Entity\Language;
 use Oro\Bundle\TranslationBundle\Entity\Repository\LanguageRepository;
 use Oro\Bundle\TranslationBundle\Provider\LanguageProvider;
+use Oro\Bundle\TranslationBundle\Translation\Translator;
 
-class LanguageProviderTest extends \PHPUnit_Framework_TestCase
+class LanguageProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|LanguageRepository */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|LanguageRepository */
     protected $repository;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|LocaleSettings */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry */
+    protected $managerRegistry;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject|LocaleSettings */
     protected $localeSettings;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject|AclHelper */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject|AclHelper */
     protected $aclHelper;
 
     /** @var LanguageProvider */
@@ -25,10 +30,13 @@ class LanguageProviderTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         $this->repository = $this->getMockBuilder(LanguageRepository::class)->disableOriginalConstructor()->getMock();
+        $this->managerRegistry = $this->getMockBuilder(ManagerRegistry::class)->disableOriginalConstructor()->getMock();
+        $this->managerRegistry->expects($this->once())->method('getRepository')->willReturn($this->repository);
+
         $this->localeSettings = $this->getMockBuilder(LocaleSettings::class)->disableOriginalConstructor()->getMock();
         $this->aclHelper = $this->getMockBuilder(AclHelper::class)->disableOriginalConstructor()->getMock();
 
-        $this->provider = new LanguageProvider($this->repository, $this->localeSettings, $this->aclHelper);
+        $this->provider = new LanguageProvider($this->managerRegistry, $this->localeSettings, $this->aclHelper);
     }
 
     protected function tearDown()
@@ -77,5 +85,26 @@ class LanguageProviderTest extends \PHPUnit_Framework_TestCase
             ->willReturn($data);
 
         $this->assertSame($this->provider->getAvailableLanguagesByCurrentUser(), $data);
+    }
+
+    public function testGetLanguages()
+    {
+        $data = [new Language()];
+
+        $this->repository->expects($this->once())->method('getLanguages')->willReturn($data);
+
+        $this->assertSame($data, $this->provider->getLanguages());
+    }
+
+    public function testGetDefaultLanguage()
+    {
+        $language = new Language();
+
+        $this->repository->expects($this->once())
+            ->method('findOneBy')
+            ->with(['code' => Translator::DEFAULT_LOCALE])
+            ->willReturn($language);
+
+        $this->assertSame($language, $this->provider->getDefaultLanguage());
     }
 }

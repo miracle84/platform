@@ -3,21 +3,22 @@
 namespace Oro\Bundle\IntegrationBundle\Form\Handler;
 
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
-use Oro\Bundle\IntegrationBundle\Event\IntegrationUpdateEvent;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\IntegrationBundle\Event\DefaultOwnerSetEvent;
+use Oro\Bundle\IntegrationBundle\Event\IntegrationUpdateEvent;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class ChannelHandler
 {
+    use RequestHandlerTrait;
+
     const UPDATE_MARKER = 'formUpdateMarker';
 
-    /** @var Request */
-    protected $request;
+    /** @var RequestStack */
+    protected $requestStack;
 
     /** @var EntityManager */
     protected $em;
@@ -29,18 +30,18 @@ class ChannelHandler
     protected $eventDispatcher;
 
     /**
-     * @param Request                  $request
+     * @param RequestStack             $requestStack
      * @param FormInterface            $form
      * @param EntityManager            $em
      * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
-        Request $request,
+        RequestStack $requestStack,
         FormInterface $form,
         EntityManager $em,
         EventDispatcherInterface $eventDispatcher
     ) {
-        $this->request         = $request;
+        $this->requestStack    = $requestStack;
         $this->form            = $form;
         $this->em              = $em;
         $this->eventDispatcher = $eventDispatcher;
@@ -59,10 +60,18 @@ class ChannelHandler
         $isNewEntity = !$entity->getId();
         $this->form->setData($entity);
 
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
             $oldState = $this->getIntegration($entity);
-            $this->form->submit($this->request);
-            if (!$this->request->get(self::UPDATE_MARKER, false) && $this->form->isValid()) {
+            // Determines whether we have to submit form as if a button was clicked (==false)
+            // or user just changed Type (==true).
+            $updateMarker = $request->get(self::UPDATE_MARKER, false);
+
+            // We must not clear missing values if it is just a form update, i.e ($updateMarker == true),
+            // because we will lose default values of underlying entity.
+            // Otherwise, if it just a normal submit, we have to submit form in a normal way.
+            $this->submitPostPutRequest($this->form, $request, !$updateMarker);
+            if (!$updateMarker && $this->form->isValid()) {
                 $this->em->persist($entity);
                 $this->em->flush();
 

@@ -2,23 +2,18 @@
 
 namespace Oro\Bundle\AttachmentBundle\Tests\Unit\Resizer;
 
-use Liip\ImagineBundle\Imagine\Cache\CacheManager;
-use Liip\ImagineBundle\Model\Binary;
-
-use Prophecy\Argument;
-
+use Imagine\Exception\RuntimeException;
+use Liip\ImagineBundle\Binary\BinaryInterface;
 use Oro\Bundle\AttachmentBundle\Entity\File;
-use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
 use Oro\Bundle\AttachmentBundle\Manager\FileManager;
 use Oro\Bundle\AttachmentBundle\Resizer\ImageResizer;
-use Oro\Bundle\AttachmentBundle\Tools\ImageFactory;
+use Oro\Bundle\AttachmentBundle\Tools\Imagine\Binary\Factory\ImagineBinaryByFileContentFactoryInterface;
+use Oro\Bundle\AttachmentBundle\Tools\Imagine\Binary\Filter\ImagineBinaryFilterInterface;
 use Psr\Log\LoggerInterface;
 
-class ImageResizerTest extends \PHPUnit_Framework_TestCase
+class ImageResizerTest extends \PHPUnit\Framework\TestCase
 {
-    const CACHE_RESOLVER_NAME = 'resolver';
     const FILTER_NAME = 'filter';
-    const PATH = 'path';
     const MIME_TYPE = 'image/gif';
     const FORMAT = 'gif';
     const CONTENT = 'content';
@@ -26,122 +21,147 @@ class ImageResizerTest extends \PHPUnit_Framework_TestCase
     /**
      * @var ImageResizer
      */
-    protected $resizer;
+    private $resizer;
 
     /**
-     * @var AttachmentManager
+     * @var FileManager|\PHPUnit\Framework\MockObject\MockObject
      */
-    protected $attachmentManager;
+    private $fileManager;
 
     /**
-     * @var CacheManager
+     * @var ImagineBinaryByFileContentFactoryInterface|\PHPUnit\Framework\MockObject\MockObject
      */
-    protected $cacheManager;
+    private $imagineBinaryFactory;
 
     /**
-     * @var FileManager
+     * @var ImagineBinaryFilterInterface|\PHPUnit\Framework\MockObject\MockObject
      */
-    protected $fileManager;
-
-    /**
-     * @var ImageFactory
-     */
-    protected $imageFactory;
+    private $imagineBinaryFilter;
 
     public function setUp()
     {
-        $this->attachmentManager = $this->prophesize(AttachmentManager::class);
-        $this->cacheManager = $this->prophesize(CacheManager::class);
-        $this->imageFactory = $this->prophesize(ImageFactory::class);
-        $this->fileManager = $this->prophesize(FileManager::class);
+        $this->imagineBinaryFactory
+            = $this->createMock(ImagineBinaryByFileContentFactoryInterface::class);
+        $this->imagineBinaryFilter = $this->createMock(ImagineBinaryFilterInterface::class);
+        $this->fileManager = $this->createMock(FileManager::class);
 
         $this->resizer = new ImageResizer(
-            $this->attachmentManager->reveal(),
-            $this->cacheManager->reveal(),
-            $this->fileManager->reveal(),
-            $this->imageFactory->reveal(),
-            self::CACHE_RESOLVER_NAME
+            $this->fileManager,
+            $this->imagineBinaryFactory,
+            $this->imagineBinaryFilter
         );
-    }
-
-    public function testResizeImageWhenImageExistsAndNoForce()
-    {
-        $image = $this->prophesize(File::class);
-        $image->getId()->willReturn(1);
-        $image->getFileName()->willReturn('image.jpg');
-
-        $this->attachmentManager->getFilteredImageUrl($image, self::FILTER_NAME)->willReturn(self::PATH);
-
-        $this->cacheManager->isStored(self::PATH, self::FILTER_NAME, self::CACHE_RESOLVER_NAME)->willReturn(true);
-        $this->cacheManager->store(Argument::any())->shouldNotBeCalled();
-
-        $this->assertFalse($this->resizer->resizeImage($image->reveal(), self::FILTER_NAME, false));
     }
 
     public function testImageNotFound()
     {
         $exception = new \Exception();
 
-        $logger = $this->prophesize(LoggerInterface::class);
+        $logger = $this->createLoggerMock();
         $logger
-            ->warning(
+            ->method('warning')
+            ->with(
                 'Image (id: 1, filename: image.jpg) not found. Skipped during resize.',
                 ['exception' => $exception]
-            )
-            ->shouldBeCalled();
-        $this->resizer->setLogger($logger->reveal());
+            );
+        $this->resizer->setLogger($logger);
 
-        $image = $this->prophesize(File::class);
-        $image->getId()->willReturn(1);
-        $image->getFilename()->willReturn('image.jpg');
+        $image = $this->createFileMock();
+        $image->method('getId')->willReturn(1);
+        $image->method('getFilename')->willReturn('image.jpg');
 
-        $this->attachmentManager->getFilteredImageUrl($image, self::FILTER_NAME)->willReturn(self::PATH);
+        $this->fileManager
+            ->method('getContent')
+            ->with($image)
+            ->willThrowException($exception);
 
-        $this->fileManager->getContent($image)->willThrow($exception);
-
-        $this->cacheManager->isStored(self::PATH, self::FILTER_NAME, self::CACHE_RESOLVER_NAME)->willReturn(false);
-        $this->cacheManager->store(Argument::any())->shouldNotBeCalled();
-
-        $this->assertFalse($this->resizer->resizeImage($image->reveal(), self::FILTER_NAME, false));
+        $this->assertFalse($this->resizer->resizeImage($image, self::FILTER_NAME));
     }
 
-    public function testResizeImageWhenImageExistsAndForce()
+    public function testImageIsBroken()
     {
-        $image = $this->prepareImageAndExpectations($isStored = true);
+        $exception = new RuntimeException();
 
-        $this->assertTrue($this->resizer->resizeImage($image, self::FILTER_NAME, $force = true));
+        $logger = $this->createLoggerMock();
+        $logger
+            ->method('warning')
+            ->with(
+                'Image (id: 1, filename: image.jpg) is broken. Skipped during resize.',
+                ['exception' => $exception]
+            );
+        $this->resizer->setLogger($logger);
+
+        $image = $this->createFileMock();
+        $image->method('getId')->willReturn(1);
+        $image->method('getFilename')->willReturn('image.jpg');
+
+        $this->fileManager
+            ->method('getContent')
+            ->with($image)
+            ->willReturn(self::CONTENT);
+        $binary = $this->createBinaryMock();
+        $this->imagineBinaryFactory
+            ->method('createImagineBinary')
+            ->with(self::CONTENT)
+            ->willReturn($binary);
+
+        $this->imagineBinaryFilter
+            ->method('applyFilter')
+            ->with($binary, self::FILTER_NAME)
+            ->willThrowException($exception);
+
+        $this->assertFalse($this->resizer->resizeImage($image, self::FILTER_NAME));
     }
 
-    public function testResizeImageWhenImageDoesNotExist()
+    public function testResizeImage()
     {
-        $image = $this->prepareImageAndExpectations($isStored = false);
+        $binary = $this->createBinaryMock();
+        $filteredBinary = $this->createBinaryMock();
 
-        $this->assertTrue($this->resizer->resizeImage($image, self::FILTER_NAME, $force = false));
+        $image = $this->createFileMock();
+        $image->setMimeType(self::MIME_TYPE);
+
+        $this->fileManager
+            ->method('getContent')
+            ->with($image)
+            ->willReturn(self::CONTENT);
+
+        $this->imagineBinaryFactory
+            ->method('createImagineBinary')
+            ->with(self::CONTENT)
+            ->willReturn($binary);
+
+        $this->imagineBinaryFilter
+            ->method('applyFilter')
+            ->with($binary, self::FILTER_NAME)
+            ->willReturn($filteredBinary);
+
+        $this->assertEquals(
+            $filteredBinary,
+            $this->resizer->resizeImage($image, self::FILTER_NAME)
+        );
     }
 
     /**
-     * @param bool $isStored
-     * @return File
+     * @return LoggerInterface|\PHPUnit\Framework\MockObject\MockObject
      */
-    protected function prepareImageAndExpectations($isStored)
+    private function createLoggerMock()
     {
-        $filteredBinary = new Binary(self::CONTENT, self::MIME_TYPE, self::FORMAT);
+        return $this->createMock(LoggerInterface::class);
+    }
 
-        $image = new File();
-        $image->setMimeType(self::MIME_TYPE);
+    /**
+     * @return File|\PHPUnit\Framework\MockObject\MockObject
+     */
+    private function createFileMock()
+    {
+        return $this->createMock(File::class);
+    }
 
-        $this->fileManager->getContent($image)->willReturn(self::CONTENT);
-
-        $this->imageFactory->createImage(self::CONTENT, self::FILTER_NAME)->willReturn($filteredBinary);
-
-        $this->attachmentManager->getContent($image)->willReturn(self::CONTENT);
-        $this->attachmentManager->getFilteredImageUrl($image, self::FILTER_NAME)->willReturn(self::PATH);
-
-        $this->cacheManager->isStored(self::PATH, self::FILTER_NAME, self::CACHE_RESOLVER_NAME)->willReturn($isStored);
-        $this->cacheManager
-            ->store($filteredBinary, self::PATH, self::FILTER_NAME, self::CACHE_RESOLVER_NAME)
-            ->shouldBeCalled();
-
-        return $image;
+    /**
+     * @return BinaryInterface|\PHPUnit\Framework\MockObject\MockObject
+     */
+    private function createBinaryMock()
+    {
+        return $this->createMock(BinaryInterface::class);
     }
 }

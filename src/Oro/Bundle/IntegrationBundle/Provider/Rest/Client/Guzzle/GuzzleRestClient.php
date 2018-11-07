@@ -6,7 +6,6 @@ use Guzzle\Http\Client as GuzzleClient;
 use Guzzle\Http\Exception\BadResponseException;
 use Guzzle\Http\Message\RequestInterface;
 use Guzzle\Http\Url as GuzzleUrl;
-
 use Oro\Bundle\IntegrationBundle\Provider\Rest\Client\RestClientInterface;
 
 class GuzzleRestClient implements RestClientInterface
@@ -87,21 +86,6 @@ class GuzzleRestClient implements RestClientInterface
         }
 
         return $response->json();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getXML($resource, array $params = array(), array $headers = array(), array $options = array())
-    {
-        $response = $this->get($resource, $params, $headers, $options);
-        if (!$response->isSuccessful()) {
-            throw GuzzleRestException::createFromException(
-                BadResponseException::factory($this->lastGuzzleRequest, $response->getSourceResponse())
-            );
-        }
-
-        return $response->xml();
     }
 
     /**

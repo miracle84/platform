@@ -3,31 +3,27 @@
 namespace Oro\Bundle\FormBundle\Tests\Unit\Extension;
 
 use Oro\Bundle\FormBundle\Form\Extension\DataBlockExtension;
+use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Symfony\Component\Form\FormView;
-
-class DataBlockExtensionTest extends \PHPUnit_Framework_TestCase
+class DataBlockExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /** @var  DataBlockExtension */
     private $formExtension;
 
-    private $securityFacade;
-
+    /** @var array */
     private $options = array('block' => 1, 'subblock' => 1, 'block_config' => 1, 'tooltip' => 1);
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()->getMock();
-        $this->formExtension = new DataBlockExtension($this->securityFacade);
+        $this->formExtension = new DataBlockExtension();
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         /** @var OptionsResolver $resolver */
         $resolver = new OptionsResolver();
-        $this->formExtension->setDefaultOptions($resolver);
+        $this->formExtension->configureOptions($resolver);
 
         $this->assertEquals(
             [],

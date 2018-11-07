@@ -2,15 +2,14 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\ApiBundle\Form\Type\ScalarCollectionType;
+use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group;
+use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Validator\ValidatorExtension;
 use Symfony\Component\Form\Test\TypeTestCase;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;
-
-use Oro\Bundle\ApiBundle\Form\Type\ScalarCollectionType;
-use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group;
-use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User;
 
 class ScalarCollectionTypeTest extends TypeTestCase
 {
@@ -24,7 +23,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
 
     public function testShouldUseAdder()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|User $entity */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|User $entity */
         $entity = $this->getMockBuilder(User::class)
             ->setMethods(['addGroup', 'removeGroup'])
             ->getMock();
@@ -44,7 +43,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             [
                 'entry_data_class'    => Group::class,
                 'entry_data_property' => 'name'
@@ -52,19 +51,19 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $form = $formBuilder->getForm();
 
-        $entity->expects($this->once())
+        $entity->expects(self::once())
             ->method('addGroup')
             ->with($group2);
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('removeGroup');
 
         $form->submit(['groups' => ['group1', 'group2']]);
-        $this->assertTrue($form->isSynchronized());
+        self::assertTrue($form->isSynchronized());
     }
 
     public function testShouldUseRemover()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|User $entity */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|User $entity */
         $entity = $this->getMockBuilder(User::class)
             ->setMethods(['addGroup', 'removeGroup'])
             ->getMock();
@@ -86,7 +85,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             [
                 'entry_data_class'    => Group::class,
                 'entry_data_property' => 'name'
@@ -94,19 +93,19 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $form = $formBuilder->getForm();
 
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('addGroup');
-        $entity->expects($this->once())
+        $entity->expects(self::once())
             ->method('removeGroup')
-            ->with($this->identicalTo($group2));
+            ->with(self::identicalTo($group2));
 
         $form->submit(['groups' => ['group1']]);
-        $this->assertTrue($form->isSynchronized());
+        self::assertTrue($form->isSynchronized());
     }
 
     public function testShouldUpdateExistingEntity()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|User $entity */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|User $entity */
         $entity = $this->getMockBuilder(User::class)
             ->setMethods(['addGroup', 'removeGroup'])
             ->getMock();
@@ -124,7 +123,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             [
                 'entry_data_class'    => Group::class,
                 'entry_data_property' => 'name'
@@ -132,20 +131,20 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $form = $formBuilder->getForm();
 
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('addGroup');
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('removeGroup');
 
         $form->submit(['groups' => ['group2']]);
-        $this->assertTrue($form->isSynchronized());
+        self::assertTrue($form->isSynchronized());
 
-        $this->assertEquals('group2', $group1->getName());
+        self::assertEquals('group2', $group1->getName());
     }
 
     public function testShouldUseRemoverWhenRemoveAllItems()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|User $entity */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|User $entity */
         $entity = $this->getMockBuilder(User::class)
             ->setMethods(['addGroup', 'removeGroup'])
             ->getMock();
@@ -163,7 +162,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             [
                 'entry_data_class'    => Group::class,
                 'entry_data_property' => 'name'
@@ -171,19 +170,19 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $form = $formBuilder->getForm();
 
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('addGroup');
-        $entity->expects($this->once())
+        $entity->expects(self::once())
             ->method('removeGroup')
-            ->with($this->identicalTo($group1));
+            ->with(self::identicalTo($group1));
 
         $form->submit(['groups' => []]);
-        $this->assertTrue($form->isSynchronized());
+        self::assertTrue($form->isSynchronized());
     }
 
     public function testShouldValidateEntryEntity()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|User $entity */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|User $entity */
         $entity = $this->getMockBuilder(User::class)
             ->setMethods(['addGroup', 'removeGroup'])
             ->getMock();
@@ -201,7 +200,7 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             [
                 'entry_data_class'    => Group::class,
                 'entry_data_property' => 'name',
@@ -212,23 +211,23 @@ class ScalarCollectionTypeTest extends TypeTestCase
         );
         $form = $formBuilder->getForm();
 
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('addGroup');
-        $entity->expects($this->never())
+        $entity->expects(self::never())
             ->method('removeGroup');
 
         $form->submit(['groups' => ['']]);
-        $this->assertTrue($form->isSynchronized());
-        $this->assertFalse($form->isValid());
-        $this->assertCount(0, $form->getErrors());
-        $this->assertCount(0, $form->get('groups')->getErrors());
-        $this->assertCount(1, $form->get('groups')->get(0)->getErrors());
+        self::assertTrue($form->isSynchronized());
+        self::assertFalse($form->isValid());
+        self::assertCount(0, $form->getErrors());
+        self::assertCount(0, $form->get('groups')->getErrors());
+        self::assertCount(1, $form->get('groups')->get(0)->getErrors());
     }
 
     public function testWithInvalidValue()
     {
         $form = $this->factory->create(
-            new ScalarCollectionType(),
+            ScalarCollectionType::class,
             null,
             [
                 'entry_data_class'    => Group::class,
@@ -236,12 +235,6 @@ class ScalarCollectionTypeTest extends TypeTestCase
             ]
         );
         $form->submit('test');
-        $this->assertFalse($form->isSynchronized());
-    }
-
-    public function testGetName()
-    {
-        $type = new ScalarCollectionType();
-        $this->assertEquals('oro_api_scalar_collection', $type->getName());
+        self::assertFalse($form->isSynchronized());
     }
 }

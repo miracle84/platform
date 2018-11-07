@@ -5,7 +5,6 @@ namespace Oro\Bundle\EntityBundle\Provider;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Util\Inflector;
-
 use Symfony\Component\Translation\TranslatorInterface;
 
 /**
@@ -124,11 +123,11 @@ class FallbackEntityNameProvider implements EntityNameProviderInterface
         $getterName = 'get' . Inflector::classify($fieldName);
 
         if (method_exists($entity, $getterName)) {
-            return $entity->$getterName();
+            return $entity->{$getterName}();
         }
 
-        if (property_exists($entity, $fieldName)) {
-            return $entity->$fieldName;
+        if (isset($entity->{$fieldName})) {
+            return $entity->{$fieldName};
         }
 
         return null;

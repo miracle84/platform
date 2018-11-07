@@ -2,29 +2,26 @@
 
 namespace Oro\Bundle\ImapBundle\Provider;
 
-use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Provider\EmailFlagManagerLoaderInterface;
 use Oro\Bundle\EntityBundle\ORM\OroEntityManager;
-use Oro\Bundle\ImapBundle\Connector\ImapConnectorFactory;
 use Oro\Bundle\ImapBundle\Connector\ImapConfig;
+use Oro\Bundle\ImapBundle\Connector\ImapConnectorFactory;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailFlagManager;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailGoogleOauth2Manager;
-use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
+use Oro\Bundle\SecurityBundle\Encoder\SymmetricCrypterInterface;
 
 /**
- * Class ImapEmailFlagManagerLoader
- * @package Oro\Bundle\ImapBundle\Provider
+ * This class allows to get EmailFlagManager based on EmailFolder
  */
 class ImapEmailFlagManagerLoader implements EmailFlagManagerLoaderInterface
 {
     /** @var ImapConnectorFactory */
     protected $connectorFactory;
 
-    /** @var Mcrypt */
+    /** @var SymmetricCrypterInterface */
     protected $encryptor;
 
     /** @var ImapEmailGoogleOauth2Manager */
@@ -32,12 +29,12 @@ class ImapEmailFlagManagerLoader implements EmailFlagManagerLoaderInterface
 
     /**
      * @param ImapConnectorFactory $connectorFactory
-     * @param Mcrypt $encryptor
+     * @param SymmetricCrypterInterface $encryptor
      * @param ImapEmailGoogleOauth2Manager $imapEmailGoogleOauth2Manager
      */
     public function __construct(
         ImapConnectorFactory $connectorFactory,
-        Mcrypt $encryptor,
+        SymmetricCrypterInterface $encryptor,
         ImapEmailGoogleOauth2Manager $imapEmailGoogleOauth2Manager
     ) {
         $this->connectorFactory = $connectorFactory;

@@ -2,19 +2,19 @@
 
 namespace Oro\Bundle\CurrencyBundle\Tests\Unit\Datagrid\EventListener;
 
-use Oro\Bundle\DataGridBundle\Event\BuildBefore;
-use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
-use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-use Oro\Bundle\DataGridBundle\Extension\Formatter\Property\PropertyInterface;
-use Oro\Bundle\CurrencyBundle\Datagrid\InlineEditing\InlineEditColumnOptions\MultiCurrencyGuesser;
 use Oro\Bundle\CurrencyBundle\Datagrid\EventListener\ColumnConfigListener;
+use Oro\Bundle\CurrencyBundle\Datagrid\InlineEditing\InlineEditColumnOptions\MultiCurrencyGuesser;
+use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
+use Oro\Bundle\DataGridBundle\Event\BuildBefore;
+use Oro\Bundle\DataGridBundle\Extension\Formatter\Property\PropertyInterface;
 
-class ColumnConfigListenerTest extends \PHPUnit_Framework_TestCase
+class ColumnConfigListenerTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY = 'Test:Entity';
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityClassResolver;
 

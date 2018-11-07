@@ -2,20 +2,20 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\Test\TypeTestCase;
-use Symfony\Component\OptionsResolver\OptionsResolver;
-
 use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityExtendBundle\Form\Type\EnumPublicType;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Test\TypeTestCase;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class EnumPublicTypeTest extends TypeTestCase
 {
     /** @var EnumPublicType */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $typeHelper;
 
     protected function setUp()
@@ -31,9 +31,9 @@ class EnumPublicTypeTest extends TypeTestCase
     }
 
     /**
-     * @dataProvider setDefaultOptionsProvider
+     * @dataProvider configureOptionsProvider
      */
-    public function testSetDefaultOptions(
+    public function testConfigureOptions(
         ConfigIdInterface $configId,
         $isNewConfig,
         $enumCode,
@@ -64,7 +64,7 @@ class EnumPublicTypeTest extends TypeTestCase
             ->will($this->returnValue($hasOtherReferences));
 
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options['config_id']     = $configId;
         $options['config_is_new'] = $isNewConfig;
@@ -97,7 +97,7 @@ class EnumPublicTypeTest extends TypeTestCase
         return $resolver;
     }
 
-    public function setDefaultOptionsProvider()
+    public function configureOptionsProvider()
     {
         return [
             [
@@ -196,18 +196,10 @@ class EnumPublicTypeTest extends TypeTestCase
         ];
     }
 
-    public function testGetName()
-    {
-        $this->assertEquals(
-            'oro_entity_extend_enum_public',
-            $this->type->getName()
-        );
-    }
-
     public function testGetParent()
     {
         $this->assertEquals(
-            'choice',
+            ChoiceType::class,
             $this->type->getParent()
         );
     }

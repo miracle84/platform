@@ -3,19 +3,21 @@
 namespace Oro\Bundle\EmailBundle\Form\Type;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
-
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Validator\Constraints as Assert;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
+use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateTranslationType;
 use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class AutoResponseTemplateType extends AbstractType
 {
@@ -55,7 +57,7 @@ class AutoResponseTemplateType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('entityName', 'hidden', [
+            ->add('entityName', HiddenType::class, [
                 'attr' => [
                     'data-default-value' => Email::ENTITY_CLASS,
                 ],
@@ -68,17 +70,17 @@ class AutoResponseTemplateType extends AbstractType
                     ]),
                 ],
             ])
-            ->add('type', 'choice', [
+            ->add('type', ChoiceType::class, [
                 'label'    => 'oro.email.emailtemplate.type.label',
                 'multiple' => false,
                 'expanded' => true,
                 'choices'  => [
-                    'html' => 'oro.email.datagrid.emailtemplate.filter.type.html',
-                    'txt'  => 'oro.email.datagrid.emailtemplate.filter.type.txt'
+                    'oro.email.datagrid.emailtemplate.filter.type.html' => 'html',
+                    'oro.email.datagrid.emailtemplate.filter.type.txt' => 'txt',
                 ],
                 'required' => true
             ])
-            ->add('translations', 'oro_email_emailtemplate_translatation', [
+            ->add('translations', EmailTemplateTranslationType::class, [
                 'label'    => 'oro.email.emailtemplate.translations.label',
                 'locales'  => $this->getLanguages(),
                 'labels'   => $this->getLocaleLabels(),
@@ -96,7 +98,7 @@ class AutoResponseTemplateType extends AbstractType
                     ],
                 ],
             ])
-            ->add('visible', 'checkbox', [
+            ->add('visible', CheckboxType::class, [
                 'label' => 'oro.email.autoresponserule.form.template.visible.label',
                 'required' => false,
             ]);
@@ -133,7 +135,7 @@ class AutoResponseTemplateType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
             'data_class' => 'Oro\Bundle\EmailBundle\Entity\EmailTemplate',

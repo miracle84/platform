@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Form\Guesser;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
@@ -12,11 +11,11 @@ use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Form\Guesser\ExtendFieldTypeGuesser;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\Decimal;
-
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Guess\TypeGuess;
 use Symfony\Component\Validator\Constraints\Length;
 
-class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
+class ExtendFieldTypeGuesserTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var string
@@ -33,7 +32,10 @@ class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
      */
     const PROPERTY_TYPE = 'bigint';
 
-    static private $entityConfig = [
+    /**
+     * @var array
+     */
+    private static $entityConfig = [
         'label' => self::SOME_LABEL
     ];
 
@@ -43,27 +45,27 @@ class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
     const SOME_LABEL = 'someLabel';
 
     /**
-     * @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject
+     * @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject
      */
     private $managerRegistry;
 
     /**
-     * @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     private $entityConfigProvider;
 
     /**
-     * @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     private $formConfigProvider;
 
     /**
-     * @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     private $extendConfigProvider;
 
     /**
-     * @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     private $enumConfigProvider;
 
@@ -127,7 +129,7 @@ class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param ConfigProvider|\PHPUnit_Framework_MockObject_MockObject $configProvider
+     * @param ConfigProvider|\PHPUnit\Framework\MockObject\MockObject $configProvider
      * @param string $fieldType
      * @param string $scopeName
      * @param array $scopeOptions
@@ -175,7 +177,7 @@ class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
      */
     private function assertIsDefaultTypeGuess($typeGuess)
     {
-        $defaultTypeGuess = new TypeGuess('text', [], TypeGuess::LOW_CONFIDENCE);
+        $defaultTypeGuess = new TypeGuess(TextType::class, [], TypeGuess::LOW_CONFIDENCE);
         $this->assertEquals($defaultTypeGuess, $typeGuess);
     }
 
@@ -288,7 +290,10 @@ class ExtendFieldTypeGuesserTest extends \PHPUnit_Framework_TestCase
                     'required' => false,
                     'block' => 'general',
                     'configs' => ['allowClear' => false],
-                    'choices' => ['No', 'Yes']
+                    'choices' => [
+                        'No' => false,
+                        'Yes' => true
+                    ]
                 ]
             ],
             'string' => [

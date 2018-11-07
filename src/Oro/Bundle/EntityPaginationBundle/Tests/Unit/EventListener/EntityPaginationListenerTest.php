@@ -3,27 +3,26 @@
 namespace Oro\Bundle\EntityPaginationBundle\Tests\Unit\EventListener;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-use Oro\Bundle\EntityPaginationBundle\EventListener\EntityPaginationListener;
 use Oro\Bundle\DataGridBundle\Event\OrmResultAfter;
+use Oro\Bundle\EntityPaginationBundle\EventListener\EntityPaginationListener;
 
-class EntityPaginationListenerTest extends \PHPUnit_Framework_TestCase
+class EntityPaginationListenerTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_NAME = 'test_entity';
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $doctrineHelper;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $storage;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $paginationManager;
 
@@ -91,7 +90,7 @@ class EntityPaginationListenerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function createGridMock()
     {

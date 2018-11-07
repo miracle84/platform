@@ -2,26 +2,30 @@
 
 namespace Oro\Bundle\OrganizationBundle\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\OroResizeableRichTextType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Security\Core\SecurityContext;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
-
-use Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken;
 
 class OrganizationType extends AbstractType
 {
-    /** @var SecurityContext */
-    protected $securityContext;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
-    public function __construct(SecurityContext $securityContext)
+    /**
+     * @param TokenAccessorInterface $tokenAccessor
+     */
+    public function __construct(TokenAccessorInterface $tokenAccessor)
     {
-        $this->securityContext = $securityContext;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -32,16 +36,16 @@ class OrganizationType extends AbstractType
         $builder
             ->add(
                 'enabled',
-                'choice',
+                ChoiceType::class,
                 [
                     'required' => true,
                     'label'    => 'oro.organization.enabled.label',
-                    'choices'  => [1 => 'Active', 0 => 'Inactive']
+                    'choices'  => ['Active' => 1, 'Inactive' => 0]
                 ]
             )
             ->add(
                 'name',
-                'text',
+                TextType::class,
                 [
                     'required'    => true,
                     'label'       => 'oro.organization.name.label',
@@ -52,7 +56,7 @@ class OrganizationType extends AbstractType
             )
             ->add(
                 'description',
-                'oro_resizeable_rich_text',
+                OroResizeableRichTextType::class,
                 [
                     'required' => false,
                     'label'    => 'oro.organization.description.label'
@@ -63,9 +67,8 @@ class OrganizationType extends AbstractType
         $builder->addEventListener(
             FormEvents::POST_SUBMIT,
             function (FormEvent $event) {
-                $currentOrganization = $this->securityContext->getToken()->getOrganizationContext();
                 $data = $event->getData();
-                if (is_object($data) && $data->getId() === $currentOrganization->getId()) {
+                if (is_object($data) && $data->getId() === $this->tokenAccessor->getOrganizationId()) {
                     $data->setEnabled(true);
                 }
             }
@@ -79,10 +82,7 @@ class OrganizationType extends AbstractType
     {
         $data = $form->getData();
         if ($data) {
-            /** @var UsernamePasswordOrganizationToken $token */
-            $token = $this->securityContext->getToken();
-            $currentOrganization = $token->getOrganizationContext();
-            if ($data->getId() == $currentOrganization->getId()) {
+            if ($data->getId() == $this->tokenAccessor->getOrganizationId()) {
                 $view->children['enabled']->vars['required'] = false;
                 $view->children['enabled']->vars['disabled'] = true;
                 $view->children['enabled']->vars['value']    = true;
@@ -93,13 +93,12 @@ class OrganizationType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             array(
                 'data_class'         => 'Oro\Bundle\OrganizationBundle\Entity\Organization',
-                'intention'          => 'organization',
-                'cascade_validation' => true,
+                'csrf_token_id'      => 'organization',
             )
         );
     }

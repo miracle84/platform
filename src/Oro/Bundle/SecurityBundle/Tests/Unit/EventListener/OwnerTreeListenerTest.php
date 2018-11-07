@@ -4,14 +4,11 @@ namespace Oro\Bundle\SecurityBundle\Tests\Unit\EventListener;
 
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
-
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Oro\Component\TestUtils\ORM\Mocks\EntityManagerMock;
-use Oro\Component\TestUtils\ORM\OrmTestCase;
 use Oro\Bundle\SecurityBundle\EventListener\OwnerTreeListener;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Owner\Fixtures\Entity\TestBusinessUnit;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Owner\Fixtures\Entity\TestUser;
+use Oro\Component\TestUtils\ORM\Mocks\EntityManagerMock;
+use Oro\Component\TestUtils\ORM\OrmTestCase;
 
 class OwnerTreeListenerTest extends OrmTestCase
 {
@@ -20,10 +17,10 @@ class OwnerTreeListenerTest extends OrmTestCase
     /** @var EntityManagerMock */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContainerInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $conn;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContainerInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $treeProvider;
 
     /** @var OwnerTreeListener */
@@ -49,14 +46,7 @@ class OwnerTreeListenerTest extends OrmTestCase
 
         $this->treeProvider = $this->createMock('Oro\Bundle\SecurityBundle\Owner\OwnerTreeProviderInterface');
 
-        $container = $this->createMock('Symfony\Component\DependencyInjection\ContainerInterface');
-        $container->expects($this->any())
-            ->method('get')
-            ->with('oro_security.ownership_tree_provider.chain')
-            ->willReturn($this->treeProvider);
-
-        $this->listener = new OwnerTreeListener();
-        $this->listener->setContainer($container);
+        $this->listener = new OwnerTreeListener($this->treeProvider);
         $this->listener->addSupportedClass(self::ENTITY_NAMESPACE . '\TestOrganization');
         $this->em->getEventManager()->addEventListener('onFlush', $this->listener);
     }

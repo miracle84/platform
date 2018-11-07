@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\ConfigBundle\Form\Type;
 
+use Oro\Bundle\ConfigBundle\Config\ConfigChangeSet;
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\ConfigBundle\Form\EventListener\ConfigSubscriber;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Form;
 use Symfony\Component\Form\FormBuilderInterface;
-
-use Oro\Bundle\ConfigBundle\Config\ConfigChangeSet;
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-use Oro\Bundle\ConfigBundle\Form\EventListener\ConfigSubscriber;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 
@@ -120,16 +119,21 @@ class FormType extends AbstractType
         $view->vars['valid'] = $this->isFormValid($form);
     }
 
+    /**
+     * @param FormInterface $form
+     *
+     * @return bool
+     */
     protected function isFormValid(FormInterface $form)
     {
-        if (!$form->isValid() && $form->getErrors()->count()) {
+        if ($form->isSubmitted() && !$form->isValid() && $form->getErrors()->count()) {
             return false;
         }
 
         $isChildValid = true;
 
         foreach ($form as $child) {
-            if (!$child->isValid() && $child->getErrors(true)->count()) {
+            if ($child->isSubmitted() && !$child->isValid() && $child->getErrors(true)->count()) {
                 $isChildValid = false;
             }
         }

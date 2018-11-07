@@ -16,7 +16,7 @@ datagrids:
                     - process.createdAt
                     - process.name as processDefinition
                 from:
-                    - { table: %oro_workflow.entity.process_definition.class%, alias: process }
+                    - { table: '%oro_workflow.entity.process_definition.class%', alias: process }
         columns:
             label:
                 label: oro.workflow.processdefinition.label.label
@@ -58,7 +58,7 @@ datagrids:
                 createdAt:
                     data_name: process.createdAt
             default:
-                label: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_ASC
+                label: '%oro_datagrid.extension.orm_sorter.class%::DIRECTION_ASC'
         actions:
             view:
                 type:         navigate
@@ -98,8 +98,11 @@ datagrids:
 
     workflow-definitions-grid:
         options:
-            entityHint: workflowssss
+            entityHint: workflows
             export:     false
+            mass_actions:
+                delete:
+                    enabled: false
         acl_resource: oro_workflow_definition_view
         source:
             type: orm
@@ -112,13 +115,15 @@ datagrids:
                     - w.relatedEntity as entityClass
                     - w.active
                     - w.label
+                    - w.applications
                     - w.system
                     - w.priority
                     - w.exclusiveActiveGroups
                     - w.exclusiveRecordGroups
                     - w.createdAt
+                    - w.configuration
                 from:
-                    - { table: %oro_workflow.entity.workflow_definition.class%, alias: w }
+                    - { table: '%oro_workflow.entity.workflow_definition.class%', alias: w }
         columns:
             label:
                 label:         oro.workflow.workflowdefinition.label.label
@@ -140,6 +145,11 @@ datagrids:
             priority:
                 label:         oro.workflow.workflowdefinition.priority.label
                 frontend_type: integer
+            applications:
+                label:         oro.workflow.workflowdefinition.applications.label
+                type:          twig
+                template:      OroWorkflowBundle:Datagrid:Column/applications.html.twig
+                frontend_type: html
             exclusiveActiveGroups:
                 label:         oro.workflow.workflowdefinition.exclusive_active_groups.label
                 type:          twig
@@ -232,6 +242,9 @@ datagrids:
                         field_options:
                             multiple: true
                             choices: "@oro_workflow.datagrid.workflow_definition_entity_name_provider->getRelatedEntitiesChoice"
+                applications:
+                    type: string
+                    data_name: w.applications
                 active:
                     type: boolean
                     data_name: w.active

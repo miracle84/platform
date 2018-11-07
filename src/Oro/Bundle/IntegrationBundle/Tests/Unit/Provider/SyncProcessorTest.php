@@ -8,27 +8,27 @@ use Oro\Bundle\IntegrationBundle\Provider\SyncProcessor;
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestContext;
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Stub\TestConnector;
 
-class SyncProcessorTest extends \PHPUnit_Framework_TestCase
+class SyncProcessorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Integration|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Integration|\PHPUnit\Framework\MockObject\MockObject */
     protected $integration;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $processorRegistry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $jobExecutor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $log;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $eventDispatcher;
 
     /**
@@ -38,7 +38,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
     {
         $this->em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
-            ->setMethods(array('createQueryBuilder', 'getRepository'))
+            ->setMethods(['createQueryBuilder', 'getRepository'])
             ->getMock();
 
         $this->processorRegistry = $this->createMock('Oro\Bundle\ImportExportBundle\Processor\ProcessorRegistry');
@@ -67,7 +67,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider testProcessDataProvider
+     * @dataProvider processDataProvider
      */
     public function testProcess($data, $expected)
     {
@@ -117,7 +117,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
      *
      * @return array
      */
-    public function testProcessDataProvider()
+    public function processDataProvider()
     {
         return [
             'Single Connector Processing' => [
@@ -287,7 +287,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
      *
      * @param array $mockedMethods
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject|SyncProcessor
+     * @return \PHPUnit\Framework\MockObject\MockObject|SyncProcessor
      */
     protected function getSyncProcessor($mockedMethods = null)
     {
@@ -296,7 +296,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $registry = $this->createMock('Symfony\Bridge\Doctrine\RegistryInterface');
+        $registry = $this->createMock('Doctrine\Common\Persistence\ManagerRegistry');
         $registry->expects($this->any())->method('getManager')
             ->will($this->returnValue($this->em));
         $registry->expects($this->any())->method('getRepository')
@@ -322,7 +322,7 @@ class SyncProcessorTest extends \PHPUnit_Framework_TestCase
      * @param bool   $isAllowed
      * @param int    $order
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     private function prepareConnectorStub($type, $job, $entity, $isAllowed, $order)
     {

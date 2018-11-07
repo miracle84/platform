@@ -4,7 +4,6 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 use Oro\Bundle\EmailBundle\Async\AutoResponsesMessageProcessor;
 use Oro\Bundle\EmailBundle\Async\Topics;
 use Oro\Bundle\MessageQueueBundle\Entity\Job;
-
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Job\JobRunner;
@@ -12,7 +11,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class AutoResponsesMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -29,7 +28,7 @@ class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[AutoResponsesMessageProcessor] Got invalid message. "{"key":"value"}"')
+            ->with('Got invalid message')
         ;
 
         $processor = new AutoResponsesMessageProcessor(
@@ -104,7 +103,7 @@ class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -112,7 +111,7 @@ class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {
@@ -121,7 +120,7 @@ class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
 
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -129,7 +128,7 @@ class AutoResponsesMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|MessageProducerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|MessageProducerInterface
      */
     private function createMessageProducerMock()
     {

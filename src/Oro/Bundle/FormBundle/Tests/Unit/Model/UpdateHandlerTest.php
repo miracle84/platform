@@ -2,51 +2,54 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Model;
 
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\ParameterBag;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\UIBundle\Route\Router;
-use Oro\Bundle\FormBundle\Model\UpdateHandler;
 use Oro\Bundle\FormBundle\Event\FormHandler\AfterFormProcessEvent;
 use Oro\Bundle\FormBundle\Event\FormHandler\Events;
 use Oro\Bundle\FormBundle\Event\FormHandler\FormProcessEvent;
+use Oro\Bundle\FormBundle\Form\Handler\FormHandler;
+use Oro\Bundle\FormBundle\Model\UpdateHandler;
+use Oro\Bundle\UIBundle\Route\Router;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\ParameterBag;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\Session;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
+class UpdateHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    const FORM_DATA = ['field' => 'value'];
+
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Request
+     * @var \PHPUnit\Framework\MockObject\MockObject|Request
      */
     protected $request;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Session
+     * @var \PHPUnit\Framework\MockObject\MockObject|Session
      */
     protected $session;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Router
+     * @var \PHPUnit\Framework\MockObject\MockObject|Router
      */
     protected $router;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper
+     * @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper
      */
     protected $doctrineHelper;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|EventDispatcherInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|EventDispatcherInterface
      */
     protected $eventDispatcher;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FormInterface $form
+     * @var \PHPUnit\Framework\MockObject\MockObject|FormInterface $form
      */
     protected $form;
 
@@ -55,6 +58,14 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
      */
     protected $resultCallbackInvoked;
 
+    /** @var RequestStack|\PHPUnit\Framework\MockObject\MockObject $requestStack */
+    protected $requestStack;
+
+    /**
+     * @var FormHandler
+     */
+    protected $formHandler;
+
     /**
      * @var UpdateHandler
      */
@@ -62,31 +73,29 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->request = $this->getMockBuilder('Symfony\Component\HttpFoundation\Request')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->session = $this->getMockBuilder('Symfony\Component\HttpFoundation\Session\Session')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->router = $this->getMockBuilder('Oro\Bundle\UIBundle\Route\Router')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->eventDispatcher = $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcherInterface')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->form = $this->createMock('Symfony\Component\Form\FormInterface');
+        $this->request = new Request();
+
+        $this->requestStack = $this->createMock(RequestStack::class);
+        $this->requestStack->expects($this->any())->method('getCurrentRequest')->willReturn($this->request);
+
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+
+        $this->doctrineHelper = $this->createMock(DoctrineHelper::class);
+
+        $this->session = $this->createMock(Session::class);
+        $this->router = $this->createMock(Router::class);
+        $this->form = $this->createMock(FormInterface::class);
+
+        $this->formHandler = new FormHandler($this->eventDispatcher, $this->doctrineHelper);
 
         $this->resultCallbackInvoked = false;
 
         $this->handler = new UpdateHandler(
-            $this->request,
+            $this->requestStack,
             $this->session,
             $this->router,
             $this->doctrineHelper,
-            $this->eventDispatcher
+            $this->formHandler
         );
     }
 
@@ -127,7 +136,8 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
 
     public function testHandleUpdateWorksWithBlankDataAndNoHandler()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|FormInterface $form */
+        $this->request->initialize(['_wid' => 'WID']);
+        /** @var \PHPUnit\Framework\MockObject\MockObject|FormInterface $form */
         $form = $this->createMock('Symfony\Component\Form\FormInterface');
         $entity = $this->getObject();
         $expected = $this->getExpectedSaveData($form, $entity);
@@ -144,6 +154,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
 
     public function testUpdateWorksWithBlankDataAndNoHandler()
     {
+        $this->request->initialize(['_wid' => 'WID']);
         $data = $this->getObject();
         $expected = $this->getExpectedSaveData($this->form, $data);
 
@@ -157,12 +168,11 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($entity);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID'], self::FORM_DATA);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(false));
@@ -189,12 +199,10 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($data);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID']);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
-            ->method('submit')
-            ->with($this->request);
+            ->method('submit');
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(false));
@@ -215,12 +223,11 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($entity);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID'], self::FORM_DATA);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(true));
@@ -237,7 +244,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('flush');
         $em->expects($this->once())
             ->method('commit');
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects($this->any())
             ->method('getEntityManager')
             ->with($entity)
             ->will($this->returnValue($em));
@@ -270,12 +277,11 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($data);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID'], self::FORM_DATA);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(true));
@@ -292,7 +298,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('flush');
         $em->expects($this->once())
             ->method('commit');
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects($this->any())
             ->method('getEntityManager')
             ->with($data)
             ->will($this->returnValue($em));
@@ -323,12 +329,11 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($entity);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize([], self::FORM_DATA);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(true));
@@ -346,7 +351,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
             ->willThrowException(new \Exception('Test flush exception'));
         $em->expects($this->once())
             ->method('rollback');
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects($this->any())
             ->method('getEntityManager')
             ->with($entity)
             ->will($this->returnValue($em));
@@ -370,12 +375,11 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData')
             ->with($data);
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize([], self::FORM_DATA);
+        $this->request->setMethod('POST');
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
         $this->form->expects($this->once())
             ->method('isValid')
             ->will($this->returnValue(true));
@@ -393,7 +397,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
             ->willThrowException(new \Exception('Test flush exception'));
         $em->expects($this->once())
             ->method('rollback');
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects($this->any())
             ->method('getEntityManager')
             ->with($data)
             ->will($this->returnValue($em));
@@ -404,12 +408,8 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     public function testHandleUpdateBeforeFormDataSetInterrupted()
     {
         $entity = $this->getObject();
-        $this->request->expects($this->never())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
         $this->form->expects($this->never())
-            ->method('submit')
-            ->with($this->request);
+            ->method('submit');
 
         $this->eventDispatcher->expects($this->once())
             ->method('dispatch')
@@ -420,6 +420,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
                 }
             );
 
+        $this->request->initialize(['_wid' => 'WID']);
         $expected = $this->getExpectedSaveData($this->form, $entity);
 
         $result = $this->handler->handleUpdate(
@@ -435,12 +436,10 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     public function testHandleUpdateInterruptedBeforeFormSubmit()
     {
         $entity = $this->getObject();
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID']);
+        $this->request->setMethod('POST');
         $this->form->expects($this->never())
-            ->method('submit')
-            ->with($this->request);
+            ->method('submit');
 
         $this->eventDispatcher->expects($this->at(1))
             ->method('dispatch')
@@ -466,12 +465,10 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     public function testUpdateInterruptedBeforeFormSubmit()
     {
         $data = $this->getObject();
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize(['_wid' => 'WID']);
+        $this->request->setMethod('POST');
         $this->form->expects($this->never())
-            ->method('submit')
-            ->with($this->request);
+            ->method('submit');
 
         $this->eventDispatcher->expects($this->at(1))
             ->method('dispatch')
@@ -498,6 +495,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
             ->with($entity)
             ->will($this->returnValue(1));
 
+        $this->request->initialize(['_wid' => 'WID']);
         $expected = $this->getExpectedSaveData($this->form, $entity);
         $expected['savedId'] = 1;
 
@@ -514,11 +512,9 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
 
     public function testHandleUpdateWorksWithRouteCallback()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|FormInterface $form */
-        $this->form = $this->createMock('Symfony\Component\Form\FormInterface');
-
         $entity = $this->getObject();
 
+        $this->request->initialize(['_wid' => 'WID']);
         $handler = $this->getHandlerStub($entity);
         $this->doctrineHelper->expects($this->once())
             ->method('getSingleEntityIdentifier')
@@ -533,7 +529,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
         $saveAndCloseCallback = function () use ($saveAndCloseRoute) {
             return $saveAndCloseRoute;
         };
-        /** @var FormInterface|\PHPUnit_Framework_MockObject_MockObject $expectedForm */
+        /** @var FormInterface|\PHPUnit\Framework\MockObject\MockObject $expectedForm */
         $expectedForm = $this->createMock(FormInterface::class);
 
         $expected = $this->getExpectedSaveData($this->form, $entity);
@@ -619,6 +615,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     {
         $data = $this->getObject();
 
+        $this->request->initialize(['_wid' => 'WID']);
         $handler = $this->getHandlerStub($data);
         $this->doctrineHelper->expects($this->once())
             ->method('getSingleEntityIdentifier')
@@ -636,6 +633,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     {
         $data = $this->getObject();
 
+        $this->request->initialize(['_wid' => 'WID']);
         $handler = $this->getHandlerStub($data);
         $this->doctrineHelper->expects($this->once())
             ->method('getSingleEntityIdentifier')
@@ -654,7 +652,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     /**
      * @param string $message
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getFlashBagMock($message)
     {
@@ -669,7 +667,7 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     /**
      * @param object $entity
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getHandlerStub($entity)
     {
@@ -683,17 +681,12 @@ class UpdateHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject|FormInterface $form
+     * @param \PHPUnit\Framework\MockObject\MockObject|FormInterface $form
      * @param object $entity
-     * @param string $wid
      * @return array
      */
-    protected function getExpectedSaveData($form, $entity, $wid = 'WID')
+    protected function getExpectedSaveData($form, $entity)
     {
-        $this->request->expects($this->atLeastOnce())
-            ->method('get')
-            ->with('_wid', false)
-            ->will($this->returnValue($wid));
         $formView = $this->getMockBuilder('Symfony\Component\Form\FormView')
             ->disableOriginalConstructor()
             ->getMock();

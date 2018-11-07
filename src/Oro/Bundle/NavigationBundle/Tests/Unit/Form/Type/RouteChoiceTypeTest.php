@@ -2,34 +2,39 @@
 
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Form\Type;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManagerInterface;
-use Oro\Bundle\NavigationBundle\Entity\Repository\TitleRepository;
-use Oro\Bundle\NavigationBundle\Entity\Title;
+use Oro\Bundle\FormBundle\Form\Type\Select2ChoiceType;
 use Oro\Bundle\NavigationBundle\Form\Type\RouteChoiceType;
+use Oro\Bundle\NavigationBundle\Provider\TitleService;
+use Oro\Bundle\NavigationBundle\Provider\TitleTranslator;
+use Oro\Bundle\NavigationBundle\Title\TitleReader\TitleReaderRegistry;
 use Oro\Component\Testing\Unit\FormIntegrationTestCase;
+use Oro\Component\TestUtils\Mocks\ServiceLink;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Translation\TranslatorInterface;
 
 class RouteChoiceTypeTest extends FormIntegrationTestCase
 {
     /**
-     * @var RouterInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var RouterInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     private $router;
 
     /**
-     * @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject
+     * @var TitleReaderRegistry|\PHPUnit\Framework\MockObject\MockObject
      */
-    private $registry;
+    private $readerRegistry;
 
     /**
-     * @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TitleTranslator|\PHPUnit\Framework\MockObject\MockObject
      */
     private $translator;
+
+    /**
+     * @var TitleService|\PHPUnit\Framework\MockObject\MockObject
+     */
+    private $titleService;
 
     /**
      * @var RouteChoiceType
@@ -41,49 +46,24 @@ class RouteChoiceTypeTest extends FormIntegrationTestCase
      */
     protected function setUp()
     {
-
-        $this->translator = $this->getTranslator();
-        $this->registry = $this->createMock(ManagerRegistry::class);
         $this->router = $this->createMock(RouterInterface::class);
+        $this->readerRegistry = $this->createMock(TitleReaderRegistry::class);
+        $this->translator = $this->createMock(TitleTranslator::class);
+        $this->titleService = $this->createMock(TitleService::class);
 
-        $this->formType = new RouteChoiceType($this->router, $this->registry, $this->translator);
+        $this->formType = new RouteChoiceType(
+            $this->router,
+            $this->readerRegistry,
+            $this->translator,
+            new ServiceLink($this->titleService)
+        );
 
         parent::setUp();
     }
 
-    public function testGetName()
-    {
-        $this->assertEquals('oro_route_choice', $this->formType->getName());
-        $this->assertEquals('oro_route_choice', $this->formType->getBlockPrefix());
-    }
-
     public function testGetParent()
     {
-        $this->assertEquals('genemu_jqueryselect2_choice', $this->formType->getParent());
-    }
-
-    /**
-     * @dataProvider optionsDataProvider
-     * @param array $options
-     * @param array $expectedRoutes
-     * @param array $expectedChoices
-     */
-    public function testConfigureOptionsDefaultOptions(array $options, array $expectedRoutes, array $expectedChoices)
-    {
-        $routeCollection = $this->getRouteCollection();
-
-        $this->router->expects($this->once())
-            ->method('getRouteCollection')
-            ->willReturn($routeCollection);
-
-        $this->getRepositoryMock($expectedRoutes);
-
-        $resolver = new OptionsResolver();
-        $this->formType->configureOptions($resolver);
-        $resolvedOptions = $resolver->resolve($options);
-
-        $this->assertArrayHasKey('choices', $resolvedOptions);
-        $this->assertEquals($expectedChoices, $resolvedOptions['choices']);
+        $this->assertEquals(Select2ChoiceType::class, $this->formType->getParent());
     }
 
     /**
@@ -188,21 +168,22 @@ class RouteChoiceTypeTest extends FormIntegrationTestCase
             ->method('getRouteCollection')
             ->willReturn($routeCollection);
 
-        $this->registry->expects($this->never())
+        $this->readerRegistry
+            ->expects($this->never())
             ->method($this->anything());
 
-        $options = ['add_titles' => false];
+        $options = ['add_titles' => false, 'menu_name' => 'menu'];
 
         $resolver = new OptionsResolver();
         $this->formType->configureOptions($resolver);
         $resolvedOptions = $resolver->resolve($options);
 
         $expectedChoices = [
-            'oro_route_get_simple' => 'Oro Route Get Simple',
-            'oro_route_get' => 'Oro Route Get',
-            'oro_route_get_post' => 'Oro Route Get Post',
-            'oro_route_with_option' => 'Oro Route With Option',
-            'oro_route_get_simple_no_title' => 'Oro Route Get Simple No Title'
+            'Oro Route Get Simple' => 'oro_route_get_simple',
+            'Oro Route Get' => 'oro_route_get',
+            'Oro Route Get Post' => 'oro_route_get_post',
+            'Oro Route With Option' => 'oro_route_with_option',
+            'Oro Route Get Simple No Title' => 'oro_route_get_simple_no_title',
         ];
 
         $this->assertArrayHasKey('choices', $resolvedOptions);
@@ -245,43 +226,5 @@ class RouteChoiceTypeTest extends FormIntegrationTestCase
         $routeCollection->add('oro_route_get_simple_no_title', $simpleWithoutTitleRoute);
 
         return $routeCollection;
-    }
-
-    /**
-     * @param array $filteredRoutes
-     */
-    protected function getRepositoryMock(array $filteredRoutes)
-    {
-        /** @var TitleRepository|\PHPUnit_Framework_MockObject_MockObject $repo */
-        $repo = $this->getMockBuilder(TitleRepository::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $repo->expects($this->once())
-            ->method('getTitles')
-            ->with($filteredRoutes)
-            ->willReturn(
-                [
-                    ['route' => 'oro_route_get_simple', 'shortTitle' => 'Get Simple'],
-                    ['route' => 'special_route_get_simple', 'shortTitle'  => 'Special Get Simple'],
-                    ['route' => 'oro_route_get', 'shortTitle'  => 'Get'],
-                    ['route' => 'oro_route_get_post', 'shortTitle'  => 'Get Post'],
-                    ['route' => 'oro_route_post_simple', 'shortTitle'  => 'Post Simple'],
-                    ['route' => 'oro_route_with_parameters', 'shortTitle'  => 'With Parameters'],
-                    ['route' => 'oro_route_with_option', 'shortTitle'  => 'With Option']
-                ]
-            );
-
-        /** @var EntityManagerInterface|\PHPUnit_Framework_MockObject_MockObject $em */
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())
-            ->method('getRepository')
-            ->with(Title::class)
-            ->willReturn($repo);
-
-        $this->registry->expects($this->once())
-            ->method('getManagerForClass')
-            ->with(Title::class)
-            ->willReturn($em);
     }
 }

@@ -12,12 +12,19 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function WidgetPickerCollectionView() {
+            WidgetPickerCollectionView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             if (!options.loadWidget) {
                 throw new Error('Missing required "loadWidget" option');
             }
             if (!options.filterModel) {
-                throw  new Error('Missing required "filterModel" option');
+                throw new Error('Missing required "filterModel" option');
             }
             _.extend(this, _.pick(options, ['filterModel', 'loadWidget']));
             options.filterer = _.bind(this.filterModel.filterer, this.filterModel);
@@ -67,6 +74,9 @@ define(function(require) {
          */
         _startLoading: function() {
             return _.bind(function() {
+                if (this.disposed) {
+                    return;
+                }
                 this.isWidgetLoadingInProgress = false;
                 _.each(this.getItemViews(), function(itemView) {
                     itemView.trigger('unblock_add_btn');

@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\CacheBundle;
 
+use Oro\Bundle\CacheBundle\DependencyInjection\Compiler\CacheConfigurationPass;
+use Oro\Bundle\CacheBundle\DependencyInjection\Compiler\CacheWarmerPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
-
-use Oro\Bundle\CacheBundle\DependencyInjection\Compiler\CacheConfigurationPass;
 
 class OroCacheBundle extends Bundle
 {
@@ -17,5 +17,6 @@ class OroCacheBundle extends Bundle
         parent::build($container);
 
         $container->addCompilerPass(new CacheConfigurationPass());
+        $container->addCompilerPass(new CacheWarmerPass());
     }
 }

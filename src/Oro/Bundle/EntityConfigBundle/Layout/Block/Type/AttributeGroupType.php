@@ -3,11 +3,9 @@
 namespace Oro\Bundle\EntityConfigBundle\Layout\Block\Type;
 
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
-use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
-use Oro\Bundle\EntityConfigBundle\Layout\AttributeGroupRenderRegistry;
+use Oro\Bundle\EntityConfigBundle\Layout\AttributeRenderRegistry;
 use Oro\Bundle\EntityConfigBundle\Layout\Mapper\AttributeBlockTypeMapperInterface;
 use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
-
 use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
 use Oro\Component\Layout\Block\Type\AbstractContainerType;
 use Oro\Component\Layout\Block\Type\Options;
@@ -20,8 +18,8 @@ class AttributeGroupType extends AbstractContainerType
 {
     const NAME = 'attribute_group';
 
-    /** @var AttributeGroupRenderRegistry */
-    protected $groupRenderRegistry;
+    /** @var AttributeRenderRegistry */
+    protected $attributeRenderRegistry;
 
     /** @var AttributeBlockTypeMapperInterface */
     protected $blockTypeMapper;
@@ -33,16 +31,16 @@ class AttributeGroupType extends AbstractContainerType
     protected $notRenderableAttributeTypes = [];
 
     /**
-     * @param AttributeGroupRenderRegistry      $groupRenderRegistry
+     * @param AttributeRenderRegistry      $attributeRenderRegistry
      * @param AttributeManager                  $attributeManager
      * @param AttributeBlockTypeMapperInterface $blockTypeMapper
      */
     public function __construct(
-        AttributeGroupRenderRegistry $groupRenderRegistry,
+        AttributeRenderRegistry $attributeRenderRegistry,
         AttributeManager $attributeManager,
         AttributeBlockTypeMapperInterface $blockTypeMapper
     ) {
-        $this->groupRenderRegistry = $groupRenderRegistry;
+        $this->attributeRenderRegistry = $attributeRenderRegistry;
         $this->attributeManager = $attributeManager;
         $this->blockTypeMapper = $blockTypeMapper;
     }
@@ -61,27 +59,21 @@ class AttributeGroupType extends AbstractContainerType
     public function buildBlock(BlockBuilderInterface $builder, Options $options)
     {
         /** @var AttributeFamily $attributeFamily */
-        $attributeFamily = $options->get('attribute_family');
+        $attributeFamily = $options['attribute_family'];
         $code = $options['group'];
         $entityValue = $options->get('entity', false);
-        $excludeFromRest = $options['exclude_from_rest'];
+        $attributeGroup = $attributeFamily->getAttributeGroup($code);
 
-        $attributeGroups = $attributeFamily->getAttributeGroups()->filter(
-            function (AttributeGroup $attributeGroup) use ($code) {
-                return $attributeGroup->getCode() == $code;
-            }
-        );
-
-        if ($attributeGroups->count() === 0) {
+        if (is_null($attributeGroup)) {
             return;
         }
 
-        /** @var AttributeGroup $attributeGroup */
-        $attributeGroup = $attributeGroups->first();
+        $excludeFromRest = $options['exclude_from_rest'];
+
         $options['visible'] = $attributeGroup->getIsVisible();
 
         if ($excludeFromRest) {
-            $this->groupRenderRegistry->setRendered($attributeFamily, $attributeGroup);
+            $this->attributeRenderRegistry->setGroupRendered($attributeFamily, $attributeGroup);
         }
 
         $layoutManipulator = $builder->getLayoutManipulator();
@@ -89,6 +81,10 @@ class AttributeGroupType extends AbstractContainerType
         $attributes = $this->attributeManager->getAttributesByGroup($attributeGroup);
         foreach ($attributes as $attribute) {
             if (in_array($attribute->getType(), $this->notRenderableAttributeTypes, true)) {
+                continue;
+            }
+
+            if ($this->attributeRenderRegistry->isAttributeRendered($attributeFamily, $attribute->getFieldName())) {
                 continue;
             }
 
@@ -104,7 +100,7 @@ class AttributeGroupType extends AbstractContainerType
                         'fieldName' => $attribute->getFieldName(),
                         'className' => $attribute->getEntity()->getClassName()
                     ],
-                    $options->get('attribute_options')->toArray()
+                    $options['attribute_options']->toArray()
                 )
             );
         }

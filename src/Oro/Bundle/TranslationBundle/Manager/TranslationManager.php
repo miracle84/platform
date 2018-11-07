@@ -5,15 +5,19 @@ namespace Oro\Bundle\TranslationBundle\Manager;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\TranslationBundle\Entity\Language;
 use Oro\Bundle\TranslationBundle\Entity\Repository\LanguageRepository;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationRepository;
 use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Entity\TranslationKey;
+use Oro\Bundle\TranslationBundle\Event\InvalidateTranslationCacheEvent;
 use Oro\Bundle\TranslationBundle\Provider\TranslationDomainProvider;
 use Oro\Bundle\TranslationBundle\Translation\DynamicTranslationMetadataCache;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * Manager that provides basic use of translations that are stored in the database
+ */
 class TranslationManager
 {
     const DEFAULT_DOMAIN = 'messages';
@@ -39,19 +43,25 @@ class TranslationManager
     /** @var Translation[] */
     protected $translations = [];
 
+    /** @var EventDispatcherInterface */
+    protected $eventDispatcher;
+
     /**
      * @param ManagerRegistry $registry
      * @param TranslationDomainProvider $domainProvider
      * @param DynamicTranslationMetadataCache $dbTranslationMetadataCache
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         ManagerRegistry $registry,
         TranslationDomainProvider $domainProvider,
-        DynamicTranslationMetadataCache $dbTranslationMetadataCache
+        DynamicTranslationMetadataCache $dbTranslationMetadataCache,
+        EventDispatcherInterface $eventDispatcher
     ) {
         $this->registry = $registry;
         $this->domainProvider = $domainProvider;
         $this->dbTranslationMetadataCache = $dbTranslationMetadataCache;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     /**
@@ -64,18 +74,12 @@ class TranslationManager
      */
     public function createTranslation($key, $value, $locale, $domain = self::DEFAULT_DOMAIN)
     {
-        $cacheKey = $this->getCacheKey($locale, $domain, $key);
-        if (!array_key_exists($cacheKey, $this->translations)) {
-            $translationValue = new Translation();
-            $translationValue
-                ->setTranslationKey($this->findTranslationKey($key, $domain))
-                ->setLanguage($this->getLanguageByCode($locale))
-                ->setValue($value);
+        $translation = new Translation();
 
-            $this->translations[$cacheKey] = $translationValue;
-        }
-
-        return $this->translations[$cacheKey];
+        return $translation
+            ->setTranslationKey($this->findTranslationKey($key, $domain))
+            ->setLanguage($this->getLanguageByCode($locale))
+            ->setValue($value);
     }
 
     /**
@@ -106,23 +110,22 @@ class TranslationManager
             return null;
         }
 
+        $cacheKey = $this->getCacheKey($locale, $domain, $key);
+
         if (null === $value && null !== $translation) {
-            $cacheKey = $this->getCacheKey($locale, $domain, $key);
             $translation->setValue($value);
             $this->translations[$cacheKey] = $translation;
             return null;
         }
 
         if (null !== $value && null === $translation) {
-            $translation = $this->createTranslation($key, $value, $locale, $domain);
+            $translation = array_key_exists($cacheKey, $this->translations)
+                ? $this->translations[$cacheKey]
+                : $this->createTranslation($key, $value, $locale, $domain);
         }
 
         if (null !== $translation) {
-            $translation->setValue($value);
-            $translation->setScope($scope);
-
-            $cacheKey = $this->getCacheKey($locale, $domain, $key);
-            $this->translations[$cacheKey] = $translation;
+            $this->translations[$cacheKey] = $translation->setValue($value)->setScope($scope);
         }
 
         return $translation;
@@ -262,6 +265,10 @@ class TranslationManager
      */
     public function invalidateCache($locale = null)
     {
+        $this->eventDispatcher->dispatch(
+            InvalidateTranslationCacheEvent::NAME,
+            new InvalidateTranslationCacheEvent($locale)
+        );
         $this->dbTranslationMetadataCache->updateTimestamp($locale);
     }
 

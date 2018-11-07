@@ -2,21 +2,22 @@
 
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Utils;
 
-use Oro\Bundle\ScopeBundle\Entity\Scope;
-use Oro\Component\Testing\Unit\EntityTrait;
-
+use Oro\Bundle\LocaleBundle\Entity\Localization;
+use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
 use Oro\Bundle\NavigationBundle\Menu\Helper\MenuUpdateHelper;
 use Oro\Bundle\NavigationBundle\Tests\Unit\Entity\Stub\MenuUpdateStub;
 use Oro\Bundle\NavigationBundle\Tests\Unit\MenuItemTestTrait;
 use Oro\Bundle\NavigationBundle\Utils\MenuUpdateUtils;
+use Oro\Bundle\ScopeBundle\Entity\Scope;
+use Oro\Component\Testing\Unit\EntityTrait;
 
-class MenuUpdateUtilsTest extends \PHPUnit_Framework_TestCase
+class MenuUpdateUtilsTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
     use MenuItemTestTrait;
 
-    /** @var MenuUpdateHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var MenuUpdateHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $menuUpdateHelper;
 
     /**
@@ -59,17 +60,37 @@ class MenuUpdateUtilsTest extends \PHPUnit_Framework_TestCase
             ->getChild('item-1-1')
             ->getChild('item-1-1-1');
 
+        $firstLocalization = new Localization();
+        $this->setValue($firstLocalization, 'id', 1);
+        $secondLocalization = new Localization();
+        $this->setValue($secondLocalization, 'id', 2);
+
         $update = new MenuUpdateStub();
         $update->setKey('item-1-1-1');
         $update->setParentKey('item-2');
         $update->setUri('URI');
+        $update->addDescription(
+            (new LocalizedFallbackValue())
+                ->setString('first test description')
+                ->setLocalization($firstLocalization)
+        );
+        $update->addDescription(
+            (new LocalizedFallbackValue())
+                ->setString('second test description')
+                ->setLocalization($secondLocalization)
+        );
 
         $expectedItem = $this->createItem('item-1-1-1');
         $expectedItem->setParent($menu->getChild('item-2'));
         $expectedItem->setUri('URI');
+        $expectedItem->setExtra('description', 'second test description');
 
-        /** @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject $localizationHelper */
+        /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject $localizationHelper */
         $localizationHelper = $this->createMock(LocalizationHelper::class);
+        $localizationHelper->expects($this->atLeastOnce())
+            ->method('getCurrentLocalization')
+            ->willReturn($secondLocalization);
+
         MenuUpdateUtils::updateMenuItem($update, $menu, $localizationHelper);
 
         $this->assertEquals($expectedItem, $item);
@@ -84,7 +105,7 @@ class MenuUpdateUtilsTest extends \PHPUnit_Framework_TestCase
         $update->setParentKey('item-2');
         $update->setUri('URI');
 
-        /** @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject $localizationHelper */
+        /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject $localizationHelper */
         $localizationHelper = $this->createMock(LocalizationHelper::class);
         MenuUpdateUtils::updateMenuItem($update, $menu, $localizationHelper);
 
@@ -106,11 +127,30 @@ class MenuUpdateUtilsTest extends \PHPUnit_Framework_TestCase
         $expectedItem->setUri('URI');
         $update->setCustom(true);
 
-        /** @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject $localizationHelper */
+        /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject $localizationHelper */
         $localizationHelper = $this->createMock(LocalizationHelper::class);
         MenuUpdateUtils::updateMenuItem($update, $menu, $localizationHelper);
 
         $this->assertEquals($expectedItem, $menu->getChild('item-2')->getChild('item-1-1-1-1'));
+    }
+
+    public function testUpdateMenuItemWithOptions()
+    {
+        $menu = $this->getMenu();
+        $item = $menu->getChild('item-1');
+
+        $update = new MenuUpdateStub();
+        $update->setKey('new');
+        $update->setParentKey('item-1');
+        $update->setCustom(true);
+
+        /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject $localizationHelper */
+        $localizationHelper = $this->createMock(LocalizationHelper::class);
+
+        $options = ['extras' => ['test' => 'test']];
+        MenuUpdateUtils::updateMenuItem($update, $menu, $localizationHelper, $options);
+
+        $this->assertEquals(['test' => 'test'], $item->getChild('new')->getExtras());
     }
     
     public function testFindMenuItem()

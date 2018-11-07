@@ -2,17 +2,15 @@
 
 namespace Oro\Bundle\UserBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Oro\Bundle\SecurityBundle\Annotation\Acl;
+use Oro\Bundle\UserBundle\Entity\Role;
 use Oro\Bundle\UserBundle\Form\Handler\AclRoleHandler;
 use Oro\Bundle\UserBundle\Model\PrivilegeCategory;
-use Oro\Bundle\UserBundle\Entity\Role;
 use Oro\Bundle\UserBundle\Provider\RolePrivilegeCapabilityProvider;
 use Oro\Bundle\UserBundle\Provider\RolePrivilegeCategoryProvider;
-use Oro\Bundle\SecurityBundle\Annotation\Acl;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 /**
  * @Route("/role")
@@ -106,9 +104,9 @@ class RoleController extends Controller
      */
     public function indexAction()
     {
-        return array(
+        return [
             'entity_class' => $this->container->getParameter('oro_user.role.entity.class')
-        );
+        ];
     }
 
     /**
@@ -129,6 +127,11 @@ class RoleController extends Controller
                 'success',
                 $this->get('translator')->trans('oro.user.controller.role.message.saved')
             );
+
+            if ($this->get('oro_sync.client.connection_checker')->checkConnection()) {
+                $publisher = $this->get('oro_sync.websocket_client');
+                $publisher->publish('oro/outdated_user_page', ['role' => $role->getRole()]);
+            }
 
             return $this->get('oro_ui.router')->redirect($role);
         }
@@ -168,7 +171,7 @@ class RoleController extends Controller
      */
     protected function getRolePrivilegeCapabilityProvider()
     {
-        return $this->get('oro_user.provider.role_privilege_capability_provider_backend');
+        return $this->get('oro_user.provider.role_privilege_capability_provider');
     }
 
     /**

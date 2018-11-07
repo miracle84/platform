@@ -2,16 +2,14 @@
 
 namespace Oro\Bundle\EmbeddedFormBundle\Tests\Unit\Layout\Extension;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Oro\Component\Layout\LayoutContext;
-
 use Oro\Bundle\EmbeddedFormBundle\Layout\Extension\DependencyInjectionFormContextConfigurator;
 use Oro\Bundle\EmbeddedFormBundle\Layout\Form\DependencyInjectionFormAccessor;
+use Oro\Component\Layout\LayoutContext;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class DependencyInjectionFormContextConfiguratorTest extends \PHPUnit_Framework_TestCase
+class DependencyInjectionFormContextConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ContainerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContainerInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $container;
 
     /** @var DependencyInjectionFormContextConfigurator */

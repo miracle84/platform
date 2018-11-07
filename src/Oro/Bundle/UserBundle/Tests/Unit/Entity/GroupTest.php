@@ -3,14 +3,12 @@
 namespace Oro\Bundle\UserBundle\Tests\Unit\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\Group;
 use Oro\Bundle\UserBundle\Entity\Role;
 
-use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-
-class GroupTest extends \PHPUnit_Framework_TestCase
+class GroupTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_ROLE = 'ROLE_FOO';
 

@@ -2,17 +2,15 @@
 
 namespace Oro\Bundle\EntityBundle\Tests\Functional\Controller\Api\Rest;
 
+use FOS\RestBundle\Util\Codes;
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Component\Testing\ResponseExtension;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 
-use FOS\RestBundle\Util\Codes;
-
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-use Oro\Bundle\UserBundle\Entity\User;
-
 /**
- * @dbIsolation
+ * @dbIsolationPerTest
  */
 class EntityDataControllerTest extends WebTestCase
 {
@@ -20,7 +18,7 @@ class EntityDataControllerTest extends WebTestCase
 
     public function setUp()
     {
-        $this->initClient([], $this->generateWsseAuthHeader(), true);
+        $this->initClient([], $this->generateWsseAuthHeader());
         $this->loadFixtures([
             'Oro\Bundle\EntityBundle\Tests\Functional\DataFixtures\LoadUserData',
             'Oro\Bundle\EntityBundle\Tests\Functional\DataFixtures\LoadRoleData',

@@ -2,36 +2,35 @@
 
 namespace Oro\Bundle\EntityBundle\Manager\Api;
 
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
-
-use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityBundle\Entity\Manager\Field\EntityFieldManager;
 use Oro\Bundle\EntityBundle\Exception\FieldUpdateAccessException;
+use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 class EntityDataApiManager
 {
     /** @var  EntityFieldManager */
     protected $entityDataManager;
 
-    /** @var  AuthorizationChecker */
-    protected $securityService;
+    /** @var  AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /** @var EntityRoutingHelper */
     protected $entityRoutingHelper;
 
     /**
-     * @param EntityFieldManager   $entityDataManager
-     * @param AuthorizationChecker $securityService
-     * @param EntityRoutingHelper  $entityRoutingHelper
+     * @param EntityFieldManager            $entityDataManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param EntityRoutingHelper           $entityRoutingHelper
      */
     public function __construct(
         EntityFieldManager $entityDataManager,
-        AuthorizationChecker $securityService,
+        AuthorizationCheckerInterface $authorizationChecker,
         EntityRoutingHelper $entityRoutingHelper
     ) {
         $this->entityDataManager = $entityDataManager;
-        $this->securityService = $securityService;
+        $this->authorizationChecker = $authorizationChecker;
         $this->entityRoutingHelper = $entityRoutingHelper;
     }
 
@@ -48,7 +47,7 @@ class EntityDataApiManager
     {
         $entity = $this->entityRoutingHelper->getEntity($className, $id);
 
-        if (!$this->securityService->isGranted('EDIT', $entity)) {
+        if (!$this->authorizationChecker->isGranted('EDIT', $entity)) {
             throw new AccessDeniedException();
         }
 

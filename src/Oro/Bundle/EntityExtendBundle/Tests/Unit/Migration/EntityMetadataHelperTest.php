@@ -3,10 +3,10 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Migration;
 
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
-
 use Oro\Bundle\EntityExtendBundle\Migration\EntityMetadataHelper;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
 
-class EntityMetadataHelperTest extends \PHPUnit_Framework_TestCase
+class EntityMetadataHelperTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EntityMetadataHelper
@@ -14,49 +14,14 @@ class EntityMetadataHelperTest extends \PHPUnit_Framework_TestCase
     private $helper;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry
      */
     private $doctrine;
 
     protected function setUp()
     {
-        $this->doctrine = $this->getMockBuilder('Symfony\Bridge\Doctrine\ManagerRegistry')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->doctrine = $this->createMock(ManagerRegistry::class);
         $this->helper = new EntityMetadataHelper($this->doctrine);
-    }
-
-    public function testGetEntityClassByTableName()
-    {
-        $metadata = new ClassMetadataInfo('Oro\Bundle\EntityBundle\Tests\Unit\ORM\Fixtures\TestEntity');
-        $metadata->table['name'] = 'acme_test';
-
-        $metadataFactory = $this->getMockBuilder('Doctrine\ORM\Mapping\ClassMetadataFactory')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $metadataFactory->expects($this->once())
-            ->method('getAllMetadata')
-            ->will($this->returnValue([$metadata]));
-
-        $em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $em->expects($this->once())
-            ->method('getMetadataFactory')
-            ->will($this->returnValue($metadataFactory));
-
-        $this->doctrine->expects($this->once())
-            ->method('getManagers')
-            ->will($this->returnValue(array('default' => $em)));
-        $this->doctrine->expects($this->once())
-            ->method('getManager')
-            ->with($this->equalTo('default'))
-            ->will($this->returnValue($em));
-
-        $this->assertEquals(
-            'Oro\Bundle\EntityBundle\Tests\Unit\ORM\Fixtures\TestEntity',
-            $this->helper->getEntityClassByTableName('acme_test')
-        );
     }
 
     public function testGetEntityClassesByTableName()
@@ -81,8 +46,8 @@ class EntityMetadataHelperTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($metadataFactory));
 
         $this->doctrine->expects($this->once())
-            ->method('getManagers')
-            ->will($this->returnValue(array('default' => $em)));
+            ->method('getManagerNames')
+            ->will($this->returnValue(['default' => 'service.default']));
         $this->doctrine->expects($this->once())
             ->method('getManager')
             ->with($this->equalTo('default'))
@@ -117,8 +82,8 @@ class EntityMetadataHelperTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($metadataFactory));
 
         $this->doctrine->expects($this->once())
-            ->method('getManagers')
-            ->will($this->returnValue(array('default' => $em)));
+            ->method('getManagerNames')
+            ->will($this->returnValue(['default' => 'service.default']));
         $this->doctrine->expects($this->once())
             ->method('getManager')
             ->with($this->equalTo('default'))
@@ -155,8 +120,8 @@ class EntityMetadataHelperTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($metadata));
 
         $this->doctrine->expects($this->once())
-            ->method('getManagers')
-            ->will($this->returnValue(array('default' => $em)));
+            ->method('getManagerNames')
+            ->will($this->returnValue(['default' => 'service.default']));
         $this->doctrine->expects($this->once())
             ->method('getManager')
             ->with($this->equalTo('default'))

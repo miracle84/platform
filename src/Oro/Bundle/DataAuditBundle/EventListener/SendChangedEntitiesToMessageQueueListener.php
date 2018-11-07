@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Bundle\DataAuditBundle\EventListener;
 
 use Doctrine\Common\Util\ClassUtils;
@@ -8,6 +9,7 @@ use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\PersistentCollection;
 use Oro\Bundle\DataAuditBundle\Async\Topics;
+use Oro\Bundle\DataAuditBundle\Model\AdditionalEntityChangesToAuditStorage;
 use Oro\Bundle\DataAuditBundle\Provider\AuditConfigProvider;
 use Oro\Bundle\DataAuditBundle\Service\EntityToEntityChangeArrayConverter;
 use Oro\Bundle\PlatformBundle\EventListener\OptionalListenerInterface;
@@ -19,6 +21,7 @@ use Oro\Component\MessageQueue\Client\MessagePriority;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 /**
  * The listener does not support next features:
@@ -31,80 +34,69 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
  */
 class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInterface
 {
-    /**
-     * @var MessageProducerInterface
-     */
+    /** @var MessageProducerInterface */
     private $messageProducer;
 
-    /**
-     * @var TokenStorageInterface
-     */
-    private $securityTokenStorage;
+    /** @var TokenStorageInterface */
+    private $tokenStorage;
 
-    /**
-     * @var EntityToEntityChangeArrayConverter
-     */
+    /** @var EntityToEntityChangeArrayConverter */
     private $entityToArrayConverter;
 
-    /**
-     * @var AuditConfigProvider
-     */
-    private $configProvider;
+    /** @var AuditConfigProvider */
+    private $auditConfigProvider;
 
-    /**
-     * @var \SplObjectStorage
-     */
-    private $allInsertions;
-
-    /**
-     * @var \SplObjectStorage
-     */
-    private $allUpdates;
-
-    /**
-     * @var \SplObjectStorage
-     */
-    private $allDeletions;
-
-    /**
-     * @var \SplObjectStorage
-     */
-    private $allCollectionUpdates;
-
-    /**
-     * @var boolean
-     */
-    private $enabled = true;
-
-    /**
-     * @var LoggerInterface
-     */
+    /** @var LoggerInterface */
     private $logger;
 
+    /** @var bool */
+    private $enabled = true;
+
+    /** @var \SplObjectStorage */
+    private $allInsertions;
+
+    /** @var \SplObjectStorage */
+    private $allUpdates;
+
+    /** @var \SplObjectStorage */
+    private $allDeletions;
+
+    /** @var \SplObjectStorage */
+    private $allCollectionUpdates;
+
+    /** @var \SplObjectStorage */
+    private $allTokens;
+
     /**
-     * @param MessageProducerInterface $messageProducer
-     * @param TokenStorageInterface $securityTokenStorage
+     * @var AdditionalEntityChangesToAuditStorage
+     */
+    private $additionalEntityChangesStorage;
+
+    /**
+     * @param MessageProducerInterface           $messageProducer
+     * @param TokenStorageInterface              $tokenStorage
      * @param EntityToEntityChangeArrayConverter $entityToArrayConverter
-     * @param AuditConfigProvider $configProvider
-     * @param LoggerInterface $logger
+     * @param AuditConfigProvider                $auditConfigProvider
+     * @param LoggerInterface                    $logger
      */
     public function __construct(
         MessageProducerInterface $messageProducer,
-        TokenStorageInterface $securityTokenStorage,
+        TokenStorageInterface $tokenStorage,
         EntityToEntityChangeArrayConverter $entityToArrayConverter,
-        AuditConfigProvider $configProvider,
+        AuditConfigProvider $auditConfigProvider,
         LoggerInterface $logger
     ) {
         $this->messageProducer = $messageProducer;
-        $this->securityTokenStorage = $securityTokenStorage;
+        $this->tokenStorage = $tokenStorage;
         $this->entityToArrayConverter = $entityToArrayConverter;
-        $this->configProvider = $configProvider;
+        $this->auditConfigProvider = $auditConfigProvider;
         $this->logger = $logger;
 
         $this->allInsertions = new \SplObjectStorage;
         $this->allUpdates = new \SplObjectStorage;
         $this->allDeletions = new \SplObjectStorage;
         $this->allCollectionUpdates = new \SplObjectStorage;
+        $this->allTokens = new \SplObjectStorage;
     }
 
     /**
@@ -113,6 +105,15 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
     public function setEnabled($enabled = true)
     {
         $this->enabled = $enabled;
+    }
+
+    /**
+     * @param AdditionalEntityChangesToAuditStorage $additionalEntityChangesStorage
+     */
+    public function setAdditionalEntityChangesStorage(
+        AdditionalEntityChangesToAuditStorage $additionalEntityChangesStorage
+    ) {
+        $this->additionalEntityChangesStorage = $additionalEntityChangesStorage;
     }
 
     /**
@@ -130,33 +131,11 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         $this->findAuditableUpdates($em);
         $this->findAuditableDeletions($em);
         $this->findAuditableCollectionUpdates($em);
-    }
 
-    private function emHasChanges($em)
-    {
-        return
-            $this->hasChanges($this->allInsertions, $em) ||
-            $this->hasChanges($this->allUpdates, $em) ||
-            $this->hasChanges($this->allDeletions, $em) ||
-            $this->hasChanges($this->allCollectionUpdates, $em);
-    }
-
-    private function processMessageBody($em, &$body)
-    {
-        $body['entities_inserted'] = $this->processInsertions($em);
-        $body['entities_updated'] = $this->processUpdates($em);
-        $body['entities_deleted'] = $this->processDeletions($em);
-        $body['collections_updated'] = $this->processCollectionUpdates($em);
-
-        if (empty($body['entities_inserted']) &&
-            empty($body['entities_updated']) &&
-            empty($body['entities_deleted']) &&
-            empty($body['collections_updated'])
-        ) {
-            $body = [];
+        $token = $this->tokenStorage->getToken();
+        if (null !== $token) {
+            $this->allTokens[$em] = $token;
         }
-
-        return $body;
     }
 
     /**
@@ -168,23 +147,19 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
             return;
         }
 
+        $timestamp = time();
         $em = $eventArgs->getEntityManager();
-
-        if (!$this->emHasChanges($em)) {
-            return;
-        }
-
         try {
-            $body = [
-                'timestamp' => time(),
-                'transaction_id' => UUIDGenerator::v4(),
-                'entities_updated' => [],
-                'entities_inserted' => [],
-                'entities_deleted' => [],
-                'collections_updated' => [],
-            ];
+            $body = $this->processChanges($em);
+            if (empty($body)) {
+                return;
+            }
 
-            $securityToken = $this->securityTokenStorage->getToken();
+            $body['timestamp'] = $timestamp;
+            $body['transaction_id'] = UUIDGenerator::v4();
+
+            //we need this solution as the token can be cleared by the mq extension
+            $securityToken = $this->getSecurityToken($em);
             if (null !== $securityToken) {
                 $user = $securityToken->getUser();
                 if ($user instanceof AbstractUser) {
@@ -198,9 +173,10 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
                 if ($securityToken->hasAttribute('IMPERSONATION')) {
                     $body['impersonation_id'] = $securityToken->getAttribute('IMPERSONATION');
                 }
-            }
-            if (empty($body = $this->processMessageBody($em, $body))) {
-                return;
+
+                if ($securityToken->hasAttribute('owner_description')) {
+                    $body['owner_description'] = $securityToken->getAttribute('owner_description');
+                }
             }
 
             $this->messageProducer->send(
@@ -212,7 +188,20 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
             $this->allUpdates->detach($em);
             $this->allDeletions->detach($em);
             $this->allCollectionUpdates->detach($em);
+            $this->allTokens->detach($em);
         }
+    }
+
+    /**
+     * @param EntityManager $em
+     *
+     * @return TokenInterface|null
+     */
+    private function getSecurityToken(EntityManager $em)
+    {
+        return $this->allTokens->contains($em)
+            ? $this->allTokens[$em]
+            : $this->tokenStorage->getToken();
     }
 
     /**
@@ -223,22 +212,16 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         $uow = $em->getUnitOfWork();
 
         $insertions = new \SplObjectStorage();
-        foreach ($uow->getScheduledEntityInsertions() as $entity) {
-            if (!$this->configProvider->isAuditableEntity(ClassUtils::getClass($entity))) {
+        $scheduledInsertions = $uow->getScheduledEntityInsertions();
+        foreach ($scheduledInsertions as $entity) {
+            if (!$this->auditConfigProvider->isAuditableEntity(ClassUtils::getClass($entity))) {
                 continue;
             }
 
             $insertions[$entity] = $uow->getEntityChangeSet($entity);
         }
 
-        /** it made for issue with ImportExportTagsSubscriber::postFlush (in this method run flush) */
-        if (! $this->allInsertions->contains($em)) {
-            $this->allInsertions[$em] = $insertions;
-        } else {
-            $previousInsertionsInCurrentTransaction = $this->allInsertions->offsetGet($em);
-            $insertions->addAll($previousInsertionsInCurrentTransaction);
-            $this->allInsertions[$em] = $insertions;
-        }
+        $this->saveChanges($this->allInsertions, $em, $insertions);
     }
 
     /**
@@ -249,21 +232,16 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         $uow = $em->getUnitOfWork();
 
         $updates = new \SplObjectStorage();
-        foreach ($uow->getScheduledEntityUpdates() as $entity) {
-            if (!$this->configProvider->isAuditableEntity(ClassUtils::getClass($entity))) {
+        $scheduledUpdates = $uow->getScheduledEntityUpdates();
+        foreach ($scheduledUpdates as $entity) {
+            if (!$this->auditConfigProvider->isAuditableEntity(ClassUtils::getClass($entity))) {
                 continue;
             }
 
             $updates[$entity] = $uow->getEntityChangeSet($entity);
         }
 
-        if (! $this->allUpdates->contains($em)) {
-            $this->allUpdates[$em] = $updates;
-        } else {
-            $previousUpdatesInCurrentTransaction = $this->allUpdates->offsetGet($em);
-            $updates->addAll($previousUpdatesInCurrentTransaction);
-            $this->allUpdates[$em] = $updates;
-        }
+        $this->saveChanges($this->allUpdates, $em, $updates);
     }
 
     /**
@@ -274,9 +252,10 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         $uow = $em->getUnitOfWork();
 
         $deletions = new \SplObjectStorage();
-        foreach ($uow->getScheduledEntityDeletions() as $entity) {
+        $scheduledDeletions = $uow->getScheduledEntityDeletions();
+        foreach ($scheduledDeletions as $entity) {
             $entityClass = ClassUtils::getClass($entity);
-            if (!$this->configProvider->isAuditableEntity($entityClass)) {
+            if (!$this->auditConfigProvider->isAuditableEntity($entityClass)) {
                 continue;
             }
 
@@ -299,13 +278,7 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
             $deletions[$entity] = $this->convertEntityToArray($em, $entity, $changeSet);
         }
 
-        if (! $this->allDeletions->contains($em)) {
-            $this->allDeletions[$em] = $deletions;
-        } else {
-            $previousDeletionsInCurrentTransaction = $this->allDeletions->offsetGet($em);
-            $deletions->addAll($previousDeletionsInCurrentTransaction);
-            $this->allDeletions[$em] = $deletions;
-        }
+        $this->saveChanges($this->allDeletions, $em, $deletions);
     }
 
     /**
@@ -316,9 +289,10 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         $uow = $em->getUnitOfWork();
 
         $collectionUpdates = new \SplObjectStorage();
-        foreach ($uow->getScheduledCollectionUpdates() as $collection) {
-            /** @var $collection PersistentCollection */
-            if (!$this->configProvider->isAuditableEntity($collection->getTypeClass()->getName())) {
+        /** @var PersistentCollection[] $scheduledCollectionUpdates */
+        $scheduledCollectionUpdates = $uow->getScheduledCollectionUpdates();
+        foreach ($scheduledCollectionUpdates as $collection) {
+            if (!$this->auditConfigProvider->isAuditableEntity($collection->getTypeClass()->getName())) {
                 continue;
             }
 
@@ -334,13 +308,49 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
             ];
         }
 
-        if (! $this->allCollectionUpdates->contains($em)) {
-            $this->allCollectionUpdates[$em] = $collectionUpdates;
-        } else {
-            $previousCollectionUpdatesInCurrentTransaction = $this->allCollectionUpdates->offsetGet($em);
-            $collectionUpdates->addAll($previousCollectionUpdatesInCurrentTransaction);
-            $this->allCollectionUpdates[$em] = $collectionUpdates;
+        $this->saveChanges($this->allCollectionUpdates, $em, $collectionUpdates);
+    }
+
+    /**
+     * @param \SplObjectStorage $storage
+     * @param EntityManager     $em
+     * @param \SplObjectStorage $changes
+     */
+    private function saveChanges(\SplObjectStorage $storage, EntityManager $em, \SplObjectStorage $changes)
+    {
+        if ($changes->count() > 0) {
+            if (!$storage->contains($em)) {
+                $storage[$em] = $changes;
+            } else {
+                $previousChangesInCurrentTransaction = $storage[$em];
+                $changes->addAll($previousChangesInCurrentTransaction);
+                $storage[$em] = $changes;
+            }
         }
+    }
+
+    /**
+     * @param EntityManager $em
+     *
+     * @return array
+     */
+    private function processChanges(EntityManager $em)
+    {
+        $insertions = $this->processInsertions($em);
+        $updates = $this->processUpdates($em);
+        $deletions = $this->processDeletions($em);
+        $collectionUpdates = $this->processCollectionUpdates($em);
+
+        if (empty($insertions) && empty($updates) && empty($deletions) && empty($collectionUpdates)) {
+            return [];
+        }
+
+        $body['entities_inserted'] = $insertions;
+        $body['entities_updated'] = $updates;
+        $body['entities_deleted'] = $deletions;
+        $body['collections_updated'] = $collectionUpdates;
+
+        return $body;
     }
 
     /**
@@ -370,28 +380,77 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
      */
     private function processUpdates(EntityManager $em)
     {
-        if (!$this->allUpdates->contains($em)) {
-            return [];
-        }
-
         $updates = [];
-        foreach ($this->allUpdates[$em] as $entity) {
-            $changeSet = $this->allUpdates[$em][$entity];
-            $update = $this->convertEntityToArray($em, $entity, $changeSet);
-            if ($update['entity_id']) {
-                $updates[] = $this->convertEntityToArray($em, $entity, $changeSet);
-            } else {
-                $this->logger->error(
-                    sprintf(
-                        'The entity %s has an empty id. Possibly $entity->setId(null) was executed',
-                        $update['entity_class']
-                    ),
-                    ['entity' => $entity, 'update' => $update]
-                );
+        if ($this->allUpdates->contains($em)) {
+            foreach ($this->allUpdates[$em] as $entity) {
+                $changeSet = $this->allUpdates[$em][$entity];
+                $update = $this->processUpdate($em, $entity, $changeSet);
+                if (!$update) {
+                    continue;
+                }
+
+                $updates[] = $update;
             }
         }
 
+        if (!$this->additionalEntityChangesStorage->hasEntityUpdates($em)) {
+            return $updates;
+        }
+
+        $additionalUpdates = $this->additionalEntityChangesStorage->getEntityUpdates($em);
+        foreach ($additionalUpdates as $entity) {
+            $changeSet = $additionalUpdates->offsetGet($entity);
+            $additionalUpdate = $this->processUpdate($em, $entity, $changeSet);
+            if (!$additionalUpdate) {
+                continue;
+            }
+
+            foreach ($updates as $key => $existingUpdate) {
+                if ($existingUpdate['entity_id'] === $additionalUpdate['entity_id']
+                    && $existingUpdate['entity_class'] === $additionalUpdate['entity_class']) {
+                    $existingUpdateForMerge = &$updates[$key];
+
+                    break;
+                }
+            }
+
+            if (!empty($existingUpdateForMerge)) {
+                $existingUpdateForMerge['change_set'] = array_merge(
+                    $existingUpdateForMerge['change_set'],
+                    $additionalUpdate['change_set']
+                );
+            } else {
+                $updates[] = $additionalUpdate;
+            }
+
+            unset($existingUpdateForMerge);
+        }
+        $this->additionalEntityChangesStorage->clear($em);
+
         return $updates;
+    }
+
+    /**
+     * @param object $entity
+     * @param array $changeSet
+     * @return null|array
+     */
+    private function processUpdate(EntityManager $entityManager, $entity, array $changeSet)
+    {
+        $update = $this->convertEntityToArray($entityManager, $entity, $changeSet);
+        if ($update['entity_id']) {
+            return $update;
+        }
+
+        $this->logger->error(
+            sprintf(
+                'The entity %s has an empty id. Possibly $entity->setId(null) was executed',
+                $update['entity_class']
+            ),
+            ['entity' => $entity, 'update' => $update]
+        );
+
+        return null;
     }
 
     /**
@@ -429,8 +488,8 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         foreach ($this->allCollectionUpdates[$em] as $collection) {
             $new = [
                 'inserted' => [],
-                'deleted' => [],
-                'changed' => []
+                'deleted'  => [],
+                'changed'  => []
             ];
             foreach ($this->allCollectionUpdates[$em][$collection]['insertDiff'] as $entity) {
                 $new['inserted'][] = $this->convertEntityToArray($em, $entity, []);
@@ -440,7 +499,7 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
             }
 
             $ownerFieldName = $collection->getMapping()['fieldName'];
-            $entityData  = $this->convertEntityToArray($em, $collection->getOwner(), []);
+            $entityData = $this->convertEntityToArray($em, $collection->getOwner(), []);
             $entityData['change_set'][$ownerFieldName] = [null, $new];
 
             if ($new['inserted'] || $new['deleted']) {
@@ -449,17 +508,6 @@ class SendChangedEntitiesToMessageQueueListener implements OptionalListenerInter
         }
 
         return $collectionUpdates;
-    }
-
-    /**
-     * @param \SplObjectStorage $storage
-     * @param EntityManager     $em
-     *
-     * @return bool
-     */
-    private function hasChanges(\SplObjectStorage $storage, EntityManager $em)
-    {
-        return $storage->contains($em) && count($storage[$em]) > 0;
     }
 
     /**

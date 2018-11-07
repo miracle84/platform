@@ -3,12 +3,11 @@
 namespace Oro\Bundle\WorkflowBundle\Model\Filter;
 
 use Doctrine\Common\Collections\Collection;
-
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\WorkflowBundle\Configuration\FeatureConfigurationExtension;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 
-class FeatureCheckerWorkflowRegistryFilter implements WorkflowDefinitionFilterInterface
+class FeatureCheckerWorkflowRegistryFilter implements WorkflowDefinitionFilterInterface, SystemFilterInterface
 {
     /** @var FeatureChecker */
     private $featureChecker;

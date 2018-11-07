@@ -3,11 +3,10 @@
 namespace Oro\Bundle\TagBundle\Tests\Unit\Manager;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\TagBundle\Manager\TagImportManager;
 use Oro\Bundle\TagBundle\Entity\Tag;
+use Oro\Bundle\TagBundle\Manager\TagImportManager;
 
-class TagImportManagerTest extends \PHPUnit_Framework_TestCase
+class TagImportManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TagImportManager */
     protected $tagImportManager;

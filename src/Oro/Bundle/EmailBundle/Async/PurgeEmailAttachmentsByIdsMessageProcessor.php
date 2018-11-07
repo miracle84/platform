@@ -3,12 +3,9 @@ namespace Oro\Bundle\EmailBundle\Async;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
-
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
-
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
@@ -56,10 +53,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessor implements MessageProcessorInte
         $body = JSON::decode($message->getBody());
 
         if (! isset($body['jobId'], $body['ids']) || ! is_array($body['ids'])) {
-            $this->logger->critical(
-                sprintf('[PurgeEmailAttachmentsByIdsMessageProcessor] Got invalid message: "%s"', $message->getBody()),
-                ['message' => $message]
-            );
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }
@@ -92,9 +86,9 @@ class PurgeEmailAttachmentsByIdsMessageProcessor implements MessageProcessorInte
     }
 
     /**
-     * @param int $size
+     * @param int[] $ids
      *
-     * @return BufferedQueryResultIterator
+     * @return BufferedIdentityQueryResultIterator
      */
     private function getEmailAttachments($ids)
     {
@@ -107,7 +101,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessor implements MessageProcessorInte
 
         $em = $this->getEntityManager();
 
-        $emailAttachments = (new BufferedQueryResultIterator($qb))
+        $emailAttachments = (new BufferedIdentityQueryResultIterator($qb))
             ->setBufferSize(static::LIMIT)
             ->setPageCallback(
                 function () use ($em) {

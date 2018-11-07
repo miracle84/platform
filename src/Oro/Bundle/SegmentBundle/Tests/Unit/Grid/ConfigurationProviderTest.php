@@ -3,6 +3,7 @@
 namespace Oro\Bundle\SegmentBundle\Tests\Unit\Grid;
 
 use Oro\Bundle\DataGridBundle\Tests\Unit\Datagrid\DatagridGuesserMock;
+use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ReportBundle\Entity\Report;
@@ -18,10 +19,10 @@ class ConfigurationProviderTest extends SegmentDefinitionTestCase
     /** @var ConfigurationProvider */
     protected $provider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrine;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     protected function setUp()
@@ -34,11 +35,16 @@ class ConfigurationProviderTest extends SegmentDefinitionTestCase
         $this->configManager = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()->getMock();
 
+        $entityNameResolver = $this->getMockBuilder(EntityNameResolver::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
         $builder = new SegmentDatagridConfigurationBuilder(
             $this->getFunctionProvider(),
             $this->getVirtualFieldProvider(),
             $this->doctrine,
-            new DatagridGuesserMock()
+            new DatagridGuesserMock(),
+            $entityNameResolver
         );
 
         $builder->setConfigManager($this->configManager);
@@ -108,5 +114,14 @@ class ConfigurationProviderTest extends SegmentDefinitionTestCase
             'valid'     => [$this->getDefaultDefinition(), true],
             'not valid' => [['empty array'], false]
         ];
+    }
+
+    /**
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Segment id not found in "oro_segment_grid_" gridName.
+     */
+    public function testDoNotProcessInvalidSegmentGridName()
+    {
+        $this->provider->getConfiguration(Segment::GRID_PREFIX);
     }
 }

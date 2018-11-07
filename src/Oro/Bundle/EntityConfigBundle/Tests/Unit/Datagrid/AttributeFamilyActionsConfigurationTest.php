@@ -6,20 +6,20 @@ use Doctrine\ORM\EntityManager;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Datagrid\AttributeFamilyActionsConfiguration;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Component\Testing\Unit\EntityTrait;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class AttributeFamilyActionsConfigurationTest extends \PHPUnit_Framework_TestCase
+class AttributeFamilyActionsConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /** @var int */
     const ENTITY_ID = 777;
 
-    /** @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject */
-    private $securityFacade;
+    /** @var AuthorizationCheckerInterface|\PHPUnit\Framework\MockObject\MockObject */
+    private $authorizationChecker;
 
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     private $entityManager;
 
     /** @var AttributeFamilyActionsConfiguration */
@@ -27,16 +27,11 @@ class AttributeFamilyActionsConfigurationTest extends \PHPUnit_Framework_TestCas
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder(SecurityFacade::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->entityManager = $this->getMockBuilder(EntityManager::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->entityManager = $this->createMock(EntityManager::class);
 
         $this->attributeFamilyActionsConfiguration = new attributeFamilyActionsConfiguration(
-            $this->securityFacade,
+            $this->authorizationChecker,
             $this->entityManager
         );
     }
@@ -72,7 +67,7 @@ class AttributeFamilyActionsConfigurationTest extends \PHPUnit_Framework_TestCas
             ->with(AttributeFamily::class, self::ENTITY_ID)
             ->willReturn($attributeFamily);
 
-        $this->securityFacade
+        $this->authorizationChecker
             ->expects($this->once())
             ->method('isGranted')
             ->with('delete', $attributeFamily)

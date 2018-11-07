@@ -2,13 +2,12 @@
 
 namespace Oro\Component\ConfigExpression\Tests\Unit;
 
+use Oro\Component\ConfigExpression\ContextAccessor;
+use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
 use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-use Oro\Component\ConfigExpression\ContextAccessor;
-use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
-
-class ContextAccessorTest extends \PHPUnit_Framework_TestCase
+class ContextAccessorTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ContextAccessor

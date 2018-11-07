@@ -2,13 +2,13 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Migration;
 
-use Psr\Log\LoggerInterface;
 use Oro\Bundle\EntityConfigBundle\Migration\UpdateEntityConfigMigrationQuery;
 use Oro\Bundle\MigrationBundle\Migration\ArrayLogger;
+use Psr\Log\LoggerInterface;
 
-class UpdateEntityConfigMigrationQueryTest extends \PHPUnit_Framework_TestCase
+class UpdateEntityConfigMigrationQueryTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $commandExecutor;
 
     protected function setUp()

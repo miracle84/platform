@@ -8,7 +8,7 @@ use Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface;
 class TestMetadataAccessor implements MetadataAccessorInterface
 {
     /** @var EntityMetadata[] */
-    protected $metadata = [];
+    private $metadata = [];
 
     /**
      * @param EntityMetadata[] $metadata
@@ -23,10 +23,8 @@ class TestMetadataAccessor implements MetadataAccessorInterface
     /**
      * {@inheritdoc}
      */
-    public function getMetadata($className)
+    public function getMetadata(string $className): ?EntityMetadata
     {
-        return isset($this->metadata[$className])
-            ? $this->metadata[$className]
-            : null;
+        return $this->metadata[$className] ?? null;
     }
 }

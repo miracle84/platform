@@ -1,4 +1,3 @@
-/** @lends TagsView */
 define(function(require) {
     'use strict';
     var BaseView = require('oroui/js/app/views/base/view');
@@ -28,14 +27,28 @@ define(function(require) {
      */
     var TagsView = BaseView.extend(/** @exports TagsView.prototype */{
         showDefault: true,
+
         template: require('tpl!orotag/templates/viewer/tags-view.html'),
+
         listen: {
             'change model': 'render'
         },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function TagsView() {
+            TagsView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.fieldName = options.fieldName;
             return TagsView.__super__.initialize.apply(this, arguments);
         },
+
         getTemplateData: function() {
             var tags = this.model.get(this.fieldName);
             tags = _.sortBy(tags, this.tagSortCallback);
@@ -44,6 +57,7 @@ define(function(require) {
                 showDefault: this.showDefault
             };
         },
+
         tagSortCallback: function(a, b) {
             return (a.owner ? 1 : 0) - (b.owner ? 1 : 0);
         }

@@ -15,9 +15,21 @@ define(function(require) {
 
     EmailNotificationComponent = BaseComponent.extend({
         view: null,
+
         collection: null,
+
         countModel: null,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailNotificationComponent() {
+            EmailNotificationComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, _.pick(options, ['countModel']));
             if (this.countModel instanceof Backbone.Model === false) {
@@ -29,7 +41,7 @@ define(function(require) {
         initViews: function(options) {
             var EmailNotificationView = tools.isMobile() ? MobileEmailNotificationView : DesktopEmailNotificationView;
             this.view = new EmailNotificationView({
-                el: options._sourceElement,
+                el: options.listSelector ? options._sourceElement.find(options.listSelector) : options._sourceElement,
                 collection: this.collection,
                 countNewEmail: this.countModel.get('unreadEmailsCount'),
                 folderId: options.folderId,
@@ -37,9 +49,10 @@ define(function(require) {
                 hasMarkAllButton: Boolean(options.hasMarkAllButton),
                 hasMarkVisibleButton: Boolean(options.hasMarkVisibleButton)
             });
-            if (options._iconElement && options._iconElement.length) {
+            var iconElement;
+            if (options.iconSelector && (iconElement = options._sourceElement.find(options.iconSelector)).length) {
                 this.countView = new EmailNotificationCountView({
-                    el: options._iconElement,
+                    el: iconElement,
                     model: this.countModel
                 });
             }

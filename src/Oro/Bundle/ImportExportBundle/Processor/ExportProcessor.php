@@ -2,16 +2,14 @@
 
 namespace Oro\Bundle\ImportExportBundle\Processor;
 
-use Symfony\Component\Serializer\SerializerInterface;
-
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\ImportExportBundle\Context\ContextAwareInterface;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
-use Oro\Bundle\ImportExportBundle\Converter\QueryBuilderAwareInterface;
 use Oro\Bundle\ImportExportBundle\Converter\DataConverterInterface;
+use Oro\Bundle\ImportExportBundle\Converter\QueryBuilderAwareInterface;
 use Oro\Bundle\ImportExportBundle\Exception\InvalidConfigurationException;
 use Oro\Bundle\ImportExportBundle\Exception\RuntimeException;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class ExportProcessor implements ContextAwareProcessor, EntityNameAwareProcessor
 {
@@ -44,7 +42,7 @@ class ExportProcessor implements ContextAwareProcessor, EntityNameAwareProcessor
      */
     public function process($object)
     {
-        if (!$this->serializer) {
+        if (! $this->serializer) {
             throw new RuntimeException('Serializer must be injected.');
         }
         $data = $this->serializer->serialize(

@@ -8,7 +8,6 @@ use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
-
 use Oro\Bundle\WorkflowBundle\Entity\EventTriggerInterface;
 use Oro\Bundle\WorkflowBundle\EventListener\EventTriggerCollectorListener;
 use Oro\Bundle\WorkflowBundle\EventListener\Extension\EventTriggerExtensionInterface;
@@ -16,7 +15,7 @@ use Oro\Bundle\WorkflowBundle\EventListener\Extension\EventTriggerExtensionInter
 /**
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class EventTriggerCollectorListenerTest extends \PHPUnit_Framework_TestCase
+class EventTriggerCollectorListenerTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY = 'stdClass';
     const FIELD  = 'field';
@@ -230,7 +229,7 @@ class EventTriggerCollectorListenerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param null|bool $forceQueued
-     * @return EventTriggerExtensionInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return EventTriggerExtensionInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getExtensionMock($forceQueued = null)
     {
@@ -244,7 +243,7 @@ class EventTriggerCollectorListenerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EntityManagerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|EntityManagerInterface
      */
     protected function getEntityManagerMock()
     {

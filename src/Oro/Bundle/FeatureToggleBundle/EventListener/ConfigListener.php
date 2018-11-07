@@ -5,8 +5,8 @@ namespace Oro\Bundle\FeatureToggleBundle\EventListener;
 use Oro\Bundle\ConfigBundle\Event\ConfigSettingsUpdateEvent;
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\FeatureToggleBundle\Configuration\ConfigurationManager;
-use Oro\Bundle\FeatureToggleBundle\Event\FeaturesChange;
 use Oro\Bundle\FeatureToggleBundle\Event\FeatureChange;
+use Oro\Bundle\FeatureToggleBundle\Event\FeaturesChange;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ConfigListener
@@ -91,6 +91,11 @@ class ConfigListener
         }
 
         return $featuresStates;
+    }
+
+    public function onScopeIdChange()
+    {
+        $this->featureChecker->resetCache();
     }
 
     /**

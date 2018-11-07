@@ -9,13 +9,9 @@ use Oro\Bundle\UserBundle\Command\CreateUserCommand;
 use Oro\Bundle\UserBundle\Command\UpdateUserCommand;
 use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\UserBundle\Entity\UserManager;
-
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
-/**
- * @dbIsolation
- */
 class UserCreateUpdateTest extends WebTestCase
 {
     /**

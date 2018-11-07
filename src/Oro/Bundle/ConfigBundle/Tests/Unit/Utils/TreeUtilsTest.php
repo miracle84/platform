@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\ConfigBundle\Tests\Unit\Utils;
 
-use Oro\Bundle\ConfigBundle\Utils\TreeUtils;
 use Oro\Bundle\ConfigBundle\Config\Tree\GroupNodeDefinition;
+use Oro\Bundle\ConfigBundle\Utils\TreeUtils;
 
-class TreeUtilsTest extends \PHPUnit_Framework_TestCase
+class TreeUtilsTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * Test group tree
@@ -61,5 +61,13 @@ class TreeUtilsTest extends \PHPUnit_Framework_TestCase
         // empty node
         $result = TreeUtils::getFirstNodeName(new GroupNodeDefinition('some_name'));
         $this->assertNull($result);
+    }
+
+    public function testGetConfigKey()
+    {
+        $this->assertEquals(
+            'root.name',
+            TreeUtils::getConfigKey('root', 'name')
+        );
     }
 }

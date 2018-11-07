@@ -33,8 +33,8 @@ datagrids:
                 label: oro.notification.massnotification.status.label
                 frontend_type: select
                 choices:
-                   - oro.notification.massnotification.status.failed
-                   - oro.notification.massnotification.status.success
+                   oro.notification.massnotification.status.failed: 0
+                   oro.notification.massnotification.status.success: 1
 
         properties:
             id: ~
@@ -80,14 +80,15 @@ datagrids:
                     options:
                         field_options:
                             choices:
-                                0: oro.notification.massnotification.status.failed
-                                1: oro.notification.massnotification.status.success
+                                oro.notification.massnotification.status.failed: 0
+                                oro.notification.massnotification.status.success: 1
 
     email-notification-grid:
         options:
-            entityHint: transactional email
+            entityHint: transactional emails
             entity_pagination: true
         acl_resource: oro_notification_emailnotification_view
+        extended_entity_name: '%oro_notification.emailnotification.entity.class%'
         source:
             type: orm
             query:
@@ -95,7 +96,6 @@ datagrids:
                     - partial e.{id, entityName}
                     - event.name as eventName
                     - event.id as eventId
-                    - recipientList.owner as ownerRecipient
                     - recipientList.email as emailRecipient
                     - template.name as templateName
                 from:
@@ -107,7 +107,7 @@ datagrids:
                         - { join: e.recipientList, alias: recipientList }
                         - { join: recipientList.users, alias: recipientUsersList }
                         - { join: recipientList.groups, alias: recipientGroupsList }
-                groupBy: e.id, eventName, eventId, ownerRecipient, emailRecipient, templateName
+                groupBy: e.id, eventName, eventId, emailRecipient, templateName
 
         columns:
             entityName:
@@ -118,20 +118,24 @@ datagrids:
                 frontend_type: html
                 context:
                     entity_provider: '@oro_entity.entity_provider'
+                order: 10
 
             eventName:
                 label: oro.notification.emailnotification.event.label
                 type: translatable
                 choices: "@oro_notification.event_listener.email_notification_service->getEventNameChoices"
+                order: 20
 
             templateName:
                 label: oro.notification.emailnotification.template.label
+                order: 50
 
             recipientUsersList:
                 label: oro.notification.datagrid.recipient.user
                 type: twig
                 template: OroNotificationBundle:EmailNotification:Datagrid/Property/recipientUsersList.html.twig
                 frontend_type: html
+                order: 60
 
             recipientGroupsList:
                 label: oro.notification.datagrid.recipient.group
@@ -139,14 +143,12 @@ datagrids:
                 template: OroNotificationBundle:EmailNotification:Datagrid/Property/recipientGroupsList.html.twig
                 choices: "@oro_notification.event_listener.email_notification_service->getRecipientGroupsChoices"
                 frontend_type: html
+                order: 70
 
             emailRecipient:
                 label: oro.notification.datagrid.recipient.custom_email
                 frontend_type: string
-
-            ownerRecipient:
-                label: oro.notification.datagrid.recipient.owner
-                frontend_type: boolean
+                order: 80
 
         properties:
             id: ~
@@ -220,7 +222,3 @@ datagrids:
                 emailRecipient:
                     type: string
                     data_name: emailRecipient
-
-                ownerRecipient:
-                    type: boolean
-                    data_name: ownerRecipient

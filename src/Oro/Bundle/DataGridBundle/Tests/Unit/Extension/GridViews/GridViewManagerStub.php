@@ -5,20 +5,19 @@ namespace Oro\Bundle\DataGridBundle\Tests\Unit\Extension\GridViews;
 use Oro\Bundle\DataGridBundle\Entity\GridView;
 use Oro\Bundle\DataGridBundle\Entity\Manager\GridViewManager;
 use Oro\Bundle\DataGridBundle\Extension\GridViews\View;
+use Oro\Bundle\UserBundle\Entity\AbstractUser;
 use Oro\Bundle\UserBundle\Entity\User;
 
 class GridViewManagerStub extends GridViewManager
 {
-
     public function __construct()
     {
-        return $this;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getAllGridViews(User $user = null, $gridName = null)
+    public function getAllGridViews(AbstractUser $user = null, $gridName = null)
     {
         $currentUser = new User();
 

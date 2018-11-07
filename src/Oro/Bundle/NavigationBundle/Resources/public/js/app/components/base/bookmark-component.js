@@ -1,12 +1,12 @@
-define([
-    'jquery',
-    'underscore',
-    'oroui/js/mediator',
-    'oroui/js/app/components/base/component'
-], function($, _, mediator, BaseComponent) {
+define(function(require) {
     'use strict';
 
     var BaseBookmarkComponent;
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var mediator = require('oroui/js/mediator');
+    var Collection = require('oronavigation/js/app/models/base/collection');
+    var BaseComponent = require('oroui/js/app/components/base/component');
 
     BaseBookmarkComponent = BaseComponent.extend({
         /**
@@ -22,24 +22,35 @@ define([
             'toRemove collection': 'toRemove'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseBookmarkComponent(options) {
+            BaseBookmarkComponent.__super__.constructor.call(this, options);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             var $dataEl = $(options.dataSource);
             var data = $dataEl.data('data');
             var extraOptions = $dataEl.data('options');
             $dataEl.remove();
 
+            this.collection = new Collection();
+
             // create own property _options (not spoil prototype)
-            this._options = _.defaults({}, options || {}, extraOptions);
+            this._options = _.defaults(_.omit(options, '_subPromises'), extraOptions);
 
             BaseBookmarkComponent.__super__.initialize.call(this, options);
 
-            var $button = $(this._options.buttonOptions.el);
-            var route = $button.data('navigation-items-route');
+            var route = options._sourceElement.data('navigation-items-route');
             if (!_.isEmpty(route)) {
                 this.collection.model.prototype.route = route;
             }
 
-            var typeName = $button.data('type-name');
+            var typeName = options._sourceElement.data('type-name');
             if (!_.isEmpty(typeName)) {
                 this.typeName = typeName;
             }
@@ -55,9 +66,9 @@ define([
         toRemove: function(model) {
             model.destroy({
                 wait: true,
-                errorOutput: function(event, xhr) {
-                    // Suppress error if it's 404 response and not debug mode
-                    return xhr.status !== 404 || mediator.execute('retrieveOption', 'debug');
+                errorHandlerMessage: function(event, xhr) {
+                    // Suppress error if it's 404 response
+                    return xhr.status !== 404;
                 },
                 error: function(model, xhr) {
                     if (xhr.status === 404 && !mediator.execute('retrieveOption', 'debug')) {

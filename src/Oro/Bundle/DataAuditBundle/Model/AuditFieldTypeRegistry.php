@@ -3,7 +3,6 @@
 namespace Oro\Bundle\DataAuditBundle\Model;
 
 use LogicException;
-
 use Oro\Bundle\DataAuditBundle\Exception\UnsupportedDataTypeException;
 
 class AuditFieldTypeRegistry
@@ -36,7 +35,8 @@ class AuditFieldTypeRegistry
         'array'      => 'array',
         'simple_array' => 'simplearray',
         'json_array'   => 'jsonarray',
-        'collection' => 'text'
+        'collection' => 'text',
+        'html_escaped' => 'text',
     ];
 
     /**

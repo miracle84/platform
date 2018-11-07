@@ -2,15 +2,16 @@
 
 namespace Oro\Bundle\EmailBundle\Form\Type;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
 use Oro\Bundle\FormBundle\Form\Type\OroEntityCreateOrSelectChoiceType;
-use Oro\Bundle\EmailBundle\Validator\Constraints\AutoResponseRuleCondition as AutoResponseRuleConditionConstraint;
+use Oro\Bundle\QueryDesignerBundle\Form\Type\AbstractQueryDesignerType;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class AutoResponseRuleType extends AbstractType
+class AutoResponseRuleType extends AbstractQueryDesignerType
 {
     const NAME = 'oro_email_autoresponserule';
 
@@ -30,36 +31,31 @@ class AutoResponseRuleType extends AbstractType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
+        parent::buildForm($builder, $options);
+
         $builder
-            ->add('active', 'choice', [
+            ->add('active', ChoiceType::class, [
                 'label' => 'oro.email.autoresponserule.status.label',
                 'choices' => [
-                    true  => 'oro.email.autoresponserule.status.active',
-                    false => 'oro.email.autoresponserule.status.inactive',
+                    'oro.email.autoresponserule.status.inactive' => 0,
+                    'oro.email.autoresponserule.status.active' => 1,
                 ]
             ])
-            ->add('name', 'text', [
+            ->add('name', TextType::class, [
                 'label' => 'oro.email.autoresponserule.name.label',
             ])
-            ->add('conditions', 'oro_collection', [
-                'label' => 'oro.email.autoresponserule.conditions.label',
-                'type' => AutoResponseRuleConditionType::NAME,
-                'options' => [
-                    'constraints' => [
-                        new AutoResponseRuleConditionConstraint(),
-                    ],
-                    'error_bubbling' => false,
-                ],
-                'handle_primary' => false,
-                'allow_add_after' => true,
-            ])
-            ->add('template', OroEntityCreateOrSelectChoiceType::NAME, [
+            ->add('template', OroEntityCreateOrSelectChoiceType::class, [
                 'label' => 'oro.email.autoresponserule.template.label',
                 'class' => 'Oro\Bundle\EmailBundle\Entity\EmailTemplate',
-                'create_entity_form_type' => 'oro_email_autoresponse_template',
-                'select_entity_form_type' => 'oro_email_autoresponse_template_choice',
+                'create_entity_form_type' => AutoResponseTemplateType::class,
+                'select_entity_form_type' => AutoResponseTemplateChoiceType::class,
                 'editable' => true,
                 'edit_route' => 'oro_email_autoresponserule_edittemplate',
+            ])
+            // this field represents selected entity in query builder entity selector
+            ->add('entity', HiddenType::class, [
+                'mapped' => false,
+                'data' => 'email',
             ]);
 
         $builder->addEventSubscriber($this->autoResponseRuleSubscriber);
@@ -68,10 +64,13 @@ class AutoResponseRuleType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
+        parent::configureOptions($resolver);
+
         $resolver->setDefaults([
             'data_class' => 'Oro\Bundle\EmailBundle\Entity\AutoResponseRule',
+            'query_type' => 'string',
         ]);
     }
 

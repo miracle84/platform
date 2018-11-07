@@ -3,12 +3,12 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain;
 
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdentityFactory;
+use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\TestEntity;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\TestEntityImplementsDomainObjectInterface;
 use Oro\Bundle\SecurityBundle\Tests\Unit\TestHelper;
-use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 
-class ObjectIdentityFactoryTest extends \PHPUnit_Framework_TestCase
+class ObjectIdentityFactoryTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ObjectIdentityFactory
@@ -146,7 +146,7 @@ class ObjectIdentityFactoryTest extends \PHPUnit_Framework_TestCase
     public static function getProvider()
     {
         return array(
-            \stdClass::class => array(
+            'Entity' => array(
                 'Entity:Test:TestEntity',
                 'entity',
                 'Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\TestEntity'

@@ -21,17 +21,28 @@ define(function(require) {
      * @this AbstractSelect2
      */
     function populateCollapsibleResults(container, results, query) {
-        // jshint -W040
         var opts = this.opts;
         var id = opts.id;
         var parent = container.parent();
         var selection = this.val();
 
         var populate = function(results, container, depth, parentStack) {
-            // jscs:disable
-            var i, l, result, selectable, disabled, compound, node, label, innerContainer,
-                formatted, subId, parent, resultId;
-            // jscs:enable
+            var i;
+            var l;
+            var result;
+            var selectable;
+            var disabled;
+            var compound;
+            var node;
+            var label;
+            var innerContainer;
+            var formatted;
+            var labelId;
+            var subId;
+            var parent;
+            var resultId;
+            var expanded;
+
             results = opts.sortResults(results, container, query);
             parent = container.parent();
 
@@ -65,34 +76,41 @@ define(function(require) {
 
                 if (compound) {
                     container.addClass('accordion');
+                    labelId = _.uniqueId('label-');
                     subId = parent.attr('id') + '_' + depth + '_' + i;
 
-                    innerContainer = $('<ul></ul>')
-                        .addClass('select2-result-sub')
-                        .wrap('<div class="accordion-body collapse" id="' + subId + '" />');
-                    populate(result.children, innerContainer, depth + 1, parentStack.concat(innerContainer.parent()));
-                    innerContainer = innerContainer.parent();
+                    expanded = Boolean(query.term);
+
+                    innerContainer = $('<div class="accordion-body collapse"/>')
+                        .toggleClass('show', expanded)
+                        .attr({
+                            'id': subId,
+                            'role': 'subtree',
+                            'aria-labelledby': labelId
+                        })
+                        .append('<ul class="select2-result-sub"/>');
+
+                    populate(result.children, innerContainer.children(), depth + 1, parentStack.concat(innerContainer));
 
                     node.addClass('accordion-group')
                         .append(innerContainer);
 
-                    if (query.term) {
-                        innerContainer.addClass('in');
-                    } else {
-                        label.addClass('collapsed');
-                    }
-
-                    label = label.addClass('accordion-toggle')
-                        .attr('data-toggle', 'collapse')
-                        .attr('data-target', '#' + subId)
-                        .attr('data-parent', '#' + parent.attr('id'))
-                        .wrap('<div class="accordion-heading"/>')
-                        .parent();
+                    label.addClass('accordion-toggle')
+                        .toggleClass('collapsed', !expanded)
+                        .attr({
+                            'id': labelId,
+                            'data-toggle': 'collapse',
+                            'data-target': '#' + subId,
+                            'data-parent': '#' + parent.attr('id'),
+                            'aria-controls': subId,
+                            'aria-expanded': expanded
+                        });
+                    label = $('<div class="accordion-heading"/>').append(label);
                 }
 
                 if (selection.indexOf(resultId) >= 0) {
                     $.each(parentStack, function() {
-                        this.addClass('in');
+                        this.addClass('show');
                     });
                 }
 
@@ -102,13 +120,17 @@ define(function(require) {
             }
         };
 
-        parent.attr('id', parent.attr('id') || ('select2container_' + Date.now()));
+        if (!parent.attr('id')) {
+            parent.attr('id', _.uniqueId('select2container_'));
+        }
+
         container.on('click.collapse.data-api', '[data-toggle=collapse]', function(e) {
-            var $this = $(this);
-            var target = $this.attr('data-target');
-            var option = $(target).data('collapse') ? 'toggle' : $this.data();
-            $this[$(target).hasClass('in') ? 'addClass' : 'removeClass']('collapsed');
-            $(target).collapse(option);
+            var $el = $(e.currentTarget);
+            var $target = $($el.attr('data-target'));
+            var options = $target.data('bs.collapse') ? 'toggle' : $el.data();
+
+            $el.toggleClass('collapsed', $target.hasClass('show'));
+            $target.collapse(options);
         });
         populate(results, container, 0, []);
     }
@@ -172,7 +194,49 @@ define(function(require) {
                 }
             }
             original.apply(this, _.rest(arguments));
+        },
+
+        /* eslint-disable */
+        // Overridden full onSelect method for multi chooses,
+        // this solution related to https://github.com/select2/select2/issues/1513
+        onSelect: function (data, options) {
+
+            if (!this.triggerSelect(data)) { return; }
+
+            this.addSelectedChoice(data);
+
+            this.opts.element.trigger({ type: "selected", val: this.id(data), choice: data });
+
+            if (this.select || !this.opts.closeOnSelect) this.postprocessResults(data, false, this.opts.closeOnSelect===true);
+
+            if (this.opts.closeOnSelect) {
+                this.close();
+                this.search.width(10);
+            } else {
+                if (this.countSelectableResults()>0) {
+                    this.search.width(10);
+                    this.resizeSearch();
+                    if (this.getMaximumSelectionSize() > 0 && this.val().length >= this.getMaximumSelectionSize()) {
+                        // if we reached max selection size repaint the results so choices
+                        // are replaced with the max selection reached message
+                        this.updateResults(true);
+                    }
+                    this.positionDropdown();
+                } else {
+                    // if nothing left to select close
+                    this.close();
+                    this.search.width(10);
+                }
+            }
+
+            // since its not possible to select an element that has already been
+            // added we do not need to check if this is a new element before firing change
+            this.triggerChange({ added: data });
+
+            if (!options || !options.noFocus)
+                this.focusSearch();
         }
+        /* eslint-enable */
     };
 
     // Override methods of AbstractSelect2 class
@@ -182,6 +246,8 @@ define(function(require) {
         var close = prototype.close;
         var prepareOpts = prototype.prepareOpts;
         var init = prototype.init;
+        var destroy = prototype.destroy;
+
         prototype.prepareOpts = function(options) {
             if (options.collapsibleResults) {
                 options.populateResults = populateCollapsibleResults;
@@ -204,7 +270,10 @@ define(function(require) {
             positionDropdown.apply(this, arguments);
             var dialogIsBelow = $container.hasClass('select2-dropdown-open') &&
                 !$container.hasClass('select2-drop-above');
-            $container.parent().toggleClass(select2DropBelowClassName, dialogIsBelow);
+            if ($container.parent().hasClass(select2DropBelowClassName) !== dialogIsBelow) {
+                $container.parent().toggleClass(select2DropBelowClassName, dialogIsBelow);
+                this.opts.element.trigger('select2:dialogReposition');
+            }
         };
 
         prototype.close = function() {
@@ -225,6 +294,15 @@ define(function(require) {
             this.dropdown.prepend(this.breadcrumbs);
         };
 
+        prototype.destroy = function() {
+            if (this.propertyObserver) {
+                this.propertyObserver.disconnect();
+                delete this.propertyObserver;
+                this.propertyObserver = null;
+            }
+            destroy.call(this);
+        };
+
         prototype.updateBreadcrumbs = function() {
             var breadcrumbs = this.breadcrumbs;
             var opts = this.opts;
@@ -232,8 +310,8 @@ define(function(require) {
             if ($.isFunction(opts.formatBreadcrumbItem) && $.isFunction(opts.breadcrumbs)) {
                 var items = opts.breadcrumbs(this.pagePath);
                 $.each(items, function(i, item) {
-                    var $item = opts.formatBreadcrumbItem(item, {index: i, length: items.length});
-                    $item = $('<li class="select2-breadcrumb-item">' + $item + '</li>');
+                    var itemHTML = opts.formatBreadcrumbItem(item, {index: i, length: items.length});
+                    var $item = $('<li class="select2-breadcrumb-item">' + itemHTML + '</li>');
                     $item.data('select2-data', {pagePath: item.pagePath});
                     breadcrumbs.append($item);
                 });
@@ -247,7 +325,6 @@ define(function(require) {
             }
             original.apply(this, _.rest(arguments));
         });
-
     }(Select2['class'].abstract.prototype));
 
     (function(prototype) {
@@ -332,7 +409,6 @@ define(function(require) {
         prototype.moveHighlight = _.wrap(prototype.moveHighlight, overrideMethods.moveHighlight);
         prototype.initContainer = _.wrap(prototype.initContainer, overrideMethods.initContainer);
         prototype.tokenize = _.wrap(prototype.tokenize, overrideMethods.tokenize);
-
     }(Select2['class'].single.prototype));
 
     // Override methods of MultiSelect2 class
@@ -413,13 +489,13 @@ define(function(require) {
         prototype.addSelectedChoiceOptimized = function(data, val) {
             var enableChoice = !data.locked;
             var enabledItem = $(
-                    '<li class=\'select2-search-choice\'>' +
-                    '    <div></div>' +
-                    '    <a href=\'#\' onclick=\'return false;\' ' +
-                    'class=\'select2-search-choice-close\' tabindex=\'-1\'></a>' +
-                    '</li>');
+                '<li class=\'select2-search-choice\'>' +
+                    '<div></div>' +
+                    '<a href=\'#\' onclick=\'return false;\' ' +
+                        'class=\'select2-search-choice-close\' tabindex=\'-1\'></a>' +
+                '</li>');
             var disabledItem = $(
-                    '<li class=\'select2-search-choice select2-locked\'>' +
+                '<li class=\'select2-search-choice select2-locked\'>' +
                     '<div></div>' +
                     '</li>');
             var choice = enableChoice ? enabledItem : disabledItem;
@@ -430,38 +506,37 @@ define(function(require) {
             var formatted;
 
             formatted = this.opts.formatSelection(data, choice.find('div'), this.opts.escapeMarkup);
-            /* jshint ignore:start */
-            if (formatted != undefined) {
+            if (formatted !== undefined) {
                 choice.find('div').replaceWith('<div>' + formatted + '</div>');
             }
             var cssClass = this.opts.formatSelectionCssClass(data, choice.find('div'));
-            if (cssClass != undefined) {
+            if (cssClass !== undefined) {
                 choice.addClass(cssClass);
             }
-            /* jshint ignore:end */
 
             if (enableChoice) {
                 choice.find('.select2-search-choice-close')
                     .on('mousedown', killEvent)
                     .on('click dblclick', this.bind(function(e) {
-                    if (!this.isInterfaceEnabled()) {
-                        return;
-                    }
+                        if (!this.isInterfaceEnabled()) {
+                            return;
+                        }
 
-                    $(e.target).closest('.select2-search-choice').fadeOut('fast', this.bind(function() {
-                        this.unselect($(e.target));
-                        this.selection.find('.select2-search-choice-focus').removeClass('select2-search-choice-focus');
-                        this.close();
-                        this.focusSearch();
-                    })).dequeue();
-                    killEvent(e);
-                })).on('focus', this.bind(function() {
-                    if (!this.isInterfaceEnabled()) {
-                        return;
-                    }
-                    this.container.addClass('select2-container-active');
-                    this.dropdown.addClass('select2-drop-active');
-                }));
+                        $(e.target).closest('.select2-search-choice').fadeOut('fast', this.bind(function() {
+                            this.unselect($(e.target));
+                            this.selection.find('.select2-search-choice-focus')
+                                .removeClass('select2-search-choice-focus');
+                            this.close();
+                            this.focusSearch();
+                        })).dequeue();
+                        killEvent(e);
+                    })).on('focus', this.bind(function() {
+                        if (!this.isInterfaceEnabled()) {
+                            return;
+                        }
+                        this.container.addClass('select2-container-active');
+                        this.dropdown.addClass('select2-drop-active');
+                    }));
             }
 
             choice.data('select2-data', data);
@@ -474,5 +549,6 @@ define(function(require) {
 
         prototype.moveHighlight = _.wrap(prototype.moveHighlight, overrideMethods.moveHighlight);
 
+        prototype.onSelect = overrideMethods.onSelect;
     }(Select2['class'].multi.prototype));
 });

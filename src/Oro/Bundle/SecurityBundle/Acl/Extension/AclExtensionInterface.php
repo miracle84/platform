@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\SecurityBundle\Acl\Extension;
 
+use Oro\Bundle\SecurityBundle\Acl\Exception\InvalidAclMaskException;
+use Oro\Bundle\SecurityBundle\Acl\Permission\MaskBuilder;
 use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Oro\Bundle\SecurityBundle\Acl\Permission\MaskBuilder;
-use Oro\Bundle\SecurityBundle\Acl\Exception\InvalidAclMaskException;
 
 /**
  * A contract all ACL extensions must implement.
@@ -183,11 +183,12 @@ interface AclExtensionInterface
      * Gets all permissions allowed for a domain object represented by te given object identity.
      *
      * @param ObjectIdentity $oid
-     * @param string|null    $fieldName
-     *
+     * @param string|null $fieldName
+     * @param string|null $aclGroup
+
      * @return string[]
      */
-    public function getAllowedPermissions(ObjectIdentity $oid, $fieldName = null);
+    public function getAllowedPermissions(ObjectIdentity $oid, $fieldName = null, $aclGroup = null);
 
     /**
      * Gets default permission.

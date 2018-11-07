@@ -3,32 +3,28 @@
 namespace Oro\Bundle\UserBundle\Validator;
 
 use Doctrine\Common\Util\ClassUtils;
-
+use Oro\Bundle\EntityBundle\Entity\Manager\Field\CustomGridFieldValidatorInterface;
+use Oro\Bundle\EntityBundle\Exception\IncorrectEntityException;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\PropertyAccess\Exception\InvalidArgumentException;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
-use Symfony\Component\PropertyAccess\Exception\InvalidArgumentException;
-
-use Oro\Bundle\EntityBundle\Entity\Manager\Field\CustomGridFieldValidatorInterface;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\EntityBundle\Exception\IncorrectEntityException;
 
 class UserGridFieldValidator implements CustomGridFieldValidatorInterface
 {
     /** @var PropertyAccessor */
     protected $accessor;
 
-    /** @var  SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * UserFieldValidator constructor.
-     *
-     * @param SecurityFacade $securityFacade
+     * @param TokenAccessorInterface $tokenAccessor
      */
-    public function __construct(SecurityFacade $securityFacade)
+    public function __construct(TokenAccessorInterface $tokenAccessor)
     {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -45,7 +41,7 @@ class UserGridFieldValidator implements CustomGridFieldValidatorInterface
             );
         }
 
-        $currentUser = $this->securityFacade->getLoggedUser();
+        $currentUser = $this->tokenAccessor->getUser();
 
         if ($this->hasField($entity, $fieldName)
             && in_array($fieldName, $this->getCurrentUserFieldBlockList(), true)

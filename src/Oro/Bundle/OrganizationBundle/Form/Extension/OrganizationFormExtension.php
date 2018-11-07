@@ -2,6 +2,12 @@
 
 namespace Oro\Bundle\OrganizationBundle\Form\Extension;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Common\Util\ClassUtils;
+use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Oro\Component\DependencyInjection\ServiceLink;
 use Symfony\Component\Form\AbstractTypeExtension;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
@@ -9,50 +15,34 @@ use Symfony\Component\Form\FormEvents;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\Common\Util\ClassUtils;
-
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
-use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
-
 class OrganizationFormExtension extends AbstractTypeExtension
 {
     use FormExtendedTypeTrait;
-    
-    /**
-     * @var ManagerRegistry
-     */
+
+    /** @var ManagerRegistry */
     protected $registry;
 
-    /**
-     * @var ServiceLink
-     */
-    protected $securityFacadeLink;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
-    /**
-     * @var ServiceLink
-     */
+    /** @var ServiceLink */
     protected $metadataProviderLink;
 
-    /**
-     * @var PropertyAccessor
-     */
+    /** @var PropertyAccessor */
     protected $propertyAccessor;
 
     /**
-     * @param ManagerRegistry $registry
-     * @param ServiceLink $securityFacadeLink
-     * @param ServiceLink $metadataProviderLink
+     * @param ManagerRegistry        $registry
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param ServiceLink            $metadataProviderLink
      */
     public function __construct(
         ManagerRegistry $registry,
-        ServiceLink $securityFacadeLink,
+        TokenAccessorInterface $tokenAccessor,
         ServiceLink $metadataProviderLink
     ) {
         $this->registry = $registry;
-        $this->securityFacadeLink = $securityFacadeLink;
+        $this->tokenAccessor = $tokenAccessor;
         $this->metadataProviderLink = $metadataProviderLink;
     }
 
@@ -88,10 +78,10 @@ class OrganizationFormExtension extends AbstractTypeExtension
      */
     protected function updateOrganization($entity)
     {
-        /** @var OwnershipMetadataProvider $metadataProvider */
+        /** @var OwnershipMetadataProviderInterface $metadataProvider */
         $metadataProvider = $this->metadataProviderLink->getService();
 
-        $organizationField = $metadataProvider->getMetadata(ClassUtils::getClass($entity))->getGlobalOwnerFieldName();
+        $organizationField = $metadataProvider->getMetadata(ClassUtils::getClass($entity))->getOrganizationFieldName();
         if (!$organizationField) {
             return;
         }
@@ -101,10 +91,8 @@ class OrganizationFormExtension extends AbstractTypeExtension
             return;
         }
 
-        /** @var SecurityFacade $securityFacade */
-        $securityFacade = $this->securityFacadeLink->getService();
-        $organization = $securityFacade->getOrganization();
-        if (!$organization) {
+        $organization = $this->tokenAccessor->getOrganization();
+        if (null === $organization) {
             return;
         }
 

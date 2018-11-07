@@ -3,23 +3,24 @@
 namespace Oro\Bundle\AddressBundle\Form\Handler;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
 use Oro\Bundle\AddressBundle\Entity\AbstractAddress;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class AddressHandler
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var ObjectManager
@@ -29,13 +30,13 @@ class AddressHandler
     /**
      *
      * @param FormInterface $form
-     * @param Request       $request
+     * @param RequestStack  $requestStack
      * @param ObjectManager $manager
      */
-    public function __construct(FormInterface $form, Request $request, ObjectManager $manager)
+    public function __construct(FormInterface $form, RequestStack $requestStack, ObjectManager $manager)
     {
-        $this->form    = $form;
-        $this->request = $request;
+        $this->form = $form;
+        $this->requestStack = $requestStack;
         $this->manager = $manager;
     }
 
@@ -49,8 +50,9 @@ class AddressHandler
     {
         $this->form->setData($entity);
 
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
             if ($this->form->isValid()) {
                 $this->onSuccess($entity);
 

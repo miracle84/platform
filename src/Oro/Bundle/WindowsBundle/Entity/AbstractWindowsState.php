@@ -3,14 +3,11 @@
 namespace Oro\Bundle\WindowsBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
-use Symfony\Component\Security\Core\User\UserInterface;
-
-use Oro\Bundle\EntityBundle\EntityProperty\CreatedAtAwareTrait;
-use Oro\Bundle\EntityBundle\EntityProperty\UpdatedAtAwareTrait;
-
 use Oro\Bundle\EntityBundle\EntityProperty\CreatedAtAwareInterface;
+use Oro\Bundle\EntityBundle\EntityProperty\CreatedAtAwareTrait;
 use Oro\Bundle\EntityBundle\EntityProperty\UpdatedAtAwareInterface;
+use Oro\Bundle\EntityBundle\EntityProperty\UpdatedAtAwareTrait;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * Window state container Entity
@@ -74,17 +71,6 @@ abstract class AbstractWindowsState implements CreatedAtAwareInterface, UpdatedA
     public function getData()
     {
         return $this->data;
-    }
-
-    /**
-     * Get JSON data
-     *
-     * @return string
-     * @deprecated use getData method instead
-     */
-    public function getJsonData()
-    {
-        return json_encode($this->data);
     }
 
     /**

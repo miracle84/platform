@@ -3,25 +3,23 @@
 namespace Oro\Bundle\DataGridBundle\Datasource\Orm;
 
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
-use Oro\Component\DoctrineUtils\ORM\QueryHintResolver;
-
-use Oro\Bundle\DataGridBundle\Datasource\Orm\Configs\ConfigProcessorInterface;
+use Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\Configs\ConfigProcessorInterface;
 use Oro\Bundle\DataGridBundle\Datasource\ParameterBinderAwareInterface;
 use Oro\Bundle\DataGridBundle\Datasource\ParameterBinderInterface;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
-
 use Oro\Bundle\DataGridBundle\Event\OrmResultAfter;
 use Oro\Bundle\DataGridBundle\Event\OrmResultBefore;
 use Oro\Bundle\DataGridBundle\Event\OrmResultBeforeQuery;
-
 use Oro\Bundle\DataGridBundle\Exception\BadMethodCallException;
-use Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface;
+use Oro\Component\DoctrineUtils\ORM\QueryHintResolver;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * Allows to create datagrids from ORM queries.
+ */
 class OrmDatasource implements DatasourceInterface, ParameterBinderAwareInterface
 {
     const TYPE = 'orm';
@@ -189,13 +187,10 @@ class OrmDatasource implements DatasourceInterface, ParameterBinderAwareInterfac
      */
     protected function processConfigs(array $config)
     {
-        $this->qb        = $this->configProcessor->processQuery($config);
-        $this->countQb   = $this->configProcessor->processCountQuery($config);
-        if (isset($config['hints'])) {
-            $this->queryHints = $config['hints'];
-        }
-        if (isset($config['count_hints'])) {
-            $this->countQueryHints = $config['count_hints'];
-        }
+        $this->qb = $this->configProcessor->processQuery($config);
+        $this->countQb = $this->configProcessor->processCountQuery($config);
+
+        $this->queryHints = $config['hints'] ?? [];
+        $this->countQueryHints = $config['count_hints'] ?? $this->queryHints;
     }
 }

@@ -2,16 +2,14 @@
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-
 use Oro\Bundle\EmailBundle\Async\PurgeEmailAttachmentsMessageProcessor;
-
 use Oro\Bundle\EmailBundle\Async\Topics;
 use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -77,7 +75,7 @@ class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit_Framework_TestC
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ConfigManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|ConfigManager
      */
     private function createConfigManagerMock()
     {
@@ -85,7 +83,7 @@ class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit_Framework_TestC
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|RegistryInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|RegistryInterface
      */
     private function createRegistryInterfaceMock()
     {
@@ -94,7 +92,7 @@ class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit_Framework_TestC
 
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -103,7 +101,7 @@ class PurgeEmailAttachmentsMessageProcessorTest extends \PHPUnit_Framework_TestC
 
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|MessageProducerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|MessageProducerInterface
      */
     private function createMessageProducerMock()
     {

@@ -2,10 +2,12 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource;
 
-use Oro\Bundle\ApiBundle\Processor\RequestActionProcessor;
 use Oro\Bundle\ApiBundle\Processor\Subresource\DeleteRelationship\DeleteRelationshipContext;
 
-class DeleteRelationshipProcessor extends RequestActionProcessor
+/**
+ * The main processor for "delete_relationship" action.
+ */
+class DeleteRelationshipProcessor extends SubresourceProcessor
 {
     /**
      * {@inheritdoc}

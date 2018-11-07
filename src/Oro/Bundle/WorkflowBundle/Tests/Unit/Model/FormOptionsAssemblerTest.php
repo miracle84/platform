@@ -2,22 +2,20 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Model;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\WorkflowBundle\Model\FormOptionsAssembler;
-
 use Oro\Component\Action\Action\Configurable;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class FormOptionsAssemblerTest extends \PHPUnit_Framework_TestCase
+class FormOptionsAssemblerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $actionFactory;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $configurationPass;
 

@@ -6,7 +6,7 @@ use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
 use Oro\Bundle\DataGridBundle\Extension\GridParams\GridParamsExtension;
 
-class EntityPaginationExtensionTest extends \PHPUnit_Framework_TestCase
+class GridParamsExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var GridParamsExtension
@@ -16,6 +16,7 @@ class EntityPaginationExtensionTest extends \PHPUnit_Framework_TestCase
     protected function setUp()
     {
         $this->extension  = new GridParamsExtension();
+        $this->extension->setParameters(new ParameterBag());
     }
 
     /**

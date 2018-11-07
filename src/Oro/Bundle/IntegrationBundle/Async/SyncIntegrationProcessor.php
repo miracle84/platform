@@ -1,15 +1,14 @@
 <?php
+
 namespace Oro\Bundle\IntegrationBundle\Async;
 
 use Doctrine\ORM\EntityManagerInterface;
-
+use Oro\Bundle\IntegrationBundle\Authentication\Token\IntegrationTokenAwareTrait;
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
-
+use Oro\Bundle\IntegrationBundle\Provider\LoggerStrategyAwareInterface;
 use Oro\Bundle\IntegrationBundle\Provider\SyncProcessorRegistry;
-use Oro\Bundle\SecurityBundle\Authentication\Token\ConsoleToken;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
-
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
@@ -20,19 +19,18 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
+/**
+ * Async processor to run integration processor
+ */
 class SyncIntegrationProcessor implements MessageProcessorInterface, ContainerAwareInterface, TopicSubscriberInterface
 {
     use ContainerAwareTrait;
+    use IntegrationTokenAwareTrait;
 
     /**
      * @var RegistryInterface
      */
     private $doctrine;
-    
-    /**
-     * @var TokenStorageInterface
-     */
-    private $tokenStorage;
     
     /**
      * @var SyncProcessorRegistry
@@ -92,7 +90,8 @@ class SyncIntegrationProcessor implements MessageProcessorInterface, ContainerAw
         ], $body);
 
         if (! $body['integration_id']) {
-            $this->logger->critical('Invalid message: integration_id is empty', ['message' => $message]);
+            $this->logger->critical('Invalid message: integration_id is empty');
+
             return self::REJECT;
         }
 
@@ -102,18 +101,14 @@ class SyncIntegrationProcessor implements MessageProcessorInterface, ContainerAw
         /** @var Integration $integration */
         $integration = $em->find(Integration::class, $body['integration_id']);
         if (! $integration) {
-            $this->logger->error(
-                sprintf('Integration with id "%s" is not found', $body['integration_id']),
-                ['message' => $message]
-            );
+            $this->logger->error(sprintf('Integration with id "%s" is not found', $body['integration_id']));
+
             return self::REJECT;
         }
 
         if (! $integration->isEnabled()) {
-            $this->logger->error(
-                sprintf('Integration with id "%s" is not enabled', $body['integration_id']),
-                ['message' => $message]
-            );
+            $this->logger->error(sprintf('Integration with id "%s" is not enabled', $body['integration_id']));
+
             return self::REJECT;
         }
 
@@ -121,21 +116,21 @@ class SyncIntegrationProcessor implements MessageProcessorInterface, ContainerAw
         $ownerId = $message->getMessageId();
 
         if (! $ownerId) {
-            $this->logger->critical(
-                'Internal error: ownerId is empty',
-                ['message' => $message]
-            );
+            $this->logger->critical('Internal error: ownerId is empty');
+
             return self::REJECT;
         }
 
         $em->getConnection()->getConfiguration()->setSQLLogger(null);
 
-        $this->updateToken($integration);
+        $this->setTemporaryIntegrationToken($integration);
         $integration->getTransport()->getSettingsBag()->set('page_size', $body['transport_batch_size']);
 
         $result = $this->jobRunner->runUnique($ownerId, $jobName, function () use ($integration, $body) {
             $processor = $this->syncProcessorRegistry->getProcessorForIntegration($integration);
-            $processor->getLoggerStrategy()->setLogger($this->logger);
+            if ($processor instanceof LoggerStrategyAwareInterface) {
+                $processor->getLoggerStrategy()->setLogger($this->logger);
+            }
 
             return $processor->process(
                 $integration,
@@ -145,19 +140,5 @@ class SyncIntegrationProcessor implements MessageProcessorInterface, ContainerAw
         });
 
         return $result ? self::ACK : self::REJECT;
-    }
-
-    /**
-     * @param Integration $integration
-     */
-    protected function updateToken(Integration $integration)
-    {
-        $token = $this->tokenStorage->getToken();
-        if (false == $token) {
-            $token = new ConsoleToken();
-            $this->tokenStorage->setToken($token);
-        }
-
-        $token->setOrganizationContext($integration->getOrganization());
     }
 }

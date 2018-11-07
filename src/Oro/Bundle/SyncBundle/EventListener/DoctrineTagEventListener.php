@@ -2,34 +2,60 @@
 
 namespace Oro\Bundle\SyncBundle\EventListener;
 
-use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\Event\OnFlushEventArgs;
+use Doctrine\ORM\Event\PostFlushEventArgs;
+use Oro\Bundle\SyncBundle\Content\DataUpdateTopicSender;
+use Oro\Bundle\SyncBundle\Content\TagGeneratorInterface;
 
-use Oro\Bundle\SyncBundle\Content\TopicSender;
-
+/**
+ * Collects changes in entities and sends tags to websocket server using DataUpdateTopicSender.
+ */
 class DoctrineTagEventListener
 {
-    /** @var bool */
-    protected $isApplicationInstalled;
-
-    /** @var array */
-    protected $skipTrackingFor = [];
-
-    /** @var TopicSender */
-    protected $sender;
-
-    /** @var array */
-    protected $collectedTags = [];
+    /**
+     * @var bool
+     */
+    private $isApplicationInstalled;
 
     /**
-     * @param TopicSender      $sender
-     * @param bool|string|null $isApplicationInstalled
+     * @var array
      */
-    public function __construct(TopicSender $sender, $isApplicationInstalled)
-    {
-        $this->sender                 = $sender;
+    private $skipTrackingFor = [];
+
+    /**
+     * @var DataUpdateTopicSender
+     */
+    private $dataUpdateTopicSender;
+
+    /**
+     * @var array
+     */
+    private $collectedTags = [];
+
+    /**
+     * @var array
+     */
+    private $processedEntities = [];
+
+    /**
+     * @var TagGeneratorInterface
+     */
+    private $tagGenerator;
+
+    /**
+     * @param DataUpdateTopicSender $dataUpdateTopicSender
+     * @param TagGeneratorInterface $tagGenerator
+     * @param bool|string|null      $isApplicationInstalled
+     */
+    public function __construct(
+        DataUpdateTopicSender $dataUpdateTopicSender,
+        TagGeneratorInterface $tagGenerator,
+        $isApplicationInstalled
+    ) {
+        $this->dataUpdateTopicSender = $dataUpdateTopicSender;
         $this->isApplicationInstalled = !empty($isApplicationInstalled);
+        $this->tagGenerator = $tagGenerator;
     }
 
     /**
@@ -44,38 +70,23 @@ class DoctrineTagEventListener
             return;
         }
 
-        $em  = $event->getEntityManager();
-        $uow = $em->getUnitOfWork();
+        $uow = $event->getEntityManager()->getUnitOfWork();
 
-        $entities = array_merge(
-            $uow->getScheduledEntityDeletions(),
-            $uow->getScheduledEntityInsertions(),
-            $uow->getScheduledEntityUpdates()
-        );
-
-        $collections = array_merge($uow->getScheduledCollectionUpdates(), $uow->getScheduledCollectionDeletions());
-        foreach ($collections as $collection) {
-            $owner = $collection->getOwner();
-            if (!in_array($owner, $entities, true)) {
-                $entities[] = $owner;
-            }
+        foreach ($uow->getScheduledEntityInsertions() as $entity) {
+            $this->addEntityTags($entity, true);
         }
-
-        $generator = $this->sender->getGenerator();
-        foreach ($entities as $entity) {
-            if (!isset($this->skipTrackingFor[ClassUtils::getClass($entity)])) {
-                // invalidate collection view pages only when entity has been added or removed
-                $includeCollectionTag = $uow->isScheduledForInsert($entity)
-                    || $uow->isScheduledForDelete($entity);
-
-                $this->collectedTags = array_merge(
-                    $this->collectedTags,
-                    $generator->generate($entity, $includeCollectionTag)
-                );
-            }
+        foreach ($uow->getScheduledEntityDeletions() as $entity) {
+            $this->addEntityTags($entity, true);
         }
-
-        $this->collectedTags = array_unique($this->collectedTags);
+        foreach ($uow->getScheduledEntityUpdates() as $entity) {
+            $this->addEntityTags($entity);
+        }
+        foreach ($uow->getScheduledCollectionDeletions() as $collection) {
+            $this->addEntityTags($collection->getOwner());
+        }
+        foreach ($uow->getScheduledCollectionUpdates() as $collection) {
+            $this->addEntityTags($collection->getOwner());
+        }
     }
 
     /**
@@ -85,8 +96,9 @@ class DoctrineTagEventListener
      */
     public function postFlush(PostFlushEventArgs $event)
     {
-        $this->sender->send($this->collectedTags);
+        $this->dataUpdateTopicSender->send(array_unique($this->collectedTags));
         $this->collectedTags = [];
+        $this->processedEntities = [];
     }
 
     /**
@@ -106,5 +118,23 @@ class DoctrineTagEventListener
         }
 
         $this->skipTrackingFor[$className] = true;
+    }
+
+    /**
+     * @param object $entity
+     * @param bool   $includeCollectionTag
+     */
+    private function addEntityTags($entity, $includeCollectionTag = false)
+    {
+        $hash = spl_object_hash($entity);
+        if (!isset($this->processedEntities[$hash])
+            && !isset($this->skipTrackingFor[ClassUtils::getClass($entity)])
+        ) {
+            $this->collectedTags = array_merge(
+                $this->collectedTags,
+                $this->tagGenerator->generate($entity, $includeCollectionTag)
+            );
+            $this->processedEntities[$hash] = true;
+        }
     }
 }

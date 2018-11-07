@@ -3,6 +3,7 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\EntityExtendBundle\Form\Type\EnumSelectType;
+use Oro\Bundle\TranslationBundle\Form\Type\Select2TranslatableEntityType;
 
 class EnumSelectTypeTest extends AbstractEnumTypeTestCase
 {
@@ -19,19 +20,10 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
     public function testGetParent()
     {
         $this->assertEquals(
-            'genemu_jqueryselect2_translatable_entity',
+            Select2TranslatableEntityType::class,
             $this->type->getParent()
         );
     }
-
-    public function testGetName()
-    {
-        $this->assertEquals(
-            'oro_enum_select',
-            $this->type->getName()
-        );
-    }
-
 
     public function testBuildForm()
     {
@@ -69,13 +61,17 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
     }
 
     /**
-     * @dataProvider setDefaultOptionsProvider
+     * @dataProvider configureOptionsProvider
+     * @param boolean $multiple
+     * @param boolean $expanded
+     * @param mixed $expectedEmptyValue
+     * @param mixed $expectedEmptyData
      */
-    public function testSetDefaultOptions($multiple, $expanded, $expectedEmptyValue, $expectedEmptyData)
+    public function testConfigureOptions($multiple, $expanded, $expectedEmptyValue, $expectedEmptyData)
     {
         $resolver = $this->getOptionsResolver();
 
-        $resolvedOptions = $this->doTestSetDefaultOptions(
+        $resolvedOptions = $this->doTestConfigureOptions(
             $this->type,
             $resolver,
             'test_enum',
@@ -85,7 +81,7 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
 
         $this->assertEquals(
             [
-                'empty_value' => $expectedEmptyValue,
+                'placeholder' => $expectedEmptyValue,
                 'empty_data'  => $expectedEmptyData,
                 'configs'     => [
                     'allowClear'  => true,
@@ -98,7 +94,10 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
         );
     }
 
-    public function setDefaultOptionsProvider()
+    /**
+     * @return array
+     */
+    public function configureOptionsProvider()
     {
         return [
             [false, false, '', null],
@@ -108,13 +107,13 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
         ];
     }
 
-    public function testSetDefaultOptionsWithOverrideConfigs()
+    public function testConfigureOptionsWithOverrideConfigs()
     {
         $newPlaceholder = 'Test Placeholder';
 
         $resolver = $this->getOptionsResolver();
 
-        $resolvedOptions = $this->doTestSetDefaultOptions(
+        $resolvedOptions = $this->doTestConfigureOptions(
             $this->type,
             $resolver,
             'test_enum',
@@ -129,7 +128,7 @@ class EnumSelectTypeTest extends AbstractEnumTypeTestCase
 
         $this->assertEquals(
             [
-                'empty_value' => null,
+                'placeholder' => null,
                 'empty_data'  => '',
                 'configs'     => [
                     'allowClear'  => true,

@@ -2,13 +2,11 @@
 
 namespace Oro\Bundle\NotificationBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Validator\Context\ExecutionContextInterface;
-
-use Oro\Bundle\UserBundle\Entity\User;
+use Doctrine\ORM\Mapping as ORM;
 use Oro\Bundle\UserBundle\Entity\Group;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * EmailNotification
@@ -54,10 +52,16 @@ class RecipientList
     protected $email;
 
     /**
-     * @var boolean
-     * @ORM\Column(name="owner", type="boolean", nullable=true)
+     * @var array
+     * @ORM\Column(name="additional_email_associations", type="simple_array", nullable=true)
      */
-    protected $owner;
+    protected $additionalEmailAssociations = [];
+
+    /**
+     * @var array
+     * @ORM\Column(name="entity_emails", type="simple_array", nullable=true)
+     */
+    protected $entityEmails = [];
 
     public function __construct()
     {
@@ -77,10 +81,14 @@ class RecipientList
      * Setter for email
      *
      * @param string $email
+     *
+     * @return $this
      */
     public function setEmail($email)
     {
         $this->email = $email;
+
+        return $this;
     }
 
     /**
@@ -174,23 +182,19 @@ class RecipientList
     }
 
     /**
-     * Setter for owner field
-     *
-     * @param boolean $owner
+     * @return array
      */
-    public function setOwner($owner)
+    public function getAdditionalEmailAssociations()
     {
-        $this->owner = $owner;
+        return $this->additionalEmailAssociations;
     }
 
     /**
-     * Getter for owner field
-     *
-     * @return boolean
+     * @param array $additionalEmailAssociations
      */
-    public function getOwner()
+    public function setAdditionalEmailAssociations($additionalEmailAssociations)
     {
-        return $this->owner;
+        $this->additionalEmailAssociations = $additionalEmailAssociations;
     }
 
     /**
@@ -228,10 +232,6 @@ class RecipientList
             $results[] = sprintf('Custom email: <%s>', $this->getEmail());
         }
 
-        if ($this->getOwner()) {
-            $results[] = 'Entity owner';
-        }
-
         return implode(', ', $results);
     }
 
@@ -247,14 +247,29 @@ class RecipientList
             $this->getGroups()->isEmpty()
             && $this->getUsers()->isEmpty()
             && $this->getEmail() == null
-            && $this->getOwner() == null;
+            && $this->getEntityEmails() === [];
 
         if ($notValid) {
             $propertyPath = $context->getPropertyPath() . '.recipientList';
-            $context->addViolationAt(
-                $propertyPath,
-                'oro.notification.validators.recipient_list.empty.message'
-            );
+            $context->buildViolation('oro.notification.validators.recipient_list.empty.message')
+                ->atPath($propertyPath)
+                ->addViolation();
         }
+    }
+
+    /**
+     * @return array
+     */
+    public function getEntityEmails()
+    {
+        return $this->entityEmails;
+    }
+
+    /**
+     * @param array $entityEmails
+     */
+    public function setEntityEmails(array $entityEmails)
+    {
+        $this->entityEmails = $entityEmails;
     }
 }

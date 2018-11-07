@@ -2,20 +2,14 @@
 
 namespace Oro\Bundle\ActivityListBundle\Entity\Manager;
 
-use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Security\Core\Util\ClassUtils;
-
+use Doctrine\DBAL\Connection;
 use Oro\Bundle\ActivityBundle\EntityConfig\ActivityScope;
 use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
 use Oro\Bundle\ActivityListBundle\Entity\Repository\ActivityListRepository;
 use Oro\Bundle\ActivityListBundle\Event\ActivityListPreQueryBuildEvent;
-use Oro\Bundle\ActivityListBundle\Filter\ActivityListFilterHelper;
-use Oro\Bundle\ActivityListBundle\Helper\ActivityInheritanceTargetsHelper;
-use Oro\Bundle\ActivityListBundle\Helper\ActivityListAclCriteriaHelper;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListGroupProviderInterface;
 use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
+use Oro\Bundle\ActivityListBundle\Provider\ActivityListIdProvider;
 use Oro\Bundle\ActivityListBundle\Tools\ActivityListEntityConfigDumperExtension;
 use Oro\Bundle\CommentBundle\Entity\Manager\CommentApiManager;
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
@@ -23,21 +17,20 @@ use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureToggleableInterface;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowDataHelper;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 /**
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * A set of methods to simplify retrieving activity list items.
  */
 class ActivityListManager
 {
-    /**
-     * During 'getListDataIds' will retrieve more ids due to duplication possibility.
-     */
-    const ACTIVITY_LIST_PAGE_SIZE_MULTIPLIER = 3;
-
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /** @var EntityNameResolver */
     protected $entityNameResolver;
@@ -48,17 +41,14 @@ class ActivityListManager
     /** @var ActivityListChainProvider */
     protected $chainProvider;
 
-    /** @var ActivityListFilterHelper */
-    protected $activityListFilterHelper;
+    /** @var ActivityListIdProvider */
+    protected $activityListIdProvider;
+
+    /** @var CommentApiManager */
+    protected $commentManager;
 
     /** @var DoctrineHelper */
     protected $doctrineHelper;
-
-    /** @var ActivityListAclCriteriaHelper */
-    protected $activityListAclHelper;
-
-    /** @var ActivityInheritanceTargetsHelper */
-    protected $activityInheritanceTargetsHelper;
 
     /** @var EventDispatcherInterface */
     protected $eventDispatcher;
@@ -66,44 +56,44 @@ class ActivityListManager
     /** @var WorkflowDataHelper */
     protected $workflowHelper;
 
+    /** @var HtmlTagHelper */
+    protected $htmlTagHelper;
+
     /**
-     * @param SecurityFacade                   $securityFacade
-     * @param EntityNameResolver               $entityNameResolver
-     * @param ConfigManager                    $config
-     * @param ActivityListChainProvider        $provider
-     * @param ActivityListFilterHelper         $activityListFilterHelper
-     * @param CommentApiManager                $commentManager
-     * @param DoctrineHelper                   $doctrineHelper
-     * @param ActivityListAclCriteriaHelper    $aclHelper
-     * @param ActivityInheritanceTargetsHelper $activityInheritanceTargetsHelper
-     * @param EventDispatcherInterface         $eventDispatcher
-     * @param WorkflowDataHelper               $workflowHelper
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param EntityNameResolver            $entityNameResolver
+     * @param ConfigManager                 $config
+     * @param ActivityListChainProvider     $provider
+     * @param ActivityListIdProvider        $activityListIdProvider
+     * @param CommentApiManager             $commentManager
+     * @param DoctrineHelper                $doctrineHelper
+     * @param EventDispatcherInterface      $eventDispatcher
+     * @param WorkflowDataHelper            $workflowHelper
+     * @param HtmlTagHelper                 $htmlTagHelper
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
         EntityNameResolver $entityNameResolver,
         ConfigManager $config,
         ActivityListChainProvider $provider,
-        ActivityListFilterHelper $activityListFilterHelper,
+        ActivityListIdProvider $activityListIdProvider,
         CommentApiManager $commentManager,
         DoctrineHelper $doctrineHelper,
-        ActivityListAclCriteriaHelper $aclHelper,
-        ActivityInheritanceTargetsHelper $activityInheritanceTargetsHelper,
         EventDispatcherInterface $eventDispatcher,
-        WorkflowDataHelper $workflowHelper
+        WorkflowDataHelper $workflowHelper,
+        HtmlTagHelper $htmlTagHelper
     ) {
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
         $this->entityNameResolver = $entityNameResolver;
         $this->config = $config;
         $this->chainProvider = $provider;
-        $this->activityListFilterHelper = $activityListFilterHelper;
+        $this->activityListIdProvider = $activityListIdProvider;
         $this->commentManager = $commentManager;
         $this->doctrineHelper = $doctrineHelper;
-        $this->activityListAclHelper = $aclHelper;
-        $this->activityInheritanceTargetsHelper = $activityInheritanceTargetsHelper;
         $this->eventDispatcher = $eventDispatcher;
         $this->workflowHelper = $workflowHelper;
+        $this->htmlTagHelper = $htmlTagHelper;
     }
 
     /**
@@ -124,20 +114,24 @@ class ActivityListManager
      */
     public function getListData($entityClass, $entityId, $filter, $pageFilter = [])
     {
-        $qb = $this->getBaseQB($entityClass, $entityId);
-
         $result = [];
 
-        $ids = $this->getListDataIds(clone $qb, $entityClass, $entityId, $filter, $pageFilter);
-        if ($ids) {
-            $qb->setParameters([]);
-            $qb->resetDQLParts(['join', 'where']);
-            $qb->where($qb->expr()->in('activity.id', implode(',', $ids)));
-            $qb->orderBy(
-                'activity.' . $this->config->get('oro_activity_list.sorting_field'),
-                $this->config->get('oro_activity_list.sorting_direction')
-            );
-            $qb->setMaxResults($this->config->get('oro_activity_list.per_page'));
+        $event = new ActivityListPreQueryBuildEvent($entityClass, $entityId);
+        $this->eventDispatcher->dispatch(ActivityListPreQueryBuildEvent::EVENT_NAME, $event);
+        $qb = $this->getRepository()->getBaseActivityListQueryBuilder(
+            $entityClass,
+            $event->getTargetIds()
+        );
+
+        $ids = $this->activityListIdProvider->getActivityListIds($qb, $entityClass, $entityId, $filter, $pageFilter);
+        if (!empty($ids)) {
+            $qb = $this->getRepository()->createQueryBuilder('activity')
+                ->where($qb->expr()->in('activity.id', ':activitiesIds'))
+                ->setParameter('activitiesIds', $ids)
+                ->orderBy(
+                    QueryBuilderUtil::getField('activity', $this->config->get('oro_activity_list.sorting_field')),
+                    QueryBuilderUtil::getSortOrder($this->config->get('oro_activity_list.sorting_direction'))
+                );
 
             $result = $qb->getQuery()->getResult();
         }
@@ -154,126 +148,6 @@ class ActivityListManager
             'count' => count($viewModels),
             'data' => $viewModels
         ];
-    }
-
-    /**
-     * @param QueryBuilder $qb
-     * @param string       $entityClass
-     * @param integer      $entityId
-     * @param array        $filter
-     * @param array        $pageFilter
-     *
-     * @return array
-     */
-    protected function getListDataIds(QueryBuilder $qb, $entityClass, $entityId, $filter, $pageFilter)
-    {
-        $pageSize = $this->config->get('oro_activity_list.per_page');
-        $orderBy = $this->config->get('oro_activity_list.sorting_field');
-        $orderDirection = $this->config->get('oro_activity_list.sorting_direction');
-
-        $qb->setMaxResults($pageSize * self::ACTIVITY_LIST_PAGE_SIZE_MULTIPLIER);
-        $qb->resetDQLParts(['select', 'groupBy']);
-        $qb->addSelect('activity.id, activity.' . $orderBy);
-
-        $this->applyPageFilter($qb, $pageFilter);
-
-        $this->activityListFilterHelper->addFiltersToQuery($qb, $filter);
-        $this->activityListAclHelper->applyAclCriteria($qb, $this->chainProvider->getProviders());
-
-        $ids = array_merge(
-            $qb->getQuery()->getArrayResult(),
-            $this->getListDataIdsForInheritances(clone $qb, $entityClass, $entityId, $filter, $pageFilter)
-        );
-
-        if ((!$pageFilter && $orderDirection === 'ASC')
-            || ($orderDirection === 'DESC' && $pageFilter['action'] === 'prev')
-            || ($orderDirection === 'ASC' && $pageFilter['action'] === 'next')
-        ) {
-            // ASC sorting
-            usort($ids, function ($a, $b) use ($orderBy) {
-                return $a[$orderBy]->getTimestamp() - $b[$orderBy]->getTimestamp();
-            });
-        } else {
-            //DESC sorting
-            usort($ids, function ($a, $b) use ($orderBy) {
-                return $b[$orderBy]->getTimestamp() - $a[$orderBy]->getTimestamp();
-            });
-        }
-
-        $ids = array_unique(array_column($ids, 'id'));
-        $ids = array_slice($ids, 0, $pageSize);
-
-        return $ids;
-    }
-
-    /**
-     * @param QueryBuilder $qb
-     * @param              $pageFilter
-     */
-    protected function applyPageFilter(QueryBuilder $qb, $pageFilter)
-    {
-        $orderBy = $this->config->get('oro_activity_list.sorting_field');
-        $orderDirection = $this->config->get('oro_activity_list.sorting_direction');
-
-        if (!empty($pageFilter['date']) && !empty($pageFilter['ids'])) {
-            $dateFilter = new \DateTime($pageFilter['date'], new \DateTimeZone('UTC'));
-            $whereComparison = 'lte';
-            if (($pageFilter['action'] === 'next' && $orderDirection === 'ASC')
-                || ($pageFilter['action'] === 'prev' && $orderDirection === 'DESC')
-            ) {
-                $whereComparison = 'gte';
-            }
-
-            if ($pageFilter['action'] === 'prev') {
-                $orderDirection = ($orderDirection === 'DESC') ? 'ASC' : 'DESC';
-            }
-
-            $qb->andWhere($qb->expr()->notIn('activity.id', implode(',', $pageFilter['ids'])));
-            $qb->andWhere($qb->expr()->{$whereComparison}('activity.' . $orderBy, ':dateFilter'));
-            $qb->setParameter(':dateFilter', $dateFilter->format('Y-m-d H:i:s'));
-        }
-
-        $qb->orderBy('activity.' . $orderBy, $orderDirection);
-    }
-
-    /**
-     * @param QueryBuilder $qb
-     * @param string       $entityClass
-     * @param integer      $entityId
-     * @param array        $filter
-     * @param array        $pageFilter
-     *
-     * @return array
-     */
-    protected function getListDataIdsForInheritances(QueryBuilder $qb, $entityClass, $entityId, $filter, $pageFilter)
-    {
-        $ids = [];
-
-        // due to performance issue - perform separate data request per each inherited entity
-        $inheritanceTargets = $this->activityInheritanceTargetsHelper->getInheritanceTargetsRelations($entityClass);
-        foreach ($inheritanceTargets as $key => $inheritanceTarget) {
-            $inheritanceQb = clone $qb;
-            $inheritanceQb->resetDQLParts(['where', 'orderBy']);
-            $inheritanceQb->setParameters([]);
-            $inheritanceQb->setParameter(':entityId', $entityId);
-
-            $this->applyPageFilter($inheritanceQb, $pageFilter);
-
-            $this->activityInheritanceTargetsHelper->applyInheritanceActivity(
-                $inheritanceQb,
-                $inheritanceTarget,
-                $key,
-                ':entityId',
-                $this->config->get('oro_activity_list.grouping')
-            );
-
-            $this->activityListFilterHelper->addFiltersToQuery($inheritanceQb, $filter);
-            $this->activityListAclHelper->applyAclCriteria($inheritanceQb, $this->chainProvider->getProviders());
-
-            $ids = array_merge($ids, $inheritanceQb->getQuery()->getArrayResult());
-        }
-
-        return $ids;
     }
 
     /**
@@ -311,7 +185,7 @@ class ActivityListManager
 
     /**
      * @param ActivityList $entity
-     * @param []           $targetEntityData
+     * @param array        $targetEntityData
      *
      * @return array|null
      */
@@ -333,31 +207,31 @@ class ActivityListManager
         $owner     = $entity->getOwner();
         if ($owner) {
             $ownerName = $this->entityNameResolver->getName($owner);
-            if ($this->securityFacade->isGranted('VIEW', $owner)) {
+            if ($this->authorizationChecker->isGranted('VIEW', $owner)) {
                 $ownerId = $owner->getId();
             }
         }
 
         $editorName = '';
         $editorId   = '';
-        $editor     = $entity->getEditor();
+        $editor     = $entity->getUpdatedBy();
         if ($editor) {
             $editorName = $this->entityNameResolver->getName($editor);
-            if ($this->securityFacade->isGranted('VIEW', $editor)) {
+            if ($this->authorizationChecker->isGranted('VIEW', $editor)) {
                 $editorId = $editor->getId();
             }
         }
 
-        $isHead                  = $this->getHeadStatus($entity, $entityProvider);
         $relatedActivityEntities = $this->getRelatedActivityEntities($entity, $entityProvider);
-        $numberOfComments        = $this->commentManager->getCommentCount(
+        $numberOfComments = $this->commentManager->getCommentCount(
             $entity->getRelatedActivityClass(),
             $relatedActivityEntities
         );
-
         $data = $entityProvider->getData($entity);
-        if (isset($data['isHead']) && !$data['isHead']) {
-            $isHead = false;
+
+        $isHead = false;
+        if (isset($data['isHead'])) {
+            $isHead = $data['isHead'];
         }
 
         $workflowsData = $this->workflowHelper->getEntityWorkflowsData($activity);
@@ -369,20 +243,21 @@ class ActivityListManager
             'editor'               => $editorName,
             'editor_id'            => $editorId,
             'verb'                 => $entity->getVerb(),
-            'subject'              => $entity->getSubject(),
-            'description'          => $entity->getDescription(),
+            'subject'              => $this->htmlTagHelper->purify($entity->getSubject()),
+            'description'          => $this->htmlTagHelper->purify($entity->getDescription()),
             'data'                 => $data,
             'relatedActivityClass' => $entity->getRelatedActivityClass(),
             'relatedActivityId'    => $entity->getRelatedActivityId(),
             'createdAt'            => $entity->getCreatedAt()->format('c'),
             'updatedAt'            => $entity->getUpdatedAt()->format('c'),
-            'editable'             => $this->securityFacade->isGranted('EDIT', $activity),
-            'removable'            => $this->securityFacade->isGranted('DELETE', $activity),
+            'editable'             => $this->authorizationChecker->isGranted('EDIT', $activity),
+            'removable'            => $this->authorizationChecker->isGranted('DELETE', $activity),
             'commentCount'         => $numberOfComments,
             'commentable'          => $this->commentManager->isCommentable(),
             'workflowsData'        => $workflowsData,
             'targetEntityData'     => $targetEntityData,
             'is_head'              => $isHead,
+            'routes'               => $entityProvider->getRoutes($activity)
         ];
 
         return $result;
@@ -401,13 +276,24 @@ class ActivityListManager
      */
     public function getGroupedEntities($entity, $targetActivityClass, $targetActivityId, $widgetId, $filterMetadata)
     {
-        $results        = [];
-        $entityProvider = $this->chainProvider->getProviderForEntity(ClassUtils::getRealClass($entity));
-        if ($this->isGroupingApplicable($entityProvider)) {
-            /** @var ActivityListGroupProviderInterface $entityProvider */
+        $activityLists = [];
+        $ids = $this->getGroupedActivityListIds($entity, $targetActivityClass, $targetActivityId);
+        if (!empty($ids)) {
+            $qb = $this->getRepository()->createQueryBuilder('activity');
+            $qb = $qb
+                ->where($qb->expr()->in('activity.id', ':activitiesIds'))
+                ->setParameter('activitiesIds', $ids)
+                ->orderBy(
+                    QueryBuilderUtil::getField('activity', $this->config->get('oro_activity_list.sorting_field')),
+                    QueryBuilderUtil::getSortOrder($this->config->get('oro_activity_list.sorting_direction'))
+                );
 
-            $groupedActivities = $entityProvider->getGroupedEntities($entity);
-            $activityResults   = $this->getEntityViewModels($groupedActivities, [
+            $activityLists = $qb->getQuery()->getResult();
+        }
+
+        $results = [];
+        if (!empty($activityLists)) {
+            $activityResults = $this->getEntityViewModels($activityLists, [
                 'class' => $targetActivityClass,
                 'id'    => $targetActivityId,
             ]);
@@ -438,43 +324,79 @@ class ActivityListManager
     }
 
     /**
-     * @param string $entityClass
-     * @param int    $entityId
+     * @param object[] $entities
+     * @param object   $rootEntity
+     * @param string   $targetActivityClass
+     * @param int      $targetActivityId
      *
-     * @return QueryBuilder
+     * @return ActivityList[]
      */
-    protected function getBaseQB($entityClass, $entityId)
+    public function filterGroupedEntitiesByActivityLists(
+        array $entities,
+        $rootEntity,
+        $targetActivityClass,
+        $targetActivityId
+    ) {
+        $entityClass = ClassUtils::getRealClass($rootEntity);
+
+        $activityLists = [];
+        $ids = $this->getGroupedActivityListIds($rootEntity, $targetActivityClass, $targetActivityId);
+        if (!empty($ids)) {
+            $qb = $this->getRepository()->createQueryBuilder('activity');
+            $qb = $qb
+                ->where($qb->expr()->in('activity.id', ':activitiesIds'))
+                ->setParameter('activitiesIds', $ids);
+
+            $activityLists = $qb->getQuery()->getResult();
+        }
+
+        $entityIdsFromActivityLists = [];
+        foreach ($activityLists as $activityList) {
+            if ($activityList->getRelatedActivityClass() === $entityClass) {
+                $entityIdsFromActivityLists[] = $activityList->getRelatedActivityId();
+            }
+        }
+        $filteredEntities = [];
+        foreach ($entities as $entity) {
+            if (in_array($this->doctrineHelper->getSingleEntityIdentifier($entity), $entityIdsFromActivityLists)) {
+                $filteredEntities[] = $entity;
+            }
+        }
+
+        return $filteredEntities;
+    }
+
+    /**
+     * @param object $entity
+     * @param string $targetActivityClass
+     * @param int    $targetActivityId
+     *
+     * @return array
+     */
+    private function getGroupedActivityListIds($entity, $targetActivityClass, $targetActivityId)
     {
-        $event = new ActivityListPreQueryBuildEvent($entityClass, $entityId);
+        $entityClass = ClassUtils::getRealClass($entity);
+        $event = new ActivityListPreQueryBuildEvent(
+            $entityClass,
+            $this->doctrineHelper->getSingleEntityIdentifier($entity)
+        );
         $this->eventDispatcher->dispatch(ActivityListPreQueryBuildEvent::EVENT_NAME, $event);
         $entityIds = $event->getTargetIds();
+        $qb = $this->getRepository()->createQueryBuilder('activity')
+            ->leftJoin('activity.activityOwners', 'ao')
+            ->where('activity.relatedActivityClass = :entityClass')
+            ->setParameter('entityClass', $entityClass);
+        if (count($entityIds) > 1) {
+            $qb
+                ->andWhere('activity.relatedActivityId IN (:entityIds)')
+                ->setParameter('entityIds', $entityIds);
+        } else {
+            $qb
+                ->andWhere('activity.relatedActivityId = :entityId')
+                ->setParameter('entityId', reset($entityIds));
+        }
 
-        return $this->getRepository()->getBaseActivityListQueryBuilder(
-            $entityClass,
-            $entityIds,
-            $this->config->get('oro_activity_list.grouping')
-        );
-    }
-
-    /**
-     * @param object $entityProvider
-     *
-     * @return bool
-     */
-    protected function isGroupingApplicable($entityProvider)
-    {
-        return $entityProvider instanceof ActivityListGroupProviderInterface;
-    }
-
-    /**
-     * @param ActivityList $entity
-     * @param object       $entityProvider
-     *
-     * @return bool
-     */
-    protected function getHeadStatus(ActivityList $entity, $entityProvider)
-    {
-        return $this->isGroupingApplicable($entityProvider) && $entity->isHead();
+        return $this->activityListIdProvider->getGroupedActivityListIds($qb, $targetActivityClass, $targetActivityId);
     }
 
     /**
@@ -486,7 +408,7 @@ class ActivityListManager
     protected function getRelatedActivityEntities(ActivityList $entity, $entityProvider)
     {
         $relatedActivityEntities = [$entity];
-        if ($this->isGroupingApplicable($entityProvider)) {
+        if ($entityProvider instanceof ActivityListGroupProviderInterface) {
             $relationEntity = $this->doctrineHelper->getEntity(
                 $entity->getRelatedActivityClass(),
                 $entity->getRelatedActivityId()
@@ -554,16 +476,23 @@ class ActivityListManager
 
             // to avoid of duplication activity lists and activities items we need to clear these relations
             // from the master record before update
-            $where = "WHERE $targetField = :masterEntityId AND $activityField IN(" . implode(',', $activityIds) . ")";
-            $stmt = $dbConnection->prepare("DELETE FROM $tableName $where");
-            $stmt->bindValue('masterEntityId', $newTargetId);
-            $stmt->execute();
+            $deleteQb = $dbConnection->createQueryBuilder();
+            $deleteQb->delete($tableName)
+                ->where($deleteQb->expr()->eq($targetField, ':masterEntityId'))
+                ->andWhere($deleteQb->expr()->in($activityField, ':activityIds'))
+                ->setParameter('masterEntityId', $newTargetId)
+                ->setParameter('activityIds', $activityIds, Connection::PARAM_INT_ARRAY);
+            $deleteQb->execute();
 
-            $where = "WHERE $targetField = :sourceEntityId AND $activityField IN(" . implode(',', $activityIds) . ")";
-            $stmt = $dbConnection->prepare("UPDATE $tableName SET $targetField = :masterEntityId $where");
-            $stmt->bindValue('masterEntityId', $newTargetId);
-            $stmt->bindValue('sourceEntityId', $oldTargetId);
-            $stmt->execute();
+            $updateQb = $dbConnection->createQueryBuilder();
+            $updateQb->update($tableName)
+                ->set($targetField, ':masterEntityId')
+                ->where($updateQb->expr()->eq($targetField, ':sourceEntityId'))
+                ->andWhere($deleteQb->expr()->in($activityField, ':activityIds'))
+                ->setParameter('masterEntityId', $newTargetId)
+                ->setParameter('sourceEntityId', $oldTargetId)
+                ->setParameter('activityIds', $activityIds, Connection::PARAM_INT_ARRAY);
+            $updateQb->execute();
         }
 
         return $this;

@@ -1,0 +1,18 @@
+/* @theme: default; */
+
+.catalog-switcher {
+    .btn {
+        color: $catalog-switcher-btn-color;
+
+        @include element-state('hover') {
+            color: $catalog-switcher-btn-color;
+        }
+
+        &.active,
+        &:not(:disabled):not(.disabled):active,
+        &:not(:disabled):not(.disabled).active {
+            background-color: $catalog-switcher-btn-background-active;
+            color: $catalog-switcher-btn-color-active;
+        }
+    }
+}

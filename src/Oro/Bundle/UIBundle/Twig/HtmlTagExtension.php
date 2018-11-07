@@ -2,23 +2,31 @@
 
 namespace Oro\Bundle\UIBundle\Twig;
 
-use Oro\Bundle\FormBundle\Provider\HtmlTagProvider;
 use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * Twig extension with filters that helps prepare HTML for the output.
+ */
 class HtmlTagExtension extends \Twig_Extension
 {
-    /** @var HtmlTagProvider */
-    protected $htmlTagProvider;
-
-    /** @var HtmlTagHelper */
-    protected $htmlTagHelper;
+    /** @var ContainerInterface */
+    protected $container;
 
     /**
-     * @param HtmlTagHelper $htmlTagHelper
+     * @param ContainerInterface $container
      */
-    public function __construct(HtmlTagHelper $htmlTagHelper)
+    public function __construct(ContainerInterface $container)
     {
-        $this->htmlTagHelper = $htmlTagHelper;
+        $this->container = $container;
+    }
+
+    /**
+     * @return HtmlTagHelper
+     */
+    protected function getHtmlTagHelper()
+    {
+        return $this->container->get('oro_ui.html_tag_helper');
     }
 
     /**
@@ -27,41 +35,55 @@ class HtmlTagExtension extends \Twig_Extension
     public function getFilters()
     {
         return [
-            new \Twig_SimpleFilter('oro_tag_filter', [$this, 'tagFilter'], ['is_safe' => ['all']]),
-            new \Twig_SimpleFilter('oro_html_purify', [$this, 'htmlPurify']),
+            new \Twig_SimpleFilter('oro_html_strip_tags', [$this, 'htmlStripTags'], ['is_safe' => ['all']]),
+            new \Twig_SimpleFilter('oro_attribute_name_purify', [$this, 'attributeNamePurify']),
             new \Twig_SimpleFilter('oro_html_sanitize', [$this, 'htmlSanitize'], ['is_safe' => ['html']]),
+            new \Twig_SimpleFilter('oro_html_escape', [$this, 'htmlEscape'], ['is_safe' => ['html']]),
         ];
     }
 
     /**
-     * @param string $string
-     *
-     * @return string
-     */
-    public function tagFilter($string)
-    {
-        return $this->htmlTagHelper->stripTags($string);
-    }
-
-    /**
-     * Filter is intended to purify script, style etc tags and content of them
+     * Remove all html elements
      *
      * @param string $string
      * @return string
      */
-    public function htmlPurify($string)
+    public function htmlStripTags($string)
     {
-        return $this->htmlTagHelper->purify($string);
+        return $this->getHtmlTagHelper()->stripTags($string);
     }
 
     /**
-     * @param string $string
+     * Remove all non alpha-numeric symbols
      *
+     * @param string $string
+     * @return string
+     */
+    public function attributeNamePurify($string)
+    {
+        return preg_replace('/[^a-z0-9_-]+/i', '', $string);
+    }
+
+    /**
+     * Remove html elements except allowed
+     *
+     * @param string $string
      * @return string
      */
     public function htmlSanitize($string)
     {
-        return $this->htmlTagHelper->sanitize($string);
+        return $this->getHtmlTagHelper()->sanitize($string);
+    }
+
+    /**
+     * Allow HTML tags all forbidden tags will be escaped
+     *
+     * @param $string
+     * @return string
+     */
+    public function htmlEscape($string)
+    {
+        return $this->getHtmlTagHelper()->escape($string);
     }
 
     /**

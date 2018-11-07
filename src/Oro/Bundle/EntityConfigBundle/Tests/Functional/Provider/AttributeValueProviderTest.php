@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityConfigBundle\Tests\Functional\Provider;
 
 use Doctrine\ORM\EntityManagerInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Provider\AttributeValueProviderInterface;
@@ -12,9 +11,6 @@ use Oro\Bundle\TestFrameworkBundle\Entity\TestActivityTarget;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\TestFrameworkBundle\Tests\Functional\DataFixtures\LoadActivityTargets;
 
-/**
- * @dbIsolation
- */
 class AttributeValueProviderTest extends WebTestCase
 {
     /**

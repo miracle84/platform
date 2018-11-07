@@ -3,8 +3,8 @@
 namespace Oro\Bundle\EmailBundle\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 /**
@@ -38,6 +38,7 @@ class OroEmailExtension extends Extension
         $loader->load('form.yml');
         $loader->load('mass_action.yml');
         $loader->load('filters.yml');
+        $loader->load('commands.yml');
 
         $container->prependExtensionConfig($this->getAlias(), array_intersect_key($config, array_flip(['settings'])));
     }

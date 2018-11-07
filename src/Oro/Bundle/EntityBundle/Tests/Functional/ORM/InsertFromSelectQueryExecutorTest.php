@@ -4,16 +4,12 @@ namespace Oro\Bundle\EntityBundle\Tests\Functional\ORM;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\EntityBundle\ORM\InsertFromSelectQueryExecutor;
 use Oro\Bundle\EntityBundle\ORM\NativeQueryExecutorHelper;
 use Oro\Bundle\TestFrameworkBundle\Entity\Item;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\UserBundle\Entity\User;
 
-/**
- * @dbIsolation
- */
 class InsertFromSelectQueryExecutorTest extends WebTestCase
 {
     /**

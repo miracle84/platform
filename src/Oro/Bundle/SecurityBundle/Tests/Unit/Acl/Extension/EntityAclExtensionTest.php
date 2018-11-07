@@ -2,12 +2,8 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Extension;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Security\Core\Util\ClassUtils;
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-
-use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdAccessor;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdentityFactory;
@@ -17,22 +13,24 @@ use Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface;
 use Oro\Bundle\SecurityBundle\Acl\Permission\PermissionManager;
 use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 use Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\Entity\Permission;
 use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadata;
 use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider;
 use Oro\Bundle\SecurityBundle\Owner\EntityOwnerAccessor;
 use Oro\Bundle\SecurityBundle\Owner\EntityOwnershipDecisionMaker;
 use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
+use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
 use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\BusinessUnit;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\TestEntity;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\User;
-use Oro\Bundle\SecurityBundle\Tests\Unit\TestHelper;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Stub\OwnershipMetadataProviderStub;
-use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
-
+use Oro\Bundle\SecurityBundle\Tests\Unit\TestHelper;
 use Oro\Component\Testing\Unit\EntityTrait;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
@@ -40,14 +38,14 @@ use Oro\Component\Testing\Unit\EntityTrait;
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
-class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
+class EntityAclExtensionTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /** @var EntityAclExtension */
     private $extension;
 
-    /** @var EntitySecurityMetadataProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntitySecurityMetadataProvider|\PHPUnit\Framework\MockObject\MockObject */
     private $securityMetadataProvider;
 
     /** @var OwnershipMetadataProviderStub */
@@ -59,13 +57,13 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
     /** @var EntityOwnershipDecisionMaker */
     private $decisionMaker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|PermissionManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|PermissionManager */
     private $permissionManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|AclGroupProviderInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AclGroupProviderInterface */
     private $groupProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     private $doctrineHelper;
 
     protected function setUp()
@@ -83,19 +81,19 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
 
         $this->metadataProvider = new OwnershipMetadataProviderStub($this);
         $this->metadataProvider->setMetadata(
-            $this->metadataProvider->getGlobalLevelClass(),
+            $this->metadataProvider->getOrganizationClass(),
             new OwnershipMetadata()
         );
         $this->metadataProvider->setMetadata(
-            $this->metadataProvider->getLocalLevelClass(),
+            $this->metadataProvider->getBusinessUnitClass(),
             new OwnershipMetadata('BUSINESS_UNIT', 'owner', 'owner_id')
         );
         $this->metadataProvider->setMetadata(
-            $this->metadataProvider->getBasicLevelClass(),
+            $this->metadataProvider->getUserClass(),
             new OwnershipMetadata('BUSINESS_UNIT', 'owner', 'owner_id')
         );
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|OwnerTreeProvider $treeProviderMock */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|OwnerTreeProvider $treeProviderMock */
         $treeProviderMock = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider')
             ->disableOriginalConstructor()
             ->getMock();
@@ -104,44 +102,14 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getTree')
             ->will($this->returnValue($this->tree));
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ContainerInterface $container */
-        $container = $this->createMock('Symfony\Component\DependencyInjection\ContainerInterface');
-        $container->expects($this->any())
-            ->method('get')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        [
-                            'oro_security.ownership_tree_provider.chain',
-                            ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE,
-                            $treeProviderMock,
-                        ],
-                        [
-                            'oro_security.owner.metadata_provider.chain',
-                            ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE,
-                            $this->metadataProvider,
-                        ],
-                        [
-                            'oro_security.acl.object_id_accessor',
-                            ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE,
-                            new ObjectIdAccessor($this->doctrineHelper),
-                        ],
-                        [
-                            'oro_security.owner.entity_owner_accessor',
-                            ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE,
-                            new EntityOwnerAccessor($this->metadataProvider),
-                        ],
-                    ]
-                )
-            );
         $entityOwnerAccessor = new EntityOwnerAccessor($this->metadataProvider);
         $this->decisionMaker = new EntityOwnershipDecisionMaker(
             $treeProviderMock,
             new ObjectIdAccessor($this->doctrineHelper),
-            $entityOwnerAccessor, //new EntityOwnerAccessor($this->metadataProvider),
-            $this->metadataProvider
+            $entityOwnerAccessor,
+            $this->metadataProvider,
+            $this->createMock(TokenAccessorInterface::class)
         );
-        $this->decisionMaker->setContainer($container);
 
         $this->permissionManager = $this->getPermissionManagerMock();
 
@@ -192,51 +160,51 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
          * bu2         bu2
          *
          */
-        $this->tree->addLocalEntity('bu1', null);
-        $this->tree->addLocalEntity('bu2', null);
-        $this->tree->addLocalEntity('bu3', 'org3');
-        $this->tree->addLocalEntity('bu31', 'org3');
-        $this->tree->addLocalEntity('bu3a', 'org3');
-        $this->tree->addLocalEntity('bu3a1', 'org3');
-        $this->tree->addLocalEntity('bu4', 'org4');
-        $this->tree->addLocalEntity('bu41', 'org4');
-        $this->tree->addLocalEntity('bu411', 'org4');
+        $this->tree->addBusinessUnit('bu1', null);
+        $this->tree->addBusinessUnit('bu2', null);
+        $this->tree->addBusinessUnit('bu3', 'org3');
+        $this->tree->addBusinessUnit('bu31', 'org3');
+        $this->tree->addBusinessUnit('bu3a', 'org3');
+        $this->tree->addBusinessUnit('bu3a1', 'org3');
+        $this->tree->addBusinessUnit('bu4', 'org4');
+        $this->tree->addBusinessUnit('bu41', 'org4');
+        $this->tree->addBusinessUnit('bu411', 'org4');
 
-        $this->tree->addDeepEntity('bu1', null);
-        $this->tree->addDeepEntity('bu2', null);
-        $this->tree->addDeepEntity('bu3', null);
-        $this->tree->addDeepEntity('bu31', 'bu3');
-        $this->tree->addDeepEntity('bu3a', null);
-        $this->tree->addDeepEntity('bu3a1', 'bu3a');
-        $this->tree->addDeepEntity('bu4', null);
-        $this->tree->addDeepEntity('bu41', 'bu4');
-        $this->tree->addDeepEntity('bu411', 'bu41');
+        $this->tree->addBusinessUnitRelation('bu1', null);
+        $this->tree->addBusinessUnitRelation('bu2', null);
+        $this->tree->addBusinessUnitRelation('bu3', null);
+        $this->tree->addBusinessUnitRelation('bu31', 'bu3');
+        $this->tree->addBusinessUnitRelation('bu3a', null);
+        $this->tree->addBusinessUnitRelation('bu3a1', 'bu3a');
+        $this->tree->addBusinessUnitRelation('bu4', null);
+        $this->tree->addBusinessUnitRelation('bu41', 'bu4');
+        $this->tree->addBusinessUnitRelation('bu411', 'bu41');
 
-        $this->tree->addBasicEntity('user1', null);
-        $this->tree->addBasicEntity('user2', 'bu2');
-        $this->tree->addBasicEntity('user3', 'bu3');
-        $this->tree->addBasicEntity('user31', 'bu31');
-        $this->tree->addBasicEntity('user4', 'bu4');
-        $this->tree->addBasicEntity('user41', 'bu41');
-        $this->tree->addBasicEntity('user411', 'bu411');
+        $this->tree->addUser('user1', null);
+        $this->tree->addUser('user2', 'bu2');
+        $this->tree->addUser('user3', 'bu3');
+        $this->tree->addUser('user31', 'bu31');
+        $this->tree->addUser('user4', 'bu4');
+        $this->tree->addUser('user41', 'bu41');
+        $this->tree->addUser('user411', 'bu411');
 
-        $this->tree->addGlobalEntity('user1', 'org1');
-        $this->tree->addGlobalEntity('user1', 'org2');
-        $this->tree->addGlobalEntity('user2', 'org2');
-        $this->tree->addGlobalEntity('user3', 'org2');
-        $this->tree->addGlobalEntity('user3', 'org3');
-        $this->tree->addGlobalEntity('user31', 'org3');
-        $this->tree->addGlobalEntity('user4', 'org4');
-        $this->tree->addGlobalEntity('user411', 'org4');
+        $this->tree->addUserOrganization('user1', 'org1');
+        $this->tree->addUserOrganization('user1', 'org2');
+        $this->tree->addUserOrganization('user2', 'org2');
+        $this->tree->addUserOrganization('user3', 'org2');
+        $this->tree->addUserOrganization('user3', 'org3');
+        $this->tree->addUserOrganization('user31', 'org3');
+        $this->tree->addUserOrganization('user4', 'org4');
+        $this->tree->addUserOrganization('user411', 'org4');
 
-        $this->tree->addLocalEntityToBasic('user1', 'bu1', 'org1');
-        $this->tree->addLocalEntityToBasic('user1', 'bu2', 'org2');
-        $this->tree->addLocalEntityToBasic('user2', 'bu2', 'org2');
-        $this->tree->addLocalEntityToBasic('user3', 'bu3', 'org3');
-        $this->tree->addLocalEntityToBasic('user3', 'bu2', 'org2');
-        $this->tree->addLocalEntityToBasic('user31', 'bu31', 'org3');
-        $this->tree->addLocalEntityToBasic('user4', 'bu4', 'org4');
-        $this->tree->addLocalEntityToBasic('user411', 'bu411', 'org4');
+        $this->tree->addUserBusinessUnit('user1', 'org1', 'bu1');
+        $this->tree->addUserBusinessUnit('user1', 'org2', 'bu2');
+        $this->tree->addUserBusinessUnit('user2', 'org2', 'bu2');
+        $this->tree->addUserBusinessUnit('user3', 'org3', 'bu3');
+        $this->tree->addUserBusinessUnit('user3', 'org2', 'bu2');
+        $this->tree->addUserBusinessUnit('user31', 'org3', 'bu31');
+        $this->tree->addUserBusinessUnit('user4', 'org4', 'bu4');
+        $this->tree->addUserBusinessUnit('user411', 'org4', 'bu411');
 
         $this->tree->buildTree();
     }
@@ -452,7 +420,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 'UNKNOWN' => 7
             ]);
 
-        /* @var $entityClassResolver EntityClassResolver|\PHPUnit_Framework_MockObject_MockObject  */
+        /* @var $entityClassResolver EntityClassResolver|\PHPUnit\Framework\MockObject\MockObject  */
         $entityClassResolver = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\EntityClassResolver')
             ->disableOriginalConstructor()
             ->getMock();
@@ -497,17 +465,17 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
 
         if ($object instanceof TestEntity && $object->getOwner() !== null) {
             $owner = $object->getOwner();
-            if (is_a($owner, $this->metadataProvider->getGlobalLevelClass())) {
+            if (is_a($owner, $this->metadataProvider->getOrganizationClass())) {
                 $this->metadataProvider->setMetadata(
                     get_class($object),
                     new OwnershipMetadata('ORGANIZATION', 'owner', 'owner_id', 'organization')
                 );
-            } elseif (is_a($owner, $this->metadataProvider->getLocalLevelClass())) {
+            } elseif (is_a($owner, $this->metadataProvider->getBusinessUnitClass())) {
                 $this->metadataProvider->setMetadata(
                     get_class($object),
                     new OwnershipMetadata('BUSINESS_UNIT', 'owner', 'owner_id', 'organization')
                 );
-            } elseif (is_a($owner, $this->metadataProvider->getBasicLevelClass())) {
+            } elseif (is_a($owner, $this->metadataProvider->getUserClass())) {
                 $this->metadataProvider->setMetadata(
                     get_class($object),
                     new OwnershipMetadata('USER', 'owner', 'owner_id', 'organization')
@@ -515,7 +483,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
             }
         }
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|UsernamePasswordOrganizationToken $token */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|UsernamePasswordOrganizationToken $token */
         $token =
             $this->getMockBuilder('Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken')
                 ->disableOriginalConstructor()
@@ -598,6 +566,12 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 $this->extension->getMaskPattern($expectedMask),
                 $this->extension->getMaskPattern($resultMask)
             )
+        );
+
+        $this->assertSame(
+            $this->extension->getServiceBits($aceMask),
+            $this->extension->getServiceBits($resultMask),
+            'Service bits should not be changed.'
         );
     }
 
@@ -1161,9 +1135,9 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
      * @param bool $isEntity
      * @param bool $expected
      */
-    public function testSupports($id, $type, $class, $isEntity, $expected)
+    public function testSupports($id, $type, $class, $isEntity, $isProtectedEntity, $expected)
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|EntityClassResolver $entityClassResolverMock */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|EntityClassResolver $entityClassResolverMock */
         $entityClassResolverMock = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\EntityClassResolver')
             ->disableOriginalConstructor()
             ->getMock();
@@ -1171,20 +1145,19 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getEntityClass')
             ->with($class)
             ->willReturn($class);
-        $entityClassResolverMock->expects($this->once())
-            ->method('isEntity')
-            ->with($class)
-            ->willReturn($expected);
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|EntitySecurityMetadataProvider $entityMetadataProvider */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|EntitySecurityMetadataProvider $entityMetadataProvider */
         $entityMetadataProvider = $this
             ->getMockBuilder('Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider')
             ->disableOriginalConstructor()
             ->getMock();
+        $entityMetadataProvider->expects($this->once())
+            ->method('isProtectedEntity')
+            ->with($class)
+            ->willReturn($isProtectedEntity);
         $fieldAclExtension = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Acl\Extension\FieldAclExtension')
             ->disableOriginalConstructor()
             ->getMock();
-
 
         $extension = new EntityAclExtension(
             new ObjectIdAccessor($this->doctrineHelper),
@@ -1212,6 +1185,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 'type' => '\stdClass',
                 'class' => '\stdClass',
                 'isEntity' => false,
+                'isProtectedEntity' => false,
                 'expected' => false
             ],
             [
@@ -1219,6 +1193,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 'type' => '\stdClass',
                 'class' => '\stdClass',
                 'isEntity' => true,
+                'isProtectedEntity' => true,
                 'expected' => true
             ],
             [
@@ -1226,6 +1201,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 'type' => '@\stdClass',
                 'class' => '\stdClass',
                 'isEntity' => true,
+                'isProtectedEntity' => true,
                 'expected' => true
             ],
             [
@@ -1233,8 +1209,17 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
                 'type' => 'group@\stdClass',
                 'class' => '\stdClass',
                 'isEntity' => true,
+                'isProtectedEntity' => true,
                 'expected' => true
-            ]
+            ],
+            [
+                'id' => 'entity',
+                'type' => '@\stdClass',
+                'class' => '\stdClass',
+                'isEntity' => true,
+                'isProtectedEntity' => false,
+                'expected' => false
+            ],
         ];
     }
 
@@ -1313,7 +1298,7 @@ class EntityAclExtensionTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|PermissionManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|PermissionManager
      */
     protected function getPermissionManagerMock()
     {

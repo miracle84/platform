@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Consumption\Extension;
 
 use Oro\Component\MessageQueue\Consumption\AbstractExtension;
@@ -7,9 +8,7 @@ use Psr\Log\LoggerInterface;
 
 class LoggerExtension extends AbstractExtension
 {
-    /**
-     * @var LoggerInterface
-     */
+    /** @var LoggerInterface */
     private $logger;
 
     /**
@@ -26,6 +25,6 @@ class LoggerExtension extends AbstractExtension
     public function onStart(Context $context)
     {
         $context->setLogger($this->logger);
-        $this->logger->debug(sprintf('Set context\'s logger %s', get_class($this->logger)));
+        $this->logger->debug('Set logger to the context');
     }
 }

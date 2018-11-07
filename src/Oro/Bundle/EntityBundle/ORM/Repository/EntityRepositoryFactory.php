@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\EntityBundle\ORM\Repository;
 
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Repository\RepositoryFactory;
+use Oro\Bundle\EntityBundle\Exception\NotManageableEntityException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
-
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Repository\RepositoryFactory;
-
-use Oro\Bundle\EntityBundle\Exception\NotManageableEntityException;
 
 class EntityRepositoryFactory implements RepositoryFactory
 {
@@ -86,6 +84,14 @@ class EntityRepositoryFactory implements RepositoryFactory
         }
 
         return new $repositoryClassName($entityManager, $entityManager->getClassMetadata($entityName));
+    }
+
+    /**
+     * Removes instances of all already loaded repositories.
+     */
+    public function clear()
+    {
+        $this->repositoryServices = [];
     }
 
     /**

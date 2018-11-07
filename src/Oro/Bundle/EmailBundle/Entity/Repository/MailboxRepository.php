@@ -4,12 +4,12 @@ namespace Oro\Bundle\EmailBundle\Entity\Repository;
 
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Entity\Mailbox;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
 class MailboxRepository extends EntityRepository
 {
@@ -54,18 +54,15 @@ class MailboxRepository extends EntityRepository
      * @param User|integer $user User or user id
      * @param Organization $organization
      *
-     * @return array Array of ids
+     * @return int[] Array of ids
      */
     public function findAvailableMailboxIds($user, $organization)
     {
-        $mailboxes = $this->findAvailableMailboxes($user, $organization);
+        $qb = $this->createAvailableMailboxesQuery($user, $organization);
+        $qb->resetDQLPart('select')->select('mb.id');
+        $mailboxes = $qb->getQuery()->getArrayResult();
 
-        $ids = [];
-        foreach ($mailboxes as $mailbox) {
-            $ids[] = $mailbox->getId();
-        }
-
-        return $ids;
+        return array_column($mailboxes, 'id');
     }
 
     /**
@@ -126,18 +123,18 @@ class MailboxRepository extends EntityRepository
     {
         $qb = $this->getEntityManager()->createQueryBuilder();
         $qb->select('mb')
-           ->from('OroEmailBundle:Mailbox', 'mb')
-           ->leftJoin('mb.emailUsers', 'eu')
-           ->leftJoin('eu.folders', 'f')
-           ->leftJoin('mb.processSettings', 'ps')
-           ->where($qb->expr()->isInstanceOf('ps', $settingsClass))
-           ->andWhere('eu.email = :email')
-           ->andWhere(
-               $qb->expr()->orX(
-                   'f.type = \'inbox\'',
-                   'f.type = \'other\''
-               )
-           );
+            ->from('OroEmailBundle:Mailbox', 'mb')
+            ->leftJoin('mb.emailUsers', 'eu')
+            ->leftJoin('eu.folders', 'f')
+            ->leftJoin('mb.processSettings', 'ps')
+            ->where($qb->expr()->isInstanceOf('ps', $settingsClass))
+            ->andWhere('eu.email = :email')
+            ->andWhere(
+                $qb->expr()->orX(
+                    'f.type = \'inbox\'',
+                    'f.type = \'other\''
+                )
+            );
 
         $qb->setParameter('email', $email);
 
@@ -180,6 +177,8 @@ class MailboxRepository extends EntityRepository
             ->getDQL();
 
         $qb = $this->createQueryBuilder('m');
+
+        QueryBuilderUtil::checkParameter($emailUsersDql);
 
         return $qb
             ->select('m')

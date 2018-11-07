@@ -1,6 +1,5 @@
-OroActionBundle
-===============
+# OroActionBundle
 
-Provide the way to configure user interactions (as **operations**) and business logic execution bunches (as **action_groups**) by writing named pieces of reusable YAML configs.
+OroActionBundle enables the user interface actions definition and configuration using the YAML configuration files.
 
 Please see [documentation](./Resources/doc/index.md) for more details.

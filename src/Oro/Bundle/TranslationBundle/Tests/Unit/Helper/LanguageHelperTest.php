@@ -14,21 +14,21 @@ use Oro\Bundle\TranslationBundle\Provider\TranslationStatisticProvider;
 /**
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class LanguageHelperTest extends \PHPUnit_Framework_TestCase
+class LanguageHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var TranslationStatisticProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationStatisticProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $statisticProvider;
 
-    /** @var PackagesProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var PackagesProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $packagesProvider;
 
-    /** @var OroTranslationAdapter|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var OroTranslationAdapter|\PHPUnit\Framework\MockObject\MockObject */
     protected $translationAdapter;
 
-    /** @var TranslationServiceProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationServiceProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $translationServiceProvider;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     /** @var LanguageHelper */
@@ -109,6 +109,24 @@ class LanguageHelperTest extends \PHPUnit_Framework_TestCase
         $language = (new Language())->setCode('en');
 
         $this->assertTrue($this->helper->isAvailableInstallTranslates($language));
+    }
+
+    public function testIsTranslationsAvailablePositive()
+    {
+        $this->statisticProvider->expects($this->once())
+            ->method('get')
+            ->willReturn([
+                ['code' => 'en']
+            ]);
+
+        $language = (new Language())->setCode('en');
+
+        $this->assertTrue($this->helper->isTranslationsAvailable($language));
+    }
+
+    public function testIsTranslationsAvailableNegative()
+    {
+        $this->assertFalse($this->helper->isTranslationsAvailable(new Language()));
     }
 
     public function testIsAvailableUpdateTranslatesAndNoCode()

@@ -6,49 +6,48 @@ use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
 use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
 use Oro\Bundle\ActivityListBundle\Tests\Unit\Placeholder\Fixture\TestTarget;
 use Oro\Bundle\ActivityListBundle\Tests\Unit\Provider\Fixture\TestActivityProvider;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityConfigBundle\Config\Config;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class ActivityListChainProviderTest extends \PHPUnit_Framework_TestCase
+/**
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
+class ActivityListChainProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ActivityListChainProvider */
     protected $provider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityRoutingHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $routeHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $htmlTagHelper;
+    /** @var TokenAccessorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
     /** @var TestActivityProvider */
     protected $testActivityProvider;
 
     public function setUp()
     {
-        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->configManager  = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->routeHelper    = $this->getMockBuilder('Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->translator     = $this->getMockBuilder('Symfony\Component\Translation\TranslatorInterface')
-            ->getMock();
-        $this->htmlTagHelper  = $this->getMockBuilder('Oro\Bundle\UIBundle\Tools\HtmlTagHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->doctrineHelper = $this->createMock(DoctrineHelper::class);
+        $this->configManager = $this->createMock(ConfigManager::class);
+        $this->routeHelper = $this->createMock(EntityRoutingHelper::class);
+        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
         $this->testActivityProvider = new TestActivityProvider();
 
@@ -57,7 +56,7 @@ class ActivityListChainProviderTest extends \PHPUnit_Framework_TestCase
             $this->configManager,
             $this->translator,
             $this->routeHelper,
-            $this->htmlTagHelper
+            $this->tokenAccessor
         );
         $this->provider->addProvider($this->testActivityProvider);
     }
@@ -294,9 +293,6 @@ class ActivityListChainProviderTest extends \PHPUnit_Framework_TestCase
                     'icon'     => 'test_icon',
                     'label'    => 'test_label',
                     'template' => 'test_template.js.twig',
-                    'routes'   => [
-                        'delete' => 'test_delete_route'
-                    ],
                     'has_comments' => true,
                 ]
             ],

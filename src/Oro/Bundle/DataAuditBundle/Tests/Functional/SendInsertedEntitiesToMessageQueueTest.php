@@ -2,27 +2,20 @@
 namespace Oro\Bundle\DataAuditBundle\Tests\Functional;
 
 use Doctrine\ORM\Proxy\Proxy;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataChild;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataOwner;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataChild;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataOwner;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
+/**
+ * @dbIsolationPerTest
+ */
 class SendInsertedEntitiesToMessageQueueTest extends WebTestCase
 {
     use SendChangedEntitiesToMessageQueueExtensionTrait;
     
     protected function setUp()
     {
-        parent::setUp();
-
-        $this->initClient([], [], true);
-        $this->startTransaction();
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
+        $this->initClient();
     }
 
     public function testShouldSendWhenNewEntityInsertedWithoutChanges()
@@ -218,6 +211,7 @@ class SendInsertedEntitiesToMessageQueueTest extends WebTestCase
                 'entity_class' => TestAuditDataChild::class,
                 'entity_id' => $child->getId(),
                 'change_set' => [],
+                'additional_fields' => []
             ]],
         ], $insertedEntity['change_set']);
     }
@@ -255,6 +249,7 @@ class SendInsertedEntitiesToMessageQueueTest extends WebTestCase
                 'entity_class' => TestAuditDataChild::class,
                 'entity_id' => $child->getId(),
                 'change_set' => [],
+                'additional_fields' => []
             ]],
         ], $insertedEntity['change_set']);
     }

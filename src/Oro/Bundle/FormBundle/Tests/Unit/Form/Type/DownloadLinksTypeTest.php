@@ -2,17 +2,19 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\DownloadLinksType;
+use Oro\Component\Testing\TempDirExtension;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\FormBundle\Form\Type\DownloadLinksType;
-
-class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
+class DownloadLinksTypeTest extends \PHPUnit\Framework\TestCase
 {
+    use TempDirExtension;
+
     /** @var DownloadLinksType */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $assetHelper;
 
     protected function setUp()
@@ -28,27 +30,21 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
         unset($this->type, $this->assetHelper);
     }
 
-    public function testGetName()
-    {
-        $this->assertInternalType('string', $this->type->getName());
-        $this->assertEquals('oro_download_links_type', $this->type->getName());
-    }
-
     /**
      * @expectedException \Symfony\Component\OptionsResolver\Exception\MissingOptionsException
      * @expectedExceptionMessage The required option "source" is missing.
      */
-    public function testSetDefaultOptionsWithoutSource()
+    public function testConfigureOptionsWithoutSource()
     {
         $resolver = new OptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
         $resolver->resolve([]);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         $resolver = new OptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
 
         $options         = ['source' => []];
         $resolvedOptions = $resolver->resolve($options);
@@ -70,9 +66,7 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
      */
     public function testFinishView(array $files, array $options, array $expected)
     {
-        $testDir = $this->getTestDir();
-        $this->removeTestDir($testDir);
-        mkdir($testDir);
+        $testDir = $this->getTempDir('download_dir');
 
         $form = $this->createMock('Symfony\Component\Form\Test\FormInterface');
         $view = new FormView();
@@ -96,8 +90,6 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
 
         $this->type->finishView($view, $form, $options);
         $this->assertEquals($expected, $view->vars);
-
-        $this->removeTestDir($testDir);
     }
 
     /**
@@ -105,12 +97,14 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
      */
     public function optionsProvider()
     {
+        $downloadDir = $this->getTempDir('download_dir', null);
+
         return [
             'no files'       => [
                 'files'    => [],
                 'options'  => [
                     'source' => [
-                        'path' => $this->getTestDir() . '/*.download_file',
+                        'path' => $downloadDir . '/*.download_file',
                         'url'  => 'download/files'
                     ],
                     'class'  => ''
@@ -129,7 +123,7 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
                 ],
                 'options'  => [
                     'source' => [
-                        'path' => $this->getTestDir() . '/*.download_file',
+                        'path' => $downloadDir . '/*.download_file',
                         'url'  => 'download/files'
                     ],
                     'class'  => 'red'
@@ -145,37 +139,5 @@ class DownloadLinksTypeTest extends \PHPUnit_Framework_TestCase
                 ]
             ]
         ];
-    }
-
-    /**
-     * Get test dir path
-     *
-     * @return string
-     */
-    protected function getTestDir()
-    {
-        $tmpDir = sys_get_temp_dir();
-        if (!($tmpDir && is_dir($tmpDir) && is_writable($tmpDir))) {
-            $this->markTestSkipped(sprintf('This test requires access on create dir in temp folder "%s"', $tmpDir));
-        }
-
-        return $tmpDir . DIRECTORY_SEPARATOR . 'oro_download_dir';
-    }
-
-    /**
-     * Remove test dir
-     *
-     * @param string $dir
-     */
-    protected function removeTestDir($dir)
-    {
-        if (is_dir($dir)) {
-            $files = new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS);
-            foreach ($files as $fileInfo) {
-                unlink($fileInfo->getRealPath());
-            }
-
-            rmdir($dir);
-        }
     }
 }

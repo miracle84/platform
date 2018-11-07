@@ -4,7 +4,7 @@ namespace Oro\Bundle\ActionBundle\Tests\Unit\Model;
 
 use Oro\Bundle\ActionBundle\Model\Attribute;
 
-class AttributeTest extends \PHPUnit_Framework_TestCase
+class AttributeTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider propertiesDataProvider
@@ -58,5 +58,14 @@ class AttributeTest extends \PHPUnit_Framework_TestCase
         $attribute->setEntityAcl(array('update' => true, 'delete' => true));
         $this->assertTrue($attribute->isEntityUpdateAllowed());
         $this->assertTrue($attribute->isEntityDeleteAllowed());
+    }
+
+    public function testInstanceAndInternalType()
+    {
+        $attribute = new Attribute();
+        $this->assertInstanceOf('Oro\Bundle\ActionBundle\Model\EntityParameterInterface', $attribute);
+        $this->assertInstanceOf('Oro\Bundle\ActionBundle\Model\ParameterInterface', $attribute);
+
+        $this->assertEquals('attribute', $attribute->getInternalType());
     }
 }

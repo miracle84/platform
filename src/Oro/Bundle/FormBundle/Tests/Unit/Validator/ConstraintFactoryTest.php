@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Validator;
 
+use Oro\Bundle\FormBundle\Validator\ConstraintFactory;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-use Oro\Bundle\FormBundle\Validator\ConstraintFactory;
-
-class ConstraintFactoryTest extends \PHPUnit_Framework_TestCase
+class ConstraintFactoryTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @param string $expected

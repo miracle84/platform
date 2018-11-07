@@ -1,21 +1,22 @@
 define(function(require) {
     'use strict';
 
-    var Select2InputWidget;
-    var AbstractInputWidget = require('oroui/js/app/views/input-widget/abstract');
+    var Select2InputWidgetView;
+    var AbstractInputWidgetView = require('oroui/js/app/views/input-widget/abstract');
     var $ = require('jquery');
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
+    var tools = require('oroui/js/tools');
     // current version: http://select2.github.io/select2/
     // last version: http://select2.github.io/examples.html
     require('jquery.select2');
 
-    Select2InputWidget = AbstractInputWidget.extend({
+    Select2InputWidgetView = AbstractInputWidgetView.extend({
         initializeOptions: {
             containerCssClass: 'oro-select2',
             dropdownCssClass: 'oro-select2__dropdown',
             placeholder: __('Please select'),
-            dropdownAutoWidth: true,
+            dropdownAutoWidth: !tools.isMobile(),
             minimumInputLength: 0,
             minimumResultsForSearch: 7,
             adaptContainerCssClass: function(className) {
@@ -27,14 +28,28 @@ define(function(require) {
             }
         },
 
+        events: {
+            'select2-opening': 'disableKeyboard'
+        },
+
         widgetFunctionName: 'select2',
 
         destroyOptions: 'destroy',
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function Select2InputWidgetView() {
+            Select2InputWidgetView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
-            //fix select2.each2 bug, when empty string is FALSE
+            // fix select2.each2 bug, when empty string is FALSE
             this.$el.attr('class', $.trim(this.$el.attr('class')));
-            Select2InputWidget.__super__.initialize.apply(this, arguments);
+            Select2InputWidgetView.__super__.initialize.apply(this, arguments);
 
             if (this.isInitialized()) {
                 var data = this.$el.data(this.widgetFunctionName);
@@ -44,7 +59,7 @@ define(function(require) {
         },
 
         resolveOptions: function(options) {
-            Select2InputWidget.__super__.resolveOptions.apply(this, arguments);
+            Select2InputWidgetView.__super__.resolveOptions.apply(this, arguments);
             if (this.initializeOptions.adaptContainerCssClass) {
                 this.initializeOptions.adaptContainerCssClass = _.bind(
                     this.initializeOptions.adaptContainerCssClass,
@@ -59,7 +74,7 @@ define(function(require) {
 
         disposeWidget: function() {
             this.close();
-            return Select2InputWidget.__super__.disposeWidget.apply(this, arguments);
+            return Select2InputWidgetView.__super__.disposeWidget.apply(this, arguments);
         },
 
         findContainer: function() {
@@ -99,10 +114,22 @@ define(function(require) {
             return this.applyWidgetFunction('search', arguments);
         },
 
-        disable: function() {
-            return this.applyWidgetFunction('enable', arguments);
+        disable: function(disable) {
+            return this.applyWidgetFunction('enable', [!disable]);
+        },
+
+        disableKeyboard: function() {
+            var select = this.$el;
+            var selectContainer = this.container();
+            var isSearchHidden = selectContainer.find('.select2-search-hidden').length;
+            var minimumResultsForSearch = this.initializeOptions.minimumResultsForSearch;
+            var optionsLength = select.find('option').length;
+
+            if (tools.isMobile() && (isSearchHidden || optionsLength < minimumResultsForSearch)) {
+                selectContainer.find('.select2-search, .select2-focusser').hide();
+            }
         }
     });
 
-    return Select2InputWidget;
+    return Select2InputWidgetView;
 });

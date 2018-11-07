@@ -2,12 +2,17 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\CustomizeLoadedData;
 
+use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 
 /**
  * Computes a value of "primary" field based on a "primary" flag in a collection.
+ * For example this processor can be used to compute a value of a primary email based on
+ * a collection of emails where each element of this collection has a "primary" boolean
+ * property indicates whether an email is a primary one or not.
+ * @see \Oro\Bundle\ApiBundle\Filter\PrimaryFieldFilter
+ * @see \Oro\Bundle\ApiBundle\Processor\CustomizeFormData\MapPrimaryField
  */
 class ComputePrimaryField implements ProcessorInterface
 {
@@ -53,23 +58,11 @@ class ComputePrimaryField implements ProcessorInterface
             return;
         }
 
-        $config = $context->getConfig();
-        if (null === $config) {
-            return;
+        $primaryFieldName = $context->getResultFieldName($this->primaryFieldName);
+        if ($context->isFieldRequested($primaryFieldName, $data)) {
+            $data[$primaryFieldName] = $this->getPrimaryValue($context->getConfig(), $data);
+            $context->setResult($data);
         }
-
-        $primaryField = $config->getField($this->primaryFieldName);
-        if (!$primaryField || $primaryField->isExcluded()) {
-            // undefined or excluded primary field
-            return;
-        }
-        if (array_key_exists($this->primaryFieldName, $data)) {
-            // the primary field is already set
-            return;
-        }
-
-        $data[$this->primaryFieldName] = $this->getPrimaryValue($config, $data);
-        $context->setResult($data);
     }
 
     /**
@@ -81,16 +74,16 @@ class ComputePrimaryField implements ProcessorInterface
     protected function getPrimaryValue(EntityDefinitionConfig $config, array $data)
     {
         $result = null;
-        $association = $config->getField($this->associationName);
-        if (null !== $association) {
-            $associationName = $association->getPropertyPath($this->associationName);
+        $associationName = $config->findFieldNameByPropertyPath($this->associationName);
+        if ($associationName) {
+            $associationName = $config->findFieldNameByPropertyPath($this->associationName);
             if (!empty($data[$associationName]) && is_array($data[$associationName])) {
-                $associationTargetConfig = $association->getTargetEntity();
+                $associationTargetConfig = $config->getField($associationName)->getTargetEntity();
                 if (null !== $associationTargetConfig) {
                     $result = $this->extractPrimaryValue(
                         $data[$associationName],
-                        $this->getPropertyPath($associationTargetConfig, $this->associationDataFieldName),
-                        $this->getPropertyPath($associationTargetConfig, $this->associationPrimaryFlagFieldName)
+                        $associationTargetConfig->findFieldNameByPropertyPath($this->associationDataFieldName),
+                        $associationTargetConfig->findFieldNameByPropertyPath($this->associationPrimaryFlagFieldName)
                     );
                 }
             }
@@ -121,21 +114,5 @@ class ComputePrimaryField implements ProcessorInterface
         }
 
         return $result;
-    }
-
-    /**
-     * @param EntityDefinitionConfig $config
-     * @param string                 $fieldName
-     *
-     * @return string
-     */
-    protected function getPropertyPath(EntityDefinitionConfig $config, $fieldName)
-    {
-        $field = $config->getField($fieldName);
-        if (null === $field) {
-            return $fieldName;
-        }
-
-        return $field->getPropertyPath($fieldName);
     }
 }

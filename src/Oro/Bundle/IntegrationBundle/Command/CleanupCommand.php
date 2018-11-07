@@ -3,17 +3,16 @@
 namespace Oro\Bundle\IntegrationBundle\Command;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Bundle\BatchBundle\ORM\Query\DeletionQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\CronBundle\Command\CronCommandInterface;
+use Oro\Bundle\EntityBundle\ORM\NativeQueryExecutorHelper;
 use Oro\Bundle\IntegrationBundle\Entity\Status;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
-
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -85,9 +84,9 @@ class CleanupCommand extends ContainerAwareCommand implements CronCommandInterfa
         $failedInterval->sub(\DateInterval::createFromDateString(self::FAILED_STATUSES_INTERVAL));
 
         $integrationStatuses = $this->getOldIntegrationStatusesQueryBuilder($completedInterval, $failedInterval);
-        $iterator = new DeletionQueryResultIterator($integrationStatuses);
+        $iterator = new BufferedIdentityQueryResultIterator($integrationStatuses);
         $iterator->setBufferSize(self::BATCH_SIZE);
-        $iterator->setHydrationMode(AbstractQuery::HYDRATE_SCALAR);
+        $iterator->setHydrationMode(Query::HYDRATE_SCALAR);
 
         if (!count($iterator)) {
             $output->writeln('<info>There are no integration statuses eligible for clean up</info>');
@@ -104,13 +103,13 @@ class CleanupCommand extends ContainerAwareCommand implements CronCommandInterfa
     /**
      * Delete records using iterator
      *
-     * @param DeletionQueryResultIterator $iterator
+     * @param BufferedIdentityQueryResultIterator $iterator
      *
      * @param string                      $className Entity FQCN
      *
      * @throws \Exception
      */
-    protected function deleteRecords(DeletionQueryResultIterator $iterator, $className)
+    protected function deleteRecords(BufferedIdentityQueryResultIterator $iterator, $className)
     {
         $iteration = 0;
 
@@ -196,9 +195,9 @@ class CleanupCommand extends ContainerAwareCommand implements CronCommandInterfa
     {
         /** @var Connection $connection */
         $connection = $this->getEntityManager()->getConnection();
-        $tableName = $this->getContainer()
-            ->get('oro_entity.orm.native_query_executor_helper')
-            ->getTableName(Status::class);
+        /** @var NativeQueryExecutorHelper $nativeQueryExecutorHelper */
+        $nativeQueryExecutorHelper = $this->getContainer()->get('oro_entity.orm.native_query_executor_helper');
+        $tableName = $nativeQueryExecutorHelper->getTableName(Status::class);
         $selectQuery = <<<SQL
 SELECT MAX(a.id) AS id
 FROM 

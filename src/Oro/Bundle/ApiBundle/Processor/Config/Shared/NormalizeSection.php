@@ -3,15 +3,21 @@
 namespace Oro\Bundle\ApiBundle\Processor\Config\Shared;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
 use Oro\Bundle\ApiBundle\Config\EntityConfigInterface;
-use Oro\Bundle\ApiBundle\Config\FieldConfigInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
+use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
+use Oro\Bundle\ApiBundle\Config\FieldConfigInterface;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
+/**
+ * The base class for processors that do normalization of filters and sorters, such as:
+ * * remove all elements marked as excluded
+ * * update the property path attribute for existing elements
+ * * extract elements from the definitions of related entities
+ * * remove duplicated elements
+ */
 abstract class NormalizeSection implements ProcessorInterface
 {
     /** @var DoctrineHelper */
@@ -53,18 +59,34 @@ abstract class NormalizeSection implements ProcessorInterface
     ) {
         $fields = $section->getFields();
         $toRemoveFieldNames = [];
+        $toAddFields = [];
         foreach ($fields as $fieldName => $field) {
             if ($field->isExcluded()) {
                 $toRemoveFieldNames[] = $fieldName;
-            } elseif (!$field->hasPropertyPath() && $definition->hasField($fieldName)) {
-                $propertyPath = $definition->getField($fieldName)->getPropertyPath();
-                if ($propertyPath) {
-                    $field->setPropertyPath($propertyPath);
+            } elseif (!$field->hasPropertyPath()) {
+                if ($definition->hasField($fieldName)) {
+                    $propertyPath = $definition->getField($fieldName)->getPropertyPath();
+                    if ($propertyPath) {
+                        $field->setPropertyPath($propertyPath);
+                    }
+                } else {
+                    $definitionFieldName = $definition->findFieldNameByPropertyPath($fieldName);
+                    if ($definitionFieldName) {
+                        $propertyPath = $definition->getField($definitionFieldName)->getPropertyPath();
+                        if ($propertyPath) {
+                            $field->setPropertyPath($propertyPath);
+                            $toRemoveFieldNames[] = $fieldName;
+                            $toAddFields[$definitionFieldName] = $field;
+                        }
+                    }
                 }
             }
         }
         foreach ($toRemoveFieldNames as $fieldName) {
             $section->removeField($fieldName);
+        }
+        foreach ($toAddFields as $fieldName => $field) {
+            $section->addField($fieldName, $field);
         }
     }
 

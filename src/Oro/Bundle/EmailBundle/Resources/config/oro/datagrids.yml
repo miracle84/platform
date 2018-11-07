@@ -61,7 +61,7 @@ datagrids:
                             modal:         true
                             dblclick:      maximize
                             maximizedHeightDecreaseBy: minimize-bar
-                            width: 700
+                            width: 1000
             delete:
                 type:         delete
                 acl_resource: oro_email_autoresponserule_delete
@@ -83,29 +83,32 @@ datagrids:
                     - eu.id
                 join:
                     left:
-                        -
-                            join: eu.email
-                            alias: e
-                        -
-                            join: eu.folders
-                            alias: f
-                        -
-                            join: f.origin
-                            alias: o
+                        - { join: eu.email, alias: e }
+                        - { join: eu.folders, alias: f }
+                        - { join: f.origin, alias: o }
                 where:
                     and:
                         - o.isActive = true
                 groupBy: eu.id
             query:
                 select:
-                    - partial eu.{id, email}
-                    - e
-                    - eu.receivedAt as receivedAt
+                    - eu.id AS id
+                    - eu.seen AS seen
+                    - eu.receivedAt AS receivedAt
+                    - IDENTITY(eu.origin) AS originId
+                    - IDENTITY(eu.owner) AS ownerId
+                    - e.id AS emailId
+                    - e.subject AS subject
+                    - e.sentAt AS sentAt
+                    - e.fromName AS fromName
+                    - IDENTITY(e.fromEmailAddress) AS fromEmailAddressId
+                    - IDENTITY(e.thread) AS threadId
                     - eb.textBody AS body_content
-                    - >
-                        (SELECT COUNT(_ec.id)
-                        FROM OroEmailBundle:Email _ec
-                        WHERE _ec.thread = e.thread) AS thread_email_count
+# counting logic moved to EmailQueryFactory:addEmailsCount
+#                    - >
+#                        (SELECT COUNT(_ec.id)
+#                        FROM OroEmailBundle:Email _ec
+#                        WHERE _ec.thread = e.thread) AS thread_email_count
                     - >
                         CASE
                             WHEN e.thread IS NULL THEN eb.hasAttachments
@@ -119,24 +122,16 @@ datagrids:
                             ) THEN true
                             ELSE false
                         END AS has_attachments
-                    - CASE WHEN eu.seen = true THEN 0 ELSE 1 END as is_new
+                    - CASE WHEN eu.seen = true THEN 0 ELSE 1 END AS is_new
                 from:
                     - { table: OroEmailBundle:EmailUser, alias: eu }
                 join:
+                    inner:
+                        - { join: eu.email, alias: e }
                     left:
-                        -
-                            join: eu.email
-                            alias: e
-                        -
-                            join: e.emailBody
-                            alias: eb
-                        -
-                            join: e.recipients
-                            alias: r
+                        - { join: e.emailBody, alias: eb }
 # The next join is performed in EmailGridListener, when any of grid filters are applied: folder, folders, mailbox.
-#                        -
-#                            join: eu.folders
-#                            alias: f
+#                        - { join: eu.folders, alias: f }
 # Attributes from f are used in ChoiceMessageTypeFilter also.
                 where:
                     and:
@@ -148,6 +143,13 @@ datagrids:
                                 WHERE act_o.isActive = true AND eu.id = act_eu.id
                             )
         columns:
+            mailbox:
+                data_name: origin
+                label: oro.email.mailbox.entity_label
+                type: twig
+                frontend_type: html
+                template: OroEmailBundle:Email:Datagrid/Property/mailbox.html.twig
+                renderable: false
             contacts:
                 data_name: ~
                 type: twig
@@ -155,7 +157,7 @@ datagrids:
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/contacts.html.twig
             subject:
-                data_name: email.subject
+                data_name: subject
                 type: twig
                 label: oro.email.subject.label
                 frontend_type: html
@@ -166,6 +168,7 @@ datagrids:
                 label:
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/attachments.html.twig
+                manageable: false
             receivedAt:
                 data_name: receivedAt
                 type: twig
@@ -176,11 +179,12 @@ datagrids:
             id: ~
         sorters:
             columns:
-                subject:  { data_name: e.subject }
-                receivedAt:   { data_name: receivedAt }
-            default: { receivedAt: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC }
+                subject: { data_name: subject }
+                receivedAt: { data_name: receivedAt }
+                mailbox: { data_name: originId }
+            default: { receivedAt: '%oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC' }
         options:
-            entityHint: email
+            entityHint: emails
 
     simplified-email-grid:
         extends: base-email-grid
@@ -195,8 +199,8 @@ datagrids:
         # Oro\Bundle\EmailBundle\EventListener\Datagrid\EmailGridListener for performance reasons
         filters:
             columns:
-                subject: { type: string,   data_name: e.subject }
-                from:    { type: string,   data_name: e.fromName, label: oro.email.from_email_address.label }
+                subject: { type: email-string, data_name: e.subject }
+                from:    { type: email-string, data_name: e.fromName, label: oro.email.from_email_address.label }
                 to:      { type: string,   data_name: r_to.name,  label: oro.email.to.label }
                 cc:      { type: string,   data_name: r_cc.name,  label: oro.email.cc.label, enabled: false }
                 bcc:     { type: string,   data_name: r_bcc.name, label: oro.email.bcc.label, enabled: false }
@@ -209,8 +213,8 @@ datagrids:
                         field_options:
                             multiple: true
                             choices:
-                                inbox: oro.email.folder_type.inbox
-                                sent: oro.email.folder_type.sent
+                                oro.email.folder_type.inbox: inbox
+                                oro.email.folder_type.sent: sent
                     data_name: f.type
                 folders:
                     type: multiselect-originfolder
@@ -227,8 +231,8 @@ datagrids:
                         field_options:
                             choices:
                                 # in boolean filter type, 1 = yes, 2 = false
-                                2: oro.email.status.unread.label
-                                1: oro.email.status.read.label
+                                oro.email.status.unread.label: 2
+                                oro.email.status.read.label: 1
                     data_name: eu.seen
                 mailbox:
                     label: oro.email.mailbox.entity_label
@@ -250,11 +254,10 @@ datagrids:
 
         properties:
             id: ~
-            email.id: ~
             view_thread_link:
                 type: url
-                route: oro_email_thread_view
-                params: { id: email.id }
+                route: oro_email_user_thread_view
+                params: { id: emailId }
             toggle_seen_link:
                 type: url
                 route: oro_email_toggle_seen
@@ -291,63 +294,57 @@ datagrids:
         mass_actions:
             emailmarkread:
                 type: emailmarkread
-                entity_name: %oro_email.email_user.entity.class%
+                entity_name: '%oro_email.email_user.entity.class%'
                 data_identifier: eu.id
                 label: oro.email.datagrid.emails.action.mark_as_read
                 icon: check-square-o
             emailmarkunread:
                 type: emailmarkunread
-                entity_name: %oro_email.email_user.entity.class%
+                entity_name: '%oro_email.email_user.entity.class%'
                 data_identifier: eu.id
                 label: oro.email.datagrid.emails.action.mark_as_unread
                 icon: minus
         options:
-            toolbarOptions:
-                addColumnManager: false
             entity_pagination: true
             entity_pagination_target: Oro\Bundle\EmailBundle\Entity\Email
 
     dashboard-recent-emails-grid:
         source:
             type: orm
+            skip_acl_apply: true
             query:
                 select:
-                    - partial e.{ id, subject, sentAt }
-                    - partial eu.{ id, receivedAt, email }
+                    - eu.id AS id
+                    - eu.seen AS seen
+                    - eu.receivedAt AS receivedAt
+                    - e.id AS emailId
+                    - e.subject AS subject
+                    - e.sentAt AS sentAt
                     - eb.textBody AS body_content
-                    - a
-                    - CASE WHEN eu.seen = true THEN 0 ELSE 1 END as is_new
+                    - CASE WHEN eu.seen = true THEN 0 ELSE 1 END AS is_new
                 from:
                     - { table: OroEmailBundle:EmailUser, alias: eu }
                 join:
-                    left:
-                        -
-                            join: eu.email
-                            alias: e
-                        -
-                            join: e.emailBody
-                            alias: eb
                     inner:
-                        - { join: eu.folders, alias: f }
-                        - { join: f.origin, alias: o }
-                        - { join: e.fromEmailAddress, alias: a }
+                        - { join: eu.email, alias: e }
+                    left:
+                        - { join: e.emailBody, alias: eb }
         properties:
             id: ~
             row_class_name:
                 type: callback
                 className: 'email-row-is-readed'
                 callable: "@oro_email.helper.datagrid.emails->getReadedRowClosure"
-            email.id: ~
             view_thread_link:
                 type: url
                 route: oro_email_thread_widget
-                params: { id: email.id }
+                params: { id: emailId }
             reply_email_link:
                 type: url
                 route: oro_email_email_reply
-                params: { id: email.id }
+                params: { id: emailId }
         options:
-            entityHint: email
+            entityHint: emails
             toolbarOptions:
                 hide: true
                 pagination:
@@ -392,6 +389,10 @@ datagrids:
         extends: dashboard-recent-emails-grid
         source:
             query:
+                join:
+                    inner:
+                        - { join: eu.folders, alias: f }
+                        - { join: e.fromEmailAddress, alias: a }
                 where:
                     and:
                         - f.type IN ('%oro_email.email_folder.model.class%::INBOX', '%oro_email.email_folder.model.class%::OTHER')
@@ -402,45 +403,48 @@ datagrids:
                 label: oro.email.received_at.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/date_long.html.twig
-            fromEmailExpression:
+            fromEmailAddress:
                 type: twig
                 label: oro.email.from_name.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/from.html.twig
             subject:
-                data_name: email.subject
+                data_name: subject
                 type: twig
                 label: oro.email.subject.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/subject.html.twig
         sorters:
             columns:
-                fromEmailExpression: { data_name: fromEmailExpression }
-                receivedAt:  { data_name: eu.receivedAt }
+                fromEmailAddress: { data_name: fromEmailAddress }
+                receivedAt:  { data_name: receivedAt }
             default:
-                receivedAt: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC
+                receivedAt: '%oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC'
 
     dashboard-recent-emails-sent-grid:
         extends: dashboard-recent-emails-grid
         source:
             query:
+                join:
+                    inner:
+                        - { join: eu.folders, alias: f }
                 where:
                     and:
                         - f.type = '%oro_email.email_folder.model.class%::SENT'
                         - f.id > 0
         columns:
             sentAt:
-                data_name: email.sentAt
+                data_name: sentAt
                 label: oro.email.sent_at.label
                 frontend_type: datetime
             recipients:
-                data_name: email.recipients
+                data_name: recipients
                 type: twig
                 label: oro.email.recipients.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/recipients.html.twig
             subject:
-                data_name: email.subject
+                data_name: subject
                 type: twig
                 label: oro.email.subject.label
                 frontend_type: html
@@ -449,12 +453,15 @@ datagrids:
             columns:
                 sentAt:  { data_name: e.sentAt }
             default:
-                sentAt: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC
+                sentAt: '%oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC'
 
     dashboard-recent-emails-new-grid:
         extends: dashboard-recent-emails-grid
         source:
             query:
+                join:
+                    inner:
+                        - { join: e.fromEmailAddress, alias: a }
                 where:
                     and:
                         - eu.seen = false
@@ -464,23 +471,23 @@ datagrids:
                 label: oro.email.received_at.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/date_long.html.twig
-            fromEmailExpression:
+            fromEmailAddress:
                 type: twig
                 label: oro.email.from_name.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/from.html.twig
             subject:
-                data_name: email.subject
+                data_name: subject
                 type: twig
                 label: oro.email.subject.label
                 frontend_type: html
                 template: OroEmailBundle:Email:Datagrid/Property/subject.html.twig
         sorters:
             columns:
-                fromEmailExpression: { data_name: fromEmailExpression }
-                receivedAt:  { data_name: eu.receivedAt }
+                fromEmailAddress: { data_name: fromEmailAddress }
+                receivedAt:  { data_name: receivedAt }
             default:
-                receivedAt: %oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC
+                receivedAt: '%oro_datagrid.extension.orm_sorter.class%::DIRECTION_DESC'
         options:
             requireJSModules:
                 - oroemail/js/datagrid/listen-to-read-email-extension
@@ -497,7 +504,7 @@ datagrids:
                     - t.type
                     - t.isSystem
                 from:
-                    - { table: %oro_email.emailtemplate.entity.class%, alias: t }
+                    - { table: '%oro_email.emailtemplate.entity.class%', alias: t }
                 where:
                     and:
                         - t.visible = true
@@ -542,8 +549,8 @@ datagrids:
                     null_value: _empty_
                     options:
                         field_options:
-                            multiple:       true
-                            choices:        "@oro_email.emailtemplate.datagrid_helper->getEntityNames"
+                            multiple: true
+                            choices: "@oro_email.emailtemplate.datagrid_helper->getEntityNames"
                             translatable_options: false
                 name:
                     type:      string
@@ -587,9 +594,9 @@ datagrids:
                 link:         delete_link
         options:
             entity_pagination: true
+            entityHint: email template
         action_configuration: "@oro_email.emailtemplate.datagrid_helper->getActionConfigurationClosure"
         views_list : "@oro_email.emailtemplate.datagrid_view_list"
-        options: { entityHint: email template }
 
     base-mailboxes-grid:
         source:
@@ -657,7 +664,7 @@ datagrids:
     email-for-context-grid:
         extends: email-grid
         options:
-            entityHint: email
+            entityHint: emails
             entity_pagination: true
             toolbarOptions:
                 pageSize:

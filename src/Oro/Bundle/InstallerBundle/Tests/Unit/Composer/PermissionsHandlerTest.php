@@ -2,19 +2,20 @@
 
 namespace Oro\Bundle\InstallerBundle\Tests\Unit\Composer;
 
-use Symfony\Component\Filesystem\Filesystem;
-
 use Oro\Bundle\InstallerBundle\Composer\PermissionsHandler;
+use Oro\Component\Testing\TempDirExtension;
 
-class PermissionsHandlerTest extends \PHPUnit_Framework_TestCase
+class PermissionsHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    use TempDirExtension;
+
     /**
      * @var PermissionsHandler
      */
     protected $handler;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $process;
 
@@ -30,19 +31,10 @@ class PermissionsHandlerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . time();
-
-        $fs = new Filesystem();
-        $fs->mkdir($this->directory);
+        $this->directory = $this->getTempDir('permissions_handler');
 
         $this->handler = new PermissionsHandler();
         $this->handler->setProcess($this->process);
-    }
-
-    protected function tearDown()
-    {
-        $fs = new Filesystem();
-        $fs->remove($this->directory);
     }
 
     public function testSetPermissionsSetfacl()

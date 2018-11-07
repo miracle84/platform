@@ -2,11 +2,9 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Functional\Api\Rest;
 
+use Oro\Bundle\EmailBundle\Tests\Functional\DataFixtures\LoadAdminOwnerEmailData;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class EmailControllerTest extends WebTestCase
 {
     const INCORRECT_ID = -1;
@@ -30,7 +28,7 @@ class EmailControllerTest extends WebTestCase
     protected function setUp()
     {
         $this->initClient([], $this->generateWsseAuthHeader());
-        $this->loadFixtures(['Oro\Bundle\EmailBundle\Tests\Functional\DataFixtures\LoadEmailData']);
+        $this->loadFixtures([LoadAdminOwnerEmailData::class]);
     }
 
     /**

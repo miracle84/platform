@@ -5,7 +5,6 @@ namespace Oro\Bundle\EmailBundle\EventListener;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Model\WebSocket\WebSocketSendProcessor;
 
@@ -42,7 +41,7 @@ class EmailUserListener
     }
 
     /**
-     * Send notification to clank that user have new emails
+     * Send notification to websocket that user have new emails
      *
      * @param PostFlushEventArgs $args
      */

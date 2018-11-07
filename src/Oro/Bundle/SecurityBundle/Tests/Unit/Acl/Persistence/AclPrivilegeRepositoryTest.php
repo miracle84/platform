@@ -3,12 +3,6 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Persistence;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-use Symfony\Component\Security\Acl\Domain\RoleSecurityIdentity;
-use Symfony\Component\Security\Acl\Exception\NotAllAclsFoundException;
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity as OID;
-
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdentityFactory;
 use Oro\Bundle\SecurityBundle\Acl\Extension\EntityMaskBuilder;
@@ -18,25 +12,29 @@ use Oro\Bundle\SecurityBundle\Metadata\FieldSecurityMetadata;
 use Oro\Bundle\SecurityBundle\Model\AclPermission;
 use Oro\Bundle\SecurityBundle\Model\AclPrivilege;
 use Oro\Bundle\SecurityBundle\Model\AclPrivilegeIdentity;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity as OID;
+use Symfony\Component\Security\Acl\Domain\RoleSecurityIdentity;
+use Symfony\Component\Security\Acl\Exception\NotAllAclsFoundException;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
-class AclPrivilegeRepositoryTest extends \PHPUnit_Framework_TestCase
+class AclPrivilegeRepositoryTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AclPrivilegeRepository */
     private $repository;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $manager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $extensionSelector;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $extension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $aceProvider;
 
     protected function setUp()

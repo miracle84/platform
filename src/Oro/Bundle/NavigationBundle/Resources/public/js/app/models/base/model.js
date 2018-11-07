@@ -1,13 +1,12 @@
-define([
-    'underscore',
-    'routing',
-    'oroui/js/app/models/base/model'
-], function(_, routing, BaseModel) {
+define(function(require) {
     'use strict';
 
-    var Model;
+    var BaseNavigationItemModel;
+    var _ = require('underscore');
+    var routing = require('routing');
+    var BaseModel = require('oroui/js/app/models/base/model');
 
-    Model = BaseModel.extend({
+    BaseNavigationItemModel = BaseModel.extend({
         route: 'oro_api_get_navigationitems',
 
         defaults: {
@@ -16,6 +15,13 @@ define([
             url: null,
             position: null,
             type: null
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseNavigationItemModel() {
+            BaseNavigationItemModel.__super__.constructor.apply(this, arguments);
         },
 
         url: function() {
@@ -32,5 +38,5 @@ define([
         }
     });
 
-    return Model;
+    return BaseNavigationItemModel;
 });

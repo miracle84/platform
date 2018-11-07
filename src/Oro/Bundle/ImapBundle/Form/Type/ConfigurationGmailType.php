@@ -2,22 +2,23 @@
 
 namespace Oro\Bundle\ImapBundle\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\CallbackTransformer;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
 use Oro\Bundle\ImapBundle\Form\EventListener\ApplySyncSubscriber;
-use Oro\Bundle\ImapBundle\Form\EventListener\OriginFolderSubscriber;
-use Oro\Bundle\ImapBundle\Form\EventListener\GmailOAuthSubscriber;
 use Oro\Bundle\ImapBundle\Form\EventListener\DecodeFolderSubscriber;
+use Oro\Bundle\ImapBundle\Form\EventListener\GmailOAuthSubscriber;
+use Oro\Bundle\ImapBundle\Form\EventListener\OriginFolderSubscriber;
 use Oro\Bundle\ImapBundle\Mail\Storage\GmailImap;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\CallbackTransformer;
+use Symfony\Component\Form\Extension\Core\Type\ButtonType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Translation\TranslatorInterface;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -32,22 +33,22 @@ class ConfigurationGmailType extends AbstractType
     /** ConfigManager */
     protected $userConfigManager;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * @param TranslatorInterface $translator
-     * @param ConfigManager $userConfigManager
-     * @param SecurityFacade $securityFacade
+     * @param TranslatorInterface    $translator
+     * @param ConfigManager          $userConfigManager
+     * @param TokenAccessorInterface $tokenAccessor
      */
     public function __construct(
         TranslatorInterface $translator,
         ConfigManager $userConfigManager,
-        SecurityFacade $securityFacade
+        TokenAccessorInterface $tokenAccessor
     ) {
         $this->translator = $translator;
         $this->userConfigManager = $userConfigManager;
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -63,40 +64,40 @@ class ConfigurationGmailType extends AbstractType
         $builder->addEventSubscriber(new ApplySyncSubscriber());
 
         $builder
-            ->add('check', 'button', [
+            ->add('check', ButtonType::class, [
                 'label' => $this->translator->trans('oro.imap.configuration.connect'),
                 'attr' => ['class' => 'btn btn-primary']
             ])
-            ->add('accessToken', 'hidden')
-            ->add('refreshToken', 'hidden')
-            ->add('accessTokenExpiresAt', 'hidden')
-            ->add('imapHost', 'hidden', [
+            ->add('accessToken', HiddenType::class)
+            ->add('refreshToken', HiddenType::class)
+            ->add('accessTokenExpiresAt', HiddenType::class)
+            ->add('imapHost', HiddenType::class, [
                 'required' => true,
                 'data' => GmailImap::DEFAULT_GMAIL_HOST
             ])
-            ->add('imapPort', 'hidden', [
+            ->add('imapPort', HiddenType::class, [
                 'required' => true,
                 'data' => GmailImap::DEFAULT_GMAIL_PORT
             ])
-            ->add('user', 'hidden', [
+            ->add('user', HiddenType::class, [
                 'required' => true,
             ])
-            ->add('imapEncryption', 'hidden', [
+            ->add('imapEncryption', HiddenType::class, [
                 'required' => true,
                 'data' => GmailImap::DEFAULT_GMAIL_SSL
             ])
-            ->add('clientId', 'hidden', [
+            ->add('clientId', HiddenType::class, [
                 'data' => $this->userConfigManager->get('oro_google_integration.client_id')
             ])
-            ->add('smtpHost', 'hidden', [
+            ->add('smtpHost', HiddenType::class, [
                 'required' => false,
                 'data' => GmailImap::DEFAULT_GMAIL_SMTP_HOST
             ])
-            ->add('smtpPort', 'hidden', [
+            ->add('smtpPort', HiddenType::class, [
                 'required' => false,
                 'data' => GmailImap::DEFAULT_GMAIL_SMTP_PORT
             ])
-            ->add('smtpEncryption', 'hidden', [
+            ->add('smtpEncryption', HiddenType::class, [
                 'required'    => false,
                 'data' => GmailImap::DEFAULT_GMAIL_SMTP_SSL
             ]);
@@ -104,7 +105,6 @@ class ConfigurationGmailType extends AbstractType
         $builder->get('accessTokenExpiresAt')
             ->addModelTransformer(new CallbackTransformer(
                 function ($originalAccessTokenExpiresAt) {
-
                     if ($originalAccessTokenExpiresAt === null) {
                         return '';
                     }
@@ -166,12 +166,12 @@ class ConfigurationGmailType extends AbstractType
                 $data = $event->getData();
                 if ($data !== null) {
                     if (($data->getOwner() === null) && ($data->getMailbox() === null)) {
-                        $data->setOwner($this->securityFacade->getLoggedUser());
+                        $data->setOwner($this->tokenAccessor->getUser());
                     }
                     if ($data->getOrganization() === null) {
-                        $organization = $this->securityFacade->getOrganization()
-                            ? $this->securityFacade->getOrganization()
-                            : $this->securityFacade->getLoggedUser()->getOrganization();
+                        $organization = $this->tokenAccessor->getOrganization()
+                            ? $this->tokenAccessor->getOrganization()
+                            : $this->tokenAccessor->getUser()->getOrganization();
                         $data->setOrganization($organization);
                     }
 

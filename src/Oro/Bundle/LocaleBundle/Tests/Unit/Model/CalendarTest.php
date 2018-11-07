@@ -3,8 +3,10 @@
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Model;
 
 use Oro\Bundle\LocaleBundle\Model\Calendar;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Intl\Util\IntlTestHelper;
 
-class CalendarTest extends \PHPUnit_Framework_TestCase
+class CalendarTest extends TestCase
 {
     /**
      * @var Calendar
@@ -18,6 +20,8 @@ class CalendarTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
+        IntlTestHelper::requireIntl($this);
+
         $this->calendar = new Calendar();
         $this->defaultLocale = \Locale::getDefault();
     }
@@ -73,7 +77,7 @@ class CalendarTest extends \PHPUnit_Framework_TestCase
         if (null !== $defaultLocale) {
             \Locale::setDefault($defaultLocale);
         }
-        $this->assertEquals($expected, $this->calendar->getMonthNames($width));
+        $this->assertEquals($expected, $this->calendar->getMonthNames($width), '', 0.0, 10, false, true);
     }
 
     public function getMonthNamesDataProvider()

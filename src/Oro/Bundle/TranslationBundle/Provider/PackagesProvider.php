@@ -4,20 +4,18 @@ namespace Oro\Bundle\TranslationBundle\Provider;
 
 use Composer\Config;
 use Composer\Package\PackageInterface;
-
 use Oro\Bundle\DistributionBundle\Manager\PackageManager;
-use Oro\Component\DependencyInjection\ServiceLink;
 
 class PackagesProvider implements PackageProviderInterface
 {
-    /** @var ServiceLink */
-    protected $pmLink;
+    /** @var PackageManager */
+    protected $pm;
 
     /** @var array */
     protected $bundles;
 
     /** @var  string */
-    protected $kernelRootDir;
+    protected $kernelProjectDir;
 
     /** @var  string */
     protected $composerCacheHome;
@@ -29,24 +27,24 @@ class PackagesProvider implements PackageProviderInterface
     protected $packageProviders;
 
     /**
-     * @param ServiceLink $pmLink
-     * @param array $bundles
-     * @param string $kernelRootDir
-     * @param string $composerCacheHome
-     * @param array $packageProviders
+     * @param PackageManager $pm
+     * @param array          $bundles
+     * @param string         $kernelProjectDir
+     * @param string         $composerCacheHome
+     * @param array          $packageProviders
      */
     public function __construct(
-        ServiceLink $pmLink,
+        PackageManager $pm,
         array $bundles,
-        $kernelRootDir,
+        $kernelProjectDir,
         $composerCacheHome,
         array $packageProviders = []
     ) {
-        $this->pmLink            = $pmLink;
-        $this->bundles           = $bundles;
-        $this->kernelRootDir     = $kernelRootDir;
+        $this->pm = $pm;
+        $this->bundles = $bundles;
+        $this->kernelProjectDir = $kernelProjectDir;
         $this->composerCacheHome = $composerCacheHome;
-        $this->packageProviders  = $packageProviders;
+        $this->packageProviders = $packageProviders;
     }
 
     /**
@@ -61,11 +59,11 @@ class PackagesProvider implements PackageProviderInterface
             putenv(sprintf('COMPOSER_HOME=%s', $this->composerCacheHome));
 
             // avoid change of current directory, just give correct vendor dir
-            $rootPath                            = realpath($this->kernelRootDir . '/../') . DIRECTORY_SEPARATOR;
+            $rootPath                            = realpath($this->kernelProjectDir . '/') . DIRECTORY_SEPARATOR;
             Config::$defaultConfig['vendor-dir'] = $rootPath . Config::$defaultConfig['vendor-dir'];
         }
 
-        return $this->pmLink->getService();
+        return $this->pm;
     }
 
     /**

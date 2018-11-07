@@ -5,12 +5,12 @@ namespace Oro\Bundle\ImapBundle\Manager\DTO;
 use Oro\Bundle\EmailBundle\Model\EmailHeader;
 use Oro\Bundle\ImapBundle\Mail\Storage\Body;
 use Oro\Bundle\ImapBundle\Mail\Storage\Message;
-use Oro\Bundle\ImapBundle\Mail\Storage\Exception\InvalidBodyFormatException;
 
+/**
+ * Represents IMAP email instance with content like body and attachments.
+ */
 class Email extends EmailHeader
 {
-    const EMAIL_EMPTY_BODY_CONTENT = "\n";
-
     /**
      * @var Message
      */
@@ -66,6 +66,16 @@ class Email extends EmailHeader
     }
 
     /**
+     * Get Message object
+     *
+     * @return Message
+     */
+    public function getMessage()
+    {
+        return $this->message;
+    }
+
+    /**
      * Get email body
      *
      * @return EmailBody
@@ -80,14 +90,12 @@ class Email extends EmailHeader
             if ($contentType && strtolower($contentType->getType()) === 'text/html') {
                 $this->body->setContent($body->getContent(Body::FORMAT_HTML)->getDecodedContent());
                 $this->body->setBodyIsText(false);
-            } elseif ($contentType && strtolower($contentType->getType()) === 'text/plain') {
+            } else {
                 $this->body->setContent($body->getContent(Body::FORMAT_TEXT)->getDecodedContent());
                 $this->body->setBodyIsText(true);
-            } else {
-                //if body has wrong type, set body as empty and then try to save it as attachment
-                $this->body->setContent(self::EMAIL_EMPTY_BODY_CONTENT);
-                $this->body->setBodyIsText(true);
             }
+
+            $this->body->setOriginalContentType($contentType);
         }
 
         return $this->body;
@@ -101,10 +109,9 @@ class Email extends EmailHeader
     public function getAttachments()
     {
         if ($this->attachments === null) {
-            $this->attachments = array();
-
+            $this->attachments = [];
             $attachments = $this->message->getAttachments();
-            if (!$attachments && $this->getBody()->getContent() === self::EMAIL_EMPTY_BODY_CONTENT) {
+            if (!$attachments && !$this->getBody()->getOriginalContentType()) {
                 $attachment = $this->message->getMessageAsAttachment();
                 if ($attachment) {
                     $attachments[] = $attachment;
@@ -142,7 +149,7 @@ class Email extends EmailHeader
     public function hasFlag($flag)
     {
         $flags = $this->message->getFlags();
-        if (in_array($flag, $flags)) {
+        if (in_array($flag, $flags, true)) {
             return true;
         }
         return false;

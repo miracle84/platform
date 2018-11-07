@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Entity;
 
+use Oro\Bundle\IntegrationBundle\Entity\FieldsChanges;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 
-use Oro\Bundle\IntegrationBundle\Entity\FieldsChanges;
-
-class FieldsChangesTest extends \PHPUnit_Framework_TestCase
+class FieldsChangesTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var FieldsChanges

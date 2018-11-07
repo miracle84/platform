@@ -3,18 +3,19 @@
 namespace Oro\Component\Testing\Unit;
 
 use Symfony\Component\Form\Extension\Validator\ValidatorExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase as BaseTestCase;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\Test\FormIntegrationTestCase as BaseTestCase;
 use Symfony\Component\Translation\TranslatorInterface;
 use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\ConstraintValidatorInterface;
 use Symfony\Component\Validator\ConstraintValidatorFactoryInterface;
+use Symfony\Component\Validator\ConstraintValidatorInterface;
+use Symfony\Component\Validator\Context\ExecutionContextFactory;
 use Symfony\Component\Validator\Mapping\ClassMetadata;
-use Symfony\Component\Validator\Mapping\ClassMetadataFactory;
+use Symfony\Component\Validator\Mapping\Factory\LazyLoadingMetadataFactory;
 use Symfony\Component\Validator\Mapping\Loader\LoaderInterface;
 use Symfony\Component\Validator\Mapping\Loader\YamlFileLoader;
 use Symfony\Component\Validator\Validation;
-use Symfony\Component\Validator\Validator;
+use Symfony\Component\Validator\Validator\RecursiveValidator;
 
 class FormIntegrationTestCase extends BaseTestCase
 {
@@ -51,11 +52,11 @@ class FormIntegrationTestCase extends BaseTestCase
     }
 
     /**
-     * @return Validator
+     * @return RecursiveValidator
      */
     protected function getValidator()
     {
-        /* @var $loader \PHPUnit_Framework_MockObject_MockObject|LoaderInterface */
+        /* @var $loader \PHPUnit\Framework\MockObject\MockObject|LoaderInterface */
         $loader = $this->createMock('Symfony\Component\Validator\Mapping\Loader\LoaderInterface');
         $loader
             ->expects($this->any())
@@ -64,10 +65,10 @@ class FormIntegrationTestCase extends BaseTestCase
                 $this->loadMetadata($meta);
             }));
 
-        $validator = new Validator(
-            new ClassMetadataFactory($loader),
-            $this->getConstraintValidatorFactory(),
-            $this->getTranslator()
+        $validator = new RecursiveValidator(
+            new ExecutionContextFactory($this->getTranslator()),
+            new LazyLoadingMetadataFactory($loader),
+            $this->getConstraintValidatorFactory()
         );
 
         return $validator;
@@ -146,17 +147,16 @@ class FormIntegrationTestCase extends BaseTestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ConstraintValidatorFactoryInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|ConstraintValidatorFactoryInterface
      */
     protected function getConstraintValidatorFactory()
     {
-        /* @var $factory \PHPUnit_Framework_MockObject_MockObject|ConstraintValidatorFactoryInterface */
+        /* @var $factory \PHPUnit\Framework\MockObject\MockObject|ConstraintValidatorFactoryInterface */
         $factory = $this->createMock('Symfony\Component\Validator\ConstraintValidatorFactoryInterface');
 
         $factory->expects($this->any())
             ->method('getInstance')
             ->will($this->returnCallback(function (Constraint $constraint) {
-
                 $className = $constraint->validatedBy();
 
                 if (!isset($this->validators[$className])
@@ -173,11 +173,11 @@ class FormIntegrationTestCase extends BaseTestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|TranslatorInterface
      */
     protected function getTranslator()
     {
-        /* @var $translator \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface */
+        /* @var $translator \PHPUnit\Framework\MockObject\MockObject|TranslatorInterface */
         $translator = $this->createMock('Symfony\Component\Translation\TranslatorInterface');
 
         $translator->expects($this->any())
@@ -228,5 +228,14 @@ class FormIntegrationTestCase extends BaseTestCase
         }
 
         return $path;
+    }
+
+    /**
+     * @param \DateTime $expected
+     * @param \DateTime $actual
+     */
+    public static function assertDateTimeEquals(\DateTime $expected, \DateTime $actual)
+    {
+        self::assertEquals($expected->format('c'), $actual->format('c'));
     }
 }

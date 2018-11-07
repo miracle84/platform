@@ -3,11 +3,11 @@
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Datagrid\Extension;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Query\Expr;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\ResultsObject;
+use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
@@ -20,21 +20,21 @@ use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
 /**
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class LocalizedValueExtensionTest extends \PHPUnit_Framework_TestCase
+class LocalizedValueExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var DoctrineHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var EntityClassResolver|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityClassResolver|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityClassResolver;
 
-    /** @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $localizationHelper;
 
-    /** @var OrmDatasource|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var OrmDatasource|\PHPUnit\Framework\MockObject\MockObject */
     protected $datasource;
 
-    /** @var QueryBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var QueryBuilder|\PHPUnit\Framework\MockObject\MockObject */
     protected $queryBuilder;
 
     /** @var LocalizedValueExtension */
@@ -70,6 +70,7 @@ class LocalizedValueExtensionTest extends \PHPUnit_Framework_TestCase
             $this->entityClassResolver,
             $this->localizationHelper
         );
+        $this->extension->setParameters(new ParameterBag());
     }
 
     public function testApplicable()

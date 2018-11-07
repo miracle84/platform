@@ -2,19 +2,17 @@
 
 namespace Oro\Component\Layout\Tests\Unit\Loader\Generator\Extension;
 
+use CG\Core\DefaultGeneratorStrategy;
 use CG\Generator\PhpClass;
 use CG\Generator\PhpMethod;
-use CG\Core\DefaultGeneratorStrategy;
-
-use Oro\Component\Layout\Loader\Generator\VisitContext;
 use Oro\Component\Layout\Loader\Generator\Extension\ImportLayoutUpdateVisitor;
+use Oro\Component\Layout\Loader\Generator\VisitContext;
 
-class ImportLayoutUpdateVisitorTest extends \PHPUnit_Framework_TestCase
+class ImportLayoutUpdateVisitorTest extends \PHPUnit\Framework\TestCase
 {
     // @codingStandardsIgnoreStart
     public function testVisit()
     {
-
         $condition = new ImportLayoutUpdateVisitor();
         $phpClass = PhpClass::create('ImportedLayoutUpdate');
         $visitContext = new VisitContext($phpClass);
@@ -74,7 +72,8 @@ class ImportedLayoutUpdate implements \Oro\Component\Layout\LayoutUpdateImportIn
 }
 CLASS
         ,
-        $strategy->generate($visitContext->getClass()));
+        $strategy->generate($visitContext->getClass())
+        );
     }
     //codingStandardsIgnoreEnd
 }

@@ -11,7 +11,7 @@ define(function(require) {
         },
 
         listen: {
-            'commentCountChanged': 'updateCommentsQuantity'
+            commentCountChanged: 'updateCommentsQuantity'
         },
 
         /**
@@ -19,6 +19,13 @@ define(function(require) {
          * @type {number}
          */
         commentCount: 0,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailItemView() {
+            EmailItemView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc

@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Form\EventListener;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Translation\ConfigTranslationHelper;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 use Oro\Bundle\TranslationBundle\Translation\Translator;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 
 class ConfigSubscriber implements EventSubscriberInterface
 {
@@ -101,9 +100,16 @@ class ConfigSubscriber implements EventSubscriberInterface
             if (isset($data[$scope])) {
                 $configId = $this->configManager->getConfigIdByModel($configModel, $scope);
                 $config   = $provider->getConfigById($configId);
+                $this->configManager->calculateConfigChangeSet($config);
+                $changeSet = $this->configManager->getConfigChangeSet($config);
 
                 $translatable = $provider->getPropertyConfig()->getTranslatableValues($configId);
                 foreach ($data[$scope] as $code => $value) {
+                    if (isset($changeSet[$code][static::NEW_PENDING_VALUE_KEY])) {
+                        // we shouldn't overwrite config's value by data from form,
+                        // if it was directly changed earlier by some form's listener or something like that
+                        $value = $changeSet[$code][static::NEW_PENDING_VALUE_KEY];
+                    }
                     if (in_array($code, $translatable, true)) {
                         // check if a label text was changed
                         $labelKey = $config->get($code);

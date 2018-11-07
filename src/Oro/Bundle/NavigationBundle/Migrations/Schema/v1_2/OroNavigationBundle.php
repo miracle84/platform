@@ -6,14 +6,12 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Pagination\Paginator;
-
-use Symfony\Bundle\FrameworkBundle\Routing\Router;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 use Oro\Bundle\NavigationBundle\Entity\NavigationHistoryItem;
+use Symfony\Bundle\FrameworkBundle\Routing\Router;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class OroNavigationBundle implements Migration, ContainerAwareInterface
 {
@@ -64,7 +62,7 @@ class OroNavigationBundle implements Migration, ContainerAwareInterface
 
         foreach ($paginator as $navItem) {
             try {
-                $url       = str_replace('app_dev.php/', '', $navItem['url']);
+                $url       = str_replace('index_dev.php/', '', $navItem['url']);
                 $routeData = $this->router->match($url);
                 $entityId  = isset($routeData['id']) ? (int)$routeData['id'] : null;
                 $route     = $routeData['_route'];

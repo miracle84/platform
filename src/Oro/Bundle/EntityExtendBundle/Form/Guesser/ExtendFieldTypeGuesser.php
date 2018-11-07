@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityExtendBundle\Form\Guesser;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
 use Oro\Bundle\EntityBundle\Form\Guesser\AbstractFormGuesser;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
@@ -13,7 +12,6 @@ use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendConfigDumper;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\Decimal;
-
 use Symfony\Component\Validator\Constraints\Length;
 
 class ExtendFieldTypeGuesser extends AbstractFormGuesser
@@ -36,6 +34,13 @@ class ExtendFieldTypeGuesser extends AbstractFormGuesser
     /** @var array */
     protected $typeMap = [];
 
+    /**
+     * @param ManagerRegistry $managerRegistry
+     * @param ConfigProvider  $entityConfigProvider
+     * @param ConfigProvider  $formConfigProvider
+     * @param ConfigProvider  $extendConfigProvider
+     * @param ConfigProvider  $enumConfigProvider
+     */
     public function __construct(
         ManagerRegistry $managerRegistry,
         ConfigProvider $entityConfigProvider,
@@ -132,7 +137,10 @@ class ExtendFieldTypeGuesser extends AbstractFormGuesser
                 // Doctrine DBAL can't save null to boolean field
                 // see https://github.com/doctrine/dbal/issues/2580
                 $options['configs']['allowClear'] = false;
-                $options['choices'] = ['No', 'Yes'];
+                $options['choices'] = [
+                    'No' => false,
+                    'Yes' => true
+                ];
                 break;
             case 'enum':
                 $options['enum_code'] = $this->enumConfigProvider->getConfig($className, $fieldName)

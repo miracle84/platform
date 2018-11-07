@@ -1,13 +1,15 @@
 define(['underscore', 'backbone', 'oro/dialog-widget'
-    ], function(_, Backbone, DialogWidget) {
+], function(_, Backbone, DialogWidget) {
     'use strict';
+
+    var EntityView;
 
     /**
      * @export  oroform/js/multiple-entity/view
      * @class   oroform.MultipleEntity.View
      * @extends Backbone.View
      */
-    return Backbone.View.extend({
+    EntityView = Backbone.View.extend({
         attributes: {
             'class': 'list-group-item clearfix span3 box-type1'
         },
@@ -25,6 +27,16 @@ define(['underscore', 'backbone', 'oro/dialog-widget'
             template: null
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function EntityView() {
+            EntityView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             this.template = _.template(this.options.template);
@@ -43,12 +55,12 @@ define(['underscore', 'backbone', 'oro/dialog-widget'
             e.stopImmediatePropagation();
             e.preventDefault();
             var widget = new DialogWidget({
-                'url': this.options.model.get('link'),
-                'title': this.options.model.get('label'),
+                url: this.options.model.get('link'),
+                title: this.options.model.get('label'),
                 dialogOptions: {
-                    'allowMinimize': true,
-                    'width': 675,
-                    'autoResize': true
+                    allowMinimize: true,
+                    width: 675,
+                    autoResize: true
                 }
             });
             widget.render();
@@ -80,4 +92,6 @@ define(['underscore', 'backbone', 'oro/dialog-widget'
             return this;
         }
     });
+
+    return EntityView;
 });

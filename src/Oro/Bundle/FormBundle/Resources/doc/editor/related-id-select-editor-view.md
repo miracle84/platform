@@ -1,5 +1,7 @@
+## RelatedIdSelectEditorView ⇐ [SelectEditorView](./select-editor-view.md)
+
 <a name="module_RelatedIdSelectEditorView"></a>
-## RelatedIdSelectEditorView ⇐ <code>[SelectEditorView](./select-editor-view.md)</code>
+
 Select-like cell content editor. This view is applicable when the cell value contains label (not the value).
 The editor will use provided `choices` map and `value_field_name`. The server will be updated with value only.
 
@@ -36,6 +38,11 @@ datagrids:
                 key-2: Second
           validation_rules:
             NotBlank: ~
+          save_api_accessor:
+              route: '<route>'
+              query_parameter_names:
+                 - '<parameter1>'
+                 - '<parameter2>'
     properties:
       # this line is required to add {column-name-value} to data sent to client
       {column-name-value}: ~
@@ -50,21 +57,23 @@ inline_editing.editor.view_options.value_field_name | Related value field name.
 inline_editing.editor.view_options.placeholder      | Optional. Placeholder translation key for an empty element
 inline_editing.editor.view_options.placeholder_raw  | Optional. Raw placeholder value
 inline_editing.editor.view_options.css_class_name   | Optional. Additional css class name for editor view DOM el
-inline_editing.editor.validation_rules | Optional. Validation rules. See [documentation](https://goo.gl/j9dj4Y)
+inline_editing.validation_rules | Optional. Validation rules. See [documentation](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
+inline_editing.save_api_accessor                    | Optional. Sets accessor module, route, parameters etc.
 
 
 ### Constructor parameters
 
-**Extends:** <code>[SelectEditorView](./select-editor-view.md)</code>  
+**Extends:** [SelectEditorView](./select-editor-view.md)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| options | <code>Object</code> | Options container |
-| options.model | <code>Object</code> | Current row model |
-| options.fieldName | <code>string</code> | Field name to edit in model |
-| options.placeholder | <code>string</code> | Placeholder translation key for an empty element |
-| options.placeholder_raw | <code>string</code> | Raw placeholder value. It overrides placeholder translation key |
-| options.validationRules | <code>Object</code> | Validation rules. See [documentation here](https://goo.gl/j9dj4Y) |
-| options.choices | <code>Object</code> | Key-value set of available choices |
-| options.value_field_name | <code>Object</code> | Related value field name |
+| options | `Object` | Options container |
+| options.model | `Object` | Current row model |
+| options.className | `string` | CSS class name for editor element |
+| options.fieldName | `string` | Field name to edit in model |
+| options.placeholder | `string` | Placeholder translation key for an empty element |
+| options.placeholder_raw | `string` | Raw placeholder value. It overrides placeholder translation key |
+| options.validationRules | `Object` | Validation rules. See [documentation here](../reference/js_validation.md#conformity-server-side-validations-to-client-once) |
+| options.choices | `Object` | Key-value set of available choices |
+| options.value_field_name | `Object` | Related value field name |
 

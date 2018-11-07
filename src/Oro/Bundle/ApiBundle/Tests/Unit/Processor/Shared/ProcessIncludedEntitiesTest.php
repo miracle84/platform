@@ -2,7 +2,6 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ActionProcessorInterface;
 use Oro\Bundle\ApiBundle\Collection\IncludedEntityCollection;
 use Oro\Bundle\ApiBundle\Collection\IncludedEntityData;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
@@ -13,18 +12,20 @@ use Oro\Bundle\ApiBundle\Processor\Shared\ProcessIncludedEntities;
 use Oro\Bundle\ApiBundle\Processor\Update\UpdateContext;
 use Oro\Bundle\ApiBundle\Request\ApiActions;
 use Oro\Bundle\ApiBundle\Request\ErrorCompleterInterface;
+use Oro\Bundle\ApiBundle\Request\ErrorCompleterRegistry;
 use Oro\Bundle\ApiBundle\Tests\Unit\Processor\FormProcessorTestCase;
+use Oro\Component\ChainProcessor\ActionProcessorInterface;
 
 class ProcessIncludedEntitiesTest extends FormProcessorTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $processorBag;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ActionProcessorBagInterface */
+    private $processorBag;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $errorCompleter;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ErrorCompleterInterface */
+    private $errorCompleter;
 
     /** @var ProcessIncludedEntities */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
@@ -33,9 +34,15 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
         $this->processorBag = $this->createMock(ActionProcessorBagInterface::class);
         $this->errorCompleter = $this->createMock(ErrorCompleterInterface::class);
 
-        $this->processor = new ProcessIncludedEntitiesStub(
+        $errorCompleterRegistry = $this->createMock(ErrorCompleterRegistry::class);
+        $errorCompleterRegistry->expects(self::any())
+            ->method('getErrorCompleter')
+            ->with($this->context->getRequestType())
+            ->willReturn($this->errorCompleter);
+
+        $this->processor = new ProcessIncludedEntities(
             $this->processorBag,
-            $this->errorCompleter
+            $errorCompleterRegistry
         );
     }
 
@@ -70,12 +77,15 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
         $expectedContext = new CreateContext($this->configProvider, $this->metadataProvider);
         $expectedContext->setVersion($this->context->getVersion());
         $expectedContext->getRequestType()->set($this->context->getRequestType());
+        $expectedContext->setMasterRequest(false);
+        $expectedContext->setCorsRequest(false);
         $expectedContext->setRequestHeaders($this->context->getRequestHeaders());
         $expectedContext->setIncludedEntities($includedEntities);
         $expectedContext->setClassName('Test\Class');
         $expectedContext->setId('id');
         $expectedContext->setRequestData(['data' => ['type' => 'testType', 'id' => 'testId']]);
         $expectedContext->setResult($includedEntity);
+        $expectedContext->skipFormValidation(true);
         $expectedContext->setLastGroup('transform_data');
         $expectedContext->setSoftErrorsHandling(true);
 
@@ -94,7 +104,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             ->method('process')
             ->willReturnCallback(
                 function (CreateContext $context) use ($expectedContext, $actionMetadata) {
-                    $this->assertEquals($expectedContext, $context);
+                    self::assertEquals($expectedContext, $context);
 
                     $context->setMetadata($actionMetadata);
                 }
@@ -104,10 +114,12 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
 
         $this->context->setIncludedData($includedData);
         $this->context->setIncludedEntities($includedEntities);
+        $this->context->setMasterRequest(true);
+        $this->context->setCorsRequest(true);
         $this->context->getRequestHeaders()->set('header1', 'value1');
         $this->processor->process($this->context);
-        $this->assertFalse($actionContext->hasErrors());
-        $this->assertSame($actionMetadata, $includedEntityData->getMetadata());
+        self::assertFalse($actionContext->hasErrors());
+        self::assertSame($actionMetadata, $includedEntityData->getMetadata());
     }
 
     public function testProcessForNewIncludedEntityWhenCreateActionFailed()
@@ -132,6 +144,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
         $expectedContext->setId('id');
         $expectedContext->setRequestData(['data' => ['type' => 'testType', 'id' => 'testId']]);
         $expectedContext->setResult($includedEntity);
+        $expectedContext->skipFormValidation(true);
         $expectedContext->setLastGroup('transform_data');
         $expectedContext->setSoftErrorsHandling(true);
 
@@ -150,7 +163,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             ->method('process')
             ->willReturnCallback(
                 function (CreateContext $context) use ($expectedContext, $error, $actionMetadata) {
-                    $this->assertEquals($expectedContext, $context);
+                    self::assertEquals($expectedContext, $context);
 
                     $context->setMetadata($actionMetadata);
                     $context->addError($error);
@@ -158,14 +171,18 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             );
         $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with(self::identicalTo($error), self::identicalTo($actionMetadata));
+            ->with(
+                self::identicalTo($error),
+                $expectedContext->getRequestType(),
+                self::identicalTo($actionMetadata)
+            );
 
         $this->context->setIncludedData($includedData);
         $this->context->setIncludedEntities($includedEntities);
         $this->context->getRequestHeaders()->set('header1', 'value1');
         $this->processor->process($this->context);
-        $this->assertEquals([$error], $actionContext->getErrors());
-        $this->assertNull($includedEntityData->getMetadata());
+        self::assertEquals([$error], $actionContext->getErrors());
+        self::assertNull($includedEntityData->getMetadata());
     }
 
     public function testProcessForExistingIncludedEntityWhenUpdateActionSuccess()
@@ -182,12 +199,15 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
         $expectedContext = new UpdateContext($this->configProvider, $this->metadataProvider);
         $expectedContext->setVersion($this->context->getVersion());
         $expectedContext->getRequestType()->set($this->context->getRequestType());
+        $expectedContext->setMasterRequest(false);
+        $expectedContext->setCorsRequest(false);
         $expectedContext->setRequestHeaders($this->context->getRequestHeaders());
         $expectedContext->setIncludedEntities($includedEntities);
         $expectedContext->setClassName('Test\Class');
         $expectedContext->setId('id');
         $expectedContext->setRequestData(['data' => ['type' => 'testType', 'id' => 'testId']]);
         $expectedContext->setResult($includedEntity);
+        $expectedContext->skipFormValidation(true);
         $expectedContext->setLastGroup('transform_data');
         $expectedContext->setSoftErrorsHandling(true);
 
@@ -206,7 +226,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             ->method('process')
             ->willReturnCallback(
                 function (UpdateContext $context) use ($expectedContext, $actionMetadata) {
-                    $this->assertEquals($expectedContext, $context);
+                    self::assertEquals($expectedContext, $context);
 
                     $context->setMetadata($actionMetadata);
                 }
@@ -216,10 +236,12 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
 
         $this->context->setIncludedData($includedData);
         $this->context->setIncludedEntities($includedEntities);
+        $this->context->setMasterRequest(true);
+        $this->context->setCorsRequest(true);
         $this->context->getRequestHeaders()->set('header1', 'value1');
         $this->processor->process($this->context);
-        $this->assertFalse($actionContext->hasErrors());
-        $this->assertSame($actionMetadata, $includedEntityData->getMetadata());
+        self::assertFalse($actionContext->hasErrors());
+        self::assertSame($actionMetadata, $includedEntityData->getMetadata());
     }
 
     public function testProcessForExistingIncludedEntityWhenUpdateActionFailed()
@@ -244,6 +266,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
         $expectedContext->setId('id');
         $expectedContext->setRequestData(['data' => ['type' => 'testType', 'id' => 'testId']]);
         $expectedContext->setResult($includedEntity);
+        $expectedContext->skipFormValidation(true);
         $expectedContext->setLastGroup('transform_data');
         $expectedContext->setSoftErrorsHandling(true);
 
@@ -262,7 +285,7 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             ->method('process')
             ->willReturnCallback(
                 function (UpdateContext $context) use ($expectedContext, $error, $actionMetadata) {
-                    $this->assertEquals($expectedContext, $context);
+                    self::assertEquals($expectedContext, $context);
 
                     $context->setMetadata($actionMetadata);
                     $context->addError($error);
@@ -270,13 +293,17 @@ class ProcessIncludedEntitiesTest extends FormProcessorTestCase
             );
         $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with(self::identicalTo($error), self::identicalTo($actionMetadata));
+            ->with(
+                self::identicalTo($error),
+                $expectedContext->getRequestType(),
+                self::identicalTo($actionMetadata)
+            );
 
         $this->context->setIncludedData($includedData);
         $this->context->setIncludedEntities($includedEntities);
         $this->context->getRequestHeaders()->set('header1', 'value1');
         $this->processor->process($this->context);
-        $this->assertEquals([$error], $actionContext->getErrors());
-        $this->assertNull($includedEntityData->getMetadata());
+        self::assertEquals([$error], $actionContext->getErrors());
+        self::assertNull($includedEntityData->getMetadata());
     }
 }

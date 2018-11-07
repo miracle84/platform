@@ -3,12 +3,13 @@ parameters:
 
 services:
     oro_importexport.job_executor:
-        class: %oro_importexport.job_executor.class%
+        class: '%oro_importexport.job_executor.class%'
         arguments:
             - '@akeneo_batch.connectors'
             - '@akeneo_batch.job_repository'
             - '@oro_importexport.context_registry'
             - '@doctrine'
+            - '@oro_importexport.job.context.aggregator_registry'
         lazy: true
         calls:
             - [setEventDispatcher, ['@event_dispatcher']]

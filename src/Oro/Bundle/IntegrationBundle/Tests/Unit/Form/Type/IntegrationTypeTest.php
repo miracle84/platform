@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\IntegrationBundle\Form\Type\ChannelType as IntegrationType;
 use Symfony\Component\Form\FormBuilder;
 
-use Oro\Bundle\IntegrationBundle\Form\Type\ChannelType as IntegrationType;
-
-class IntegrationTypeTest extends \PHPUnit_Framework_TestCase
+class IntegrationTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var IntegrationType */
     protected $type;
 
-    /** @var  FormBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  FormBuilder|\PHPUnit\Framework\MockObject\MockObject */
     protected $builder;
 
     public function setUp()
@@ -43,11 +42,6 @@ class IntegrationTypeTest extends \PHPUnit_Framework_TestCase
             ->with($this->isInstanceOf('Oro\Bundle\IntegrationBundle\Form\EventListener\DefaultOwnerSubscriber'));
 
         $this->type->buildForm($this->builder, []);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_integration_channel_form', $this->type->getName());
     }
 
     public function testConfigureOptions()

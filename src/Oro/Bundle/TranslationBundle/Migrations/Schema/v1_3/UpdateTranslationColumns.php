@@ -1,9 +1,8 @@
 <?php
 
-namespace Oro\Bundle\TranslationBundle\Migrations\Schema\v1_2;
+namespace Oro\Bundle\TranslationBundle\Migrations\Schema\v1_3;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\OrderedMigrationInterface;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;

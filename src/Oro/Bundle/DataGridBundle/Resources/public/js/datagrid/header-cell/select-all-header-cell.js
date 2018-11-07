@@ -1,13 +1,14 @@
 define([
+    'jquery',
     'underscore',
     'backgrid',
     '../select-state-model',
-    'backbone'
-], function(_, Backgrid, SelectStateModel, Backbone) {
+    'oroui/js/app/views/base/view',
+    'tpl!orodatagrid/templates/datagrid/select-all-header-cell.html'
+], function($, _, Backgrid, SelectStateModel, BaseView, template) {
     'use strict';
 
     var SelectAllHeaderCell;
-    var $ = Backbone.$;
 
     /**
      * Contains mass-selection logic
@@ -19,9 +20,9 @@ define([
      *
      * @export  orodatagrid/js/datagrid/header-cell/select-all-header-cell
      * @class   orodatagrid.datagrid.headerCell.SelectAllHeaderCell
-     * @extends Backbone.View
+     * @extends BaseView
      */
-    SelectAllHeaderCell = Backbone.View.extend({
+    SelectAllHeaderCell = BaseView.extend({
         keepElement: false,
         /** @property */
         className: 'select-all-header-cell renderable',
@@ -29,9 +30,16 @@ define([
         /** @property */
         tagName: 'th',
 
-        template: '#template-select-all-header-cell',
+        template: template,
 
         selectState: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function SelectAllHeaderCell() {
+            SelectAllHeaderCell.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initializer.
@@ -68,8 +76,8 @@ define([
          */
         updateState: function(selectState) {
             this.$('[data-select]:checkbox').prop({
-                'indeterminate': !selectState.isEmpty(),
-                'checked': !selectState.get('inset')
+                indeterminate: !selectState.isEmpty(),
+                checked: !selectState.get('inset')
             });
         },
 
@@ -79,7 +87,7 @@ define([
          * @returns {orodatagrid.datagrid.cell.SelectAllHeaderCell}
          */
         render: function() {
-            this.$el.html(_.template($(this.template).text())());
+            this.$el.html(this.getTemplateFunction()(this.getTemplateData()));
             this.delegateEvents();
             return this;
         },
@@ -118,7 +126,6 @@ define([
             } else if ($el.is('[data-select-all-visible]')) {
                 // Handles click on selectAllVisible button
                 this.collection.trigger('backgrid:selectAllVisible');
-
             } else if ($el.is('[data-select-none]')) {
                 // Handles click on selectNone button
                 this.collection.trigger('backgrid:selectNone');

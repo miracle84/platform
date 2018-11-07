@@ -2,38 +2,50 @@
 
 namespace Oro\Bundle\ApiBundle\Config\Definition;
 
+use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 
-use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
-use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
-
+/**
+ * The configuration of elements in "entities" section.
+ */
 class EntityDefinitionConfiguration extends TargetEntityDefinitionConfiguration
 {
     /**
      * {@inheritdoc}
      */
-    public function configureEntityNode(NodeBuilder $node)
+    public function configureEntityNode(NodeBuilder $node): void
     {
         parent::configureEntityNode($node);
         $node
-            ->arrayNode(EntityDefinitionConfig::IDENTIFIER_FIELD_NAMES)
-                ->prototype('scalar')->end()
+            ->arrayNode(ConfigUtil::IDENTIFIER_FIELD_NAMES)
+                ->prototype('scalar')->cannotBeEmpty()->end()
             ->end()
-            ->booleanNode(EntityDefinitionConfig::DISABLE_INCLUSION)->end()
-            ->booleanNode(EntityDefinitionConfig::DISABLE_FIELDSET)->end()
-            ->booleanNode(EntityDefinitionConfig::DISABLE_META_PROPERTIES)->end()
-            ->scalarNode(EntityDefinitionConfig::DELETE_HANDLER)->cannotBeEmpty()->end()
-            ->scalarNode(EntityDefinitionConfig::DOCUMENTATION_RESOURCE)->cannotBeEmpty()->end();
+            ->booleanNode(ConfigUtil::DISABLE_INCLUSION)->end()
+            ->booleanNode(ConfigUtil::DISABLE_FIELDSET)->end()
+            ->booleanNode(ConfigUtil::DISABLE_META_PROPERTIES)->end()
+            ->scalarNode(ConfigUtil::DELETE_HANDLER)->cannotBeEmpty()->end()
+            ->arrayNode(ConfigUtil::DOCUMENTATION_RESOURCE)
+                ->beforeNormalization()
+                    ->ifString()
+                    ->then(function ($v) {
+                        return [$v];
+                    })
+                ->end()
+                ->prototype('scalar')->cannotBeEmpty()->end()
+            ->end();
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function postProcessConfig(array $config)
+    protected function postProcessConfig(array $config): array
     {
         $config = parent::postProcessConfig($config);
-        if (empty($config[EntityDefinitionConfig::IDENTIFIER_FIELD_NAMES])) {
-            unset($config[EntityDefinitionConfig::IDENTIFIER_FIELD_NAMES]);
+        if (empty($config[ConfigUtil::IDENTIFIER_FIELD_NAMES])) {
+            unset($config[ConfigUtil::IDENTIFIER_FIELD_NAMES]);
+        }
+        if (empty($config[ConfigUtil::DOCUMENTATION_RESOURCE])) {
+            unset($config[ConfigUtil::DOCUMENTATION_RESOURCE]);
         }
 
         return $config;
@@ -42,10 +54,10 @@ class EntityDefinitionConfiguration extends TargetEntityDefinitionConfiguration
     /**
      * {@inheritdoc}
      */
-    protected function configureFieldNode(NodeBuilder $node)
+    protected function configureFieldNode(NodeBuilder $node): void
     {
         parent::configureFieldNode($node);
         $node
-            ->booleanNode(EntityDefinitionFieldConfig::META_PROPERTY)->end();
+            ->booleanNode(ConfigUtil::META_PROPERTY)->end();
     }
 }

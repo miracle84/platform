@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\UserBundle\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-
 use JMS\Serializer\Annotation as JMS;
-
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\UserBundle\Model\ExtendRole;
 
@@ -37,7 +37,7 @@ use Oro\Bundle\UserBundle\Model\ExtendRole;
  * )
  * @JMS\ExclusionPolicy("ALL")
  */
-class Role extends ExtendRole
+class Role extends ExtendRole implements \Serializable
 {
     const PREFIX_ROLE = 'ROLE_';
 
@@ -71,6 +71,13 @@ class Role extends ExtendRole
     protected $label;
 
     /**
+     * @var User[]|Collection
+     *
+     * @ORM\ManyToMany(targetEntity="Oro\Bundle\UserBundle\Entity\User", mappedBy="roles")
+     */
+    protected $users;
+
+    /**
      * Populate the role field
      *
      * @param string $role ROLE_FOO etc
@@ -79,19 +86,14 @@ class Role extends ExtendRole
     {
         parent::__construct($role);
 
-        $this->role  =
+        $this->role =
         $this->label = $role;
+        $this->users = new ArrayCollection();
     }
 
-    /**
-     * Unset the id on copy
-     */
     public function __clone()
     {
-        if ($this->id) {
-            $this->id = null;
-            $this->setRole($this->role);
-        }
+        $this->id = null;
     }
 
     /**
@@ -143,5 +145,66 @@ class Role extends ExtendRole
     public function getPrefix()
     {
         return static::PREFIX_ROLE;
+    }
+
+    /**
+     * @param User $user
+     *
+     * @return $this
+     */
+    public function addUser(User $user)
+    {
+        if (!$this->users->contains($user)) {
+            $this->users[] = $user;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param User $user
+     *
+     * @return $this
+     */
+    public function removeUser(User $user)
+    {
+        if ($this->users->contains($user)) {
+            $this->users->removeElement($user);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|User[]
+     */
+    public function getUsers()
+    {
+        return $this->users;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function serialize()
+    {
+        $dataForSerialization = [$this->id, $this->role, $this->label];
+        if (property_exists($this, 'organization')) {
+            $dataForSerialization[] =  is_object($this->organization) ? clone $this->organization : $this->organization;
+        }
+
+        return serialize($dataForSerialization);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function unserialize($serialized)
+    {
+        if (property_exists($this, 'organization')) {
+            list($this->id, $this->role, $this->label, $this->organization) = unserialize($serialized);
+        } else {
+            list($this->id, $this->role, $this->label) = unserialize($serialized);
+        }
     }
 }

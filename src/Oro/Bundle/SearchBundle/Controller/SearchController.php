@@ -2,18 +2,20 @@
 
 namespace Oro\Bundle\SearchBundle\Controller;
 
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-
+use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
 use Oro\Bundle\SearchBundle\Provider\ResultStatisticsProvider;
 use Oro\Bundle\SecurityBundle\Annotation\Acl;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Provides search functionality of quick search and search page
+ */
 class SearchController extends Controller
 {
     /**
@@ -26,13 +28,15 @@ class SearchController extends Controller
      *      group_name="",
      *      category="entity"
      * )
+     * @param Request $request
+     * @return Response
      */
-    public function ajaxAdvancedSearchAction()
+    public function ajaxAdvancedSearchAction(Request $request)
     {
-        return $this->getRequest()->isXmlHttpRequest()
+        return $request->isXmlHttpRequest()
             ? new JsonResponse(
                 $this->get('oro_search.index')->advancedSearch(
-                    $this->getRequest()->get('query')
+                    $request->get('query')
                 )->toSearchResultData()
             )
             : $this->forward('OroSearchBundle:Search:searchResults');
@@ -44,23 +48,24 @@ class SearchController extends Controller
      * @Route("/search-bar", name="oro_search_bar")
      * @Template("OroSearchBundle:Search:searchBar.html.twig")
      * @AclAncestor("oro_search")
+     * @param Request $request
+     * @return array
      */
-    public function searchBarAction()
+    public function searchBarAction(Request $request)
     {
         return array(
             'entities'     => $this->get('oro_search.index')->getAllowedEntitiesListAliases(),
-            'searchString' => $this->getRequest()->get('searchString'),
-            'fromString'   => $this->getRequest()->get('fromString'),
+            'searchString' => $request->get('searchString'),
+            'fromString'   => $request->get('fromString'),
         );
     }
 
     /**
      * @param Request $request
-     * @return array
+     * @return Response
      *
      * @Route("/suggestion", name="oro_search_suggestion")
      * @AclAncestor("oro_search")
-     * @Template("OroSearchBundle:Search:searchSuggestion.html.twig")
      */
     public function searchSuggestionAction(Request $request)
     {
@@ -81,7 +86,7 @@ class SearchController extends Controller
             $dispatcher->dispatch(PrepareResultItemEvent::EVENT_NAME, new PrepareResultItemEvent($item));
         }
 
-        return $searchResults->toSearchResultData();
+        return new JsonResponse($searchResults->toSearchResultData());
     }
 
     /**

@@ -2,18 +2,22 @@
 
 namespace Oro\Bundle\AddressBundle\Form\Type;
 
+use Oro\Bundle\AddressBundle\Form\EventListener\AddressCountryAndRegionSubscriber;
+use Oro\Bundle\FormBundle\Form\Extension\StripTagsExtension;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Validator\Constraint;
 
-use Oro\Bundle\AddressBundle\Form\EventListener\AddressCountryAndRegionSubscriber;
-
+/**
+ * The form type for Address entity.
+ * @see \Oro\Bundle\AddressBundle\Entity\Address
+ */
 class AddressType extends AbstractType
 {
-    const ABSTRACT_ADDRESS_GROUP = 'AbstractAddress';
     /**
      * @var AddressCountryAndRegionSubscriber
      */
@@ -34,25 +38,69 @@ class AddressType extends AbstractType
     {
         $builder->addEventSubscriber($this->countryAndRegionSubscriber);
         $builder
-            ->add('id', 'hidden')
-            ->add('label', 'text', array('required' => false, 'label' => 'oro.address.label.label'))
-            ->add('namePrefix', 'text', array('required' => false, 'label' => 'oro.address.name_prefix.label'))
-            ->add('firstName', 'text', array('required' => false, 'label' => 'oro.address.first_name.label'))
-            ->add('middleName', 'text', array('required' => false, 'label' => 'oro.address.middle_name.label'))
-            ->add('lastName', 'text', array('required' => false, 'label' => 'oro.address.last_name.label'))
-            ->add('nameSuffix', 'text', array('required' => false, 'label' => 'oro.address.name_suffix.label'))
-            ->add('organization', 'text', array('required' => false, 'label' => 'oro.address.organization.label'))
-            ->add('country', 'oro_country', array('required' => true, 'label' => 'oro.address.country.label'))
-            ->add('street', 'text', array('required' => false, 'label' => 'oro.address.street.label'))
-            ->add('street2', 'text', array('required' => false, 'label' => 'oro.address.street2.label'))
-            ->add('city', 'text', array('required' => false, 'label' => 'oro.address.city.label'))
-            ->add('region', 'oro_region', array('required' => false, 'label' => 'oro.address.region.label'))
+            ->add('id', HiddenType::class)
+            ->add('label', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.label.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('namePrefix', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.name_prefix.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('firstName', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.first_name.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('middleName', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.middle_name.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('lastName', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.last_name.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('nameSuffix', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.name_suffix.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('organization', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.organization.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('country', CountryType::class, array('required' => true, 'label' => 'oro.address.country.label'))
+            ->add('street', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.street.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('street2', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.street2.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('city', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.city.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ))
+            ->add('region', RegionType::class, array('required' => false, 'label' => 'oro.address.region.label'))
             ->add(
                 'region_text',
-                'hidden',
+                HiddenType::class,
                 array('required' => false, 'random_id' => true, 'label' => 'oro.address.region_text.label')
             )
-            ->add('postalCode', 'text', array('required' => false, 'label' => 'oro.address.postal_code.label'));
+            ->add('postalCode', TextType::class, array(
+                'required' => false,
+                'label' => 'oro.address.postal_code.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ));
     }
 
     /**
@@ -63,11 +111,9 @@ class AddressType extends AbstractType
         $resolver->setDefaults(
             array(
                 'data_class' => 'Oro\Bundle\AddressBundle\Entity\Address',
-                'intention' => 'address',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
+                'csrf_token_id' => 'address',
                 'single_form' => true,
-                'region_route' => 'oro_api_country_get_regions',
-                'validation_groups' => [Constraint::DEFAULT_GROUP, self::ABSTRACT_ADDRESS_GROUP],
+                'region_route' => 'oro_api_country_get_regions'
             )
         );
     }

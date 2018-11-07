@@ -4,24 +4,22 @@ namespace Oro\Bundle\TranslationBundle\Tests\Unit\Translation;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Translation\MessageCatalogue;
-
 use Oro\Bundle\EntityBundle\Tools\DatabaseChecker;
-use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationRepository;
+use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Translation\OrmTranslationLoader;
 use Oro\Bundle\TranslationBundle\Translation\OrmTranslationResource;
+use Symfony\Component\Translation\MessageCatalogue;
 
-class OrmTranslationLoaderTest extends \PHPUnit_Framework_TestCase
+class OrmTranslationLoaderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var TranslationRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationRepository|\PHPUnit\Framework\MockObject\MockObject */
     protected $repository;
 
-    /** @var DatabaseChecker|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var DatabaseChecker|\PHPUnit\Framework\MockObject\MockObject */
     protected $databaseChecker;
 
     /** @var OrmTranslationLoader */

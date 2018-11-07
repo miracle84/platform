@@ -2,7 +2,9 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
 use Oro\Bundle\EntityConfigBundle\Form\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType as BaseChoiceType;
 
 class ChoiceTypeTest extends AbstractConfigTypeTestCase
 {
@@ -17,25 +19,21 @@ class ChoiceTypeTest extends AbstractConfigTypeTestCase
     }
 
     /**
-     * @dataProvider setDefaultOptionsProvider
+     * @dataProvider configureOptionsProvider
+     * @param ConfigIdInterface $configId
+     * @param boolean $immutable
+     * @param array $options
+     * @param array $expectedOptions
      */
-    public function testSetDefaultOptions($configId, $immutable, array $options, array $expectedOptions)
+    public function testConfigureOptions($configId, $immutable, array $options, array $expectedOptions)
     {
-        $this->doTestSetDefaultOptions($this->type, $configId, $immutable, $options, $expectedOptions);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals(
-            'oro_entity_config_choice',
-            $this->type->getName()
-        );
+        $this->doTestConfigureOptions($this->type, $configId, $immutable, $options, $expectedOptions);
     }
 
     public function testGetParent()
     {
         $this->assertEquals(
-            'choice',
+            BaseChoiceType::class,
             $this->type->getParent()
         );
     }

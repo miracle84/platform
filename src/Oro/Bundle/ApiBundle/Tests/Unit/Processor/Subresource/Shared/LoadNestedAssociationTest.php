@@ -2,31 +2,33 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\Shared;
 
-use Oro\Component\EntitySerializer\EntitySerializer;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
+use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
+use Oro\Bundle\ApiBundle\Metadata\FieldMetadata;
 use Oro\Bundle\ApiBundle\Processor\Subresource\Shared\LoadNestedAssociation;
-use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorOrmRelatedTestCase;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
+use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorOrmRelatedTestCase;
+use Oro\Bundle\ApiBundle\Util\EntityIdHelper;
+use Oro\Component\EntitySerializer\EntitySerializer;
 
 class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $entitySerializer;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntitySerializer */
+    private $entitySerializer;
 
     /** @var LoadNestedAssociation */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
         parent::setUp();
 
-        $this->entitySerializer = $this->getMockBuilder(EntitySerializer::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->entitySerializer = $this->createMock(EntitySerializer::class);
 
         $this->processor = new LoadNestedAssociation(
             $this->entitySerializer,
-            $this->doctrineHelper
+            $this->doctrineHelper,
+            new EntityIdHelper()
         );
     }
 
@@ -36,6 +38,7 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
 
         $this->context->setResult($result);
         $this->processor->process($this->context);
+
         self::assertSame($result, $this->context->getResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -48,6 +51,7 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
         $this->processor->process($this->context);
+
         self::assertFalse($this->context->hasResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -61,6 +65,7 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
         $this->processor->process($this->context);
+
         self::assertFalse($this->context->hasResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -70,6 +75,9 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('nestedAssociation');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -88,9 +96,11 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertEquals(
             ['id' => 1],
             $this->context->getResult()
@@ -103,6 +113,9 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('nestedAssociation');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -121,9 +134,11 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertNull($this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -133,6 +148,9 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('nestedAssociation');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -149,9 +167,11 @@ class LoadNestedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCas
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertNull($this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }

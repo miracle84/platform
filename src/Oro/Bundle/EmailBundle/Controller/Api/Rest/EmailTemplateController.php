@@ -2,27 +2,28 @@
 
 namespace Oro\Bundle\EmailBundle\Controller\Api\Rest;
 
-use FOS\RestBundle\Util\Codes;
-use FOS\RestBundle\Controller\Annotations\Get;
 use FOS\RestBundle\Controller\Annotations\Delete;
+use FOS\RestBundle\Controller\Annotations\Get;
 use FOS\RestBundle\Controller\Annotations\NamePrefix;
 use FOS\RestBundle\Controller\Annotations\RouteResource;
-
+use FOS\RestBundle\Util\Codes;
 use Nelmio\ApiDocBundle\Annotation\ApiDoc;
-
-use Symfony\Component\HttpFoundation\Response;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
-
+use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
+use Oro\Bundle\EmailBundle\Provider\VariablesProvider;
 use Oro\Bundle\SecurityBundle\Annotation\Acl;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken;
-use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
-use Oro\Bundle\EmailBundle\Provider\VariablesProvider;
-use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
 use Oro\Bundle\SoapBundle\Controller\Api\Rest\RestController;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Symfony\Component\HttpFoundation\Response;
+use Twig_Error_Loader;
+use Twig_Error_Runtime;
+use Twig_Error_Syntax;
 
 /**
+ * Controller to work with email templates.
+ * Provides delete, list, compile, variables actions for email templates.
+ *
  * @RouteResource("emailtemplate")
  * @NamePrefix("oro_api_")
  */
@@ -96,19 +97,16 @@ class EmailTemplateController extends RestController
             );
         }
 
-        $securityContext = $this->get('security.context');
-        /** @var UsernamePasswordOrganizationToken $token */
-        $token        = $securityContext->getToken();
-        $organization = $token->getOrganizationContext();
-
         $entityName = $this->get('oro_entity.routing_helper')->resolveEntityClass($entityName);
 
         /** @var $emailTemplateRepository EmailTemplateRepository */
         $emailTemplateRepository = $this->getDoctrine()->getRepository('OroEmailBundle:EmailTemplate');
+
         $templates = $emailTemplateRepository
             ->getTemplateByEntityName(
+                $this->get('oro_security.acl_helper'),
                 $entityName,
-                $organization,
+                $this->get('oro_security.token_accessor')->getOrganization(),
                 (bool)$includeNonEntity,
                 (bool)$includeSystemTemplates
             );
@@ -193,18 +191,27 @@ class EmailTemplateController extends RestController
             );
         }
 
-        list($subject, $body) = $this->get('oro_email.email_renderer')
-            ->compileMessage($emailTemplate, $templateParams);
+        try {
+            [$subject, $body] = $this->get('oro_email.email_renderer')->compileMessage($emailTemplate, $templateParams);
 
-        $data = [
-            'subject' => $subject,
-            'body'    => $body,
-            'type'    => $emailTemplate->getType(),
-        ];
+            $view = $this->view(
+                [
+                    'subject' => $subject,
+                    'body' => $body,
+                    'type' => $emailTemplate->getType(),
+                ],
+                Codes::HTTP_OK
+            );
+        } catch (Twig_Error_Syntax|Twig_Error_Loader|Twig_Error_Runtime $e) {
+            $view = $this->view(
+                [
+                    'reason' => $this->get('translator')->trans('oro.email.emailtemplate.failed_to_compile'),
+                ],
+                Codes::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
 
-        return $this->handleView(
-            $this->view($data, Codes::HTTP_OK)
-        );
+        return $this->handleView($view);
     }
 
     /**

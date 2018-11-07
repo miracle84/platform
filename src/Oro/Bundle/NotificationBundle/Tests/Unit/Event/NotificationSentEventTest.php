@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\NotificationBundle\Tests\Unit\Event;
 
-use Oro\Bundle\NotificationBundle\Event\NotificationSentEvent;
 use Oro\Bundle\NotificationBundle\Entity\SpoolItem;
+use Oro\Bundle\NotificationBundle\Event\NotificationSentEvent;
 
-class NotificationSentEventTest extends \PHPUnit_Framework_TestCase
+class NotificationSentEventTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetters()
     {

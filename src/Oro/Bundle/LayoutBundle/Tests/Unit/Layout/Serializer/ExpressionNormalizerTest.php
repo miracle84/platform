@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout\Serializer;
 
+use Oro\Bundle\LayoutBundle\Layout\Serializer\ExpressionNormalizer;
 use Symfony\Component\ExpressionLanguage\Node\ConstantNode;
 use Symfony\Component\ExpressionLanguage\ParsedExpression;
 
-use Oro\Bundle\LayoutBundle\Layout\Serializer\ExpressionNormalizer;
-
-class ExpressionNormalizerTest extends \PHPUnit_Framework_TestCase
+class ExpressionNormalizerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExpressionNormalizer */
     protected $normalizer;

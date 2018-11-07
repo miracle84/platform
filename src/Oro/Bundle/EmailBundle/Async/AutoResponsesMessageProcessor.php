@@ -4,7 +4,6 @@ namespace Oro\Bundle\EmailBundle\Async;
 use Oro\Bundle\MessageQueueBundle\Entity\Job;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
-
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
@@ -49,10 +48,7 @@ class AutoResponsesMessageProcessor implements MessageProcessorInterface, TopicS
         $data = JSON::decode($message->getBody());
 
         if (! isset($data['ids']) || ! is_array($data['ids'])) {
-            $this->logger->critical(sprintf(
-                '[AutoResponsesMessageProcessor] Got invalid message. "%s"',
-                $message->getBody()
-            ), ['message' => $message]);
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }

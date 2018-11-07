@@ -2,17 +2,15 @@
 
 namespace Oro\Bundle\UIBundle\DependencyInjection;
 
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
+use Oro\Component\PhpUtils\ArrayUtil;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
-use Oro\Component\PhpUtils\ArrayUtil;
-
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
-
 /**
- * This is the class that validates and merges configuration from your app/config files
+ * This is the class that validates and merges configuration from your config files
  *
  * To learn more see
  * {@link http://symfony.com/doc/current/cookbook/bundles/extension.html#cookbook-bundles-extension-config-class}
@@ -51,7 +49,7 @@ class Configuration implements ConfigurationInterface
             [
                 self::ORGANIZATION_NAME_KEY  => ['value' => 'ORO'],
                 self::APPLICATION_URL_KEY   => ['value' => 'http://localhost'],
-                'navbar_position'   => ['value' => 'top'],
+                'navbar_position'   => ['value' => 'left'],
             ]
         );
 

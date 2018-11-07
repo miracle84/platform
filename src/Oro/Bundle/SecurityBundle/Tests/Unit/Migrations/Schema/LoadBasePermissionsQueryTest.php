@@ -4,13 +4,12 @@ namespace Oro\Bundle\SecurityBundle\Tests\Unit\Migrations\Schema;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
-
 use Oro\Bundle\MigrationBundle\Migration\ArrayLogger;
 use Oro\Bundle\SecurityBundle\Migrations\Schema\LoadBasePermissionsQuery;
 
-class LoadBasePermissionsQueryTest extends \PHPUnit_Framework_TestCase
+class LoadBasePermissionsQueryTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|Connection */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|Connection */
     protected $connection;
 
     protected function setUp()

@@ -3,12 +3,14 @@
 namespace Oro\Bundle\HelpBundle\Model;
 
 use Doctrine\Common\Cache\CacheProvider;
+use Oro\Bundle\HelpBundle\Annotation\Help;
+use Oro\Bundle\PlatformBundle\Composer\VersionHelper;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerNameParser;
 use Symfony\Component\HttpFoundation\Request;
 
-use Oro\Bundle\HelpBundle\Annotation\Help;
-use Oro\Bundle\PlatformBundle\Composer\VersionHelper;
-
+/**
+ * The help link URL provider.
+ */
 class HelpLinkProvider
 {
     /**
@@ -111,12 +113,14 @@ class HelpLinkProvider
      */
     public function getHelpLinkUrl()
     {
-        if ($this->cache && $this->cache->contains($this->requestRoute)) {
+        $helpLink = false;
+        if ($this->cache && $this->requestRoute) {
             $helpLink = $this->cache->fetch($this->requestRoute);
-        } else {
+        }
+        if (false === $helpLink) {
             $helpLink = $this->constructedHelpLinkUrl();
 
-            if ($this->cache) {
+            if ($this->cache && $this->requestRoute) {
                 $this->cache->save($this->requestRoute, $helpLink);
             }
         }

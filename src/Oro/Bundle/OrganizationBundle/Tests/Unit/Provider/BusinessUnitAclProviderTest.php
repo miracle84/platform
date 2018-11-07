@@ -2,10 +2,12 @@
 
 namespace Oro\Bundle\OrganizationBundle\Tests\Unit\Provider;
 
-use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\OrganizationBundle\Provider\BusinessUnitAclProvider;
+use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class BusinessUnitAclProviderTest extends \PHPUnit_Framework_TestCase
+class BusinessUnitAclProviderTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_NAME='test';
     const PERMISSION='VIEW';
@@ -13,29 +15,31 @@ class BusinessUnitAclProviderTest extends \PHPUnit_Framework_TestCase
     /** @var BusinessUnitAclProvider */
     protected $provider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $aclVoter;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $treeProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $observer;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $user;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $organization;
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
         $this->aclVoter = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter')
             ->disableOriginalConstructor()
@@ -66,18 +70,19 @@ class BusinessUnitAclProviderTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->securityFacade->expects($this->any())
-            ->method('getLoggedUser')
+        $this->tokenAccessor->expects($this->any())
+            ->method('getUser')
             ->will($this->returnValue($this->user));
 
-        $this->securityFacade->expects($this->any())
+        $this->tokenAccessor->expects($this->any())
             ->method('getOrganization')
             ->will($this->returnValue($this->organization));
 
         $this->provider = $this->getMockBuilder('Oro\Bundle\OrganizationBundle\Provider\BusinessUnitAclProvider')
             ->setMethods(['getAccessLevel'])
             ->setConstructorArgs([
-                $this->securityFacade,
+                $this->authorizationChecker,
+                $this->tokenAccessor,
                 $this->aclVoter,
                 $this->treeProvider
                 ])

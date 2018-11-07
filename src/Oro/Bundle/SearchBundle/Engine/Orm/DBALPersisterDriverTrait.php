@@ -3,17 +3,17 @@
 namespace Oro\Bundle\SearchBundle\Engine\Orm;
 
 use Carbon\Carbon;
-
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\PostgreSqlPlatform;
+use Doctrine\DBAL\Statement;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManagerInterface;
-
 use Oro\Bundle\SearchBundle\Entity\AbstractItem;
 
 /**
  * @property EntityManagerInterface $entityManager
+ * @deprecated sience 1.5. Please use the BaseDriver.
  */
 trait DBALPersisterDriverTrait
 {
@@ -24,13 +24,13 @@ trait DBALPersisterDriverTrait
      * [
      *     spl_object_hash => [
      *         'id'         => id of the item,
-               'entity'     => class of the entity,
-               'alias'      => alias of the entity,
-               'record_id'  => id of the entity,
-               'title'      => title of the entity,
-               'changed'    => changed attribute,
-               'created_at' => when the Item was created,
-               'updated_at' => when the Item was updated,
+     *         'entity'     => class of the entity,
+     *         'alias'      => alias of the entity,
+     *         'record_id'  => id of the entity,
+     *         'title'      => title of the entity,
+     *         'changed'    => changed attribute,
+     *         'created_at' => when the Item was created,
+     *         'updated_at' => when the Item was updated,
      *     ],
      *     ...
      * ]
@@ -38,7 +38,7 @@ trait DBALPersisterDriverTrait
     private $writeableItemData = [];
 
     /**
-     * Doctrine types for columns in $itemData
+     * Doctrine types for columns in $writeableItemData
      *
      * @var array
      * [
@@ -101,7 +101,7 @@ trait DBALPersisterDriverTrait
     private $indexUpdateData = [];
 
     /**
-     * Stores all data taken from Items given by 'addItem' method
+     * Stores all data taken from Items given by 'writeItem' method
      */
     public function flushWrites()
     {
@@ -121,7 +121,7 @@ trait DBALPersisterDriverTrait
     }
 
     /**
-     * Adds AbstractItem of which data will be stored when 'store' method is called
+     * Adds AbstractItem of which data will be stored when 'flushWrites' method is called
      *
      * @param AbstractItem $item
      */
@@ -184,12 +184,16 @@ trait DBALPersisterDriverTrait
      *
      * @param Connection $connection
      * @param array $multiInsertQueryData
+     * @return Statement[]
+     * @throws \Doctrine\DBAL\DBALException
      */
     private function runMultiInserts(Connection $connection, array $multiInsertQueryData)
     {
-        foreach ($multiInsertQueryData as $data) {
-            $connection->executeQuery($data['query'], $data['values'], $data['types']);
+        $result = [];
+        foreach ($multiInsertQueryData as $key => $data) {
+            $result[$key] = $connection->executeQuery($data['query'], $data['values'], $data['types']);
         }
+        return $result;
     }
 
     /**
@@ -252,7 +256,7 @@ trait DBALPersisterDriverTrait
     }
 
     /**
-     * Converts $item into array and stores the result in the DbalStorer object
+     * Converts $item into array and stores the result in the object
      *
      * @param AbstractItem $item
      */
@@ -309,7 +313,7 @@ trait DBALPersisterDriverTrait
     }
 
     /**
-     * Converts indexes of $item into objects and stores them in the DbalStorer object
+     * Converts indexes of $item into objects and stores them in the object
      *
      * @param Collection   $fields
      * @param AbstractItem $item

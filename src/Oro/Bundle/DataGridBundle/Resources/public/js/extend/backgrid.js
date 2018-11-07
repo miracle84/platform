@@ -71,8 +71,8 @@ define(function(require) {
         var model = this.model;
         var columnName = this.column.get('name');
         $el.text(this.formatter.fromRaw(model.get(columnName), model));
-        //$el.addClass(columnName);
-        //this.updateStateClassesMaybe();
+        // $el.addClass(columnName);
+        // this.updateStateClassesMaybe();
         this.delegateEvents();
         return this;
     };
@@ -94,6 +94,15 @@ define(function(require) {
         if (_.isFunction(this.events)) {
             oldUndelegateEvents.call(this);
         }
+    };
+
+    /**
+     * Shortcut method for the check if the cell is editable
+     *
+     * @return {boolean}
+     */
+    Backgrid.Cell.prototype.isEditableColumn = function() {
+        return Backgrid.callByNeed(this.column.editable(), this.column, this.model);
     };
 
     return Backgrid;

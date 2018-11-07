@@ -12,7 +12,7 @@ use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
-class DbalTransportFactoryTest extends \PHPUnit_Framework_TestCase
+class DbalTransportFactoryTest extends \PHPUnit\Framework\TestCase
 {
     use ClassExtensionTrait;
 
@@ -45,11 +45,14 @@ class DbalTransportFactoryTest extends \PHPUnit_Framework_TestCase
         $processor = new Processor();
         $config = $processor->process($tb->buildTree(), []);
 
+        $pidFileDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'oro-message-queue';
+
         $this->assertEquals([
             'connection' => 'default',
             'table' => 'oro_message_queue',
-            'orphan_time' => 300,
+            'pid_file_dir' => $pidFileDir,
             'polling_interval' => 1000,
+            'consumer_process_pattern' => ':consume'
         ], $config);
     }
 
@@ -59,11 +62,14 @@ class DbalTransportFactoryTest extends \PHPUnit_Framework_TestCase
 
         $transport = new DbalTransportFactory();
 
+        $pidFileDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'oro-message-queue';
+
         $serviceId = $transport->createService($container, [
             'connection' => 'connection-name',
             'table' => 'table-name',
-            'orphan_time' => 12345,
+            'pid_file_dir' => $pidFileDir,
             'polling_interval' => 7890,
+            'consumer_process_pattern' => ':consume',
         ]);
 
         $this->assertEquals('oro_message_queue.transport.dbal.connection', $serviceId);
@@ -88,8 +94,9 @@ class DbalTransportFactoryTest extends \PHPUnit_Framework_TestCase
         $serviceId = $transport->createService($container, [
             'connection' => 'connection-name',
             'table' => 'table-name',
-            'orphan_time' => 12345,
+            'pid_file_dir' => '/dir',
             'polling_interval' => 7890,
+            'consumer_process_pattern' => ':consume',
         ]);
 
         //guard
@@ -105,13 +112,18 @@ class DbalTransportFactoryTest extends \PHPUnit_Framework_TestCase
         );
         $this->assertEquals(RedeliverOrphanMessagesDbalExtension::class, $orphanExtensionDef->getClass());
         $this->assertFalse($orphanExtensionDef->isPublic());
-        $this->assertEquals([12345], $orphanExtensionDef->getArguments());
+        $this->assertEquals(
+            'oro_message_queue.consumption.dbal.pid_file_manager',
+            (string) $orphanExtensionDef->getArgument(0)
+        );
+        $this->assertEquals(
+            'oro_message_queue.consumption.dbal.cli_process_manager',
+            (string) $orphanExtensionDef->getArgument(1)
+        );
 
         $expectedTags = [
             'oro_message_queue.consumption.extension' => [
-                [
-                    'priority' => 20,
-                ]
+                ['priority' => -20]
             ]
         ];
 

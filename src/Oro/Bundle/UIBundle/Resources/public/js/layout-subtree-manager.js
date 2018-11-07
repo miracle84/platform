@@ -116,6 +116,7 @@ define([
                     self._callViewMethod(eventBlockIds, 'setContent', function(blockId) {
                         return [content[blockId] || ''];
                     });
+                    self._callViewMethod(eventBlockIds, 'afterContentLoading');
                     if (options.layoutSubtreeCallback) {
                         options.layoutSubtreeCallback();
                     }
@@ -136,20 +137,18 @@ define([
             data = data || {};
             data.layout_block_ids = [blockId];
             $.ajax({
-                    url: document.location.pathname,
-                    type: this.method,
-                    data: data || {}
-                })
-                .done(function(content) {
-                    if (_.isFunction(callback)) {
-                        callback(content[blockId] || '');
-                    }
-                })
-                .fail(function(jqxhr) {
-                    if (_.isFunction(callback)) {
-                        callback('');
-                    }
-                });
+                url: document.location.pathname,
+                type: this.method,
+                data: data || {}
+            }).done(function(content) {
+                if (_.isFunction(callback)) {
+                    callback(content[blockId] || '');
+                }
+            }).fail(function(jqxhr) {
+                if (_.isFunction(callback)) {
+                    callback('');
+                }
+            });
         }
     };
 

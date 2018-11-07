@@ -2,19 +2,17 @@
 
 namespace Oro\Bundle\ActivityListBundle\Migrations\Data\ORM;
 
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Common\DataFixtures\AbstractFixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
-use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
 use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
 use Oro\Bundle\ActivityListBundle\Entity\ActivityOwner;
+use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class UpdateActivityListOwner extends AbstractFixture implements DependentFixtureInterface, ContainerAwareInterface
 {
@@ -68,7 +66,7 @@ class UpdateActivityListOwner extends AbstractFixture implements DependentFixtur
                 ->getRepository('OroActivityListBundle:ActivityList')
                 ->createQueryBuilder('e');
 
-            $iterator = new BufferedQueryResultIterator($queryBuilder);
+            $iterator = new BufferedIdentityQueryResultIterator($queryBuilder);
             $iterator->setBufferSize(self::BATCH_SIZE);
             $itemsCount = 0;
             $entities = [];

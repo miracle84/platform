@@ -2,6 +2,7 @@ define(function(require) {
     'use strict';
 
     var AttributeGroupTabsComponent;
+    var _ = require('underscore');
     var mediator = require('oroui/js/mediator');
     var BaseComponent = require('oroui/js/app/components/base/component');
     var BaseCollection = require('oroui/js/app/models/base/collection');
@@ -9,22 +10,25 @@ define(function(require) {
 
     AttributeGroupTabsComponent = BaseComponent.extend({
         /**
-         * @type {Object}
+         * @inheritDoc
          */
-        current: null,
+        constructor: function AttributeGroupTabsComponent() {
+            AttributeGroupTabsComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @param {Object} options
          */
         initialize: function(options) {
-            var groups  = options.data;
+            var data = _.each(options.data, function(item) {
+                item.uniqueId = _.uniqueId(item.id);
+            });
 
-            var first = groups[0];
-            first.active = true;
-            this.current = first.id;
-            this.trigger(this.current);
+            this.groups = new BaseCollection(data);
 
-            this.groups = new BaseCollection(groups);
+            var first = this.groups.first();
+            first.set('active', true);
+            this.triggerGroupChange(first, true);
 
             this.view = new TabCollectionView({
                 el: options._sourceElement,
@@ -33,20 +37,23 @@ define(function(require) {
             });
 
             this.listenTo(this.groups, 'change', this.onGroupChange);
+            this.listenTo(this.groups, 'select', this.onGroupChange);
         },
 
         onGroupChange: function(model) {
-            if (model.hasChanged('active') && model.get('active') === true) {
-                this.trigger(this.current);
-                this.trigger(model.get('id'));
-                this.current = model.get('id');
+            if (model.get('active') === true) {
+                this.triggerGroupChange(model);
             }
         },
 
-        trigger: function(code) {
-            mediator.trigger('entity-config:attribute-group:changed', {
-                id: code
-            });
+        /**
+         * Triggers global event via mediator and pass params to listeners
+         *
+         * @param {Backbone.Model} model
+         * @param {boolean} initialize
+         */
+        triggerGroupChange: function(model, initialize) {
+            mediator.trigger('entity-config:attribute-group:changed', model, initialize);
         }
     });
 

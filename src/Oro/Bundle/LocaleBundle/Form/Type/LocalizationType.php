@@ -2,7 +2,9 @@
 
 namespace Oro\Bundle\LocaleBundle\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Extension\StripTagsExtension;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
@@ -20,39 +22,42 @@ class LocalizationType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('name', 'text', ['required' => true, 'label' => 'oro.locale.localization.name.label'])
+            ->add('name', TextType::class, [
+                'required' => true,
+                'label' => 'oro.locale.localization.name.label',
+                StripTagsExtension::OPTION_NAME => true,
+            ])
             ->add(
                 'titles',
-                LocalizedFallbackValueCollectionType::NAME,
+                LocalizedFallbackValueCollectionType::class,
                 [
                     'required' => true,
                     'label' => 'oro.locale.localization.title.label',
-                    'options' => [
-                        'constraints' => [new NotBlank(['message' => 'oro.locale.localization.titles.blank'])]
+                    'entry_options' => [
+                        'constraints' => [new NotBlank(['message' => 'oro.locale.localization.titles.blank'])],
+                        StripTagsExtension::OPTION_NAME => true,
                     ]
                 ]
             )
             ->add(
-                'languageCode',
-                LanguageSelectType::NAME,
+                'language',
+                LanguageSelectType::class,
                 [
                     'required' => true,
-                    'label' => 'oro.locale.localization.language_code.label',
-                    'placeholder' => 'oro.locale.localization.form.placeholder.select_language'
+                    'label' => 'oro.locale.localization.language.label'
                 ]
             )
             ->add(
                 'formattingCode',
-                FormattingSelectType::NAME,
+                FormattingSelectType::class,
                 [
                     'required' => true,
-                    'label' => 'oro.locale.localization.formatting_code.label',
-                    'placeholder' => 'oro.locale.localization.form.placeholder.select_formatting'
+                    'label' => 'oro.locale.localization.formatting_code.label'
                 ]
             )
             ->add(
                 'parentLocalization',
-                LocalizationParentSelectType::NAME,
+                LocalizationParentSelectType::class,
                 ['required' => false, 'label' => 'oro.locale.localization.parent_localization.label']
             );
     }

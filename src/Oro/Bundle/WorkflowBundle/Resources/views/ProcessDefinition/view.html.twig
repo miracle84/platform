@@ -3,48 +3,36 @@
 {% oro_title_set({params : {"%process_definition.label%": entity.label} }) %}
 
 {% block navButtons %}
-    {% if resource_granted('oro_process_definition_update') %}
+    {% if is_granted('oro_process_definition_update') %}
         {% set idButton = entity.name ~ '-process-deactivate-btn' %}
-        {% if entity.enabled %}
-            {{ UI.button({
-                'aCss':  'no-hash btn-danger',
-                'iCss':  'fa-close',
-                'id':    idButton,
-                'label': 'oro.workflow.action.process.deactivate'|trans,
-                'path':  path('oro_api_process_deactivate', {'processDefinition': entity.name}),
-                'title': 'oro.workflow.action.process.deactivate'|trans,
-            }) }}
-        {% else %}
-            {{ UI.button({
-                'iCss':  'fa-check',
-                'aCss':  'no-hash btn-success',
-                'id':    idButton,
-                'label': 'oro.workflow.action.process.activate'|trans,
-                'path':  path('oro_api_process_activate', {'processDefinition': entity.name}),
-                'title': 'oro.workflow.action.process.activate'|trans,
-            }) }}
-        {% endif %}
-        <script type="text/javascript">
-            require(['jquery', 'oroui/js/mediator'],
-            function($, mediator) {
-                $('#{{ idButton }}').on('click', function(e) {
-                    e.preventDefault();
-                    var el = $(this);
-                    $.ajax({
-                        url: el.prop('href'),
-                        type: 'GET',
-                        success: function(response) {
-                            if (response.message) {
-                                mediator.once('page:afterChange', function() {
-                                    mediator.execute('showFlashMessage', 'success', response.message);
-                                });
-                            }
-                            mediator.execute('refreshPage');
-                        }
-                    })
-                });
-            });
-        </script>
+        {% set options = {
+            'data': {
+                'role': 'status-toggle'
+            }
+        } %}
+        <div {{ UI.renderPageComponentAttributes({
+            view: 'oroworkflow/js/app/views/process-status-toggle-btn-view'
+        }) }}>
+            {% if entity.enabled %}
+                {{ UI.button(options|merge({
+                    'aCss':  'no-hash btn-danger',
+                    'iCss':  'fa-close',
+                    'id':    idButton,
+                    'label': 'oro.workflow.action.process.deactivate'|trans,
+                    'path':  path('oro_api_process_deactivate', {'processDefinition': entity.name}),
+                    'title': 'oro.workflow.action.process.deactivate'|trans,
+                })) }}
+            {% else %}
+                {{ UI.button(options|merge({
+                    'iCss':  'fa-check',
+                    'aCss':  'no-hash btn-success',
+                    'id':    idButton,
+                    'label': 'oro.workflow.action.process.activate'|trans,
+                    'path':  path('oro_api_process_activate', {'processDefinition': entity.name}),
+                    'title': 'oro.workflow.action.process.activate'|trans,
+                })) }}
+            {% endif %}
+        </div>
     {% endif %}
 {% endblock navButtons %}
 
@@ -53,9 +41,9 @@
 
     <div class="pull-left">
         {% if entity.enabled %}
-            <div class="badge badge-enabled status-enabled"><i class="icon-status-enabled fa-circle"></i>{{ 'Active'|trans }}</div>
+            <div class="badge badge-pill badge-enabled status-enabled"><i class="icon-status-enabled fa-circle"></i>{{ 'Active'|trans }}</div>
         {% else %}
-            <div class="badge badge-disabled status-disabled"><i class="icon-status-disabled fa-circle"></i>{{ 'Inactive'|trans }}</div>
+            <div class="badge badge-pill badge-disabled status-disabled"><i class="icon-status-disabled fa-circle"></i>{{ 'Inactive'|trans }}</div>
         {% endif %}
     </div>
 {% endblock breadcrumbs %}
@@ -125,7 +113,6 @@
     {% set dataBlocks = [
         {
             'title': 'oro.workflow.block.title.process_info'|trans,
-            'class': 'active',
             'subblocks': [
                 {'data' : [processDefinitionInfo] },
             ]

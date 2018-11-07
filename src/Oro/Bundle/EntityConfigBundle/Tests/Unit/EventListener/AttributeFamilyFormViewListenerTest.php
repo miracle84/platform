@@ -5,19 +5,18 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\EventListener;
 use Oro\Bundle\EntityConfigBundle\EventListener\AttributeFamilyFormViewListener;
 use Oro\Bundle\UIBundle\Event\BeforeListRenderEvent;
 use Oro\Bundle\UIBundle\View\ScrollData;
-
 use Symfony\Component\Form\FormView;
 use Symfony\Component\Translation\TranslatorInterface;
 
-class AttributeFamilyFormViewListenerTest extends \PHPUnit_Framework_TestCase
+class AttributeFamilyFormViewListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $translator;
 
     /**
-     * @var \Twig_Environment|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Twig_Environment|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $environment;
 
@@ -91,7 +90,7 @@ class AttributeFamilyFormViewListenerTest extends \PHPUnit_Framework_TestCase
             )
             ->willReturn($templateData);
 
-        $event = new BeforeListRenderEvent($this->environment, new ScrollData(), new FormView());
+        $event = new BeforeListRenderEvent($this->environment, new ScrollData(), new \stdClass(), new FormView());
         $this->listener->onEdit($event);
 
         $this->assertEquals($expectedScrollData, $event->getScrollData()->getData());

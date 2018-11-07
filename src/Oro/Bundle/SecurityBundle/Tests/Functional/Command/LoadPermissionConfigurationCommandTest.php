@@ -5,9 +5,6 @@ namespace Oro\Bundle\SecurityBundle\Tests\Functional\Command;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\Common\Util\ClassUtils;
-
-use Symfony\Component\Console\Tester\CommandTester;
-
 use Oro\Bundle\SecurityBundle\Command\LoadPermissionConfigurationCommand;
 use Oro\Bundle\SecurityBundle\Configuration\PermissionConfigurationProvider;
 use Oro\Bundle\SecurityBundle\Entity\Permission;
@@ -17,10 +14,8 @@ use Oro\Bundle\SecurityBundle\Tests\Functional\Command\Stub\TestBundle2\TestBund
 use Oro\Bundle\SecurityBundle\Tests\Functional\Command\Stub\TestBundleIncorrect\TestBundleIncorrect;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Component\Config\CumulativeResourceManager;
+use Symfony\Component\Console\Tester\CommandTester;
 
-/**
- * @dbIsolation
- */
 class LoadPermissionConfigurationCommandTest extends WebTestCase
 {
     /**

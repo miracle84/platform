@@ -1,4 +1,3 @@
-/** @lends SelectEditorView */
 define(function(require) {
     'use strict';
 
@@ -9,7 +8,7 @@ define(function(require) {
      *
      * ### Column configuration samples:
      * ``` yml
-     * datagrid:
+     * datagrids:
      *   {grid-uid}:
      *     inline_editing:
      *       enable: true
@@ -34,6 +33,11 @@ define(function(require) {
      *               css_class_name: '<class-name>'
      *           validation_rules:
      *             NotBlank: ~
+     *           save_api_accessor:
+     *               route: '<route>'
+     *               query_parameter_names:
+     *                  - '<parameter1>'
+     *                  - '<parameter2>'
      * ```
      *
      * ### Options in yml:
@@ -45,7 +49,8 @@ define(function(require) {
      * inline_editing.editor.view_options.key_type         | Optional. Specifies type of value that should be sent to server. Currently string/boolean/number key types are supported.
      * inline_editing.editor.view_options.placeholder_raw  | Optional. Raw placeholder value
      * inline_editing.editor.view_options.css_class_name   | Optional. Additional css class name for editor view DOM el
-     * inline_editing.editor.validation_rules | Optional. Validation rules. See [documentation](https://goo.gl/j9dj4Y)
+     * inline_editing.validation_rules                     | Optional. Validation rules. See [documentation](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * inline_editing.save_api_accessor                    | Optional. Sets accessor module, route, parameters etc.
      *
      * ### Constructor parameters
      *
@@ -53,9 +58,10 @@ define(function(require) {
      * @param {Object} options - Options container
      * @param {Object} options.model - Current row model
      * @param {string} options.fieldName - Field name to edit in model
+     * @param {string} options.className - CSS class name for editor element
      * @param {string} options.placeholder - Placeholder translation key for an empty element
      * @param {string} options.placeholder_raw - Raw placeholder value. It overrides placeholder translation key
-     * @param {Object} options.validationRules - Validation rules. See [documentation here](https://goo.gl/j9dj4Y)
+     * @param {Object} options.validationRules - Validation rules. See [documentation here](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
      * @param {Object} options.choices - Key-value set of available choices
      *
      * @augments [TextEditorView](./text-editor-view.md)
@@ -67,7 +73,7 @@ define(function(require) {
     var $ = require('jquery');
     require('jquery.select2');
 
-    SelectEditorView = TextEditorView.extend(/** @exports SelectEditorView.prototype */{
+    SelectEditorView = TextEditorView.extend(/** @lends SelectEditorView.prototype */{
         className: 'select-editor',
 
         SELECTED_ITEMS_H_MARGIN_BETWEEN: 5,
@@ -91,6 +97,13 @@ define(function(require) {
 
         keyType: 'string',
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function SelectEditorView() {
+            SelectEditorView.__super__.constructor.apply(this, arguments);
+        },
+
         initialize: function(options) {
             if (options.key_type) {
                 this.keyType = options.key_type;
@@ -111,19 +124,19 @@ define(function(require) {
             var fieldRestrictions = _.result(this.options, 'fieldRestrictions');
             if (fieldRestrictions) {
                 restrictionExpectation = _.result(fieldRestrictions, 'mode') === 'disallow';
-                results = _.map(choices, function(text, id) {
-                    var presentInRestriction = _.indexOf(fieldRestrictions.values, id) !== -1;
+                results = _.map(choices, function(value, label) {
+                    var presentInRestriction = _.indexOf(fieldRestrictions.values, value) !== -1;
                     return {
-                        id: id,
-                        text: text,
+                        id: value,
+                        text: label,
                         disabled: presentInRestriction === restrictionExpectation
                     };
                 });
             } else {
-                results = _.map(choices, function(text, id) {
+                results = _.map(choices, function(value, label) {
                     return {
-                        id: id,
-                        text: text
+                        id: value,
+                        text: label
                     };
                 });
             }

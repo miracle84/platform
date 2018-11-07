@@ -26,6 +26,13 @@ define([
         useDirectLauncherLink: true,
 
         /**
+         * @inheritDoc
+         */
+        constructor: function NavigateAction() {
+            NavigateAction.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Initialize launcher options with url
          *
          * @param {Object} options
@@ -70,7 +77,7 @@ define([
                 for (key in options.parameters) {
                     if (options.parameters.hasOwnProperty(key)) {
                         value = options.parameters[key];
-                        url = this.addUrlParameter(url, key,  value);
+                        url = this.addUrlParameter(url, key, value);
                     }
                 }
             }
@@ -78,7 +85,7 @@ define([
                 for (key in this.parameters) {
                     if (this.parameters.hasOwnProperty(key)) {
                         value = this.parameters[key];
-                        url = this.addUrlParameter(url, key,  value);
+                        url = this.addUrlParameter(url, key, value);
                     }
                 }
             }

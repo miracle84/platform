@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Validator;
 
-use Symfony\Component\Validator\Context\ExecutionContext;
-use Symfony\Component\Validator\Context\ExecutionContextInterface;
-use Symfony\Component\Validator\Violation\ConstraintViolationBuilderInterface;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\UserBundle\Provider\PasswordComplexityConfigProvider;
 use Oro\Bundle\UserBundle\Validator\Constraints\PasswordComplexity;
 use Oro\Bundle\UserBundle\Validator\PasswordComplexityValidator;
+use Symfony\Component\Validator\Context\ExecutionContext;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use Symfony\Component\Validator\Violation\ConstraintViolationBuilderInterface;
 
-class PasswordComplexityValidatorTest extends \PHPUnit_Framework_TestCase
+class PasswordComplexityValidatorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ConstraintViolationBuilderInterface */
     protected $violationBuilder;
@@ -88,7 +87,7 @@ class PasswordComplexityValidatorTest extends \PHPUnit_Framework_TestCase
                     [PasswordComplexityConfigProvider::CONFIG_NUMBERS, false, false, null, false],
                     [PasswordComplexityConfigProvider::CONFIG_SPECIAL_CHARS, false, false, null, false],
                 ],
-                'value' => 'password',
+                'value' => '0',
                 'message' => 'oro.user.message.invalid_password.min_length',
 
             ],

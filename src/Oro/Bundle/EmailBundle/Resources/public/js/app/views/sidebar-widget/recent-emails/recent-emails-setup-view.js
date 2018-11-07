@@ -16,6 +16,16 @@ define(function(require) {
 
         foldersData: null,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function RecentEmailsContentView() {
+            RecentEmailsContentView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function() {
             RecentEmailsContentView.__super__.initialize.apply(this, arguments);
             $.getJSON(routing.generate('oro_email_emailorigin_list'),
@@ -34,12 +44,12 @@ define(function(require) {
                 if (mailbox.active) {
                     folders =
                         _.where(mailbox.folder, {syncEnabled: true})
-                        .map(function(folder) {
-                            return {
-                                id: Number(folder.id),
-                                text: folder.fullName
-                            };
-                        });
+                            .map(function(folder) {
+                                return {
+                                    id: Number(folder.id),
+                                    text: folder.fullName
+                                };
+                            });
                     if (folders.length > 0) {
                         if (text) {
                             mailboxes.push({
@@ -119,8 +129,6 @@ define(function(require) {
                 }
                 this.subview('loading').show();
             }
-
-            this.initLayout();
         },
 
         fetchFromData: function() {

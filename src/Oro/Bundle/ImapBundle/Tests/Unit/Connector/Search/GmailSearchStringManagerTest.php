@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\ImapBundle\Tests\Unit\Connector\Search;
 
+use Oro\Bundle\ImapBundle\Connector\Search\GmailSearchStringManager;
 use Oro\Bundle\ImapBundle\Connector\Search\SearchQuery;
 use Oro\Bundle\ImapBundle\Connector\Search\SearchQueryExpr;
 use Oro\Bundle\ImapBundle\Connector\Search\SearchQueryMatch;
-use Oro\Bundle\ImapBundle\Connector\Search\GmailSearchStringManager;
 
-class GmailSearchStringManagerTest extends \PHPUnit_Framework_TestCase
+class GmailSearchStringManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var GmailSearchStringManager */
     private $searchStringManager;

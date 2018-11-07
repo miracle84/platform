@@ -8,7 +8,7 @@ use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Normalizer\ConfigNormalizer;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
-class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
+class ConfigNormalizerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider normalizeConfigProvider
@@ -25,7 +25,7 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
         $normalizedConfig = $configLoader->load($config);
         $normalizer->normalizeConfig($normalizedConfig);
 
-        $this->assertEquals($expectedConfig, $normalizedConfig->toArray());
+        self::assertEquals($expectedConfig, $normalizedConfig->toArray());
     }
 
     /**
@@ -53,13 +53,14 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                                         ],
                                         'field112' => null
                                     ]
-                                ],
+                                ]
                             ]
-                        ],
+                        ]
                     ]
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_renamed_fields'  => ['realField2' => 'field2'],
                     'fields'           => [
                         'field2'       => [
                             'property_path' => 'realField2'
@@ -70,9 +71,9 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                                     'fields' => [
                                         'field112' => null
                                     ]
-                                ],
+                                ]
                             ]
-                        ],
+                        ]
                     ]
                 ]
             ],
@@ -110,6 +111,7 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_excluded_fields' => ['field1'],
                     'fields'           => [
                         'field1' => null,
                         'field2' => [
@@ -133,9 +135,10 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_excluded_fields' => ['field1', 'field2'],
                     'fields'           => [
                         'field1' => [
-                            'exclude' => true,
+                            'exclude' => true
                         ],
                         'field2' => [
                             'exclude'    => true,
@@ -162,6 +165,7 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_excluded_fields' => ['field1', 'field2'],
                     'fields'           => [
                         'field1' => null,
                         'field2' => [
@@ -180,7 +184,7 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                         'field' => [
                             'fields' => [
                                 'field1' => [
-                                    'exclude' => true,
+                                    'exclude' => true
                                 ],
                                 'field2' => [
                                     'depends_on' => ['field1']
@@ -193,7 +197,8 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                     'exclusion_policy' => 'all',
                     'fields'           => [
                         'field' => [
-                            'fields' => [
+                            '_excluded_fields' => ['field1'],
+                            'fields'           => [
                                 'field1' => null,
                                 'field2' => [
                                     'depends_on' => ['field1']
@@ -303,7 +308,8 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                     'exclusion_policy' => 'all',
                     'fields'           => [
                         'association1' => [
-                            'fields' => [
+                            '_excluded_fields' => ['field11'],
+                            'fields'           => [
                                 'field11' => null
                             ]
                         ],
@@ -330,6 +336,7 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_excluded_fields' => ['association1'],
                     'fields'           => [
                         'association1' => [
                             'fields' => [
@@ -359,26 +366,140 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                                             'exclude' => true
                                         ]
                                     ]
-                                ],
+                                ]
                             ]
-                        ],
+                        ]
                     ]
                 ],
                 'expectedConfig' => [
                     'exclusion_policy' => 'all',
+                    '_excluded_fields' => ['association1'],
                     'fields'           => [
                         'field2'       => [
                             'depends_on' => ['association1.association11.field111']
                         ],
                         'association1' => [
-                            'fields' => [
+                            '_excluded_fields' => ['association11'],
+                            'fields'           => [
                                 'association11' => [
-                                    'fields' => [
+                                    '_excluded_fields' => ['field111'],
+                                    'fields'           => [
                                         'field111' => null
                                     ]
-                                ],
+                                ]
                             ]
+                        ]
+                    ]
+                ]
+            ],
+            'collapsed association'                                      => [
+                'config'         => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse' => true,
+                            'fields'   => [
+                                'id' => null
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedConfig' => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse'        => true,
+                            '_collapse_field' => 'id',
+                            'fields'          => [
+                                'id' => null
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'collapsed association with excluded fields'                 => [
+                'config'         => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse' => true,
+                            'fields'   => [
+                                'id'   => null,
+                                'name' => ['exclude' => true]
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedConfig' => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse'         => true,
+                            '_collapse_field'  => 'id',
+                            '_excluded_fields' => ['name'],
+                            'fields'           => [
+                                'id'   => null,
+                                'name' => ['exclude' => true]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'collapsed association with composite identifier'            => [
+                'config'         => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse' => true,
+                            'fields'   => [
+                                'id1' => null,
+                                'id2' => null
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedConfig' => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'association1' => [
+                            'collapse' => true,
+                            'fields'   => [
+                                'id1' => null,
+                                'id2' => null
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'field depends on collapsed association child field'         => [
+                'config'         => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'field1'       => [
+                            'depends_on' => ['association1.field11']
                         ],
+                        'association1' => [
+                            'collapse' => true,
+                            'fields'   => [
+                                'id' => null
+                            ]
+                        ]
+                    ]
+                ],
+                'expectedConfig' => [
+                    'exclusion_policy' => 'all',
+                    'fields'           => [
+                        'field1'       => [
+                            'depends_on' => ['association1.field11']
+                        ],
+                        'association1' => [
+                            'collapse'        => true,
+                            '_collapse_field' => 'id',
+                            'fields'          => [
+                                'id'      => null,
+                                'field11' => null
+                            ]
+                        ]
                     ]
                 ]
             ],
@@ -388,13 +509,13 @@ class ConfigNormalizerTest extends \PHPUnit_Framework_TestCase
                     'fields'           => [
                         'association1' => [
                             'data_type' => 'association:manyToOne'
-                        ],
+                        ]
                     ]
                 ],
                 'expectedConfig' => [
-                    'exclusion_policy' => 'all',
+                    'exclusion_policy' => 'all'
                 ]
-            ],
+            ]
         ];
     }
 }

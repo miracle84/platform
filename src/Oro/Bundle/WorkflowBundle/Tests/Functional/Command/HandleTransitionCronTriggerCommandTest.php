@@ -4,7 +4,6 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Functional\Command;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
-
 use Oro\Bundle\TestFrameworkBundle\Entity\WorkflowAwareEntity;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\WorkflowBundle\Command\HandleTransitionCronTriggerCommand;
@@ -14,9 +13,6 @@ use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadTransitionTriggers;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadWorkflowDefinitions;
 
-/**
- * @dbIsolation
- */
 class HandleTransitionCronTriggerCommandTest extends WebTestCase
 {
     protected function setUp()

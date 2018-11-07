@@ -2,13 +2,17 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Create\JsonApi;
 
+use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
+use Oro\Bundle\ApiBundle\Model\Error;
+use Oro\Bundle\ApiBundle\Model\ErrorSource;
 use Oro\Bundle\ApiBundle\Processor\Create\JsonApi\ExtractEntityId;
+use Oro\Bundle\ApiBundle\Request\Constraint;
 use Oro\Bundle\ApiBundle\Tests\Unit\Processor\FormProcessorTestCase;
 
 class ExtractEntityIdTest extends FormProcessorTestCase
 {
     /** @var ExtractEntityId */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
@@ -30,7 +34,7 @@ class ExtractEntityIdTest extends FormProcessorTestCase
         $this->context->setRequestData($requestData);
         $this->processor->process($this->context);
 
-        $this->assertEquals($entityId, $this->context->getId());
+        self::assertEquals($entityId, $this->context->getId());
     }
 
     public function testProcessWhenEntityIdDoesNotExistInContext()
@@ -44,7 +48,7 @@ class ExtractEntityIdTest extends FormProcessorTestCase
         $this->context->setRequestData($requestData);
         $this->processor->process($this->context);
 
-        $this->assertEquals(456, $this->context->getId());
+        self::assertEquals(456, $this->context->getId());
     }
 
     public function testProcessForEmptyRequestData()
@@ -54,18 +58,44 @@ class ExtractEntityIdTest extends FormProcessorTestCase
         $this->context->setRequestData($requestData);
         $this->processor->process($this->context);
 
-        $this->assertNull($this->context->getId());
+        self::assertNull($this->context->getId());
     }
 
-    public function testProcessForEmptyRequestDataWithoutEntityId()
+    public function testProcessForEmptyRequestDataWithoutEntityIdButEntityHasIdGenerator()
     {
         $requestData = [
             'data' => []
         ];
+        $metadata = new EntityMetadata();
+        $metadata->setHasIdentifierGenerator(true);
 
         $this->context->setRequestData($requestData);
+        $this->context->setMetadata($metadata);
         $this->processor->process($this->context);
 
-        $this->assertNull($this->context->getId());
+        self::assertNull($this->context->getId());
+        self::assertFalse($this->context->hasErrors());
+    }
+
+    public function testProcessForEmptyRequestDataWithoutEntityIdAndEntityDoesNotHaveIdGenerator()
+    {
+        $requestData = [
+            'data' => []
+        ];
+        $metadata = new EntityMetadata();
+        $metadata->setHasIdentifierGenerator(false);
+
+        $this->context->setRequestData($requestData);
+        $this->context->setMetadata($metadata);
+        $this->processor->process($this->context);
+
+        self::assertNull($this->context->getId());
+        self::assertEquals(
+            [
+                Error::createValidationError(Constraint::ENTITY_ID, 'The identifier is mandatory')
+                    ->setSource(ErrorSource::createByPropertyPath('id'))
+            ],
+            $this->context->getErrors()
+        );
     }
 }

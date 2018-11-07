@@ -4,6 +4,9 @@ namespace Oro\Bundle\ApiBundle\Config;
 
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
+/**
+ * Represents the configuration of Data API sub-resources.
+ */
 class SubresourcesConfig
 {
     /** @var SubresourceConfig[] [association name => SubresourceConfig, ...] */
@@ -56,9 +59,11 @@ class SubresourcesConfig
      */
     public function getSubresource($associationName)
     {
-        return isset($this->subresources[$associationName])
-            ? $this->subresources[$associationName]
-            : null;
+        if (!isset($this->subresources[$associationName])) {
+            return null;
+        }
+
+        return $this->subresources[$associationName];
     }
 
     /**

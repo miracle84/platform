@@ -3,16 +3,14 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 
 use Oro\Bundle\EmailBundle\Async\PurgeEmailAttachmentsByIdsMessageProcessor;
 use Oro\Bundle\EmailBundle\Async\Topics;
-
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
-
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -37,8 +35,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[PurgeEmailAttachmentsByIdsMessageProcessor]'
-                .' Got invalid message: "[]"')
+            ->with('Got invalid message')
         ;
 
         $message = new NullMessage();
@@ -57,7 +54,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_
 
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -65,7 +62,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|RegistryInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|RegistryInterface
      */
     private function createRegistryInterfaceMock()
     {
@@ -73,7 +70,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {
@@ -81,7 +78,7 @@ class PurgeEmailAttachmentsByIdsMessageProcessorTest extends \PHPUnit_Framework_
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {

@@ -2,10 +2,9 @@
 
 namespace Oro\Component\Layout;
 
-use Symfony\Component\Form\FormView;
-
-use Oro\Component\Layout\Form\RendererEngine\FormRendererEngineInterface;
 use Oro\Component\Layout\Form\FormRendererInterface;
+use Oro\Component\Layout\Form\RendererEngine\FormRendererEngineInterface;
+use Symfony\Component\Form\FormView;
 
 /**
  * Heavily inspired by FormRenderer class
@@ -158,7 +157,10 @@ class Renderer implements FormRendererInterface
             // If a block recursively calls searchAndRenderBlock() again, resume rendering
             // using the parent type in the hierarchy.
             $blockNameHierarchy = $this->blockNameHierarchyMap[$viewAndSuffixCacheKey];
-            $hierarchyLevel = $this->hierarchyLevelMap[$viewAndSuffixCacheKey] - 1;
+            $hierarchyLevel = $this->hierarchyLevelMap[$viewAndSuffixCacheKey];
+            if (!$renderParentBlock) {
+                $hierarchyLevel -= 1;
+            }
 
             $hierarchyInit = false;
         }
@@ -183,7 +185,7 @@ class Renderer implements FormRendererInterface
         // Load the resource where this block can be found
         $resource = $this->engine->getResourceForBlockNameHierarchy($view, $blockNameHierarchy, $hierarchyLevel);
         if ($renderParentBlock) {
-            $resource = $this->engine->switchToNextParentResource($view, $blockNameHierarchy);
+            $resource = $this->engine->switchToNextParentResource($view, $blockNameHierarchy, $hierarchyLevel);
         }
 
         // Update the current hierarchy level to the one at which the resource was found

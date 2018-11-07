@@ -2,27 +2,25 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Helper;
 
-use Oro\Bundle\EntityConfigBundle\Helper\EntityConfigHelper;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\EntityConfigBundle\Helper\EntityConfigHelper;
 use Oro\Bundle\EntityConfigBundle\Metadata\EntityMetadata;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-
 use Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface;
 
-class EntityConfigHelperTest extends \PHPUnit_Framework_TestCase
+class EntityConfigHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ConfigProvider */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigProvider */
     protected $configProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ConfigManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigManager */
     protected $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ConfigInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigInterface */
     protected $config;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|AclGroupProviderInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AclGroupProviderInterface */
     protected $groupProvider;
 
     /** @var EntityConfigHelper */
@@ -46,6 +44,46 @@ class EntityConfigHelperTest extends \PHPUnit_Framework_TestCase
         $this->groupProvider = $this->createMock('Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface');
 
         $this->helper = new EntityConfigHelper($this->configProvider, $this->groupProvider);
+    }
+
+    public function testGetAvailableRoutes()
+    {
+        $this->configProvider->expects($this->once())
+            ->method('getClassName')
+            ->with('TestClass')
+            ->willReturn('TestClass');
+
+        $this->configProvider->expects($this->once())
+            ->method('getConfigManager')
+            ->willReturn($this->configManager);
+
+        $metadata = $this->createMock(EntityMetadata::class);
+
+        $this->configManager->expects($this->once())
+            ->method('getEntityMetadata')
+            ->with('TestClass')
+            ->willReturn($metadata);
+
+        $metadata->expects($this->once())
+            ->method('getRoutes')
+            ->willReturn(['route1' => 'value1']);
+
+        $this->assertEquals(
+            [
+                'route1' => 'value1',
+            ],
+            $this->helper->getAvailableRoutes('TestClass')
+        );
+    }
+
+    public function testGetAvailableRoutesWithoutMetadata()
+    {
+        $this->configProvider->expects($this->once())->method('getClassName')->willReturnArgument(0);
+        $this->configProvider->expects($this->once())->method('getConfigManager')->willReturn($this->configManager);
+
+        $this->configManager->expects($this->once())->method('getEntityMetadata')->with('TestClass')->willReturn(null);
+
+        $this->assertEquals([], $this->helper->getAvailableRoutes('TestClass'));
     }
 
     /**

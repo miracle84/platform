@@ -9,7 +9,6 @@ namespace Oro\Bundle\EmailBundle\Mail\Header;
 
 use \Zend\Mail\Header\ContentType as BaseContentType;
 use \Zend\Mail\Header\Exception\InvalidArgumentException;
-
 use Oro\Bundle\EmailBundle\Mail\Headers;
 
 class ContentType extends BaseContentType
@@ -41,9 +40,11 @@ class ContentType extends BaseContentType
 
         if (count($values)) {
             foreach ($values as $keyValuePair) {
-                list($key, $value) = explode('=', $keyValuePair, 2);
-                $value = trim($value, "'\" \t\n\r\0\x0B");
-                $header->addParameter($key, $value);
+                if ($keyValuePair && strpos($keyValuePair, '=') !== false) {
+                    list($key, $value) = explode('=', $keyValuePair, 2);
+                    $value = trim($value, "'\" \t\n\r\0\x0B");
+                    $header->addParameter($key, $value);
+                }
             }
         }
 

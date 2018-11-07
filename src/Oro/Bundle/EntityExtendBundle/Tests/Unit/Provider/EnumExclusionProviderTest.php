@@ -3,15 +3,14 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Provider;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityExtendBundle\Provider\EnumExclusionProvider;
 
-class EnumExclusionProviderTest extends \PHPUnit_Framework_TestCase
+class EnumExclusionProviderTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_CLASS = 'Test\Entity';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     /** @var EnumExclusionProvider */

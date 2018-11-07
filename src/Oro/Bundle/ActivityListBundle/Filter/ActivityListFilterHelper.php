@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ActivityListBundle\Filter;
 
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
 use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\FilterBundle\Datasource\Orm\OrmFilterDatasourceAdapter;
@@ -83,7 +82,7 @@ class ActivityListFilterHelper
                     'options'   => [
                         'field_options' => [
                             'multiple' => true,
-                            'choices'  => array_flip($this->chainProvider->getSupportedActivities())
+                            'choices' => $this->chainProvider->getSupportedActivities()
                         ]
                     ]
                 ]

@@ -104,6 +104,27 @@ define([
         dropdownFitContainers: ['.ui-dialog-content>*:first-child', '#container', 'body'],
 
         /**
+         * Allow clear selected value
+         *
+         * @property {Boolean}
+         */
+        allowClear: true,
+
+        /**
+         * Is used for states in template
+         * @property {String} 'dropdown-mode' | 'toggle-mode'
+         * @default ''
+         */
+        renderMode: '',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function AbstractFilter() {
+            AbstractFilter.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Initialize.
          *
          * @param {Object} options
@@ -111,7 +132,7 @@ define([
          */
         initialize: function(options) {
             var opts = _.pick(options || {}, 'enabled', 'visible', 'canDisable', 'placeholder', 'showLabel', 'label',
-                'templateSelector', 'templateTheme');
+                'templateSelector', 'templateTheme', 'template', 'renderMode');
             _.extend(this, opts);
 
             this._defineTemplate();
@@ -122,8 +143,10 @@ define([
             if (_.isUndefined(this.emptyValue)) {
                 this.emptyValue = {};
             }
-            // init raw value of filter
-            this.value = tools.deepClone(this.emptyValue);
+            // init raw value of filter if it was not initialized
+            if (_.isUndefined(this.value)) {
+                this.value = tools.deepClone(this.emptyValue);
+            }
 
             AbstractFilter.__super__.initialize.apply(this, arguments);
 
@@ -208,6 +231,8 @@ define([
             return this;
         },
 
+        close: function() {},
+
         /**
          * Reset filter elements
          *
@@ -241,6 +266,16 @@ define([
                 this._onValueUpdated(this.value, oldValue);
             }
             return this;
+        },
+
+        /**
+         * Set renderMode to filter
+         * @param {String} value
+         */
+        setRenderMode: function(value) {
+            if (_.isString(value) && value.length) {
+                this.renderMode = value;
+            }
         },
 
         /**
@@ -307,6 +342,15 @@ define([
         },
 
         /**
+         * Triggers when filter value is changed
+         *
+         * @protected
+         */
+        _onValueChanged: function() {
+            this.trigger('change');
+        },
+
+        /**
          * Triggers update event
          *
          * @param {*} newValue
@@ -361,7 +405,6 @@ define([
                     break;
                 default:
                     result = $input.val();
-
             }
             return result;
         },
@@ -390,7 +433,6 @@ define([
                     break;
                 default:
                     $input.val(value);
-
             }
             return this;
         },
@@ -435,8 +477,8 @@ define([
          */
         _writeDOMValue: function(value) {
             throw new Error('Method _writeDOMValue is abstract and must be implemented');
-            //this._setInputValue(inputValueSelector, value.value);
-            //return this
+            // this._setInputValue(inputValueSelector, value.value);
+            // return this
         },
 
         /**
@@ -447,7 +489,17 @@ define([
          */
         _readDOMValue: function() {
             throw new Error('Method _readDOMValue is abstract and must be implemented');
-            //return { value: this._getInputValue(this.inputValueSelector) }
+            // return { value: this._getInputValue(this.inputValueSelector) }
+        },
+
+        /**
+         * Return true if DOM Value of filter is changed
+         *
+         * @returns {boolean}
+         * @protected
+         */
+        _isDOMValueChanged: function() {
+            throw new Error('Method _isDOMValueChanged is abstract and must be implemented');
         },
 
         /**

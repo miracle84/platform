@@ -2,19 +2,18 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\EntityConfigBundle\DependencyInjection\Compiler\AttributeBlockTypeMapperPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Compiler\AttributeBlockTypeMapperPass;
-
-class AttributeBlockTypeMapperPassTest extends \PHPUnit_Framework_TestCase
+class AttributeBlockTypeMapperPassTest extends \PHPUnit\Framework\TestCase
 {
     public function testProcess()
     {
         $registry = $this->getMockBuilder(Definition::class)->getMock();
 
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $container */
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $container */
         $container = $this->getMockBuilder(ContainerBuilder::class)->getMock();
         $container->expects($this->once())
             ->method('getDefinition')
@@ -39,7 +38,7 @@ class AttributeBlockTypeMapperPassTest extends \PHPUnit_Framework_TestCase
 
     public function testProcessSkip()
     {
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $container */
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $container */
         $container = $this->getMockBuilder(ContainerBuilder::class)->getMock();
         $container->expects($this->once())
             ->method('findTaggedServiceIds')

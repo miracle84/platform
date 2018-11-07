@@ -4,12 +4,10 @@ namespace Oro\Bundle\WorkflowBundle\Command;
 
 use Doctrine\Common\Persistence\ObjectRepository;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\WorkflowBundle\Model\ProcessData;
 use Oro\Bundle\WorkflowBundle\Model\ProcessHandler;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
-
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -120,13 +118,5 @@ class HandleProcessTriggerCommand extends ContainerAwareCommand
     protected function getProcessHandler()
     {
         return $this->getContainer()->get('oro_workflow.process.process_handler');
-    }
-
-    /**
-     * @return bool
-     */
-    public function isActive()
-    {
-        return true;
     }
 }

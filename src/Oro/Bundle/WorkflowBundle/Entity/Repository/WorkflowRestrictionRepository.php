@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowRestriction;
 
 class WorkflowRestrictionRepository extends EntityRepository
@@ -52,7 +51,8 @@ class WorkflowRestrictionRepository extends EntityRepository
                 'GROUP_CONCAT(ri.entityId) AS ids'
             )
             ->groupBy('r.id')
-            ->where($queryBuilder->expr()->in('ri.entityId', $entityIds))
+            ->where($queryBuilder->expr()->in('ri.entityId', ':entityIds'))
+            ->setParameter('entityIds', $entityIds)
             ->andWhere('r.entityClass = :entityClass')
             ->setParameter('entityClass', $entityClass)
             ->getQuery()->getArrayResult();

@@ -2,18 +2,17 @@
 
 namespace Oro\Bundle\WorkflowBundle\Command;
 
+use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
+use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowDefinitionRepository;
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
+use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Translation\TranslatorInterface;
 use Symfony\Component\Yaml\Yaml;
-
-use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowDefinitionRepository;
-use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
-use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 
 class DebugWorkflowDefinitionsCommand extends ContainerAwareCommand
 {
@@ -27,6 +26,7 @@ class DebugWorkflowDefinitionsCommand extends ContainerAwareCommand
         'Related Entity',
         'Type',
         'Priority',
+        'Applications',
         'Exclusive Active Group',
         'Exclusive Record Groups'
     ];
@@ -84,12 +84,15 @@ class DebugWorkflowDefinitionsCommand extends ContainerAwareCommand
                     $recordGroups = 'N/A';
                 }
 
+                $applications = implode(', ', $workflow->getApplications());
+
                 $row = [
                     $workflow->getName(),
                     $translator->trans($workflow->getLabel(), [], WorkflowTranslationHelper::TRANSLATION_DOMAIN),
                     $workflow->getRelatedEntity(),
                     $workflow->isSystem() ? 'System' : 'Custom',
                     (int)$workflow->getPriority(),
+                    $applications,
                     $activeGroups,
                     $recordGroups
                 ];
@@ -125,6 +128,7 @@ class DebugWorkflowDefinitionsCommand extends ContainerAwareCommand
                 'defaults' => [
                     'active' => $workflow->isActive()
                 ],
+                WorkflowConfiguration::NODE_APPLICATIONS => $workflow->getApplications()
             ];
 
             $startStep = $workflow->getStartStep();
@@ -175,7 +179,7 @@ class DebugWorkflowDefinitionsCommand extends ContainerAwareCommand
                     $array[$key] = null;
                 }
             }
-            if (in_array(strtolower($key), ['label', 'message'], true)) {
+            if (in_array(strtolower($key), ['label', 'message', 'button_label', 'button_title'], true)) {
                 unset($array[$key]);
             }
         }

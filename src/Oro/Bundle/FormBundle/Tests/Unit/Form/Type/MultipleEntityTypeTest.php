@@ -2,48 +2,46 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Type;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
-
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\FormBundle\Form\Type\EntityIdentifierType;
 use Oro\Bundle\FormBundle\Form\Type\MultipleEntityType;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class MultipleEntityTypeTest extends FormIntegrationTestCase
 {
     const PERMISSION_ALLOW    = 'test_permission_allow';
     const PERMISSION_DISALLOW = 'test_permission_disallow';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
     protected function setUp()
     {
-        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()->getMock();
+        $this->doctrineHelper = $this->createMock(DoctrineHelper::class);
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
 
-        $metadata               = new ClassMetadataInfo('\stdClass');
+        $metadata = new ClassMetadataInfo('\stdClass');
         $metadata->identifier[] = 'id';
 
-        $this->em = $this->getMockBuilder('Doctrine\ORM\EntityManager')->disableOriginalConstructor()
-            ->getMock();
+        $this->em = $this->createMock(EntityManager::class);
         $this->em->expects($this->any())->method('getClassMetadata')
             ->willReturnMap([['\stdClass', $metadata]]);
 
-        $this->registry = $this->createMock('Doctrine\Common\Persistence\ManagerRegistry');
+        $this->registry = $this->createMock(ManagerRegistry::class);
         $this->registry->expects($this->any())->method('getManagerForClass')
             ->willReturnMap([['\stdClass', $this->em]]);
 
@@ -52,7 +50,7 @@ class MultipleEntityTypeTest extends FormIntegrationTestCase
 
     protected function tearDown()
     {
-        unset($this->securityFacade, $this->registry);
+        unset($this->authorizationChecker, $this->registry);
 
         parent::tearDown();
     }
@@ -63,8 +61,8 @@ class MultipleEntityTypeTest extends FormIntegrationTestCase
     protected function getExtensions()
     {
         $types = [
-            'oro_multiple_entity'   => new MultipleEntityType($this->doctrineHelper, $this->securityFacade),
-            'oro_entity_identifier' => new EntityIdentifierType($this->registry)
+            MultipleEntityType::class   => new MultipleEntityType($this->doctrineHelper, $this->authorizationChecker),
+            EntityIdentifierType::class => new EntityIdentifierType($this->registry)
         ];
 
         return [
@@ -74,7 +72,7 @@ class MultipleEntityTypeTest extends FormIntegrationTestCase
 
     public function testBuildForm()
     {
-        $form = $this->factory->create('oro_multiple_entity', null, ['class' => '\stdClass']);
+        $form = $this->factory->create(MultipleEntityType::class, null, ['class' => '\stdClass']);
 
         $this->assertTrue($form->has('added'));
         $this->assertTrue($form->has('removed'));
@@ -82,7 +80,7 @@ class MultipleEntityTypeTest extends FormIntegrationTestCase
 
     public function testHasKnownOptions()
     {
-        $form = $this->factory->create('oro_multiple_entity', null, ['class' => '\stdClass']);
+        $form = $this->factory->create(MultipleEntityType::class, null, ['class' => '\stdClass']);
 
         $knownOptions = [
             'add_acl_resource',
@@ -111,15 +109,19 @@ class MultipleEntityTypeTest extends FormIntegrationTestCase
      */
     public function testViewHasVars($options, $expectedKey, $expectedValue)
     {
-        $form = $this->factory->create('oro_multiple_entity', null, array_merge($options, ['class' => '\stdClass']));
+        $form = $this->factory->create(
+            MultipleEntityType::class,
+            null,
+            array_merge($options, ['class' => '\stdClass'])
+        );
 
         if (isset($options['add_acl_resource'])) {
-            $this->securityFacade->expects($this->once())
+            $this->authorizationChecker->expects($this->once())
                 ->method('isGranted')
                 ->with($options['add_acl_resource'])
                 ->will($this->returnValue($expectedValue));
         } else {
-            $this->securityFacade->expects($this->never())
+            $this->authorizationChecker->expects($this->never())
                 ->method('isGranted');
         }
 

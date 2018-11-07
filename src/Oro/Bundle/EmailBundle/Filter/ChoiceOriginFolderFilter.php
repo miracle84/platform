@@ -2,13 +2,11 @@
 
 namespace Oro\Bundle\EmailBundle\Filter;
 
-use Oro\Bundle\FilterBundle\Filter\ChoiceFilter;
-
-use Symfony\Component\Form\FormView;
-use Symfony\Component\Form\FormInterface;
-
 use Oro\Bundle\EmailBundle\Form\Type\Filter\ChoiceOriginFolderFilterType;
+use Oro\Bundle\FilterBundle\Filter\ChoiceFilter;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 
 class ChoiceOriginFolderFilter extends ChoiceFilter
 {
@@ -17,7 +15,7 @@ class ChoiceOriginFolderFilter extends ChoiceFilter
      */
     protected function getFormType()
     {
-        return ChoiceOriginFolderFilterType::NAME;
+        return ChoiceOriginFolderFilterType::class;
     }
 
     /**

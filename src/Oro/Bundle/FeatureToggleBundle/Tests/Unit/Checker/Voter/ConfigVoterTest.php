@@ -3,19 +3,19 @@
 namespace Oro\Bundle\FeatureToggleBundle\Tests\Unit\Checker\Voter;
 
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\FeatureToggleBundle\Checker\Voter\ConfigVoter;
 use Oro\Bundle\FeatureToggleBundle\Checker\Voter\VoterInterface;
 use Oro\Bundle\FeatureToggleBundle\Configuration\ConfigurationManager;
-use Oro\Bundle\FeatureToggleBundle\Checker\Voter\ConfigVoter;
 
-class ConfigVoterTest extends \PHPUnit_Framework_TestCase
+class ConfigVoterTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
     /**
-     * @var ConfigurationManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigurationManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $featureConfigManager;
 

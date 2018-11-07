@@ -3,11 +3,10 @@
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Model;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\ActionGroupExecutionArgs;
 
-class ActionGroupExecutionArgsTest extends \PHPUnit_Framework_TestCase
+class ActionGroupExecutionArgsTest extends \PHPUnit\Framework\TestCase
 {
     public function testNameConstruction()
     {

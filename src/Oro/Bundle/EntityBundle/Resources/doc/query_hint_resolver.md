@@ -1,4 +1,4 @@
-## Resolving of ORM query hints ##
+## Resolving of ORM query hints
 
 The [Query Hint Resolver](./../../../../Component/DoctrineUtils/ORM/QueryHintResolver.php) service has been introduced to make the building of a configuration based queries (like grids, API, etc) easier and more flexible.
 
@@ -24,7 +24,7 @@ Please pay attention on `walker_hint_provider` attribute. It is optional and can
         public: false
         class: Oro\Bundle\SecurityBundle\ORM\Walker\CurrentUserWalkerHintProvider
         arguments:
-             - @security.context
+             - @security.token_storage
 ```
 
 To map a hint to a custom output walker use the attribute `output_walker` instead of `tree_walker` in DI container configuration, for example:

@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout\Extension\Generator;
 
-use Symfony\Component\Yaml\Yaml;
-
 use Oro\Bundle\LayoutBundle\Layout\Extension\Generator\AddTreeGeneratorExtension;
 use Oro\Component\Layout\Loader\Generator\GeneratorData;
 use Oro\Component\Layout\Loader\Visitor\VisitorCollection;
+use Symfony\Component\Yaml\Yaml;
 
-class AddTreeGeneratorExtensionTest extends \PHPUnit_Framework_TestCase
+class AddTreeGeneratorExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var AddTreeGeneratorExtension
@@ -42,8 +41,8 @@ class AddTreeGeneratorExtensionTest extends \PHPUnit_Framework_TestCase
      */
     public function prepareDataProvider()
     {
-        $source = Yaml::parse(__DIR__.'/data/layout.yml')['layouts'];
-        $sourceMultiple = Yaml::parse(__DIR__.'/data/layout_multiple_add_tree.yml')['layouts'];
+        $source = Yaml::parse(file_get_contents(__DIR__.'/data/layout.yml'))['layouts'];
+        $sourceMultiple = Yaml::parse(file_get_contents(__DIR__.'/data/layout_multiple_add_tree.yml'))['layouts'];
         return [
             'tree' => [
                 'source' => $source,

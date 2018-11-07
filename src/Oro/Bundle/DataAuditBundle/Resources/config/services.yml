@@ -35,6 +35,8 @@ services:
             - '@oro_dataaudit.converter.entity_to_entity_change_array'
             - '@oro_dataaudit.audit_config_provider'
             - '@logger'
+        calls:
+            - [setAdditionalEntityChangesStorage, ['@oro_dataaudit.model.additional_entity_changes_to_audit_storage']]
         tags:
             - { name: doctrine.event_listener, event: onFlush, priority: -255 }
             - { name: doctrine.event_listener, event: postFlush, priority: -255 }
@@ -64,11 +66,8 @@ services:
     oro_dataaudit.event_listener.segment_widget_options_listener:
         class: 'Oro\Bundle\DataAuditBundle\EventListener\SegmentWidgetOptionsListener'
         arguments:
-            - '@http_kernel'
-            - '@oro_security.security_facade'
+            - '@security.authorization_checker'
             - '@oro_dataaudit.segment_widget.context_checker'
-        calls:
-            - ['setRequest', ["@?request="]]
         tags:
             - { name: kernel.event_listener, event: oro_segment.widget_options_load, method: onLoad }
 
@@ -76,6 +75,13 @@ services:
         class: 'Oro\Bundle\DataAuditBundle\EventListener\SegmentConditionBuilderOptionsListener'
         tags:
             - { name: kernel.event_listener, event: oro_segment.condition_builder_options_load, method: onLoad }
+
+    oro_dataaudit.event_listener.entity_structure_options_listener:
+        class: 'Oro\Bundle\DataAuditBundle\EventListener\EntityStructureOptionsListener'
+        arguments:
+            - '@oro_dataaudit.audit_config_provider'
+        tags:
+            - { name: kernel.event_listener, event: oro_entity.structure.options, method: onOptionsRequest }
 
     # Placeholder filter
     oro_dataaudit.placeholder.filter:
@@ -107,7 +113,7 @@ services:
         class: 'Oro\Bundle\DataAuditBundle\Provider\AuditConfigProvider'
         public: false
         arguments:
-            - '@oro_entity_config.provider.dataaudit'
+            - '@oro_entity_config.config_manager'
 
     oro_dataaudit.entity_name_provider:
         class: 'Oro\Bundle\DataAuditBundle\Provider\EntityNameProvider'
@@ -123,10 +129,11 @@ services:
             - '@oro_dataaudit.loggable.audit_entity_mapper'
             - '@oro_dataaudit.audit_config_provider'
             - '@oro_dataaudit.entity_name_provider'
+        calls:
+            - [setEventDispatcher, ['@event_dispatcher']]
 
     oro_dataaudit.converter.entity_changes_to_audit_entry:
         class: 'Oro\Bundle\DataAuditBundle\Service\EntityChangesToAuditEntryConverter'
-        public: false
         arguments:
             - '@doctrine'
             - '@oro_dataaudit.loggable.audit_entity_mapper'
@@ -138,7 +145,6 @@ services:
     oro_dataaudit.async.audit_changed_entities:
         class: 'Oro\Bundle\DataAuditBundle\Async\AuditChangedEntitiesProcessor'
         arguments:
-            - '@doctrine'
             - '@oro_dataaudit.converter.entity_changes_to_audit_entry'
             - '@oro_message_queue.message_producer'
         tags:
@@ -147,8 +153,8 @@ services:
     oro_dataaudit.async.audit_changed_entities_relations:
         class: 'Oro\Bundle\DataAuditBundle\Async\AuditChangedEntitiesRelationsProcessor'
         arguments:
-            - '@doctrine'
             - '@oro_dataaudit.converter.entity_changes_to_audit_entry'
+            - '@logger'
         tags:
             - { name: 'oro_message_queue.client.message_processor' }
 
@@ -159,3 +165,14 @@ services:
             - '@oro_dataaudit.converter.entity_changes_to_audit_entry'
         tags:
             - { name: 'oro_message_queue.client.message_processor' }
+
+    oro_dataaudit.migration.demo_data_fixtures_listener:
+        class: Oro\Bundle\DataAuditBundle\EventListener\DemoDataFixturesListener
+        arguments:
+            - '@oro_platform.optional_listeners.manager'
+        tags:
+            - { name: kernel.event_listener, event: oro_migration.data_fixtures.pre_load, method: onPreLoad }
+            - { name: kernel.event_listener, event: oro_migration.data_fixtures.post_load, method: onPostLoad }
+
+    oro_dataaudit.model.additional_entity_changes_to_audit_storage:
+        class: Oro\Bundle\DataAuditBundle\Model\AdditionalEntityChangesToAuditStorage

@@ -14,19 +14,29 @@ class InternalEntityConfig extends EntityConfig
     /**
      * {@inheritdoc}
      */
-    public function has($key)
+    public function toArray()
     {
-        return array_key_exists($key, $this->cache) || parent::has($key);
+        return \array_merge(parent::toArray(), $this->cache);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function get($key)
+    public function has($key)
     {
-        return array_key_exists($key, $this->cache)
-            ? $this->cache[$key]
-            : parent::get($key);
+        return \array_key_exists($key, $this->cache) || parent::has($key);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function get($key, $defaultValue = null)
+    {
+        if (\array_key_exists($key, $this->cache)) {
+            return $this->cache[$key];
+        }
+
+        return parent::get($key, $defaultValue);
     }
 
     /**

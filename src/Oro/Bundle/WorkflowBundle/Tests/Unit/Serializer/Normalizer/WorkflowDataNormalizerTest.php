@@ -3,34 +3,33 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Serializer\Normalizer;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\WorkflowBundle\Serializer\Normalizer\WorkflowDataNormalizer;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
+use Oro\Bundle\WorkflowBundle\Serializer\Normalizer\WorkflowDataNormalizer;
 
-class WorkflowDataNormalizerTest extends \PHPUnit_Framework_TestCase
+class WorkflowDataNormalizerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $attributeNormalizer;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $serializer;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $workflow;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $attribute;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $attributeManager;
 
@@ -57,12 +56,33 @@ class WorkflowDataNormalizerTest extends \PHPUnit_Framework_TestCase
         $restrictionManager = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Restriction\RestrictionManager')
             ->disableOriginalConstructor()
             ->getMock();
-        $this->workflow = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\Workflow')
-            ->setMethods(array('getName'))
-            ->setConstructorArgs(
-                array($doctrineHelper, $aclManager, $restrictionManager, null, $this->attributeManager, null)
-            )
+        $variableManager = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\VariableManager')
+            ->disableOriginalConstructor()
             ->getMock();
+        $this->workflow = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\Workflow')
+            ->setMethods(['getName', 'getVariables', 'getDefinition'])
+            ->setConstructorArgs([
+                $doctrineHelper,
+                $aclManager,
+                $restrictionManager,
+                null,
+                $this->attributeManager,
+                null,
+                $variableManager
+            ])->getMock();
+
+        $workflowDefinition = $this->createMock('Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition');
+        $workflowDefinition->expects($this->any())
+            ->method('getConfiguration')
+            ->willReturn([]);
+
+        $this->workflow->expects($this->any())
+            ->method('getVariables')
+            ->will($this->returnValue(new ArrayCollection()));
+        $this->workflow->expects($this->any())
+            ->method('getDefinition')
+            ->will($this->returnValue($workflowDefinition));
+
         $this->attribute = $this->createMock('Oro\Bundle\ActionBundle\Model\Attribute');
         $this->normalizer = new WorkflowDataNormalizer();
     }

@@ -51,6 +51,16 @@ define(function(require) {
             cancelAndEditPrevRowAction: 'editPrevRowCell'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function CellPopupEditorComponent() {
+            CellPopupEditorComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = options || {};
             if (!this.options.plugin) {
@@ -198,7 +208,8 @@ define(function(require) {
             }
 
             var cell = this.options.cell;
-            var serverUpdateData = this.view.getServerUpdateData();
+            var serverUpdateData = this.getServerUpdateData();
+            this.applyDivisor(serverUpdateData, false);
             this.formState = this.view.getFormState();
             var modelUpdateData = this.view.getModelUpdateData();
             cell.$el.addClass('loading');
@@ -219,7 +230,8 @@ define(function(require) {
             }
             var savePromise = this.options.save_api_accessor.send(cell.model.toJSON(), serverUpdateData, {}, {
                 processingMessage: __('oro.form.inlineEditing.saving_progress'),
-                preventWindowUnload: __('oro.form.inlineEditing.inline_edits')
+                preventWindowUnload: __('oro.form.inlineEditing.inline_edits'),
+                errorHandlerMessage: false
             });
             if (this.constructor.processSavePromise) {
                 savePromise = this.constructor.processSavePromise(savePromise, cell.column.get('metadata'));
@@ -272,7 +284,7 @@ define(function(require) {
          */
         exitEditMode: function(withDispose) {
             if (this.view) {
-                this.errorHolderView.adoptErrorMessage();
+                this.errorHolderView.parseValidatorErrors(this.view.validator.errorList);
                 if (!this.options.cell.disposed) {
                     this.options.cell.$el.removeClass('edit-mode').addClass('view-mode');
                 }
@@ -476,6 +488,7 @@ define(function(require) {
                         }, this)
                     ) {
                         var fields = response.hasOwnProperty('fields') ? response.fields : response;
+                        this.applyDivisor(fields, true);
                         var routeParamsRenameMap = _.invert(this.options.save_api_accessor.routeParametersRenameMap);
                         _.each(fields, function(item, i) {
                             var propName = routeParamsRenameMap.hasOwnProperty(i) ? routeParamsRenameMap[i] : i;
@@ -501,9 +514,9 @@ define(function(require) {
         },
 
         onSaveError: function(jqXHR) {
-            var errorCode = 'responseJSON' in jqXHR && 'code' in jqXHR.responseJSON ?
-                jqXHR.responseJSON.code :
-                jqXHR.status;
+            var errorCode = 'responseJSON' in jqXHR && 'code' in jqXHR.responseJSON
+                ? jqXHR.responseJSON.code
+                : jqXHR.status;
 
             var errors = [];
             var fieldLabel;
@@ -547,30 +560,27 @@ define(function(require) {
             var backendErrors;
             var responseErrors = _.result(jqXHR.responseJSON, 'errors');
             if (responseErrors) {
-                if (this.disposed || this.options.cell.disposed) {
-                    _.each(responseErrors.children, function(item) {
-                        if (_.isArray(item.errors)) {
-                            mediator.execute('showMessage', 'error', item.errors[0]);
-                        }
-                    });
-                    if (_.isArray(responseErrors.errors)) {
-                        mediator.execute('showMessage', 'error', responseErrors.errors[0]);
+                _.each(responseErrors.children, function(item) {
+                    if (_.isArray(item.errors)) {
+                        mediator.execute('showMessage', 'error', item.errors[0]);
                     }
-                } else {
-                    fieldErrors = _.result(responseErrors.children, this.options.cell.column.get('name'));
-                    if (!fieldErrors && this.options.viewOptions !== 'undefined' &&
-                        this.options.viewOptions.value_field_name !== 'undefined'
-                    ) {
-                        fieldErrors = _.result(responseErrors.children, this.options.viewOptions.value_field_name);
-                    }
-
-                    if (fieldErrors && _.isArray(fieldErrors.errors)) {
-                        backendErrors = {value: fieldErrors.errors[0]};
-                    } else if (_.isArray(responseErrors.errors)) {
-                        backendErrors = {value: responseErrors.errors[0]};
-                    }
-                    this.errorHolderView.setErrorMessages(backendErrors);
+                });
+                if (_.isArray(responseErrors.errors)) {
+                    mediator.execute('showMessage', 'error', __(responseErrors.errors[0]));
                 }
+                fieldErrors = _.result(responseErrors.children, this.options.cell.column.get('name'));
+                if (!fieldErrors && this.options.viewOptions !== 'undefined' &&
+                    this.options.viewOptions.value_field_name !== 'undefined'
+                ) {
+                    fieldErrors = _.result(responseErrors.children, this.options.viewOptions.value_field_name);
+                }
+
+                if (fieldErrors && _.isArray(fieldErrors.errors)) {
+                    backendErrors = {value: __(fieldErrors.errors[0])};
+                } else if (_.isArray(responseErrors.errors)) {
+                    backendErrors = {value: __(responseErrors.errors[0])};
+                }
+                this.errorHolderView.setErrorMessages(backendErrors);
             } else if (_.isArray(jqXHR.responseJSON)) {
                 var allErrors = _.chain(jqXHR.responseJSON)
                     .map(_.property('detail'))
@@ -584,6 +594,25 @@ define(function(require) {
                     if (error) {
                         this.errorHolderView.setErrorMessages({value: error});
                     }
+                }
+            }
+        },
+
+        /**
+         * @return {Object}
+         */
+        getServerUpdateData: function() {
+            return this.view.getServerUpdateData();
+        },
+
+        applyDivisor: function(fields, toResponse) {
+            var metadata = this.options.cell.column.attributes.metadata;
+            var fieldName = metadata.name;
+            if (_.has(metadata, 'divisor')) {
+                if (!isNaN(fields[fieldName])) {
+                    fields[fieldName] = toResponse
+                        ? fields[fieldName] / metadata.divisor
+                        : fields[fieldName] * metadata.divisor;
                 }
             }
         }

@@ -1,4 +1,4 @@
-#  Client side form validation
+# Client side form validation
 ## Setup validation rules for form fields
 Main aim of development client side validation was to support same validation annotation which is used for server side - [Symfony validation](http://symfony.com/doc/current/book/validation.html). Once `validation.yml` is created, all rules get translated to fields `data-validation` attribute, e.g.:
 ```yml
@@ -85,7 +85,7 @@ In case you have one form which saves several different entities at once (e.g. c
 ```
 After that, validation for sub-entinty works only if some of fields is not blank. Otherwise it ignores all validation rules for fields elements of sub-entity.
 
-###Override of optional validation logic
+### Override of optional validation logic
 In case if you want to customize "optional validation group" behaviour you can override a handler which is responsible for
 handle field changes in specific optional validation group. In this case you need:
 1) add custom handler to requirejs.yml
@@ -116,17 +116,9 @@ situations you should add custom application module
 requirejs.yml:
     paths:
         example/js/custom-handler: 'bundles/example/js/custom-handler.js'
-        example/js/custom-module: 'bundles/example/js/custom-module.js'
     config:
         appmodules:
-            - example/js/custom-module
-
-custom-handler.js:
-    define([
-        'oroui/js/app/controllers/base/controller'
-    ], function(BaseController) {
-        BaseController.loadBeforeAction(['example/js/custom-handler'], function() {});
-    });
+            - example/js/custom-handler
 ```
 
 ## Ignore validation section

@@ -17,24 +17,27 @@ security:
             pattern:                        ^/user/(login|reset-request|send-email|check-email)$
             provider:                       chain_provider
             anonymous:                      true
+            context:                        main
+            logout_on_user_change: true
 
         reset_password:
             pattern:                        ^/user/reset/*
             provider:                       chain_provider
             anonymous:                      true
+            logout_on_user_change: true
 
         main:
             pattern:                        ^/
             provider:                       chain_provider
             organization-form-login:
-                csrf_provider:              form.csrf_provider
+                csrf_token_generator:       security.csrf.token_manager
                 check_path:                 oro_user_security_check
                 login_path:                 oro_user_security_login
                 default_target_path:        oro_default
             logout:
                 path:                       oro_user_security_logout
             organization-remember-me:
-                key:                        %secret%
+                secret:                     '%secret%'
                 name:                       BAPRM
                 lifetime:                   1209600   # stay logged for two weeks
                 httponly:                   true
@@ -42,6 +45,7 @@ security:
             guard:
                 authenticators:
                     - oro_user.impersonation_authenticator
+            logout_on_user_change: true
 
 oro_user:
     privileges:
@@ -63,3 +67,6 @@ oro_user:
             fix_values: false
             default_value: 1
             show_default: false
+
+escape_wsse_authentication:
+    authentication_listener_class: Oro\Bundle\UserBundle\Security\Http\Firewall\Listener

@@ -2,15 +2,12 @@
 
 namespace Oro\Bundle\ActionBundle\Model\ActionGroup;
 
-use Symfony\Component\Validator\Constraints as Assert;
-
 use Doctrine\Common\Collections\Collection;
-
-use Oro\Component\Action\Exception\InvalidParameterException;
-
 use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\ActionGroup;
 use Oro\Bundle\ActionBundle\Model\Parameter;
+use Oro\Component\Action\Exception\InvalidParameterException;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class ParametersResolver
 {
@@ -87,7 +84,7 @@ class ParametersResolver
         if ((function_exists($isFunction = 'is_' . $type) && $isFunction($value)) ||
             ($value instanceof $type)
         ) {
-                return true;
+            return true;
         }
 
         $message = sprintf(

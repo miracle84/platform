@@ -1,9 +1,10 @@
 define([
+    'tpl!orodatagrid/templates/datagrid/pagination-input.html',
     'jquery',
     'underscore',
     './pagination',
     'jquery.numeric'
-], function($, _, Pagination) {
+], function(template, $, _, Pagination) {
     'use strict';
 
     var PaginationInput;
@@ -17,11 +18,10 @@ define([
      */
     PaginationInput = Pagination.extend({
         /** @property */
-        template: '#template-datagrid-toolbar-pagination-input',
+        template: template,
 
         /** @property */
         events: {
-            'click [data-grid-pagination-trigger]': 'onChangePage',
             'blur [data-grid-pagination-trigger-input]': 'onChangePageByInput',
             'change [data-grid-pagination-trigger-input]': 'onChangePageByInput',
             'keyup input': function(e) {
@@ -34,6 +34,13 @@ define([
 
         /** @property */
         windowSize: 0,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function PaginationInput() {
+            PaginationInput.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Apply change of pagination page input
@@ -52,7 +59,7 @@ define([
                 return;
             }
 
-            pageIndex = state.firstPage === 0 ? pageIndex - 1  : pageIndex;
+            pageIndex = state.firstPage === 0 ? pageIndex - 1 : pageIndex;
             if (pageIndex < state.firstPage) {
                 pageIndex = state.firstPage;
                 $(e.target).val(state.firstPage === 0 ? state.firstPage + 1 : state.firstPage);

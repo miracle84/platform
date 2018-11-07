@@ -4,9 +4,6 @@ namespace Oro\Bundle\NotificationBundle\Tests\Functional;
 
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class MassControllersTest extends WebTestCase
 {
     protected function setUp()
@@ -17,7 +14,7 @@ class MassControllersTest extends WebTestCase
         );
         $this->client->useHashNavigation(true);
         $this->loadFixtures(
-            ['Oro\Bundle\NotificationBundle\Tests\Functional\Fixture\LoadMassNotificationFixtures']
+            ['Oro\Bundle\NotificationBundle\Tests\Functional\DataFixtures\LoadMassNotificationFixtures']
         );
     }
 

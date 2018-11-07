@@ -3,21 +3,21 @@
 namespace Oro\Bundle\SyncBundle\Content;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
-use Oro\Bundle\DataGridBundle\Event\BuildAfter;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
+use Oro\Bundle\DataGridBundle\Event\BuildAfter;
 use Oro\Bundle\DataGridBundle\Extension\Toolbar\ToolbarExtension;
 
 class DataGridTagListener
 {
     const TAGS_PATH = '[contentTags]';
 
-    /** @var TagGeneratorChain */
+    /** @var TagGeneratorInterface */
     protected $generator;
 
     /**
-     * @param TagGeneratorChain $generator
+     * @param TagGeneratorInterface $generator
      */
-    public function __construct(TagGeneratorChain $generator)
+    public function __construct(TagGeneratorInterface $generator)
     {
         $this->generator = $generator;
     }

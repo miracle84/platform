@@ -2,94 +2,157 @@
 
 namespace Oro\Bundle\LoggerBundle\Tests\Unit\Monolog;
 
+use Doctrine\Common\Cache\CacheProvider;
 use Monolog\Handler\HandlerInterface;
 use Monolog\Logger;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\LoggerBundle\DependencyInjection\Configuration;
+use Oro\Bundle\LoggerBundle\Monolog\DetailedLogsHandler;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-use Oro\Bundle\LoggerBundle\Monolog\DetailedLogsHandler;
-
-class DetailedLogsHandlerTest extends \PHPUnit_Framework_TestCase
+class DetailedLogsHandlerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $config;
 
     /**
-     * @var HandlerInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var HandlerInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $nestedHandler;
+
+    /**
+     * @var ContainerInterface|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $container;
 
     /**
      * @var DetailedLogsHandler
      */
     protected $handler;
 
+    /**
+     * {@inheritdoc}
+     */
     protected function setUp()
     {
         $this->config = $this->getMockBuilder(ConfigManager::class)
-            ->setMethods(['get'])
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->nestedHandler = $this->getMockBuilder(HandlerInterface::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $container = $this->getMockBuilder(ContainerInterface::class)->disableOriginalConstructor()->getMock();
-        $container->expects($this->any())
-            ->method('get')
-            ->with('oro_config.user')
-            ->willReturn($this->config);
-        $container->expects($this->any())
+        $this->container = $this->getMockBuilder(ContainerInterface::class)->disableOriginalConstructor()->getMock();
+        $this->container->expects($this->any())
             ->method('has')
             ->with('oro_config.user')
             ->willReturn(true);
 
         $this->handler = new DetailedLogsHandler();
-        $this->handler->setHandler($this->nestedHandler);
-        $this->handler->setContainer($container);
+        $this->handler->setContainer($this->container);
     }
 
-    public function testIsHandling()
+    public function testIsHandlingApplicationIsNotInstalled()
     {
-        $this->assertTrue($this->handler->isHandling([]));
-    }
+        /** @var CacheProvider|\PHPUnit\Framework\MockObject\MockObject $cacheProvider */
+        $cacheProvider = $this->getMockBuilder(CacheProvider::class)->getMock();
 
-    public function testNoRecordsArePassedToNestedHandlerWhenEndTimestampCheckFails()
-    {
-        $this->nestedHandler->expects($this->never())->method('handleBatch');
+        $cacheProvider->expects($this->once())
+            ->method('fetch')
+            ->with(Configuration::LOGS_LEVEL_KEY)
+            ->willReturn(false);
 
-        $this->handler->close();
-    }
-
-    public function testClose()
-    {
-        $this->config->expects($this->at(0))
+        $this->container
+            ->expects($this->once())
             ->method('get')
-            ->with('oro_logger.detailed_logs_end_timestamp')
-            ->willReturn(time() + 3600);
-
-        $this->config->expects($this->at(1))
-            ->method('get')
-            ->with('oro_logger.detailed_logs_level')
-            ->willReturn('warning');
-
-        $this->nestedHandler->expects($this->once())
-            ->method('handleBatch')
-            ->with([
-                2 => ['level' => Logger::WARNING],
-                3 => ['level' => Logger::ERROR],
-                4 => ['level' => Logger::CRITICAL],
+            ->willReturnMap([
+                ['oro_logger.cache', 1, $cacheProvider],
             ]);
 
-        $this->handler->handle(['level' => Logger::DEBUG]);
-        $this->handler->handle(['level' => Logger::INFO]);
-        $this->handler->handle(['level' => Logger::WARNING]);
-        $this->handler->handle(['level' => Logger::ERROR]);
-        $this->handler->handle(['level' => Logger::CRITICAL]);
+        $this->config->expects($this->never())->method('get');
 
-        $this->handler->close();
+        $this->container
+            ->expects($this->once())
+            ->method('getParameter')
+            ->with('oro_logger.detailed_logs_default_level')
+            ->willReturn('warning');
+
+        $this->assertTrue($this->handler->isHandling(['level' => Logger::WARNING]));
+    }
+
+    private function configureMethods()
+    {
+        /** @var CacheProvider|\PHPUnit\Framework\MockObject\MockObject $cacheProvider */
+        $cacheProvider = $this->getMockBuilder(CacheProvider::class)->getMock();
+
+        $cacheProvider->expects($this->once())
+            ->method('fetch')
+            ->with(Configuration::LOGS_LEVEL_KEY)
+            ->willReturn('warning');
+
+        $this->container
+            ->expects($this->exactly(1))
+            ->method('get')
+            ->willReturnMap([
+                ['oro_logger.cache', 1, $cacheProvider],
+            ]);
+
+        $this->config->expects($this->never())->method('get');
+        $this->container->expects($this->never())->method('hasParameter');
+        $this->container->expects($this->never())->method('getParameter');
+    }
+
+    public function testIsHandlingWithCache()
+    {
+        $this->configureMethods();
+
+        $this->assertTrue($this->handler->isHandling(['level' => Logger::WARNING]));
+    }
+
+    // @codingStandardsIgnoreStart
+    /**
+     * @expectedException \LogicException
+     * @expectedExceptionMessage Trying to execute method `Oro\Bundle\LoggerBundle\Monolog\DetailedLogsHandler::write` which requires Handler to be set.
+     */
+    // @codingStandardsIgnoreEnd
+    public function testHandleException()
+    {
+        $this->configureMethods();
+
+        $record = [
+            'message' => 'Some error message',
+            'context' => [],
+            'level' => Logger::WARNING,
+            'level_name' => Logger::WARNING,
+            'channel' => 'chanelName',
+            'datetime' => new \DateTime(),
+            'extra' => [],
+        ];
+
+        $this->handler->handle($record);
+    }
+
+    public function testHandle()
+    {
+        $this->configureMethods();
+
+        $record = [
+            'message' => 'Some error message',
+            'context' => [],
+            'level' => Logger::WARNING,
+            'level_name' => Logger::WARNING,
+            'channel' => 'chanelName',
+            'datetime' => new \DateTime(),
+            'extra' => [],
+        ];
+
+        $this->nestedHandler = $this->getMockBuilder(HandlerInterface::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->nestedHandler->expects($this->once())
+            ->method('handle');
+
+        $this->handler->setHandler($this->nestedHandler);
+        $this->handler->handle($record);
     }
 }

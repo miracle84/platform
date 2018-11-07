@@ -2,22 +2,20 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Owner;
 
-use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
-
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
+use Oro\Bundle\EntityBundle\Tools\DatabaseChecker;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
+use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
+use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Component\TestUtils\ORM\Mocks\ConnectionMock;
 use Oro\Component\TestUtils\ORM\Mocks\DriverMock;
 use Oro\Component\TestUtils\ORM\Mocks\EntityManagerMock;
 use Oro\Component\TestUtils\ORM\OrmTestCase;
-use Oro\Bundle\EntityBundle\Tools\DatabaseChecker;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\MetadataProviderInterface;
-use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
-use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
-use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class OwnerTreeProviderTest extends OrmTestCase
 {
@@ -45,16 +43,16 @@ class OwnerTreeProviderTest extends OrmTestCase
     /** @var EntityManagerMock */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DatabaseChecker */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DatabaseChecker */
     protected $databaseChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|CacheProvider */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|CacheProvider */
     protected $cache;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|MetadataProviderInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|OwnershipMetadataProviderInterface */
     protected $ownershipMetadataProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TokenStorageInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TokenStorageInterface */
     protected $tokenStorage;
 
     protected function setUp()
@@ -84,13 +82,13 @@ class OwnerTreeProviderTest extends OrmTestCase
         $this->cache->expects($this->any())->method('save');
 
         $this->ownershipMetadataProvider = $this->createMock(
-            'Oro\Bundle\SecurityBundle\Owner\Metadata\MetadataProviderInterface'
+            'Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface'
         );
         $this->ownershipMetadataProvider->expects($this->any())
-            ->method('getBasicLevelClass')
+            ->method('getUserClass')
             ->willReturn(self::ENTITY_NAMESPACE . '\TestUser');
         $this->ownershipMetadataProvider->expects($this->any())
-            ->method('getLocalLevelClass')
+            ->method('getBusinessUnitClass')
             ->willReturn(self::ENTITY_NAMESPACE . '\TestBusinessUnit');
 
         $this->tokenStorage = $this->createMock(
@@ -142,13 +140,13 @@ class OwnerTreeProviderTest extends OrmTestCase
     }
 
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject $conn
+     * @param \PHPUnit\Framework\MockObject\MockObject $conn
      * @param int                                      $expectsAt
      * @param string                                   $sql
      * @param array                                    $result
      */
     protected function setFetchAllQueryExpectationAt(
-        \PHPUnit_Framework_MockObject_MockObject $conn,
+        \PHPUnit\Framework\MockObject\MockObject $conn,
         $expectsAt,
         $sql,
         $result
@@ -165,7 +163,7 @@ class OwnerTreeProviderTest extends OrmTestCase
     }
 
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject $connection
+     * @param \PHPUnit\Framework\MockObject\MockObject $connection
      * @param string[]                                 $businessUnits
      */
     protected function setGetBusinessUnitsExpectation($connection, array $businessUnits)
@@ -190,7 +188,7 @@ class OwnerTreeProviderTest extends OrmTestCase
     }
 
     /**
-     * @param \PHPUnit_Framework_MockObject_MockObject $connection
+     * @param \PHPUnit\Framework\MockObject\MockObject $connection
      * @param string[]                                 $users
      */
     protected function setGetUsersExpectation($connection, array $users)
@@ -286,7 +284,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 
@@ -383,7 +380,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 
@@ -482,7 +478,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 
@@ -565,7 +560,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 
@@ -660,7 +654,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 
@@ -811,7 +804,6 @@ class OwnerTreeProviderTest extends OrmTestCase
             ]
         );
 
-        $this->treeProvider->warmUpCache();
         /** @var OwnerTree $tree */
         $tree = $this->treeProvider->getTree();
 

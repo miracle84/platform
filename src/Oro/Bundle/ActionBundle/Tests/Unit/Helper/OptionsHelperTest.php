@@ -2,16 +2,24 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Helper;
 
-use Symfony\Bundle\FrameworkBundle\Routing\Router;
-use Symfony\Bundle\FrameworkBundle\Tests\Templating\Helper\Fixtures\StubTranslator;
-
-use Oro\Bundle\ActionBundle\Helper\OptionsHelper;
 use Oro\Bundle\ActionBundle\Button\ButtonInterface;
+use Oro\Bundle\ActionBundle\Helper\OptionsHelper;
+use Oro\Bundle\ActionBundle\Model\ActionData;
+use Oro\Bundle\ActionBundle\Model\Operation;
+use Oro\Bundle\ActionBundle\Operation\Execution\FormProvider;
+use Symfony\Bundle\FrameworkBundle\Routing\Router;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class OptionsHelperTest extends \PHPUnit_Framework_TestCase
+class OptionsHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Router|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Router|\PHPUnit\Framework\MockObject\MockObject */
     protected $router;
+
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $translator;
+
+    /** @var FormProvider|\PHPUnit\Framework\MockObject\MockObject */
+    protected $formProvider;
 
     /** @var OptionsHelper */
     protected $helper;
@@ -21,15 +29,21 @@ class OptionsHelperTest extends \PHPUnit_Framework_TestCase
      */
     protected function setUp()
     {
-        $this->router = $this->getMockBuilder(Router::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
+        $this->router = $this->createMock(Router::class);
         $this->router->expects($this->any())->method('generate')->willReturn('generated-url');
 
+        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->translator->expects($this->any())
+            ->method('trans')
+            ->willReturnCallback(function ($id) {
+                return $id === 'untranslated' ? 'untranslated' : '[trans]'.$id.'[/trans]';
+            });
+
+        $this->formProvider = $this->createMock(FormProvider::class);
         $this->helper = new OptionsHelper(
             $this->router,
-            new StubTranslator()
+            $this->translator,
+            $this->formProvider
         );
     }
 
@@ -46,6 +60,8 @@ class OptionsHelperTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @return array
+     *
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     public function getFrontendOptionsProvider()
     {
@@ -72,6 +88,10 @@ class OptionsHelperTest extends \PHPUnit_Framework_TestCase
                     'showDialog' => true,
                     'frontendOptions' => [
                         'title' => 'custom title',
+                        'message' => [
+                            'message' => 'message1',
+                            'message_parameters' => ['param1' => 'value1'],
+                        ],
                     ],
                     'buttonOptions' => [
                         'data' => [
@@ -97,6 +117,54 @@ class OptionsHelperTest extends \PHPUnit_Framework_TestCase
                     ],
                 ],
             ],
+            'options with message' => [
+                'button' => $this->getButton('test label', [
+                    'hasForm' => false,
+                    'frontendOptions' => [
+                        'message' => [
+                            'title' => 'title1',
+                            'content' => 'message1',
+                            'message_parameters' => ['param1' => 'value1']
+                        ],
+                    ]
+                ]),
+                'expectedData' => [
+                    'options' => [
+                        'hasDialog' => false,
+                        'showDialog' => false,
+                        'executionUrl' => 'generated-url',
+                        'url' => 'generated-url',
+                        'jsDialogWidget' => ButtonInterface::DEFAULT_JS_DIALOG_WIDGET,
+                        'message' => [
+                            'title' => 'title1',
+                            'content' => '[trans]message1[/trans]',
+                            'message_parameters' => ['param1' => 'value1']
+                        ],
+                    ],
+                    'data' => [],
+                ],
+            ],
+            'options with untranslated message' => [
+                'button' => $this->getButton('test label', [
+                    'hasForm' => false,
+                    'frontendOptions' => [
+                        'message' => [
+                            'message' => 'untranslated',
+                            'message_parameters' => ['param1' => 'value1']
+                        ],
+                    ]
+                ]),
+                'expectedData' => [
+                    'options' => [
+                        'hasDialog' => false,
+                        'showDialog' => false,
+                        'executionUrl' => 'generated-url',
+                        'url' => 'generated-url',
+                        'jsDialogWidget' => ButtonInterface::DEFAULT_JS_DIALOG_WIDGET,
+                    ],
+                    'data' => [],
+                ],
+            ],
         ];
     }
 
@@ -104,7 +172,7 @@ class OptionsHelperTest extends \PHPUnit_Framework_TestCase
      * @param string $label
      * @param array $templateData
      *
-     * @return ButtonInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return ButtonInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getButton($label, array $templateData)
     {

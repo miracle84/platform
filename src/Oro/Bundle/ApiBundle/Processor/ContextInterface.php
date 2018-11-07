@@ -2,8 +2,6 @@
 
 namespace Oro\Bundle\ApiBundle\Processor;
 
-use Oro\Component\ChainProcessor\ContextInterface as ComponentContextInterface;
-use Oro\Component\ChainProcessor\ParameterBagInterface;
 use Oro\Bundle\ApiBundle\Collection\Criteria;
 use Oro\Bundle\ApiBundle\Config\ConfigExtraInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
@@ -16,7 +14,12 @@ use Oro\Bundle\ApiBundle\Metadata\MetadataExtraInterface;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Request\DocumentBuilderInterface;
 use Oro\Bundle\ApiBundle\Request\RequestType;
+use Oro\Component\ChainProcessor\ContextInterface as ComponentContextInterface;
+use Oro\Component\ChainProcessor\ParameterBagInterface;
 
+/**
+ * Represents an execution context for Data API processors for public actions.
+ */
 interface ContextInterface extends ComponentContextInterface
 {
     /**
@@ -54,6 +57,13 @@ interface ContextInterface extends ComponentContextInterface
      * @param string $className
      */
     public function setClassName($className);
+
+    /**
+     * Checks whether metadata of an entity has at least one identifier field.
+     *
+     * @return bool
+     */
+    public function hasIdentifierFields();
 
     /**
      * Gets request headers.
@@ -116,7 +126,7 @@ interface ContextInterface extends ComponentContextInterface
      *
      * @param DocumentBuilderInterface|null $documentBuilder
      */
-    public function setResponseDocumentBuilder(DocumentBuilderInterface $documentBuilder = null);
+    public function setResponseDocumentBuilder(?DocumentBuilderInterface $documentBuilder);
 
     /**
      * Gets a list of filters is used to add additional restrictions to a query is used to get result data.
@@ -138,6 +148,38 @@ interface ContextInterface extends ComponentContextInterface
      * @param FilterValueAccessorInterface $accessor
      */
     public function setFilterValues(FilterValueAccessorInterface $accessor);
+
+    /**
+     * Indicates whether the current action processes a master API request
+     * or it is executed as part of another action.
+     *
+     * @return bool
+     */
+    public function isMasterRequest(): bool;
+
+    /**
+     * Sets a flag indicates whether the current action processes a master API request
+     * or it is executed as part of another action.
+     *
+     * @param bool $master
+     */
+    public function setMasterRequest(bool $master): void;
+
+    /**
+     * Indicates whether the current request is CORS request.
+     * @link https://www.w3.org/TR/cors/
+     *
+     * @return bool
+     */
+    public function isCorsRequest(): bool;
+
+    /**
+     * Sets a flag indicates whether the current request is CORS request.
+     * @link https://www.w3.org/TR/cors/
+     *
+     * @param bool $cors
+     */
+    public function setCorsRequest(bool $cors): void;
 
     /**
      * Checks whether a query is used to get result data exists.
@@ -220,24 +262,24 @@ interface ContextInterface extends ComponentContextInterface
      * Marks a work as already done.
      * In the most cases this method is useless because it is easy to determine
      * when a work is already done just checking a state of a context.
-     * But in case if a processor does a complex work, it might be required
-     * to mark a work as already done directly.
+     * But if a processor does a complex work, it might be required
+     * to directly mark the work as already done.
      *
-     * @param string $operationName The name of an opperation that represents some work
+     * @param string $operationName The name of an operation that represents some work
      */
     public function setProcessed($operationName);
 
     /**
      * Marks a work as not done yet.
      *
-     * @param string $operationName The name of an opperation that represents some work
+     * @param string $operationName The name of an operation that represents some work
      */
     public function clearProcessed($operationName);
 
     /**
      * Checks whether a work is already done.
      *
-     * @param string $operationName The name of an opperation that represents some work
+     * @param string $operationName The name of an operation that represents some work
      *
      * @return bool
      */
@@ -319,7 +361,7 @@ interface ContextInterface extends ComponentContextInterface
      *
      * @param EntityDefinitionConfig|null $definition
      */
-    public function setConfig(EntityDefinitionConfig $definition = null);
+    public function setConfig(?EntityDefinitionConfig $definition);
 
     /**
      * Checks whether a configuration of filters for an entity exists.
@@ -340,7 +382,7 @@ interface ContextInterface extends ComponentContextInterface
      *
      * @param FiltersConfig|null $config
      */
-    public function setConfigOfFilters(FiltersConfig $config = null);
+    public function setConfigOfFilters(?FiltersConfig $config);
 
     /**
      * Checks whether a configuration of sorters for an entity exists.
@@ -361,7 +403,7 @@ interface ContextInterface extends ComponentContextInterface
      *
      * @param SortersConfig|null $config
      */
-    public function setConfigOfSorters(SortersConfig $config = null);
+    public function setConfigOfSorters(?SortersConfig $config);
 
     /**
      * Checks whether a configuration of the given section exists.
@@ -421,6 +463,15 @@ interface ContextInterface extends ComponentContextInterface
     public function hasMetadataExtra($extraName);
 
     /**
+     * Gets a request for some additional metadata info by its name.
+     *
+     * @param string $extraName
+     *
+     * @return MetadataExtraInterface|null
+     */
+    public function getMetadataExtra($extraName);
+
+    /**
      * Adds a request for some additional metadata info.
      *
      * @param MetadataExtraInterface $extra
@@ -455,5 +506,5 @@ interface ContextInterface extends ComponentContextInterface
      *
      * @param EntityMetadata|null $metadata
      */
-    public function setMetadata(EntityMetadata $metadata = null);
+    public function setMetadata(?EntityMetadata $metadata);
 }

@@ -3,15 +3,16 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Validator\Constraints;
 
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
-use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
-use Oro\Bundle\WorkflowBundle\Validator\Constraints\TransitionIsAllowedValidator;
-use Oro\Bundle\WorkflowBundle\Validator\Constraints\TransitionIsAllowed;
 use Oro\Bundle\WorkflowBundle\Exception\InvalidTransitionException;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
+use Oro\Bundle\WorkflowBundle\Validator\Constraints\TransitionIsAllowed;
+use Oro\Bundle\WorkflowBundle\Validator\Constraints\TransitionIsAllowedValidator;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class TransitionIsAllowedValidatorTest extends \PHPUnit_Framework_TestCase
+class TransitionIsAllowedValidatorTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $registry;
 
@@ -66,7 +67,7 @@ class TransitionIsAllowedValidatorTest extends \PHPUnit_Framework_TestCase
 
         $value = new WorkflowData();
 
-        $context = $this->createMock('Symfony\Component\Validator\ExecutionContextInterface');
+        $context = $this->createMock(ExecutionContextInterface::class);
 
         foreach (array_values($expectedViolations) as $index => $expectedViolation) {
             list($message, $params) = array_pad((array)$expectedViolation, 2, array());

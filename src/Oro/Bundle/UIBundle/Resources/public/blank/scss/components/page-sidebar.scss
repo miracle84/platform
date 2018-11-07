@@ -1,4 +1,4 @@
-// @theme: blank
+/* @theme: blank; */
 
 .page-sidebar {
     width: $page-sidebar-width;
@@ -6,12 +6,23 @@
 
     order: $page-sidebar-order;
     flex: $page-sidebar-flex;
+
+    &--right {
+        padding: $page-sidebar-right-inner-offset;
+
+        order: $page-sidebar-right-order;
+    }
 }
 
 @include breakpoint('tablet') {
     .page-sidebar {
         width: $page-sidebar-tablet-s-width;
-        margin: $page-sidebar-tablet-s-offset;
         padding: $page-sidebar-tablet-s-inner-offset;
+    }
+}
+
+@include breakpoint('print') {
+    .page-sidebar {
+        display: none !important;
     }
 }

@@ -4,9 +4,6 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Model;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
@@ -16,8 +13,9 @@ use Oro\Bundle\WorkflowBundle\Model\TransitionAssembler;
 use Oro\Bundle\WorkflowBundle\Model\TransitionManager;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowAssembler;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
+class WorkflowAssemblerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var array */
     protected $workflowParameters = [
@@ -157,7 +155,7 @@ class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function createTranslatorMock()
     {
@@ -191,7 +189,7 @@ class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param string $name
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getStepMock($name)
     {
@@ -207,7 +205,7 @@ class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
     /**
      * @param string $isStart
      * @param string $name
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getTransitionMock($isStart, $name)
     {
@@ -225,7 +223,7 @@ class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param string $name
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getAttributeMock($name)
     {
@@ -261,16 +259,18 @@ class WorkflowAssemblerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->setMethods(array('assemble'))
             ->getMock();
+
         if ($expectations) {
-            $expectedTransitions = $expectedTransitions ?
-                $expectedTransitions :
-                $configuration[WorkflowConfiguration::NODE_TRANSITIONS];
-            $expectedDefinitions = $expectedDefinitions ?
-                $expectedDefinitions :
-                $configuration[WorkflowConfiguration::NODE_TRANSITION_DEFINITIONS];
+            if ($expectedTransitions) {
+                $configuration[WorkflowConfiguration::NODE_TRANSITIONS] = $expectedTransitions;
+            }
+            if ($expectedDefinitions) {
+                $configuration[WorkflowConfiguration::NODE_TRANSITION_DEFINITIONS] = $expectedDefinitions;
+            }
+
             $transitionAssembler->expects($this->once())
                 ->method('assemble')
-                ->with($expectedTransitions, $expectedDefinitions, $steps)
+                ->with($configuration, $steps)
                 ->will($this->returnValue($transitions));
         }
 

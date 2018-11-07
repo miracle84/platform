@@ -9,18 +9,12 @@ define(function(require) {
     var routing = require('routing');
     require('bootstrap');
 
-    /**
-     * @export  oronavigation/js/app/views/shortcuts-view
-     * @class   oronavigation.shortcuts.View
-     * @extends BaseView
-     */
     ShortcutsView = BaseView.extend({
-        options: {
-            el: '.shortcuts .input-large'
-        },
+        autoRender: true,
 
         events: {
-            'change': 'onChange'
+            'change': 'onChange',
+            'click .nav-content': 'stopPropagation'
         },
 
         data: {},
@@ -31,16 +25,46 @@ define(function(require) {
         entityClass: '',
         entityId: 0,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function ShortcutsView() {
+            ShortcutsView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
+            this.options = options || {};
+
+            var $input = this.getTypeaheadInput();
+            this.sourceUrl = $input.data('source-url') ? $input.data('source-url') : null;
+            this.entityClass = $input.data('entity-class') ? $input.data('entity-class') : null;
+            this.entityId = $input.data('entity-id') ? $input.data('entity-id') : null;
+        },
+
+        /**
+         * @inheritDoc
+         */
+        render: function() {
+            var $input = this.getTypeaheadInput();
+
+            if (!$input.data('typeahead')) {
+                this.initTypeahead();
+            }
+            this.initLayout();
+
+            return this;
+        },
+
+        getTypeaheadInput: function() {
+            return this.$('[data-role="shortcut-search"]');
+        },
+
+        initTypeahead: function() {
             var self = this;
-            this.options = _.defaults(options || {}, this.options);
-            this.sourceUrl = this.$el.data('source-url') ? this.$el.data('source-url') : null;
-            this.entityClass = this.$el.data('entity-class') ? this.$el.data('entity-class') : null;
-            this.entityId = this.$el.data('entity-id') ? this.$el.data('entity-id') : null;
-
-            this.$el.val('');
-
-            this.$el.typeahead({
+            this.getTypeaheadInput().typeahead({
                 source: _.bind(this.source, this),
                 matcher: function(item) {
                     return item.key.toLowerCase().indexOf(this.query.toLowerCase()) !== -1;
@@ -71,11 +95,11 @@ define(function(require) {
                         if (item.item.dialog) {
                             var config = item.item.dialog_config;
                             var options = {
-                                type: config.widget.type,
-                                multiple: config.widget.multiple,
+                                'type': config.widget.type,
+                                'multiple': config.widget.multiple,
                                 'refresh-widget-alias': config.widget.refreshWidgetAlias,
                                 'reload-grid-name': config.widget.reloadGridName,
-                                options: {
+                                'options': {
                                     alias: config.widget.options.alias,
                                     dialogOptions: {
                                         title: __(config.widget.options.dialogOptions.title),
@@ -87,7 +111,7 @@ define(function(require) {
                                         width: config.widget.options.dialogOptions.width
                                     }
                                 },
-                                createOnEvent: 'click'
+                                'createOnEvent': 'click'
                             };
                             var dataUrl = routing.generate(config.dataUrl, {
                                 entityClass: self.entityClass,
@@ -115,7 +139,7 @@ define(function(require) {
                     items.first().addClass('active');
                     this.$menu.html(items);
                     return this;
-                }, 'click': function(e) {
+                }, click: function(e) {
                     e.stopPropagation();
                     e.preventDefault();
                     if (!this.$menu.find('.active').data('isDialog')) {
@@ -124,8 +148,6 @@ define(function(require) {
                     }
                 }
             });
-            this.$form = this.$el.closest('form');
-            this.render();
         },
 
         source: function(query, process) {
@@ -137,7 +159,7 @@ define(function(require) {
                 process(this.cache[query]);
                 this.render();
             } else {
-                var url = routing.generate(this.sourceUrl, {'query': query});
+                var url = routing.generate(this.sourceUrl, {query: query});
                 $.get(url, _.bind(function(data) {
                     this.data = data;
                     var result = [];
@@ -155,26 +177,22 @@ define(function(require) {
         },
 
         onChange: function() {
-            var key = this.$el.val();
+            var $input = this.getTypeaheadInput();
+            var key = $input.val();
             var dataItem;
-            this.$el.val('');
+            $input.val('');
             if (!_.isUndefined(this.data[key])) {
                 dataItem = this.data[key];
                 if (!dataItem.dialog) {
-                    this.$form.attr('action', dataItem.url).submit();
+                    $input.closest('form').attr('action', dataItem.url).submit();
                 } else {
-                    this.$el.parent().find('li.active > a').click();
+                    $input.parent().find('li.active > a').click();
                 }
             }
         },
 
-        getLayoutElement: function() {
-            return this.$el.closest('.shortcuts');
-        },
-
-        render: function() {
-            this.initLayout();
-            return this;
+        stopPropagation: function(e) {
+            e.stopPropagation();
         }
     });
 

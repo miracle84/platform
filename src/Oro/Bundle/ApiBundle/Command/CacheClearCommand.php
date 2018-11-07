@@ -2,17 +2,19 @@
 
 namespace Oro\Bundle\ApiBundle\Command;
 
+use Oro\Bundle\ApiBundle\Provider\CacheManager;
+use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 
-use Oro\Bundle\ApiBundle\Provider\ResourcesCache;
-use Oro\Bundle\EntityBundle\ORM\EntityAliasResolver;
-
+/**
+ * The CLI command to clear Data API cache.
+ */
 class CacheClearCommand extends ContainerAwareCommand
 {
-    const COMMAND_NAME = 'oro:api:cache:clear';
+    public const COMMAND_NAME = 'oro:api:cache:clear';
 
     /**
      * {@inheritdoc}
@@ -21,8 +23,10 @@ class CacheClearCommand extends ContainerAwareCommand
     {
         $this
             ->setName(self::COMMAND_NAME)
-            ->setDescription('Clears Data API cache')
-            ->setHelp(<<<EOF
+            ->setDescription('Clears Data API cache.')
+            ->addOption('no-warmup', null, InputOption::VALUE_NONE, 'Do not warm up the cache.')
+            ->setHelp(
+                <<<EOF
 The <info>%command.name%</info> command clears Data API cache:
 
   <info>php %command.full_name%</info>
@@ -40,15 +44,17 @@ EOF
     {
         $io = new SymfonyStyle($input, $output);
 
-        $io->comment('Clearing the cache for API resources');
-        /** @var ResourcesCache $resourcesCache */
-        $resourcesCache = $this->getContainer()->get('oro_api.resources_cache');
-        $resourcesCache->clear();
+        $noWarmup = $input->getOption('no-warmup');
 
-        $io->comment('Clearing the cache for entity aliases');
-        /** @var EntityAliasResolver $entityAliasResolver */
-        $entityAliasResolver = $this->getContainer()->get('oro_api.entity_alias_resolver');
-        $entityAliasResolver->clearCache();
+        /** @var CacheManager $cacheManager */
+        $cacheManager = $this->getContainer()->get('oro_api.cache_manager');
+        if ($noWarmup) {
+            $io->comment('Clearing API cache...');
+            $cacheManager->clearCaches();
+        } else {
+            $io->comment('Warming up API cache...');
+            $cacheManager->warmUpCaches();
+        }
 
         $io->success('API cache was successfully cleared.');
     }

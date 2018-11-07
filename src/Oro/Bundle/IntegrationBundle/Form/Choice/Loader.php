@@ -3,7 +3,6 @@
 namespace Oro\Bundle\IntegrationBundle\Form\Choice;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\SecurityBundle\Form\ChoiceList\AclProtectedQueryBuilderLoader;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 
@@ -26,7 +25,8 @@ class Loader extends AclProtectedQueryBuilderLoader
             $allowedTypes = array_unique($allowedTypes);
 
             if (!empty($allowedTypes)) {
-                $qb->andWhere($qb->expr()->in('i.type', $allowedTypes));
+                $qb->andWhere($qb->expr()->in('i.type', ':allowedTypes'))
+                    ->setParameter('allowedTypes', $allowedTypes);
             } else {
                 $qb->andWhere($qb->expr()->neq(true, true));
             }

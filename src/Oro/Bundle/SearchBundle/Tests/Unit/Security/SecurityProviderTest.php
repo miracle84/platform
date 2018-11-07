@@ -3,27 +3,29 @@
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Security;
 
 use Oro\Bundle\SearchBundle\Security\SecurityProvider;
+use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class SecurityProviderTest extends \PHPUnit_Framework_TestCase
+class SecurityProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var SecurityProvider
-     */
+    /** @var SecurityProvider */
     protected $provider;
 
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entitySecurityMetadataProvider;
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->entitySecurityMetadataProvider
-            = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider')
-                ->disableOriginalConstructor()
-                ->getMock();
-        $this->provider = new SecurityProvider($this->securityFacade, $this->entitySecurityMetadataProvider);
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->entitySecurityMetadataProvider = $this->createMock(EntitySecurityMetadataProvider::class);
+
+        $this->provider = new SecurityProvider(
+            $this->authorizationChecker,
+            $this->entitySecurityMetadataProvider
+        );
     }
 
     public function testIisProtectedEntity()
@@ -37,7 +39,7 @@ class SecurityProviderTest extends \PHPUnit_Framework_TestCase
 
     public function testIsGranted()
     {
-        $this->securityFacade->expects($this->once())
+        $this->authorizationChecker->expects($this->once())
             ->method('isGranted')
             ->with('VIEW', 'someClass')
             ->will($this->returnValue(true));

@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\FormBundle\Utils;
 
-use Symfony\Component\Form\FormView;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\DataTransformerInterface;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 
 class FormUtils
 {
@@ -32,9 +32,31 @@ class FormUtils
         if (array_key_exists('auto_initialize', $options)) {
             $options['auto_initialize'] = false;
         }
+
+        //@TODO: Should be removed in scope #BAP-17037
+        if (array_key_exists('choices_as_values', $options)) {
+            $options['choices_as_values'] = null;
+        }
         $options = array_merge($options, $modifyOptions);
         $options = array_diff_key($options, array_flip($unsetOptions));
-        $form->add($fieldName, $config->getType()->getName(), $options);
+        $form->add($fieldName, get_class($config->getType()->getInnerType()), $options);
+    }
+
+    /**
+     * @param FormInterface $form
+     * @param string $fieldName
+     * @param array $mergeOptions
+     */
+    public static function replaceFieldOptionsRecursive(
+        FormInterface $form,
+        string $fieldName,
+        array $mergeOptions = []
+    ) {
+        $config  = $form->get($fieldName)->getConfig();
+        $options = $config->getOptions();
+
+        $options = array_replace_recursive($options, $mergeOptions);
+        $form->add($fieldName, get_class($config->getType()->getInnerType()), $options);
     }
 
     /**

@@ -5,10 +5,6 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures;
 use Doctrine\Common\DataFixtures\AbstractFixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-
 use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Manager\TranslationManager;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadLanguages;
@@ -16,9 +12,10 @@ use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadTranslations;
 use Oro\Bundle\TranslationBundle\Translation\KeySource\TranslationKeySource;
 use Oro\Bundle\TranslationBundle\Translation\TranslationKeyGenerator;
 use Oro\Bundle\TranslationBundle\Translation\Translator;
-
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Translation\KeyTemplate\WorkflowTemplate;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 class LoadWorkflowTranslations extends AbstractFixture implements DependentFixtureInterface, ContainerAwareInterface
 {
@@ -58,8 +55,12 @@ class LoadWorkflowTranslations extends AbstractFixture implements DependentFixtu
                 'attribute.attribute2.label' => 'workflow4.attribute2.label.value',
                 'transition.transition1.label' => 'workflow4.transition1.label.value',
                 'transition.transition1.warning_message' => 'workflow4.transition1.message.value',
+                'transition.transition1.button_label' => 'workflow4.transition1.button_label.value',
+                'transition.transition1.button_title' => 'workflow4.transition1.button_title.value',
                 'transition.transition2.label' => 'workflow4.transition2.label.value',
                 'transition.transition2.warning_message' => 'workflow4.transition2.message.value',
+                'transition.transition2.button_label' => 'workflow4.transition2.button_label.value',
+                'transition.transition2.button_title' => 'workflow4.transition2.button_title.value',
             ],
         ],
     ];

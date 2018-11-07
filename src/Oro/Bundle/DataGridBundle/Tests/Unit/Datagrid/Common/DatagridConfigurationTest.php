@@ -5,8 +5,9 @@ namespace Oro\Bundle\DataGridBundle\Tests\Unit\Datagrid\Common;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmQueryConfiguration;
+use Oro\Bundle\DataGridBundle\Provider\SystemAwareResolver;
 
-class DatagridConfigurationTest extends \PHPUnit_Framework_TestCase
+class DatagridConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     /** @var DatagridConfiguration */
     protected $configuration;
@@ -222,19 +223,22 @@ class DatagridConfigurationTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $configArray);
     }
 
-    public function testExceptions()
+    /**
+     * @expectedException \BadMethodCallException
+     * @expectedExceptionMessage DatagridConfiguration::addColumn: name should not be empty
+     */
+    public function testAddColumnWithoutName()
     {
-        $this->expectException('BadMethodCallException');
-        $this->expectExceptionMessage('DatagridConfiguration::addColumn: name should not be empty');
         $this->configuration->addColumn(null, []);
+    }
 
-        $this->expectException('BadMethodCallException');
-        $this->expectExceptionMessage('DatagridConfiguration::updateLabel: name should not be empty');
+    /**
+     * @expectedException \BadMethodCallException
+     * @expectedExceptionMessage DatagridConfiguration::updateLabel: name should not be empty
+     */
+    public function testUpdateLabelWithoutName()
+    {
         $this->configuration->updateLabel(null, []);
-
-        $this->expectException('BadMethodCallException');
-        $this->expectExceptionMessage('DatagridConfiguration::addSelect: select should not be empty');
-        $this->configuration->addSelect(null);
     }
 
     public function testUpdateLabel()
@@ -274,7 +278,7 @@ class DatagridConfigurationTest extends \PHPUnit_Framework_TestCase
 
     public function testAddSelect()
     {
-        $this->configuration->addSelect('testColumn');
+        $this->configuration->getOrmQuery()->addSelect('testColumn');
 
         $configArray = $this->configuration->toArray();
         $this->assertEquals(
@@ -289,13 +293,13 @@ class DatagridConfigurationTest extends \PHPUnit_Framework_TestCase
 
     public function testJoinTable()
     {
-        $this->configuration->joinTable('left', ['param' => 'value']);
+        $this->configuration->getOrmQuery()->addLeftJoin('rootAlias.association', 'joinAlias');
 
         $configArray = $this->configuration->toArray();
         $this->assertEquals(
             [
                 'source' => [
-                    'query' => ['join' => ['left' => [['param' => 'value']]]],
+                    'query' => ['join' => ['left' => [['join' => 'rootAlias.association', 'alias' => 'joinAlias']]]],
                 ]
             ],
             $configArray
@@ -315,6 +319,23 @@ class DatagridConfigurationTest extends \PHPUnit_Framework_TestCase
         $this->assertEmpty($configArray['columns']);
         $this->assertEmpty($configArray['sorters']['columns']);
         $this->assertEmpty($configArray['filters']['columns']);
+    }
+
+    public function testIsDatagridExtendedFrom()
+    {
+        self::assertFalse($this->configuration->isDatagridExtendedFrom('some-datagrid-name'));
+
+        $this->configuration->offsetSet(SystemAwareResolver::KEY_EXTENDED_FROM, null);
+        self::assertFalse($this->configuration->isDatagridExtendedFrom('some-datagrid-name'));
+
+        $this->configuration->offsetSet(SystemAwareResolver::KEY_EXTENDED_FROM, ['some-other-datagrid-name']);
+        self::assertFalse($this->configuration->isDatagridExtendedFrom('some-datagrid-name'));
+
+        $this->configuration->offsetSet(SystemAwareResolver::KEY_EXTENDED_FROM, [
+            'some-datagrid-name',
+            'some-other-datagrid-name'
+        ]);
+        self::assertTrue($this->configuration->isDatagridExtendedFrom('some-datagrid-name'));
     }
 
     /**

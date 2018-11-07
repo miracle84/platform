@@ -6,6 +6,7 @@ define(function(require) {
     var _ = require('underscore');
     var BaseComponent = require('oroui/js/app/components/base/component');
     var tools = require('oroui/js/tools');
+    var errorHandler = require('oroui/js/error');
 
     /**
      * Creates a view passed through 'view' option and binds it with _sourceElement
@@ -13,12 +14,19 @@ define(function(require) {
      */
     ViewComponent = BaseComponent.extend({
         /**
+         * @inheritDoc
+         */
+        constructor: function ViewComponent() {
+            ViewComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * @constructor
          * @param {Object} options
          */
         initialize: function(options) {
             var subPromises = _.values(options._subPromises);
-            var viewOptions = _.extend(
+            var viewOptions = _.defaults(
                 _.omit(options, '_sourceElement', '_subPromises', 'view'),
                 {el: options._sourceElement}
             );
@@ -61,9 +69,11 @@ define(function(require) {
             if (this.view.deferredRender) {
                 this.view.deferredRender
                     .done(_.bind(this._resolveDeferredInit, this))
-                    .fail(function() {
-                        throw new Error('View rendering failed');
-                    });
+                    .fail(function(error) {
+                        errorHandler.showError(error || new Error('View rendering failed'));
+                        // the error is already handled, there's no need to propagate it upper
+                        this._rejectDeferredInit();
+                    }.bind(this));
             } else {
                 this._resolveDeferredInit();
             }

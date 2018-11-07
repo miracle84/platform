@@ -46,6 +46,23 @@ class CollectionField extends Element
     }
 
     /**
+     * @param int $number starts from 1
+     * @throws \InvalidArgumentException
+     */
+    public function removeRow($number)
+    {
+        $removeRowButton = $this->find('xpath', sprintf('(//button[contains(@class, "removeRow")])[%s]', $number));
+
+        if (!$removeRowButton) {
+            throw new \InvalidArgumentException(
+                sprintf('Cannot remove collection element with %s number', $number)
+            );
+        }
+
+        $removeRowButton->click();
+    }
+
+    /**
      * Find any text inputs. Type can be text, email, password etc.
      *
      * @return NodeElement[]
@@ -74,11 +91,19 @@ class CollectionField extends Element
 
     /**
      * @param array|TableNode $values
+     * @param int $withAdditionalRows
      */
-    protected function addNewRows($values)
+    protected function addNewRows($values, $withAdditionalRows = 0)
     {
-        array_walk($values, function () {
+        $rows = $values;
+        if (is_a($values, TableNode::class)) {
+            $rows = $values->getRows();
+            // Unset first row as it is used for table caption
+            unset($rows[0]);
+        }
+
+        for ($i = 0; $i < (count($rows) + $withAdditionalRows); $i++) {
             $this->clickLink('Add');
-        });
+        }
     }
 }

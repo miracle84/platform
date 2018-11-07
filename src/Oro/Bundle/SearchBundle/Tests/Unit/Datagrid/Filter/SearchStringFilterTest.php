@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Datagrid\Filter;
 
-use Symfony\Component\Form\FormFactoryInterface;
-
 use Doctrine\Common\Collections\Expr\Comparison as DoctrineComparison;
-use Oro\Bundle\SearchBundle\Query\Criteria\Comparison;
-use Oro\Bundle\SearchBundle\Datagrid\Filter\SearchStringFilter;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\TextFilterType;
 use Oro\Bundle\SearchBundle\Datagrid\Filter\Adapter\SearchFilterDatasourceAdapter;
+use Oro\Bundle\SearchBundle\Datagrid\Filter\SearchStringFilter;
+use Oro\Bundle\SearchBundle\Query\Criteria\Comparison;
+use Symfony\Component\Form\FormFactoryInterface;
 
-class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
+class SearchStringFilterTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var SearchStringFilter
@@ -24,9 +23,9 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
      */
     protected function setUp()
     {
-        /* @var $formFactory FormFactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $formFactory FormFactoryInterface|\PHPUnit\Framework\MockObject\MockObject */
         $formFactory = $this->createMock(FormFactoryInterface::class);
-        /* @var $filterUtility FilterUtility|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $filterUtility FilterUtility|\PHPUnit\Framework\MockObject\MockObject */
         $filterUtility = $this->createMock(FilterUtility::class);
 
         $this->filter = new SearchStringFilter($formFactory, $filterUtility);
@@ -70,6 +69,7 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
         $this->filter->init('test', array_merge([
             FilterUtility::FORCE_LIKE_KEY => false,
             FilterUtility::MIN_LENGTH_KEY => 0,
+            FilterUtility::MAX_LENGTH_KEY => 100,
             FilterUtility::DATA_NAME_KEY => $fieldName
         ], $filterParams));
         $this->filter->apply($ds, ['type' => $filterType, 'value' => $fieldValue]);
@@ -78,9 +78,9 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
     /**
      * @param string $fieldValue
      * @param array  $filterParams
-     * @dataProvider applyWithMinLengthViolatedDataProvider
+     * @dataProvider applyWithMinAndMaxLengthViolatedDataProvider
      */
-    public function testApplyWithMinLengthViolated($fieldValue, array $filterParams = [])
+    public function testApplyWithMinAndMaxLengthViolated($fieldValue, array $filterParams = [])
     {
         $filterType = 'anyCustomFilterType';
         $fieldName = 'field';
@@ -93,6 +93,7 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
         $this->filter->init('test', array_merge([
             FilterUtility::FORCE_LIKE_KEY => false,
             FilterUtility::MIN_LENGTH_KEY => 0,
+            FilterUtility::MAX_LENGTH_KEY => 100,
             FilterUtility::DATA_NAME_KEY => $fieldName
         ], $filterParams));
         $this->filter->apply($ds, ['type' => $filterType, 'value' => $fieldValue]);
@@ -126,9 +127,27 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
                     FilterUtility::MIN_LENGTH_KEY => 5,
                 ]
             ],
+            'contains like max_length' => [
+                'filterType' => TextFilterType::TYPE_CONTAINS,
+                'comparisonOperator' => Comparison::LIKE,
+                [
+                    FilterUtility::FORCE_LIKE_KEY => true,
+                    FilterUtility::MAX_LENGTH_KEY => 20,
+                ]
+            ],
             'not contains' => [
                 'filterType' => TextFilterType::TYPE_NOT_CONTAINS,
                 'comparisonOperator' => Comparison::NOT_CONTAINS,
+                [
+                    FilterUtility::FORCE_LIKE_KEY => false,
+                ]
+            ],
+            'not contains force like' => [
+                'filterType' => TextFilterType::TYPE_NOT_CONTAINS,
+                'comparisonOperator' => Comparison::NOT_LIKE,
+                [
+                    FilterUtility::FORCE_LIKE_KEY => true,
+                ]
             ],
             'equal' => [
                 'filterType' => TextFilterType::TYPE_EQUAL,
@@ -140,10 +159,11 @@ class SearchStringFilterTest extends \PHPUnit_Framework_TestCase
     /**
      * @return array
      */
-    public function applyWithMinLengthViolatedDataProvider()
+    public function applyWithMinAndMaxLengthViolatedDataProvider()
     {
         return [
             ['abc', [FilterUtility::MIN_LENGTH_KEY => 4]],
+            ['abcabcabc', [FilterUtility::MAX_LENGTH_KEY => 6]],
         ];
     }
 }

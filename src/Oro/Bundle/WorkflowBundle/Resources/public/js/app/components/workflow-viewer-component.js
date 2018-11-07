@@ -18,11 +18,26 @@ define(function(require) {
      * @augments BaseComponent
      */
     WorkflowViewerComponent = BaseComponent.extend(/** @lends WorkflowViewerComponent.prototype */{
+        options: {
+            entity: {},
+            chartOptions: {},
+            connectionOptions: {},
+            availableDestinations: {}
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function WorkflowViewerComponent() {
+            WorkflowViewerComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc
          */
         initialize: function(options) {
+            this.options = _.defaults(options || {}, this.options);
+
             this.flowchartEnabled = !tools.isMobile();
             var flowchartOptions = this.flowchartEnabled ? {} : _.pick(options, ['connectionOptions', 'chartOptions']);
             WorkflowViewerComponent.__super__.initialize.apply(this, arguments);
@@ -31,7 +46,13 @@ define(function(require) {
                 this.flowchartState = new FlowchartStateModel();
                 this.FlowchartWorkflowView = FlowchartViewerWorkflowView;
             }
-            this.initViews(options._sourceElement, flowchartOptions);
+            if (this.deferredInit) {
+                this.deferredInit.done(function() {
+                    this.initViews(options._sourceElement, flowchartOptions);
+                }.bind(this));
+            } else {
+                this.initViews(options._sourceElement, flowchartOptions);
+            }
         },
 
         /**

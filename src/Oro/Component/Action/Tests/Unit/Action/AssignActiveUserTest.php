@@ -2,34 +2,28 @@
 
 namespace Oro\Component\Action\Tests\Unit\Action;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-use Symfony\Component\Security\Core\User\User;
-
 use Oro\Component\Action\Action\AssignActiveUser;
 use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
+use Symfony\Component\PropertyAccess\PropertyPath;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\User\User;
 
-class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
+class AssignActiveUserTest extends \PHPUnit\Framework\TestCase
 {
     const ATTRIBUTE_NAME = 'some_attribute';
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
-    protected $securityContext;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenStorage;
 
-    /**
-     * @var AssignActiveUser
-     */
+    /** @var AssignActiveUser */
     protected $action;
 
     protected function setUp()
     {
-        $this->securityContext = $this->getMockBuilder('Symfony\Component\Security\Core\SecurityContext')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->tokenStorage = $this->createMock(TokenStorageInterface::class);
 
-        $this->action = new AssignActiveUser(new ContextAccessor(), $this->securityContext);
+        $this->action = new AssignActiveUser(new ContextAccessor(), $this->tokenStorage);
         $dispatcher = $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcher')
             ->disableOriginalConstructor()
             ->getMock();
@@ -38,7 +32,7 @@ class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
 
     protected function tearDown()
     {
-        unset($this->securityContext);
+        unset($this->tokenStorage);
         unset($this->action);
     }
 
@@ -58,12 +52,27 @@ class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
         return array(
             'numeric attribute' => array(
                 'inputOptions'    => array(new PropertyPath(self::ATTRIBUTE_NAME)),
-                'expectedOptions' => array('attribute' => new PropertyPath(self::ATTRIBUTE_NAME)),
+                'expectedOptions' => array(
+                    'attribute' => new PropertyPath(self::ATTRIBUTE_NAME),
+                    'exceptionOnNotFound' => true
+                ),
             ),
             'string attribute' => array(
                 'inputOptions'    => array('attribute' => new PropertyPath(self::ATTRIBUTE_NAME)),
-                'expectedOptions' => array('attribute' => new PropertyPath(self::ATTRIBUTE_NAME)),
-            )
+                'expectedOptions' => array(
+                    'attribute' => new PropertyPath(self::ATTRIBUTE_NAME),
+                    'exceptionOnNotFound' => true),
+            ),
+            'exceptionOnNotFound false' => [
+                'inputOptions' => [
+                    'attribute' => new PropertyPath(self::ATTRIBUTE_NAME),
+                    'exceptionOnNotFound' => false,
+                ],
+                'expectedOptions' => [
+                    'attribute' => new PropertyPath(self::ATTRIBUTE_NAME),
+                    'exceptionOnNotFound' => false,
+                ],
+            ],
         );
     }
 
@@ -89,15 +98,16 @@ class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
             'no options' => array(
                 'options' => array(),
                 'exceptionName' => '\Oro\Component\Action\Exception\InvalidParameterException',
-                'exceptionMessage' => 'Only one attribute parameter must be defined',
+                'exceptionMessage' => 'Only one or two attribute parameters must be defined',
             ),
             'too many options' => array(
                 'options' => array(
                     'attribute' => new PropertyPath(self::ATTRIBUTE_NAME),
+                    'exceptionOnNotFound' => false,
                     'additional' => 'value'
                 ),
                 'exceptionName' => '\Oro\Component\Action\Exception\InvalidParameterException',
-                'exceptionMessage' => 'Only one attribute parameter must be defined',
+                'exceptionMessage' => 'Only one or two attribute parameters must be defined',
             ),
             'no attribute' => array(
                 'options' => array(
@@ -131,7 +141,7 @@ class AssignActiveUserTest extends \PHPUnit_Framework_TestCase
             ->method('getUser')
             ->will($this->returnValue($user));
 
-        $this->securityContext->expects($this->once())
+        $this->tokenStorage->expects($this->once())
             ->method('getToken')
             ->will($this->returnValue($token));
 

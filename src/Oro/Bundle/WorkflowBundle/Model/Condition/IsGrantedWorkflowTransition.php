@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\WorkflowBundle\Model\Condition;
 
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-use Symfony\Component\Security\Acl\Voter\FieldVote;
-
+use Oro\Bundle\SecurityBundle\Acl\Domain\DomainObjectWrapper;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Component\ConfigExpression\Condition\AbstractCondition;
 use Oro\Component\ConfigExpression\ContextAccessorAwareInterface;
 use Oro\Component\ConfigExpression\ContextAccessorAwareTrait;
 use Oro\Component\ConfigExpression\Exception\InvalidArgumentException;
-
-use Oro\Bundle\SecurityBundle\Acl\Domain\DomainObjectWrapper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Voter\FieldVote;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 /**
  * Used to perform ACL check for ability to perform transition
@@ -25,8 +24,11 @@ class IsGrantedWorkflowTransition extends AbstractCondition implements ContextAc
 
     const NAME = 'is_granted_workflow_transition';
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var string */
     protected $transitionName;
@@ -35,11 +37,15 @@ class IsGrantedWorkflowTransition extends AbstractCondition implements ContextAc
     protected $targetStepName;
 
     /**
-     * @param SecurityFacade  $securityFacade
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenAccessorInterface        $tokenAccessor
      */
-    public function __construct(SecurityFacade $securityFacade)
-    {
-        $this->securityFacade = $securityFacade;
+    public function __construct(
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor
+    ) {
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -79,7 +85,7 @@ class IsGrantedWorkflowTransition extends AbstractCondition implements ContextAc
     {
         /** @var WorkflowItem $context */
 
-        if (!$this->securityFacade->hasLoggedUser()) {
+        if (!$this->tokenAccessor->hasUser()) {
             return true;
         }
 
@@ -88,12 +94,12 @@ class IsGrantedWorkflowTransition extends AbstractCondition implements ContextAc
             new ObjectIdentity('workflow', $context->getWorkflowName())
         );
 
-        if (!$this->securityFacade->isGranted('PERFORM_TRANSITIONS', $objectWrapper)) {
+        if (!$this->authorizationChecker->isGranted('PERFORM_TRANSITIONS', $objectWrapper)) {
             //performing of transitions is forbidden on workflow level
             return false;
         }
 
-        if (!$this->securityFacade->isGranted(
+        if (!$this->authorizationChecker->isGranted(
             'PERFORM_TRANSITION',
             new FieldVote(
                 $objectWrapper,

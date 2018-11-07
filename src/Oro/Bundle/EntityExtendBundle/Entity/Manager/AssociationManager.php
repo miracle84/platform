@@ -4,18 +4,18 @@ namespace Oro\Bundle\EntityExtendBundle\Entity\Manager;
 
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityBundle\ORM\SqlQueryBuilder;
 use Oro\Bundle\EntityBundle\ORM\UnionQueryBuilder;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
 use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
 class AssociationManager
 {
@@ -31,22 +31,28 @@ class AssociationManager
     /** @var EntityNameResolver */
     protected $entityNameResolver;
 
+    /** @var FeatureChecker */
+    protected $featureChecker;
+
     /**
      * @param ConfigManager      $configManager
      * @param ServiceLink        $aclHelperLink
      * @param DoctrineHelper     $doctrineHelper
      * @param EntityNameResolver $entityNameResolver
+     * @param FeatureChecker     $featureChecker
      */
     public function __construct(
         ConfigManager $configManager,
         ServiceLink $aclHelperLink,
         DoctrineHelper $doctrineHelper,
-        EntityNameResolver $entityNameResolver
+        EntityNameResolver $entityNameResolver,
+        FeatureChecker $featureChecker
     ) {
         $this->configManager      = $configManager;
         $this->aclHelperLink      = $aclHelperLink;
         $this->doctrineHelper     = $doctrineHelper;
         $this->entityNameResolver = $entityNameResolver;
+        $this->featureChecker     = $featureChecker;
     }
 
     /**
@@ -109,6 +115,10 @@ class AssociationManager
     public function getSingleOwnerFilter($scope, $attribute = 'enabled')
     {
         return function ($ownerClass, $targetClass, ConfigManager $configManager) use ($scope, $attribute) {
+            if (!$this->featureChecker->isResourceEnabled($targetClass, 'entities')) {
+                return false;
+            }
+
             return $configManager->getProvider($scope)
                 ->getConfig($targetClass)
                 ->is($attribute);
@@ -127,6 +137,10 @@ class AssociationManager
     public function getMultiOwnerFilter($scope, $attribute)
     {
         return function ($ownerClass, $targetClass, ConfigManager $configManager) use ($scope, $attribute) {
+            if (!$this->featureChecker->isResourceEnabled($targetClass, 'entities')) {
+                return false;
+            }
+
             $ownerClassNames = $configManager->getProvider($scope)
                 ->getConfig($targetClass)
                 ->get($attribute, false, []);
@@ -193,7 +207,7 @@ class AssociationManager
         $orderBy = null,
         $callback = null
     ) {
-        $criteria = QueryUtils::normalizeCriteria($filters);
+        $criteria = QueryBuilderUtil::normalizeCriteria($filters);
 
         $qb = $this->getUnionQueryBuilder($associationOwnerClass)
             ->addSelect('id', 'ownerId', Type::INTEGER)
@@ -202,7 +216,7 @@ class AssociationManager
             ->addSelect('entityTitle', 'title');
         foreach ($associationTargets as $entityClass => $fieldName) {
             $subQb = $this->getAssociationSubQueryBuilder($associationOwnerClass, $entityClass, $fieldName);
-            QueryUtils::applyJoins($subQb, $joins);
+            QueryBuilderUtil::applyJoins($subQb, $joins);
             $subQb->addCriteria($criteria);
             if (null !== $callback && is_callable($callback)) {
                 call_user_func($callback, $subQb, $entityClass);
@@ -242,22 +256,23 @@ class AssociationManager
         $targetFieldName
     ) {
         $targetAlias = 'target';
-
-        return $this->doctrineHelper->getEntityManagerForClass($associationOwnerClass)
+        $qb = $this->doctrineHelper->getEntityManagerForClass($associationOwnerClass)
             ->getRepository($associationOwnerClass)
-            ->createQueryBuilder('e')
-            ->select(
-                sprintf(
-                    'e.id AS id, target.%s AS entityId, \'%s\' AS entityClass, %s AS entityTitle',
-                    $this->doctrineHelper->getSingleEntityIdentifierFieldName($targetEntityClass),
-                    $targetEntityClass,
-                    $this->entityNameResolver->prepareNameDQL(
-                        $this->entityNameResolver->getNameDQL($targetEntityClass, $targetAlias),
-                        true
-                    )
-                )
-            )
-            ->innerJoin('e.' . $targetFieldName, $targetAlias);
+            ->createQueryBuilder('e');
+
+        return $qb->select(
+            'e.id AS id',
+            sprintf(
+                'target.%s AS entityId',
+                $this->doctrineHelper->getSingleEntityIdentifierFieldName($targetEntityClass)
+            ),
+            (string)$qb->expr()->literal($targetEntityClass) . ' AS entityClass',
+            $this->entityNameResolver->prepareNameDQL(
+                $this->entityNameResolver->getNameDQL($targetEntityClass, $targetAlias),
+                true
+            ) . '  AS entityTitle'
+        )
+        ->innerJoin(QueryBuilderUtil::getField('e', $targetFieldName), $targetAlias);
     }
 
     /**
@@ -319,7 +334,7 @@ class AssociationManager
         $orderBy = null,
         $callback = null
     ) {
-        $criteria = QueryUtils::normalizeCriteria($filters);
+        $criteria = QueryBuilderUtil::normalizeCriteria($filters);
 
         $qb = $this->getUnionQueryBuilder($associationTargetClass)
             ->addSelect('entityId', 'id', Type::INTEGER)
@@ -328,7 +343,7 @@ class AssociationManager
         $targetIdFieldName = $this->doctrineHelper->getSingleEntityIdentifierFieldName($associationTargetClass);
         foreach ($associationOwners as $ownerClass => $fieldName) {
             $subQb = $this->getAssociationOwnersSubQueryBuilder($ownerClass, $fieldName, $targetIdFieldName);
-            QueryUtils::applyJoins($subQb, $joins);
+            QueryBuilderUtil::applyJoins($subQb, $joins);
             $subQb->addCriteria($criteria);
             if (null !== $callback && is_callable($callback)) {
                 call_user_func($callback, $subQb, $ownerClass);
@@ -367,21 +382,21 @@ class AssociationManager
         $ownerFieldName,
         $targetIdFieldName
     ) {
-        return $this->doctrineHelper->getEntityManagerForClass($associationOwnerClass)
+        $qb = $this->doctrineHelper->getEntityManagerForClass($associationOwnerClass)
             ->getRepository($associationOwnerClass)
-            ->createQueryBuilder('e')
+            ->createQueryBuilder('e');
+
+        return $qb
             ->select(
-                sprintf(
-                    'target.%s AS id, e.id AS entityId, \'%s\' AS entityClass, %s AS entityTitle',
-                    $targetIdFieldName,
-                    $associationOwnerClass,
-                    $this->entityNameResolver->prepareNameDQL(
-                        $this->entityNameResolver->getNameDQL($associationOwnerClass, 'e'),
-                        true
-                    )
-                )
+                QueryBuilderUtil::sprintf('target.%s AS id', $targetIdFieldName),
+                'e.id AS entityId',
+                (string)$qb->expr()->literal($associationOwnerClass) . ' AS entityClass',
+                $this->entityNameResolver->prepareNameDQL(
+                    $this->entityNameResolver->getNameDQL($associationOwnerClass, 'e'),
+                    true
+                ) . ' AS entityTitle'
             )
-            ->innerJoin('e.' . $ownerFieldName, 'target');
+            ->innerJoin(QueryBuilderUtil::getField('e', $ownerFieldName), 'target');
     }
 
     /**
@@ -404,7 +419,7 @@ class AssociationManager
         if (null !== $limit) {
             $qb->setMaxResults($limit);
             if (null !== $page) {
-                $qb->setFirstResult(QueryUtils::getPageOffset($page, $limit));
+                $qb->setFirstResult(QueryBuilderUtil::getPageOffset($page, $limit));
             }
         }
     }

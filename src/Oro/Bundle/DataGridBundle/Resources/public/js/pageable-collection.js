@@ -3,10 +3,9 @@ define([
     'underscore',
     'backbone',
     'backbone-pageable-collection',
-    'oroui/js/mediator',
     'orotranslation/js/translator',
     'oroui/js/tools'
-], function($, _, Backbone, BackbonePageableCollection, mediator, __, tools) {
+], function($, _, Backbone, BackbonePageableCollection, __, tools) {
     'use strict';
 
     var PageableCollection;
@@ -38,8 +37,7 @@ define([
      * @param {Object} options
      * @returns {Backbone.Collection}
      */
-    function resetQuickly () {
-
+    function resetQuickly() {
         var collection = arguments[0];
         var options = arguments[2];
         var resetArgs = _.toArray(arguments).slice(1);
@@ -49,8 +47,7 @@ define([
 
         try {
             collection.reset.apply(collection, resetArgs);
-        }
-        finally {
+        } finally {
             collection.comparator = comparator;
             if (comparator && !options.reset) {
                 collection.sort();
@@ -106,12 +103,19 @@ define([
         /**
          * Default current state of collection
          *
-         * @property
+         * @property {Object}
          */
         state: _.extend({
             appearanceType: 'grid',
             appearanceData: {}
         }, BackbonePageableCollection.prototype.state),
+
+        /**
+         * Previous state of collection
+         *
+         * @property {Object}
+         */
+        previousState: {},
 
         /**
          * Declaration of URL parameters
@@ -152,6 +156,13 @@ define([
          * @property {Boolean}
          */
         onePagePagination: false,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function PageableCollection() {
+            PageableCollection.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initialize basic parameters from source options
@@ -216,10 +227,10 @@ define([
             }
 
             _.extend(this.queryParams, {
-                currentPage:    this.inputName + '[_pager][_page]',
-                pageSize:       this.inputName + '[_pager][_per_page]',
-                sortBy:         this.inputName + '[_sort_by][%field%]',
-                parameters:     this.inputName + '[_parameters]',
+                currentPage: this.inputName + '[_pager][_page]',
+                pageSize: this.inputName + '[_pager][_per_page]',
+                sortBy: this.inputName + '[_sort_by][%field%]',
+                parameters: this.inputName + '[_parameters]',
                 appearanceType: this.inputName + '[_appearance][_type]',
                 appearanceData: this.inputName + '[_appearance][_data]'
             });
@@ -411,7 +422,6 @@ define([
         // removing models that are no longer present, and merging models that
         // already exist in the collection, as necessary. Similar to **Model#set**,
         // the core operation for updating the data contained by the collection.
-        /*jshint maxstatements:false*/
         set: function(models, options) {
             options = _.defaults({}, options, {add: true, remove: true, merge: true});
             if (options.parse) {
@@ -543,8 +553,11 @@ define([
          * @param {Object} state
          */
         updateState: function(state) {
+            var previousState = _.clone(this.state);
             var newState = _.extend({}, this.state, state);
+
             this.state = this._checkState(newState);
+            this.previousState = previousState;
             this.trigger('updateState', this, this.state);
         },
 
@@ -565,7 +578,6 @@ define([
                 currentPage !== null && currentPage !== void 0 &&
                 firstPage !== null && firstPage !== void 0 &&
                 (mode === 'infinite' ? links : true)) {
-
                 state.totalRecords = totalRecords = this.finiteInt(totalRecords, 'totalRecords');
                 state.firstPage = firstPage = this.finiteInt(firstPage, 'firstPage');
 
@@ -581,8 +593,8 @@ define([
                     throw new RangeError('"pageSize" must be >= 0');
                 }
 
-                state.totalPages = pageSize === 0 ?
-                    1 : totalPages = state.totalPages = Math.ceil(totalRecords / pageSize);
+                state.totalPages = pageSize === 0
+                    ? 1 : totalPages = state.totalPages = Math.ceil(totalRecords / pageSize);
 
                 if (firstPage < 0 || firstPage > 1) {
                     throw new RangeError('"firstPage" must be 0 or 1');
@@ -653,7 +665,7 @@ define([
             var qsi = url.indexOf('?');
             if (qsi !== -1) {
                 var nvp = url.slice(qsi + 1).split('&');
-                for (var i = 0 ; i < nvp.length ; i++) {
+                for (var i = 0; i < nvp.length; i++) {
                     var pair = nvp[i].split('=');
                     data[tools.decodeUriComponent(pair[0])] = tools.decodeUriComponent(pair[1]);
                 }
@@ -691,7 +703,6 @@ define([
                 });
 
                 return deferredFetch.promise();
-
             } else {
                 return this._fetch(options);
             }
@@ -724,9 +735,7 @@ define([
             options.data = data;
 
             if (!options.error) {
-                options.error = function() {
-                    mediator.execute('showMessage', 'error', __('oro.datagrid.loading_failed_message'));
-                };
+                options.errorHandlerMessage = __('oro.datagrid.loading_failed_message');
             }
 
             // @todo rewrite this, use mode=infinite (if possible)
@@ -745,6 +754,7 @@ define([
             }
             data = this.processQueryParams(data, state);
             this.processFiltersParams(data, state);
+            this.processColumnsParams(data, state);
 
             var self = this;
             var success = options.success;
@@ -753,7 +763,6 @@ define([
 
             if (mode !== 'server') {
                 options.success = function(col, resp, opts) {
-
                     // make sure the caller's intent is obeyed
                     opts = opts || {};
                     if (_.isUndefined(options.silent)) {
@@ -769,9 +778,9 @@ define([
                         resetQuickly(fullCollection, models, opts);
                     } else if (links[currentPage]) { // refetching a page
                         var pageSize = state.pageSize;
-                        var pageStart = (state.firstPage === 0 ?
-                            currentPage :
-                            currentPage - 1) * pageSize;
+                        var pageStart = (state.firstPage === 0
+                            ? currentPage
+                            : currentPage - 1) * pageSize;
                         var fullModels = fullCollection.models;
                         var head = fullModels.slice(0, pageStart);
                         var tail = fullModels.slice(pageStart + pageSize);
@@ -795,6 +804,17 @@ define([
 
                 // silent the first reset from backbone
                 return BBColProto.fetch.call(self, _.extend({}, options, {silent: true}));
+            } else {
+                var currentPage = state.currentPage;
+                options.success = function(col, resp, opts) {
+                    if (currentPage > 1 && _.isEmpty(resp.data) && col.state.totalRecords > 0) {
+                        // load last page, if records not found for current page(for example after records delete)
+                        self.getLastPage();
+                    }
+                    if (success) {
+                        success(col, resp, opts);
+                    }
+                };
             }
 
             return BBColProto.fetch.call(this, options);
@@ -829,9 +849,9 @@ define([
             var pageablePrototype = PageableCollection.prototype;
 
             // map params except directions
-            var queryParams = this.mode === 'client' ?
-                _.pick(this.queryParams, 'sorters') :
-                _.omit(_.pick(this.queryParams, _.keys(pageablePrototype.queryParams)), 'directions');
+            var queryParams = this.mode === 'client'
+                ? _.pick(this.queryParams, 'sorters')
+                : _.omit(_.pick(this.queryParams, _.keys(pageablePrototype.queryParams)), 'directions');
 
             var i;
             var kvp;
@@ -906,7 +926,7 @@ define([
             if (this.multipleSorting) {
                 // there is always must be at least one sorted column
                 if (_.keys(state.sorters).length <= 1 && !order) {
-                    order = this.getSortDirectionKey('ASC');  // default order
+                    order = this.getSortDirectionKey('ASC'); // default order
                 }
 
                 // last sorting has the lowest priority
@@ -967,7 +987,7 @@ define([
          * @return {PageableCollection}
          */
         clone: function() {
-            var newCollection = new PageableCollection(this.toJSON(), tools.deepClone(this.options));
+            var newCollection = new (this.constructor)(this.toJSON(), tools.deepClone(this.options));
             newCollection.state = tools.deepClone(this.state);
             newCollection.initialState = tools.deepClone(this.initialState);
             return newCollection;

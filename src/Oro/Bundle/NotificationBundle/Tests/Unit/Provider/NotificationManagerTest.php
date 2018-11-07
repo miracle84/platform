@@ -3,12 +3,11 @@
 namespace Oro\Bundle\NotificationBundle\Tests\Unit\Provider;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\NotificationBundle\Event\Handler\EmailNotificationHandler;
 use Oro\Bundle\NotificationBundle\Event\Handler\EventHandlerInterface;
 use Oro\Bundle\NotificationBundle\Provider\NotificationManager;
 
-class NotificationManagerTest extends \PHPUnit_Framework_TestCase
+class NotificationManagerTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_EVENT_NAME = 'namespace.event_name';
 
@@ -18,12 +17,12 @@ class NotificationManagerTest extends \PHPUnit_Framework_TestCase
     protected $manager;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $em;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $entity;
 
@@ -89,8 +88,6 @@ class NotificationManagerTest extends \PHPUnit_Framework_TestCase
         );
         $notificationEventMock->expects($this->once())->method('getEntity')
             ->will($this->returnValue($this->entity));
-        $notificationEventMock->expects($this->once())->method('getName')
-            ->will($this->returnValue(self::TEST_EVENT_NAME));
         $notificationEventMock->expects($this->once())->method('isPropagationStopped')
             ->will($this->returnValue($eventPropagationStopped));
 
@@ -113,7 +110,7 @@ class NotificationManagerTest extends \PHPUnit_Framework_TestCase
         $this->rules->add($rule);
         $this->rules->add($rule);
 
-        $this->manager->process($notificationEventMock);
+        $this->manager->process($notificationEventMock, self::TEST_EVENT_NAME);
     }
 
     /**

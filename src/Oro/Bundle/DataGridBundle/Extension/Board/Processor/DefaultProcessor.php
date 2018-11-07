@@ -8,15 +8,14 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query\Parameter;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
-use Oro\Component\DoctrineUtils\ORM\UnionQueryBuilder;
-use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
+use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Extension\Board\Configuration;
 use Oro\Bundle\DataGridBundle\Tools\ChoiceFieldHelper;
 use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+use Oro\Component\DoctrineUtils\ORM\UnionQueryBuilder;
 
 class DefaultProcessor implements BoardProcessorInterface
 {
@@ -149,7 +148,7 @@ class DefaultProcessor implements BoardProcessorInterface
      */
     protected function prepareWhereExpression($qb, $property, $optionIds)
     {
-        $propertyExpr = QueryUtils::getSelectExprByAlias($qb, $property);
+        $propertyExpr = QueryBuilderUtil::getSelectExprByAlias($qb, $property);
         $expressions = [];
         foreach ($optionIds as $optionId) {
             if ($optionId === null) {
@@ -182,7 +181,7 @@ class DefaultProcessor implements BoardProcessorInterface
     protected function prepareOptions($options, $default)
     {
         $result = [];
-        foreach ($options as $id => $label) {
+        foreach ($options as $label => $id) {
             $ids = [$id];
             if ($id === $default) {
                 $ids[] = null; //entities with empty values go to the default column
@@ -211,7 +210,7 @@ class DefaultProcessor implements BoardProcessorInterface
         if (isset($boardConfig[Configuration::DEFAULT_COLUMN_KEY])) {
             $default = $boardConfig[Configuration::DEFAULT_COLUMN_KEY];
         }
-        $ids = array_keys($options);
+        $ids = array_values($options);
         if (!in_array($default, $ids, true)) {
             $default = reset($ids);
         }

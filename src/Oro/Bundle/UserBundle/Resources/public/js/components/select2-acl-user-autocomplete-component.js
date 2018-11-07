@@ -3,15 +3,33 @@ define(function(require) {
 
     var Select2AclUserAutocompleteComponent;
     var Select2Component = require('oro/select2-component');
+    var _ = require('underscore');
 
     Select2AclUserAutocompleteComponent = Select2Component.extend({
+        /**
+         * @inheritDoc
+         */
+        constructor: function Select2AclUserAutocompleteComponent() {
+            Select2AclUserAutocompleteComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             var params = {
                 permission: options.configs.permission,
                 entity: options.configs.entity_name,
                 entity_id: options.configs.entity_id
             };
-            options._sourceElement.data('select2_query_additional_params', {params: params});
+
+            params = _.extend(
+                {},
+                {params: params},
+                options._sourceElement.data('select2_query_additional_params') || {}
+            );
+
+            options._sourceElement.data('select2_query_additional_params', params);
             Select2AclUserAutocompleteComponent.__super__.initialize.call(this, options);
         },
 

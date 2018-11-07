@@ -22,6 +22,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function AbstractGridChangeListener() {
+            AbstractGridChangeListener.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         dispose: function() {
             if (this.disposed) {
                 return;
@@ -162,8 +169,7 @@ define([
                 this.confirmModal[type] = new Modal(_.extend({
                     title: __('Confirmation'),
                     okText: __('OK, got it.'),
-                    className: 'modal modal-primary',
-                    okButtonClass: 'btn-primary btn-large'
+                    className: 'modal modal-primary'
                 }, options));
                 this.confirmModal[type].on('ok', _.bind(callback, this));
             }

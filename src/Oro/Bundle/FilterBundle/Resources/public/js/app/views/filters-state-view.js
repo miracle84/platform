@@ -20,8 +20,14 @@ define(function(require) {
             'mouseleave .filters-state': 'onMouseLeave'
         },
 
-        initialize: function(options) {
+        /**
+         * @inheritDoc
+         */
+        constructor: function FiltersStateView() {
+            FiltersStateView.__super__.constructor.apply(this, arguments);
+        },
 
+        initialize: function(options) {
             _.extend(this, _.pick(options, ['filters']));
 
             _.each(this.filters, function(filter) {
@@ -73,7 +79,7 @@ define(function(require) {
                     content: $filtersState.text(),
                     trigger: 'manual',
                     placement: 'bottom',
-                    animation: 'false',
+                    animation: false,
                     container: 'body',
                     template: this.popoverTemplate()
                 });
@@ -91,7 +97,7 @@ define(function(require) {
             }
             var $filtersState = this.$('.filters-state');
             $filtersState.popover('hide');
-            $filtersState.popover('destroy');
+            $filtersState.popover('dispose');
         },
 
         onClick: function() {

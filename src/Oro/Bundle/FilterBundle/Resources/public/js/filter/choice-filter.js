@@ -1,13 +1,12 @@
-define([
-    'jquery',
-    'underscore',
-    'orotranslation/js/translator',
-    'oroui/js/tools',
-    './text-filter'
-], function($, _, __, tools, TextFilter) {
+define(function(require) {
     'use strict';
 
     var ChoiceFilter;
+    var template = require('tpl!orofilter/templates/filter/choice-filter.html');
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var tools = require('oroui/js/tools');
+    var TextFilter = require('./text-filter');
 
     /**
      * Choice filter: filter type as option + filter value as string
@@ -22,6 +21,7 @@ define([
          *
          * @property
          */
+        template: template,
         templateSelector: '#choice-filter-template',
 
         /**
@@ -33,6 +33,8 @@ define([
             value: 'input[name="value"]',
             type: 'input[type="hidden"]:last'
         },
+
+        choiceDropdownSelector: '.choice-filter .dropdown-menu',
 
         /**
          * @property {boolean}
@@ -47,10 +49,16 @@ define([
         events: {
             'keyup input': '_onReadCriteriaInputKey',
             'keydown [type="text"]': '_preventEnterProcessing',
-            'click .filter-update': '_onClickUpdateCriteria',
             'click .filter-criteria .filter-criteria-hide': '_onClickCloseCriteria',
             'click .disable-filter': '_onClickDisableFilter',
             'click .choice-value': '_onClickChoiceValue'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ChoiceFilter() {
+            ChoiceFilter.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -106,6 +114,11 @@ define([
             return this;
         },
 
+        getType: function() {
+            var value = this._readDOMValue();
+            return value.type;
+        },
+
         /**
          * @inheritDoc
          */
@@ -114,24 +127,29 @@ define([
             var selectedChoiceLabel = '';
             if (!_.isEmpty(this.choices)) {
                 var foundChoice = _.find(this.choices, function(choice) {
-                    return (choice.value === value.type);
+                    return String(choice.value) === String(value.type);
                 });
-                selectedChoiceLabel = foundChoice.label;
+                foundChoice = foundChoice || _.first(this.choices);
+                selectedChoiceLabel = _.result(foundChoice, 'label') || '';
             }
             var $filter = $(this.template({
                 name: this.name,
                 choices: this.choices,
                 selectedChoice: value.type,
                 selectedChoiceLabel: selectedChoiceLabel,
-                value: value.value
+                value: value.value,
+                renderMode: this.renderMode
             }));
             this._appendFilter($filter);
             this._updateDOMValue();
+            this._updateValueField();
             this._criteriaRenderd = true;
+            this._isRenderingInProgress = false;
         },
 
         _showCriteria: function() {
-            if (!this._criteriaRenderd) {
+            if (!this._criteriaRenderd && !this._isRenderingInProgress) {
+                this._isRenderingInProgress = true;
                 this._renderCriteria();
             }
             this._updateValueField();
@@ -155,11 +173,6 @@ define([
             if (!valueFrame.length) {
                 return;
             }
-            // update left and right margins of value field frame
-            var leftWidth = this.$('.choice-filter .dropdown-toggle').outerWidth();
-            var rightWidth = this.$('.filter-update').outerWidth();
-            valueFrame.css('margin-left', leftWidth);
-            valueFrame.css('padding-right', rightWidth);
             // update class of criteria dropdown
             type = this.$(this.criteriaValueSelectors.type).val();
             isEmptyType = this.isEmptyType(type);
@@ -251,10 +264,12 @@ define([
          * @inheritDoc
          */
         _onValueUpdated: function(newValue, oldValue) {
-            // synchronize choice selector with new value
-            this.$('.choice-filter .dropdown-menu').each(function() {
+            this.$(this.choiceDropdownSelector).each(function() {
                 var $menu = $(this);
                 var name = $menu.data('name') || 'type';
+                if (oldValue[name] === newValue[name]) {
+                    return;
+                }
 
                 $menu.find('li a').each(function() {
                     var item = $(this);

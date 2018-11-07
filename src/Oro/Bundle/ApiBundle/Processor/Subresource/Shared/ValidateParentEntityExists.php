@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource\Shared;
 
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-
+use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Makes sure that the parent entity exists in the Context.
+ * Makes sure that the parent entity exists in the context.
  */
 class ValidateParentEntityExists implements ProcessorInterface
 {

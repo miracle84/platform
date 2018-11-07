@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\SecurityBundle\Acl\Extension;
 
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdentityFactory;
 use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 use Oro\Bundle\SecurityBundle\Metadata\ActionMetadataProvider;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 
 class ActionAclExtension extends AbstractAclExtension
 {
@@ -75,7 +74,7 @@ class ActionAclExtension extends AbstractAclExtension
     /**
      * {@inheritdoc}
      */
-    public function getAllowedPermissions(ObjectIdentity $oid, $fieldName = null)
+    public function getAllowedPermissions(ObjectIdentity $oid, $fieldName = null, $aclGroup = null)
     {
         return [self::PERMISSION_EXECUTE];
     }

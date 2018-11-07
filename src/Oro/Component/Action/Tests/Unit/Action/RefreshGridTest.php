@@ -2,16 +2,15 @@
 
 namespace Oro\Component\Action\Tests\Unit\Action;
 
+use Oro\Component\Action\Action\RefreshGrid;
+use Oro\Component\Action\Tests\Unit\Action\Stub\StubStorage;
+use Oro\Component\ConfigExpression\ContextAccessor;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-use Oro\Component\Action\Action\RefreshGrid;
-use Oro\Component\ConfigExpression\ContextAccessor;
-use Oro\Component\Action\Tests\Unit\Action\Stub\StubStorage;
-
-class RefreshGridTest extends \PHPUnit_Framework_TestCase
+class RefreshGridTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EventDispatcherInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EventDispatcherInterface */
     protected $eventDispatcher;
 
     /** @var RefreshGrid */

@@ -3,7 +3,6 @@
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\ImportExport\Processor;
 
 use Akeneo\Bundle\BatchBundle\Entity\StepExecution;
-
 use Oro\Bundle\ImportExportBundle\Context\ContextRegistry;
 use Oro\Bundle\ImportExportBundle\Tests\Unit\Processor\ExportProcessorTest;
 use Oro\Bundle\IntegrationBundle\ImportExport\Processor\StepExecutionAwareExportProcessor;
@@ -16,12 +15,12 @@ class StepExecutionAwareExportProcessorTest extends ExportProcessorTest
     protected $processor;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|StepExecution
+     * @var \PHPUnit\Framework\MockObject\MockObject|StepExecution
      */
     protected $stepExecution;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ContextRegistry
+     * @var \PHPUnit\Framework\MockObject\MockObject|ContextRegistry
      */
     protected $contextRegistry;
 

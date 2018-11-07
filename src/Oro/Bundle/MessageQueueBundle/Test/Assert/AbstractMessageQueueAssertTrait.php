@@ -137,4 +137,42 @@ trait AbstractMessageQueueAssertTrait
     {
         return self::getMessageCollector()->getSentMessages();
     }
+
+    /**
+     * Gets a message sent to a specific topic.
+     *
+     * @param string $topic
+     *
+     * @return string|array|Message
+     */
+    protected static function getSentMessage($topic)
+    {
+        self::assertMessagesCount($topic, 1);
+        $messages = self::getSentMessages();
+        foreach ($messages as $message) {
+            if ($message['topic'] === $topic) {
+                return $message['message'];
+            }
+        }
+        self::fail(sprintf('A message was not sent to "%s" topic.', $topic));
+    }
+
+    /**
+     * @param string $expectedTopic
+     * @param bool $extractBodies
+     * @return mixed[]
+     */
+    protected static function getSentMessagesByTopic($expectedTopic, $extractBodies = false)
+    {
+        $topicMessages = [];
+        $sentMessages = self::getSentMessages();
+        foreach ($sentMessages as $sentMessage) {
+            if ($sentMessage['topic'] === $expectedTopic) {
+                $message = $sentMessage['message'];
+                $topicMessages[] = $extractBodies && $message instanceof Message ? $message->getBody() : $message;
+            }
+        }
+
+        return $topicMessages;
+    }
 }

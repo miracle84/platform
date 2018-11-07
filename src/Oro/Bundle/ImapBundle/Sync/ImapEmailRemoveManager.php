@@ -5,17 +5,15 @@ namespace Oro\Bundle\ImapBundle\Sync;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
-
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\ImapBundle\Entity\ImapEmail;
+use Oro\Bundle\ImapBundle\Entity\ImapEmailFolder;
 use Oro\Bundle\ImapBundle\Entity\Repository\ImapEmailFolderRepository;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailManager;
-use Oro\Bundle\ImapBundle\Entity\ImapEmailFolder;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 
 class ImapEmailRemoveManager implements LoggerAwareInterface
 {
@@ -57,7 +55,7 @@ class ImapEmailRemoveManager implements LoggerAwareInterface
                     ->setParameter('uids', $existingUids);
             }
 
-            $staleImapEmails = (new BufferedQueryResultIterator($staleImapEmailsQb))
+            $staleImapEmails = (new BufferedIdentityQueryResultIterator($staleImapEmailsQb))
                 ->setPageCallback(function () {
                     $this->em->flush();
                     $clearClass = [

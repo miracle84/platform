@@ -2,38 +2,31 @@
 
 namespace Oro\Bundle\SecurityBundle\EventListener;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\SearchBundle\Event\PrepareEntityMapEvent;
 use Oro\Bundle\SearchBundle\Event\SearchMappingCollectEvent;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataInterface;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 class SearchListener
 {
     const EMPTY_ORGANIZATION_ID = 0;
     const EMPTY_OWNER_ID        = 0;
 
-    /** @var OwnershipMetadataProvider */
+    /** @var OwnershipMetadataProviderInterface */
     protected $metadataProvider;
-
-    /**  @var SecurityFacade */
-    protected $securityFacade;
 
     /** @var PropertyAccessor */
     protected $propertyAccessor;
 
     /**
-     * @param OwnershipMetadataProvider $metadataProvider
-     * @param SecurityFacade            $securityFacade
+     * @param OwnershipMetadataProviderInterface $metadataProvider
      */
-    public function __construct(OwnershipMetadataProvider $metadataProvider, SecurityFacade $securityFacade)
+    public function __construct(OwnershipMetadataProviderInterface $metadataProvider)
     {
         $this->metadataProvider = $metadataProvider;
-        $this->securityFacade   = $securityFacade;
     }
 
     /**
@@ -45,15 +38,16 @@ class SearchListener
     {
         $mapConfig = $event->getMappingConfig();
         foreach ($mapConfig as $className => $mapping) {
+            $metadata = $this->metadataProvider->getMetadata($className);
             $mapConfig[$className]['fields'][] = [
                 'name'          => 'organization',
                 'target_type'   => 'integer',
                 'target_fields' => ['organization']
             ];
             $mapConfig[$className]['fields'][] = [
-                'name'          => 'owner',
+                'name'          => $metadata->getOwnerFieldName(),
                 'target_type'   => 'integer',
-                'target_fields' => [sprintf('%s_owner', $mapping['alias'])]
+                'target_fields' => [$this->getOwnerKey($metadata, $mapping['alias'])]
             ];
         }
 
@@ -80,8 +74,8 @@ class SearchListener
             $organizationId = $this->getOrganizationId($metadata, $entity);
         }
 
-        $data['integer'][sprintf('%s_owner', $event->getEntityMapping()['alias'])] = $ownerId;
-        $data['integer']['organization']                                           = $organizationId;
+        $data['integer'][$this->getOwnerKey($metadata, $event->getEntityMapping()['alias'])] = $ownerId;
+        $data['integer']['organization'] = $organizationId;
 
         $event->setData($data);
     }
@@ -89,19 +83,16 @@ class SearchListener
     /**
      * Get entity owner id
      *
-     * @param OwnershipMetadata $metadata
-     * @param object            $entity
+     * @param OwnershipMetadataInterface $metadata
+     * @param object $entity
      *
      * @return int
      */
-    protected function getOwnerId(OwnershipMetadata $metadata, $entity)
+    protected function getOwnerId(OwnershipMetadataInterface $metadata, $entity)
     {
         $ownerId = self::EMPTY_OWNER_ID;
 
-        if (in_array(
-            $metadata->getOwnerType(),
-            [OwnershipMetadata::OWNER_TYPE_USER, OwnershipMetadata::OWNER_TYPE_BUSINESS_UNIT]
-        )) {
+        if ($metadata->isUserOwned() || $metadata->isBusinessUnitOwned() || $metadata->isOrganizationOwned()) {
             $owner = $this->getPropertyAccessor()->getValue($entity, $metadata->getOwnerFieldName());
             if ($owner && $owner->getId()) {
                 $ownerId = $owner->getId();
@@ -114,23 +105,16 @@ class SearchListener
     /**
      * Get entity organization id
      *
-     * @param OwnershipMetadata $metadata
-     * @param object            $entity
+     * @param OwnershipMetadataInterface $metadata
+     * @param object $entity
      *
      * @return int
      */
-    protected function getOrganizationId(OwnershipMetadata $metadata, $entity)
+    protected function getOrganizationId(OwnershipMetadataInterface $metadata, $entity)
     {
         $organizationId = self::EMPTY_ORGANIZATION_ID;
 
-        $organizationField = null;
-        if ($metadata->getGlobalOwnerFieldName()) {
-            $organizationField = $metadata->getGlobalOwnerFieldName();
-        }
-
-        if ($metadata->isGlobalLevelOwned()) {
-            $organizationField = $metadata->getOwnerFieldName();
-        }
+        $organizationField = $this->getOrganizationField($metadata);
 
         if ($organizationField) {
             /** @var Organization $organization */
@@ -144,6 +128,16 @@ class SearchListener
     }
 
     /**
+     * @param OwnershipMetadataInterface $metadata
+     * @param string $entityAlias
+     * @return string
+     */
+    protected function getOwnerKey(OwnershipMetadataInterface $metadata, $entityAlias)
+    {
+        return sprintf('%s_%s', $entityAlias, $metadata->getOwnerFieldName());
+    }
+
+    /**
      * @return PropertyAccessor
      */
     protected function getPropertyAccessor()
@@ -153,5 +147,25 @@ class SearchListener
         }
 
         return $this->propertyAccessor;
+    }
+
+    /**
+     * @param OwnershipMetadataInterface $metadata
+     *
+     * @return null|string
+     */
+    protected function getOrganizationField(OwnershipMetadataInterface $metadata)
+    {
+        $organizationField = null;
+
+        if ($metadata->getOrganizationFieldName()) {
+            $organizationField = $metadata->getOrganizationFieldName();
+        }
+
+        if ($metadata->isOrganizationOwned()) {
+            $organizationField = $metadata->getOwnerFieldName();
+        }
+
+        return $organizationField;
     }
 }

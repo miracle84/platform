@@ -2,22 +2,21 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\EventListener;
 
+use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
+use Oro\Bundle\EmailBundle\Entity\Email;
+use Oro\Bundle\EmailBundle\EventListener\PrepareContextTitleListener;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Symfony\Component\Routing\Router;
 
-use Oro\Bundle\EmailBundle\Entity\Email;
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
-use Oro\Bundle\EmailBundle\EventListener\PrepareContextTitleListener;
-
-class PrepareContextTitleListenerTest extends \PHPUnit_Framework_TestCase
+class PrepareContextTitleListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var PrepareContextTitleListener */
     protected $listener;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|Router */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|Router */
     protected $router;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     protected $doctrineHelper;
 
     public function setUp()

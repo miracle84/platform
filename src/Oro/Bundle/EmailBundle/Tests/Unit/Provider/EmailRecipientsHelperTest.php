@@ -2,14 +2,14 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Provider;
 
-use Oro\Bundle\EmailBundle\Model\EmailRecipientsProviderArgs;
 use Oro\Bundle\EmailBundle\Model\CategorizedRecipient;
+use Oro\Bundle\EmailBundle\Model\EmailRecipientsProviderArgs;
 use Oro\Bundle\EmailBundle\Model\Recipient;
 use Oro\Bundle\EmailBundle\Model\RecipientEntity;
 use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
 use Oro\Bundle\SearchBundle\Query\Result;
 
-class EmailRecipientsHelperTest extends \PHPUnit_Framework_TestCase
+class EmailRecipientsHelperTest extends \PHPUnit\Framework\TestCase
 {
     protected $aclHelper;
     protected $dqlNameFormatter;

@@ -2,19 +2,21 @@
 
 namespace Oro\Bundle\EmailBundle\Provider;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
-use Symfony\Component\Security\Core\Util\ClassUtils;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Doctrine\Common\Cache\Cache;
+use Doctrine\Common\Util\ClassUtils as DoctrineClassUtils;
 use Doctrine\Common\Util\Inflector;
-
 use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
 use Oro\Bundle\EmailBundle\Entity\EmailTemplateTranslation;
 use Oro\Bundle\EmailBundle\Model\EmailTemplateInterface;
+use Oro\Bundle\EmailBundle\Processor\VariableProcessorRegistry;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Translation\TranslatorInterface;
 
+/**
+ * Renders email template as a twig template in a sandboxed environment.
+ */
 class EmailRenderer extends \Twig_Environment
 {
     const VARIABLE_NOT_FOUND = 'oro.email.variable.not.found';
@@ -39,6 +41,9 @@ class EmailRenderer extends \Twig_Environment
     /** @var PropertyAccessor */
     protected $accessor;
 
+    /** @var VariableProcessorRegistry */
+    protected $variableProcessorRegistry;
+
     /** @var array */
     private $systemVariables;
 
@@ -50,6 +55,7 @@ class EmailRenderer extends \Twig_Environment
      * @param                         $cacheKey
      * @param \Twig_Extension_Sandbox $sandbox
      * @param TranslatorInterface     $translator
+     * @param VariableProcessorRegistry $variableProcessorRegistry
      */
     public function __construct(
         \Twig_LoaderInterface $loader,
@@ -58,7 +64,8 @@ class EmailRenderer extends \Twig_Environment
         Cache $cache,
         $cacheKey,
         \Twig_Extension_Sandbox $sandbox,
-        TranslatorInterface $translator
+        TranslatorInterface $translator,
+        VariableProcessorRegistry $variableProcessorRegistry
     ) {
         parent::__construct($loader, $options);
 
@@ -70,6 +77,8 @@ class EmailRenderer extends \Twig_Environment
         $this->configureSandbox();
 
         $this->translator = $translator;
+
+        $this->variableProcessorRegistry = $variableProcessorRegistry;
     }
 
     /**
@@ -149,6 +158,7 @@ class EmailRenderer extends \Twig_Environment
      * @param array                  $templateParams
      *
      * @return array first element is email subject, second - message
+     * @throws \Twig_Error
      */
     public function compileMessage(EmailTemplateInterface $template, array $templateParams = [])
     {
@@ -175,6 +185,7 @@ class EmailRenderer extends \Twig_Environment
         $content = $this->addDefaultVariableFilters($content);
 
         if (array_key_exists('entity', $templateParams)) {
+            $content = $this->processVariables($content, $templateParams);
             $content = $this->processDefaultFilters($content, $templateParams['entity']);
         }
 
@@ -251,22 +262,28 @@ class EmailRenderer extends \Twig_Environment
                     }
 
                     // check if value exists
-                    $that->getValue($value, $propertyPath);
+                    $valueToRender = $that->getValue($value, $propertyPath);
 
                     $propertyName = lcfirst(Inflector::classify($propertyPath));
-                    if (is_object($value) && array_key_exists('default_formatter', $config)) {
-                        $valueClass       = ClassUtils::getRealClass($value);
-                        $defaultFormatter = $config['default_formatter'];
-                        if (array_key_exists($valueClass, $defaultFormatter)
-                            && array_key_exists($propertyName, $defaultFormatter[$valueClass])
-                            && !is_null($defaultFormatter[$valueClass][$propertyName])
-                        ) {
-                            return sprintf(
-                                '{{ %s|oro_format(\'%s\') }}',
-                                $path,
-                                $config['default_formatter'][ClassUtils::getRealClass($value)][$propertyName]
-                            );
+                    if (is_object($value)) {
+                        if (array_key_exists('default_formatter', $config)) {
+                            $valueClass       = ClassUtils::getRealClass($value);
+                            $defaultFormatter = $config['default_formatter'];
+                            if (array_key_exists($valueClass, $defaultFormatter)
+                                && array_key_exists($propertyName, $defaultFormatter[$valueClass])
+                                && !is_null($defaultFormatter[$valueClass][$propertyName])
+                            ) {
+                                return sprintf(
+                                    '{{ %s|oro_format(\'%s\') }}',
+                                    $path,
+                                    $config['default_formatter'][ClassUtils::getRealClass($value)][$propertyName]
+                                );
+                            }
                         }
+                    }
+
+                    if (is_object($valueToRender)) {
+                        return sprintf(sprintf('{{ %s|oro_format_name }}', $path));
                     }
 
                     return sprintf('{{ %s|oro_html_sanitize }}', $path);
@@ -316,5 +333,44 @@ class EmailRenderer extends \Twig_Environment
         }
 
         return $this->systemVariables;
+    }
+
+    /**
+     * @param string $content
+     * @param array $templateParams
+     *
+     * @return string
+     */
+    protected function processVariables($content, array $templateParams)
+    {
+        $variableDefinitions = (array)$this->variablesProvider->getEntityVariableDefinitions(
+            DoctrineClassUtils::getClass($templateParams['entity'])
+        );
+
+        foreach ($variableDefinitions as $key => $variableDefinition) {
+            unset($variableDefinitions[$key]);
+            $variableDefinitions['entity.' . $key] = $variableDefinition;
+        }
+
+        return preg_replace_callback(
+            '/{{\s([\w\.\_\-]*?)\s}}/u',
+            function ($match) use ($templateParams, $variableDefinitions) {
+                list($result, $path) = $match;
+                if (isset($variableDefinitions[$path], $variableDefinitions[$path]['processor'])) {
+                    if ($this->variableProcessorRegistry->has($variableDefinitions[$path]['processor'])) {
+                        $processor = $this->variableProcessorRegistry->get($variableDefinitions[$path]['processor']);
+
+                        return $processor->process(
+                            $path,
+                            $variableDefinitions[$path],
+                            $templateParams
+                        );
+                    }
+                }
+
+                return $result;
+            },
+            $content
+        );
     }
 }

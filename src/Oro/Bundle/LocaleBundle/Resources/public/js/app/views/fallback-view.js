@@ -5,6 +5,7 @@ define(function(require) {
     var $ = require('jquery');
     var _ = require('underscore');
     var BaseView = require('oroui/js/app/views/base/view');
+    var tinyMCE = require('tinymce/tinymce');
 
     /**
      * @export orolocale/js/app/views/fallback-view
@@ -13,6 +14,8 @@ define(function(require) {
      */
     FallbackView = BaseView.extend({
         autoRender: true,
+
+        initSubviews: true,
 
         /**
          * @property {Object}
@@ -42,19 +45,26 @@ define(function(require) {
                 itemFallback: '.fallback-item-fallback'
             },
             icons: {
-                new: {
-                    html: '<i class="fa-folder-o"></i>',
+                'new': {
+                    html: '<i class="fa-language"></i>',
                     event: 'expandChildItems'
                 },
-                edited: {
-                    html: '<i class="fa-folder"></i>',
+                'edited': {
+                    html: '<i class="fa-language"></i>',
                     event: 'expandChildItems'
                 },
-                save: {
-                    html: '<i class="fa-folder-open"></i>',
+                'save': {
+                    html: '<i class="fa-language"></i>',
                     event: 'collapseChildItems'
                 }
             }
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function FallbackView() {
+            FallbackView.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -69,13 +79,24 @@ define(function(require) {
          * @inheritDoc
          */
         render: function() {
-            var self = this;
+            this.$(this.options.selectors.childItem).attr('data-layout', 'separate');
+
             this._deferredRender();
             this.initLayout().done(function() {
-                self.handleLayoutInit();
-                self._resolveDeferredRender();
-            });
+                this.handleLayoutInit();
+                this._resolveDeferredRender();
+            }.bind(this));
+
             return this;
+        },
+
+        renderSubviews: function() {
+            this.initSubviews = false;
+            this.$(this.options.selectors.childItem).removeAttr('data-layout');
+
+            this.initLayout().done(function() {
+                this.bindEvents();
+            }.bind(this));
         },
 
         /**
@@ -93,13 +114,11 @@ define(function(require) {
             this.mapItemToChildren();
 
             this.getValueEl(this.$el).each(function() {
-                //self.cloneValueToChildren(self.getItemEl(this)); uncomment on merging master
+                // self.cloneValueToChildren(self.getItemEl(this)); uncomment on merging master
             });
 
             this.fixFallbackWidth();
             this.setStatusIcon();
-
-            this.bindEvents();
         },
 
         /**
@@ -113,7 +132,7 @@ define(function(require) {
                 .keyup(_.bind(this.cloneValueToChildrenEvent, this));
 
             this.$el.find(this.options.selectors.itemValue).find('.mce-tinymce').each(function() {
-                self.getValueEl(self.getItemEl(this)).tinymce()
+                tinyMCE.get(self.getValueEl(self.getItemEl(this)).attr('id'))
                     .on('change', function() {
                         $(this.targetElm).change();
                     })
@@ -127,7 +146,6 @@ define(function(require) {
 
             this.getFallbackEl(this.$el)
                 .change(_.bind(this.switchFallbackTypeEvent, this));
-
         },
 
         /**
@@ -197,7 +215,6 @@ define(function(require) {
          * @param {Event} e
          */
         switchFallbackTypeEvent: function(e) {
-
             var $item = this.getItemEl(e.currentTarget);
 
             this.mapItemToChildren();
@@ -216,6 +233,10 @@ define(function(require) {
          * Show child items
          */
         expandChildItems: function() {
+            if (this.initSubviews) {
+                this.renderSubviews();
+            }
+
             this.options.expanded = true;
             this.setStatusIcon();
         },
@@ -252,7 +273,7 @@ define(function(require) {
         switchUseFallback: function($item) {
             var $useFallback = this.getUseFallbackEl($item);
             if ($useFallback.length === 0) {
-                return ;
+                return;
             }
 
             var checked = $useFallback.get(0).checked;
@@ -272,7 +293,7 @@ define(function(require) {
 
             var editor;
             if ($valueContainer.find('.mce-tinymce').length > 0) {
-                editor = $valueContainer.find('textarea').tinymce();
+                editor = tinyMCE.get($valueContainer.find('textarea').attr('id'));
             }
 
             if (enable) {

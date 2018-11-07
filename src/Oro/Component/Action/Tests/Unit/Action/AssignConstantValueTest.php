@@ -2,13 +2,12 @@
 
 namespace Oro\Component\Action\Tests\Unit\Action;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
-use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\Action\Action\ActionInterface;
 use Oro\Component\Action\Action\AssignConstantValue;
+use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class AssignConstantValueTest extends \PHPUnit_Framework_TestCase
+class AssignConstantValueTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_CONSTANT = 'test_c';
 

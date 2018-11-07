@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityExtendBundle\Migration\Schema;
 
 use Doctrine\DBAL\Types\Type;
-
 use Oro\Bundle\EntityExtendBundle\Migration\ExtendOptionsManager;
 use Oro\Bundle\EntityExtendBundle\Migration\OroOptions;
 use Oro\Bundle\MigrationBundle\Migration\Schema\Column;
@@ -121,6 +120,20 @@ class ExtendColumn extends Column
         }
 
         return parent::setScale($scale);
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * @return ExtendColumn
+     */
+    public function setDefault($default)
+    {
+        if ($this->constructed) {
+            $this->setOptions([OroOptions::KEY => ['extend' => ['default' => $default]]]);
+        }
+
+        return parent::setDefault($default);
     }
 
     /**

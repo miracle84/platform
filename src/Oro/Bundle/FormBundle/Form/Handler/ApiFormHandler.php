@@ -3,21 +3,22 @@
 namespace Oro\Bundle\FormBundle\Form\Handler;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class ApiFormHandler
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var ObjectManager
@@ -25,12 +26,12 @@ class ApiFormHandler
     protected $manager;
 
     /**
-     * @param Request       $request
+     * @param RequestStack  $requestStack
      * @param ObjectManager $manager
      */
-    public function __construct(Request $request, ObjectManager $manager)
+    public function __construct(RequestStack $requestStack, ObjectManager $manager)
     {
-        $this->request = $request;
+        $this->requestStack = $requestStack;
         $this->manager = $manager;
     }
 
@@ -53,8 +54,9 @@ class ApiFormHandler
     {
         $this->form->setData($entity);
 
-        if (in_array($this->request->getMethod(), ['POST', 'PUT'])) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
 
             if ($this->form->isValid()) {
                 $this->onSuccess($entity);

@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Extension;
 
-use Symfony\Component\Form\FormView;
+use Oro\Bundle\FormBundle\Form\Extension\JsValidation\RepeatedTypeExtension;
 use Symfony\Component\Form\FormInterface;
-
+use Symfony\Component\Form\FormView;
 use Symfony\Component\Validator\Constraints;
 
-use Oro\Bundle\FormBundle\Form\Extension\JsValidation\RepeatedTypeExtension;
-
-class RepeatedTypeExtensionTest extends \PHPUnit_Framework_TestCase
+class RepeatedTypeExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var RepeatedTypeExtension

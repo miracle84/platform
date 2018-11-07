@@ -14,7 +14,10 @@ define([
 
         _getWrapperTemplate: function() {
             if (!this.wrapperTemplate) {
-                var wrapperTemplateSrc = $(this.wrapperTemplateSelector).text();
+                var wrapperTemplateSrc = '';
+                if (this.wrapperTemplateSelector) {
+                    wrapperTemplateSrc = $(this.wrapperTemplateSelector).text();
+                }
                 this.wrapperTemplate = _.template(wrapperTemplateSrc);
             }
             return this.wrapperTemplate;
@@ -26,12 +29,17 @@ define([
                 showLabel: this.showLabel,
                 criteriaHint: this._getCriteriaHint(),
                 canDisable: this.canDisable,
-                isEmpty: this.isEmptyValue()
+                isEmpty: this.isEmptyValue(),
+                renderMode: this.renderMode
             }));
 
             this._appendFilter($filter);
 
-            $('body').on('click' + this._eventNamespace(), _.bind(function(e) {
+            var events = ['click', 'show.bs.dropdown'].map(function(eventName) {
+                return eventName + this._eventNamespace();
+            }.bind(this)).join(' ');
+
+            $(document).on(events, _.bind(function(e) {
                 if (this.popupCriteriaShowed) {
                     this._onClickOutsideCriteria(e);
                 }
@@ -55,7 +63,7 @@ define([
             if (this.disposed) {
                 return;
             }
-            $('body').off(this._eventNamespace());
+            $(document).off(this._eventNamespace());
             _.each(_.keys(dataFilterWrapper), function(prop) {
                 delete this[prop];
             }, this);
@@ -74,6 +82,17 @@ define([
 
         _appendFilter: function($filter) {
             this.$(this.criteriaSelector).append($filter);
+        },
+
+        /**
+         * Close criteria dropdown
+         *
+         * @returns {*}
+         */
+        close: function() {
+            this._hideCriteria();
+
+            return this;
         }
     };
 

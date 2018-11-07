@@ -3,22 +3,21 @@
 namespace Oro\Bundle\SyncBundle\Tests\Unit\Content;
 
 use Doctrine\ORM\Query\Expr\From;
-
+use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
 use Oro\Bundle\DataGridBundle\Datagrid\Datagrid;
 use Oro\Bundle\DataGridBundle\Event\BuildAfter;
 use Oro\Bundle\DataGridBundle\Extension\Acceptor;
 use Oro\Bundle\DataGridBundle\Extension\Toolbar\ToolbarExtension;
-use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\SyncBundle\Content\DataGridTagListener;
 use Oro\Bundle\SyncBundle\Content\TagGeneratorChain;
 
-class DataGridTagListenerTest extends \PHPUnit_Framework_TestCase
+class DataGridTagListenerTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_GRID_NAME   = 'gridName';
     const TEST_ENTITY_NAME = 'someEntity';
 
-    /** @var TagGeneratorChain|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TagGeneratorChain|\PHPUnit\Framework\MockObject\MockObject */
     protected $generator;
 
     /** @var DataGridTagListener */

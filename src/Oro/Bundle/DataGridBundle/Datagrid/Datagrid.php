@@ -3,10 +3,11 @@
 namespace Oro\Bundle\DataGridBundle\Datagrid;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-use Oro\Bundle\DataGridBundle\Extension\Acceptor;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\ResultsObject;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
+use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
+use Oro\Bundle\DataGridBundle\Extension\Acceptor;
 
 class Datagrid implements DatagridInterface
 {
@@ -27,6 +28,9 @@ class Datagrid implements DatagridInterface
 
     /** @var Acceptor */
     protected $acceptor;
+
+    /** @var ResultsObject */
+    protected $cachedResult = null;
 
     /**
      * @param string                $name
@@ -82,13 +86,16 @@ class Datagrid implements DatagridInterface
      */
     public function getData()
     {
-        /** @var array $rows */
+        if ($this->cachedResult !== null) {
+            return $this->cachedResult;
+        }
+        /** @var ResultRecordInterface $rows */
         $rows = $this->getAcceptedDatasource()->getResults();
 
-        $result = ResultsObject::create(['data' => $rows]);
-        $this->acceptor->acceptResult($result);
+        $this->cachedResult = ResultsObject::create(['data' => $rows]);
+        $this->acceptor->acceptResult($this->cachedResult);
 
-        return $result;
+        return $this->cachedResult;
     }
 
     /**
@@ -136,9 +143,19 @@ class Datagrid implements DatagridInterface
      */
     public function getAcceptedDatasource()
     {
-        $this->acceptor->acceptDatasource($this->getDatasource());
+        $this->acceptDatasource();
 
         return $this->getDatasource();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function acceptDatasource()
+    {
+        $this->acceptor->acceptDatasource($this->getDatasource());
+
+        return $this;
     }
 
     /**

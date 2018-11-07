@@ -1,17 +1,22 @@
 <?php
-namespace Oro\Bundle\SearchBundle\Tests\Unit\Engine;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
+namespace Oro\Bundle\SearchBundle\Tests\Unit\Engine;
 
 use Oro\Bundle\SearchBundle\Engine\Indexer;
 use Oro\Bundle\SearchBundle\Engine\ObjectMapper;
 use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
 use Oro\Bundle\SearchBundle\Query\Query;
-use Oro\Bundle\SearchBundle\Tests\Unit\Fixture\Entity\Product;
 use Oro\Bundle\SearchBundle\Tests\Unit\Fixture\Entity\Category;
 use Oro\Bundle\SearchBundle\Tests\Unit\Fixture\Entity\Manufacturer;
+use Oro\Bundle\SearchBundle\Tests\Unit\Fixture\Entity\Product;
+use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 
-class ObjectMapperTest extends \PHPUnit_Framework_TestCase
+/**
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
+class ObjectMapperTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_COUNT = 10;
     const TEST_PRICE = 150;
@@ -21,22 +26,28 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
     const ENTITY_CATEGORY     = 'Oro\Bundle\SearchBundle\Tests\Unit\Fixture\Entity\Category';
 
     /** @var ObjectMapper */
-    private $mapper;
+    protected $mapper;
 
     /** @var Manufacturer */
-    private $manufacturer;
+    protected $manufacturer;
 
     /** @var Product */
-    private $product;
+    protected $product;
 
     /** @var Category */
-    private $category;
+    protected $category;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    private $dispatcher;
+    /** @var EventDispatcherInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $dispatcher;
+
+    /** @var SearchMappingProvider|\PHPUnit\Framework\MockObject\MockObject */
+    protected $mapperProvider;
+
+    /** @var HtmlTagHelper|\PHPUnit\Framework\MockObject\MockObject */
+    protected $htmlTagHelper;
 
     /** @var array */
-    private $mappingConfig = [
+    protected $mappingConfig = [
         self::ENTITY_MANUFACTURER => [
             'fields' => [
                 [
@@ -149,19 +160,19 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
     ];
 
     /** @var array */
-    private $categories = ['men', 'women'];
+    protected $categories = ['<p>men</p>', '<p>women</p>'];
 
     protected function setUp()
     {
         $this->manufacturer = new Manufacturer();
-        $this->manufacturer->setName('adidas');
+        $this->manufacturer->setName('<p>adidas</p>');
         $this->product = new Product();
         $this->product
-            ->setName('test product')
+            ->setName('<p>test product</p>')
             ->setCount(self::TEST_COUNT)
             ->setPrice(self::TEST_PRICE)
             ->setManufacturer($this->manufacturer)
-            ->setDescription('description')
+            ->setDescription('<p>description</p>')
             ->setCreateDate(new \DateTime());
         foreach ($this->categories as $categoryName) {
             $category = new Category();
@@ -175,16 +186,40 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
         }
         $this->manufacturer->addProduct($this->product);
 
-        $eventDispatcher = $this->getMockBuilder('Symfony\Component\EventDispatcher\EventDispatcher')
-            ->disableOriginalConstructor()->getMock();
-        $mapperProvider  = new SearchMappingProvider($eventDispatcher);
-        $mapperProvider->setMappingConfig($this->mappingConfig);
+        $this->dispatcher = $this->createMock(EventDispatcherInterface::class);
 
-        $this->dispatcher = $this->createMock('Symfony\Component\EventDispatcher\EventDispatcherInterface');
+        $this->mapperProvider  = new SearchMappingProvider($this->dispatcher);
+        $this->mapperProvider->setMappingConfig($this->mappingConfig);
+
+        $this->htmlTagHelper = $this->createMock(HtmlTagHelper::class);
+        $this->htmlTagHelper->expects($this->any())
+            ->method('stripTags')
+            ->willReturnCallback(
+                function ($value) {
+                    return trim(strip_tags($value));
+                }
+            );
+        $this->htmlTagHelper->expects($this->any())
+            ->method('stripLongWords')
+            ->willReturnCallback(
+                function ($value) {
+                    $words = preg_split('/\s+/', $value);
+
+                    $words = array_filter(
+                        $words,
+                        function ($item) {
+                            return \strlen($item) <= HtmlTagHelper::MAX_STRING_LENGTH;
+                        }
+                    );
+
+                    return implode(' ', $words);
+                }
+            );
 
         $this->mapper = new ObjectMapper($this->dispatcher, $this->mappingConfig);
-        $this->mapper->setMappingProvider($mapperProvider);
+        $this->mapper->setMappingProvider($this->mapperProvider);
         $this->mapper->setPropertyAccessor(PropertyAccess::createPropertyAccessor());
+        $this->mapper->setHtmlTagHelper($this->htmlTagHelper);
     }
 
     /**
@@ -202,13 +237,13 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
         $allTextData        = sprintf('%s %s %s', $productName, $productDescription, $manufacturerName);
 
         $expectedMapping = [
-            'text'    => [
+            'text' => $this->clearTextData([
                 'name'                       => $productName,
                 'description'                => $productDescription,
                 'manufacturer'               => $manufacturerName,
                 'all_data'                   => $allTextData,
                 Indexer::TEXT_ALL_DATA_FIELD => $allTextData,
-            ],
+            ]),
             'decimal' => [
                 'price' => $this->product->getPrice(),
             ],
@@ -216,6 +251,49 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
                 'count' => $this->product->getCount(),
             ]
         ];
+
+        $this->assertEquals($expectedMapping, $this->mapper->mapObject($this->product));
+    }
+
+    public function testAllTextLimitation()
+    {
+        // create a product name exceeding the 256 length limitation
+        $productName        = 'QJfPB2teh0ukQN46FehTdiMRMMGGlaNvQvB4ymJq49zUWidBOhT9IzqNyPhYvchY1234' .
+                              'QJfPB2teh0ukQN46FehTdiMRMMGGlaNvQvB4ymJq49zUWidBOhT9IzqNyPhYvchY1234' .
+                              'QJfPB2teh0ukQN46FehTdiMRMMGGlaNvQvB4ymJq49zUWidBOhT9IzqNyPhYvchY1234' .
+                              'QJfPB2teh0ukQN46FehTdiMRMMGGlaNvQvB4ymJq49zUWidBOhT9IzqNyPhYvchY1234' .
+                              'QJfPB2teh0ukQN46FehTdiMRMMGGlaNvQvB4ymJq49zUWidBOhT9IzqNyPhYvchY1234' .
+                              ' ';
+        $expectedProductName = 'zUWidBOhT9IzqNyPhYvchY QJfPB2teh0ukQ';
+        $productName .= $expectedProductName;
+        $productDescription = 'description';
+        $manufacturerName   = $this->product->getManufacturer()->getName();
+
+        $allData = sprintf('%s %s %s', $productName, $productDescription, $manufacturerName);
+        $allTextData = sprintf('%s %s %s', $expectedProductName, $productDescription, $manufacturerName);
+
+        $expectedMapping = [
+            'text' => $this->clearTextData(
+                [
+                   'name'                       => $productName,
+                   'description'                => $productDescription,
+                   'manufacturer'               => $manufacturerName,
+                   'all_data'                   => $allData,
+                   Indexer::TEXT_ALL_DATA_FIELD => $allTextData
+                ]
+            ),
+            'decimal' => [
+                'price' => $this->product->getPrice(),
+            ],
+            'integer' => [
+                'count' => $this->product->getCount(),
+            ]
+        ];
+
+        $this->product
+            ->setName($productName)
+            ->setDescription($productDescription);
+
         $this->assertEquals($expectedMapping, $this->mapper->mapObject($this->product));
     }
 
@@ -231,12 +309,12 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
         $productName = $this->product->getName();
 
         $expectedMapping = [
-            'text' => [
+            'text' => $this->clearTextData([
                 'products'                   => $productName,
                 'categories'                 => implode(' ', $this->categories),
                 'category'                   => implode(' ', $this->categories),
                 Indexer::TEXT_ALL_DATA_FIELD => $productName . ' ' . implode(' ', $this->categories)
-            ]
+            ])
         ];
         $this->assertEquals($expectedMapping, $this->mapper->mapObject($this->manufacturer));
     }
@@ -254,12 +332,12 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
         $manufacturerName = $this->manufacturer->getName();
 
         $expectedMapping = [
-            'text' => [
+            'text' => $this->clearTextData([
                 'name'                       => $categoryName,
                 'products'                   => $productName,
                 'manufacturers'              => $manufacturerName,
                 Indexer::TEXT_ALL_DATA_FIELD => $categoryName . ' ' . $productName . ' ' . $manufacturerName
-            ]
+            ])
         ];
         $this->assertEquals($expectedMapping, $this->mapper->mapObject($this->category));
     }
@@ -347,6 +425,8 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
             ->willReturn([
                 'text.sku' => 'sku',
                 'text.defaultName' => 'defaultName',
+                'integer.integerField' => 'integerValue',
+                'decimal.decimalField' => 'decimalValue',
                 'notExistingField' => 'notExistingField'
             ]);
 
@@ -356,18 +436,50 @@ class ObjectMapperTest extends \PHPUnit_Framework_TestCase
                 'recordId' => 29
             ],
             'sku' => '2GH80',
-            'defaultName' => 'Example Headlamp'
+            'defaultName' => 'Example Headlamp',
+            'integerField' => '42',
+            'decimalField' => '12.34',
         ];
 
         $result = $this->mapper->mapSelectedData($query, $item);
 
-        $this->assertEquals(
+        $this->assertSame(
             [
                 'sku' => '2GH80',
                 'defaultName' => 'Example Headlamp',
+                'integerValue' => 42,
+                'decimalValue' => 12.34,
                 'notExistingField' => ''
             ],
             $result
         );
+    }
+
+    public function testBuildAllDataField()
+    {
+        $allData = '';
+
+        $allData = $this->mapper->buildAllDataField($allData, 'first second');
+        $this->assertEquals(' first second', $allData);
+
+        $allData = $this->mapper->buildAllDataField($allData, 'second third');
+        $this->assertEquals(' first second third', $allData);
+    }
+
+    /**
+     * @param array $fields
+     * @return array
+     */
+    protected function clearTextData(array $fields)
+    {
+        foreach ($fields as $name => &$value) {
+            if ($name !== Indexer::TEXT_ALL_DATA_FIELD) {
+                continue;
+            }
+
+            $value = str_replace(['<p>', '</p>'], ['', ''], $value);
+        }
+
+        return $fields;
     }
 }

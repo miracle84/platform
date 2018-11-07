@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\DataGridBundle\Extension\Formatter\Property;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class FieldProperty extends AbstractProperty
 {
@@ -30,12 +29,13 @@ class FieldProperty extends AbstractProperty
         if ($type === self::TYPE_SELECT || $type === self::TYPE_MULTI_SELECT) {
             $translator = $this->translator;
 
-            $choices    = $this->getOr('choices', []);
-            $translated = array_map(
-                function ($item) use ($translator) {
-                    return $translator->trans($item);
-                },
-                $choices
+            $choices = $this->getOr('choices', []);
+            $translated = [];
+            array_walk(
+                $choices,
+                function ($item, $key) use ($translator, &$translated) {
+                    $translated[$translator->trans($key)] = $item;
+                }
             );
 
             $this->params['choices'] = $translated;
@@ -52,9 +52,30 @@ class FieldProperty extends AbstractProperty
             if ($this->getOr(self::FRONTEND_TYPE_KEY) === self::TYPE_MULTI_SELECT) {
                 $value = explode(',', $value);
             }
+            $value = $this->applyDivisor($value);
         } catch (\LogicException $e) {
             // default value
             $value = null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Apply configured divisor to a numeric raw value
+     *
+     * @param mixed $value
+     *
+     * @return float
+     */
+    protected function applyDivisor($value)
+    {
+        if (!is_numeric($value)) {
+            return $value;
+        }
+
+        if ($divisor = $this->getOr(self::DIVISOR_KEY)) {
+            $value = $value / $divisor;
         }
 
         return $value;

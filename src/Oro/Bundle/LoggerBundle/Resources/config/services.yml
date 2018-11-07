@@ -1,6 +1,11 @@
 parameters:
     oro_logger.detailed_logs_default_level: error
 services:
+    oro_logger.cache:
+        parent: doctrine_cache.abstract.array
+        calls:
+            - [ setNamespace, [ 'oro_logger' ] ]
+
     oro_logger.event_subscriber.console_command:
         class: Oro\Bundle\LoggerBundle\EventSubscriber\ConsoleCommandSubscriber
         arguments:
@@ -31,3 +36,12 @@ services:
         class: Monolog\Processor\PsrLogMessageProcessor
         tags:
             - { name: monolog.processor }
+
+    oro_logger.consumption_extension.interruption_detail:
+        class: Oro\Bundle\LoggerBundle\Async\Extension\InterruptionDetailConsumptionExtension
+        public: false
+        arguments:
+            - '@service_container'
+            - '@oro_message_queue.log.message_processor_class_provider'
+        tags:
+            - { name: oro_message_queue.consumption.extension, persistent: true }

@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout\Extension\Generator;
 
+use Oro\Bundle\LayoutBundle\Layout\Extension\Generator\ExpressionGeneratorExtension;
+use Oro\Component\Layout\Loader\Generator\GeneratorData;
+use Oro\Component\Layout\Loader\Visitor\VisitorCollection;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\ExpressionLanguage\ParsedExpression;
 
-use Oro\Component\Layout\Loader\Generator\GeneratorData;
-use Oro\Component\Layout\Loader\Visitor\VisitorCollection;
-use Oro\Bundle\LayoutBundle\Layout\Extension\Generator\ExpressionGeneratorExtension;
-
-class ExpressionGeneratorExtensionTest extends \PHPUnit_Framework_TestCase
+class ExpressionGeneratorExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ExpressionLanguage|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ExpressionLanguage|\PHPUnit\Framework\MockObject\MockObject */
     protected $expressionLanguage;
 
     /** @var ExpressionGeneratorExtension */

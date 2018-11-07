@@ -2,17 +2,19 @@
 
 namespace Oro\Bundle\InstallerBundle\Composer;
 
+use Composer\Script\Event;
 use Sensio\Bundle\DistributionBundle\Composer\ScriptHandler as SensioScriptHandler;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Parser;
 use Symfony\Component\Yaml\Yaml;
 
-use Composer\Script\Event;
-
+/**
+ * Installs the assets for installer bundle, bower and npm dependencies
+ */
 class ScriptHandler extends SensioScriptHandler
 {
     /**
-     * Installs the assets for installer bundle
+     * Installs the assets for installer bundle, bower and npm dependencies
      *
      * @param Event $event A instance
      */
@@ -20,13 +22,27 @@ class ScriptHandler extends SensioScriptHandler
     {
         $options = self::getOptions($event);
         $webDir  = $options['symfony-web-dir'];
+        $vendorDir = $event->getComposer()->getConfig()->get('vendor-dir');
 
-        $sourceDir = __DIR__ . '/../Resources/public';
-        $targetDir = $webDir . '/bundles/oroinstaller';
+        $config = [
+            [
+                'from' => $vendorDir.'/bower-asset',
+                'to' => $webDir.'/bundles/bowerassets',
+            ],
+            [
+                'from' => $vendorDir.'/npm-asset',
+                'to' => $webDir.'/bundles/npmassets',
+            ],
+        ];
 
         $filesystem = new Filesystem();
-        $filesystem->remove($targetDir);
-        $filesystem->mirror($sourceDir, $targetDir);
+
+        foreach ($config as $item) {
+            if ($filesystem->exists($item['from'])) {
+                $filesystem->remove($item['to']);
+                $filesystem->mirror($item['from'], $item['to']);
+            }
+        }
     }
 
     /**
@@ -44,9 +60,9 @@ class ScriptHandler extends SensioScriptHandler
         $parametersFile = self::getParametersFile($options);
 
         $directories = [
-            'app/cache',
-            'app/logs',
-            'app/attachment',
+            'var/cache',
+            'var/logs',
+            'var/attachment',
             $webDir,
             $parametersFile
         ];
@@ -54,6 +70,9 @@ class ScriptHandler extends SensioScriptHandler
         $permissionHandler = new PermissionsHandler();
         foreach ($directories as $directory) {
             $permissionHandler->setPermissions($directory);
+        }
+        if (file_exists($importExportDir = 'var/import_export')) {
+            $permissionHandler->setPermissions($importExportDir);
         }
     }
 
@@ -119,7 +138,7 @@ class ScriptHandler extends SensioScriptHandler
     {
         return isset($options['incenteev-parameters']['file'])
             ? $options['incenteev-parameters']['file']
-            : 'app/config/parameters.yml';
+            : 'config/parameters.yml';
     }
 
     /**
@@ -132,23 +151,5 @@ class ScriptHandler extends SensioScriptHandler
         return isset($options['incenteev-parameters']['parameter-key'])
             ? $options['incenteev-parameters']['parameter-key']
             : 'parameters';
-    }
-
-    public static function checkComposerPlugin(Event $event)
-    {
-        $pluginInstalled = array_filter(
-            $event->getComposer()->getPluginManager()->getPlugins(),
-            function ($plugin) {
-                return false !== strpos(get_class($plugin), 'Fxp\Composer\AssetPlugin\FxpAssetPlugin');
-            }
-        );
-
-        if (!$pluginInstalled) {
-            throw new \RuntimeException(
-                'NPM/Bower Dependency Manager for Composer is not installed. Please run from CLI:'.PHP_EOL.
-                '> composer global require fxp/composer-asset-plugin:1.2.2'.PHP_EOL.
-                'See https://github.com/fxpio/composer-asset-plugin for details and usage.'.PHP_EOL
-            );
-        }
     }
 }

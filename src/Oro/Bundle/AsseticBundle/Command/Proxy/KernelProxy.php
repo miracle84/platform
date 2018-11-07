@@ -89,14 +89,6 @@ class KernelProxy implements KernelInterface
     /**
      * {@inheritdoc}
      */
-    public function isClassInActiveBundle($class)
-    {
-        return $this->kernel->isClassInActiveBundle($class);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getBundle($name, $first = true)
     {
         if (!empty($this->excludeBundleNames) && in_array($name, $this->excludeBundleNames)) {

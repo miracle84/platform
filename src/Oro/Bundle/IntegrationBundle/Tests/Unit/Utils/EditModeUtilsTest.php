@@ -4,15 +4,14 @@ namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Utils;
 
 use Oro\Bundle\IntegrationBundle\Entity\Channel;
 use Oro\Bundle\IntegrationBundle\Entity\Status;
-use Oro\Bundle\IntegrationBundle\Utils\EditModeUtils;
-use Oro\Bundle\IntegrationBundle\Utils\FormUtils;
 use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
-
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestConnector;
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestIntegrationType;
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestTwoWayConnector;
+use Oro\Bundle\IntegrationBundle\Utils\EditModeUtils;
+use Oro\Bundle\IntegrationBundle\Utils\FormUtils;
 
-class EditModeUtilsTest extends \PHPUnit_Framework_TestCase
+class EditModeUtilsTest extends \PHPUnit\Framework\TestCase
 {
     public function provideDataForIsEditAllowedTest()
     {
@@ -33,7 +32,7 @@ class EditModeUtilsTest extends \PHPUnit_Framework_TestCase
         ];
     }
 
-    public function testIsSwitchEnableAllowedDataProvider()
+    public function isSwitchEnableAllowedDataProvider()
     {
         return [
             [Channel::EDIT_MODE_ALLOW, true],
@@ -64,7 +63,7 @@ class EditModeUtilsTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider testIsSwitchEnableAllowedDataProvider
+     * @dataProvider isSwitchEnableAllowedDataProvider
      */
     public function testIsSwitchEnableAllowed($mode, $expected)
     {

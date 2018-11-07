@@ -2,13 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Metadata;
 
+use Oro\Bundle\ApiBundle\Exception\RuntimeException;
+use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 use Oro\Component\ChainProcessor\ParameterBag;
 use Oro\Component\ChainProcessor\ToArrayInterface;
 use Oro\Component\PhpUtils\ReflectionUtil;
-use Oro\Bundle\ApiBundle\Exception\RuntimeException;
-use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
 /**
+ * The metadata for an entity.
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class EntityMetadata implements ToArrayInterface
@@ -199,7 +201,7 @@ class EntityMetadata implements ToArrayInterface
     }
 
     /**
-     * Checks whether metadata of the given field or association exists.
+     * Checks whether metadata of the given field, association or meta property exists.
      *
      * @param string $propertyName
      *
@@ -211,6 +213,28 @@ class EntityMetadata implements ToArrayInterface
             $this->hasField($propertyName)
             || $this->hasAssociation($propertyName)
             || $this->hasMetaProperty($propertyName);
+    }
+
+    /**
+     * Gets a property metadata by its name.
+     *
+     * @param string $propertyName
+     *
+     * @return PropertyMetadata|null
+     */
+    public function getProperty($propertyName)
+    {
+        if (isset($this->fields[$propertyName])) {
+            return $this->fields[$propertyName];
+        }
+        if (isset($this->associations[$propertyName])) {
+            return $this->associations[$propertyName];
+        }
+        if (isset($this->metaProperties[$propertyName])) {
+            return $this->metaProperties[$propertyName];
+        }
+
+        return null;
     }
 
     /**
@@ -572,6 +596,16 @@ class EntityMetadata implements ToArrayInterface
     }
 
     /**
+     * Checks whether the metadata has at least one identifier field.
+     *
+     * @return bool
+     */
+    public function hasIdentifierFields()
+    {
+        return !empty($this->identifiers);
+    }
+
+    /**
      * Checks whether the metadata contains only identifier fields(s).
      *
      * @return bool
@@ -636,13 +670,23 @@ class EntityMetadata implements ToArrayInterface
     /**
      * @param object           $entity
      * @param \ReflectionClass $reflClass
-     * @param string           $propertyName
+     * @param string           $fieldName
      *
      * @return mixed
      */
-    private function getPropertyValue($entity, \ReflectionClass $reflClass, $propertyName)
+    private function getPropertyValue($entity, \ReflectionClass $reflClass, $fieldName)
     {
+        $propertyName = $fieldName;
+        $property = $this->getProperty($fieldName);
+        if (null !== $property) {
+            $propertyName = $property->getPropertyPath();
+        }
         $property = ReflectionUtil::getProperty($reflClass, $propertyName);
+        if (null === $property) {
+            throw new RuntimeException(
+                sprintf('The class "%s" does not have property "%s".', $reflClass->name, $propertyName)
+            );
+        }
         if (!$property->isPublic()) {
             $property->setAccessible(true);
         }

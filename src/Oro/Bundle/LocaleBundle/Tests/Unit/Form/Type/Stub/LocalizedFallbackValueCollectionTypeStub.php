@@ -2,17 +2,18 @@
 
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Form\Type\Stub;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\OptionsResolver\OptionsResolver;
-
 use Oro\Bundle\LocaleBundle\Form\Type\LocalizedFallbackValueCollectionType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class LocalizedFallbackValueCollectionTypeStub extends AbstractType
 {
     /**
      * {@inheritdoc}
      */
-    public function getName()
+    public function getBlockPrefix()
     {
         return LocalizedFallbackValueCollectionType::NAME;
     }
@@ -24,17 +25,17 @@ class LocalizedFallbackValueCollectionTypeStub extends AbstractType
     {
         $resolver->setDefaults([
             'field' => 'string',
-            'type' => 'text',
-            'options' => [],
+            'entry_type' => TextType::class,
+            'entry_options' => [],
             'allow_add' => true,
             'allow_delete' => true,
         ]);
 
-        $resolver->setNormalizer('type', function () {
-            return new LocalizedFallbackValueTypeStub();
+        $resolver->setNormalizer('entry_type', function () {
+            return LocalizedFallbackValueTypeStub::class;
         });
 
-        $resolver->setNormalizer('options', function () {
+        $resolver->setNormalizer('entry_options', function () {
             return [];
         });
     }
@@ -44,6 +45,6 @@ class LocalizedFallbackValueCollectionTypeStub extends AbstractType
      */
     public function getParent()
     {
-        return 'collection';
+        return CollectionType::class;
     }
 }

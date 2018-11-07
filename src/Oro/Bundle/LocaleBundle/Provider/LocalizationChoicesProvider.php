@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\LocaleBundle\Provider;
 
-use Symfony\Component\Intl\Intl;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\LocaleBundle\Entity\Localization;
-use Oro\Bundle\LocaleBundle\Formatter\FormattingCodeFormatter;
 use Oro\Bundle\LocaleBundle\Formatter\LanguageCodeFormatter;
 use Oro\Bundle\LocaleBundle\Manager\LocalizationManager;
+use Oro\Bundle\TranslationBundle\Provider\LanguageProvider;
+use Symfony\Component\Intl\Intl;
 
 class LocalizationChoicesProvider
 {
@@ -18,8 +17,8 @@ class LocalizationChoicesProvider
     /** @var LanguageCodeFormatter */
     protected $languageFormatter;
 
-    /** @var FormattingCodeFormatter */
-    protected $formattingFormatter;
+    /** @var LanguageProvider */
+    protected $languageProvider;
 
     /** @var LocalizationManager */
     protected $localizationManager;
@@ -27,27 +26,35 @@ class LocalizationChoicesProvider
     /**
      * @param ConfigManager $configManager
      * @param LanguageCodeFormatter $languageFormatter
-     * @param FormattingCodeFormatter $formattingFormatter
+     * @param LanguageProvider $languageProvider
      * @param LocalizationManager $localizationManager
      */
     public function __construct(
         ConfigManager $configManager,
         LanguageCodeFormatter $languageFormatter,
-        FormattingCodeFormatter $formattingFormatter,
+        LanguageProvider $languageProvider,
         LocalizationManager $localizationManager
     ) {
         $this->configManager = $configManager;
         $this->languageFormatter = $languageFormatter;
-        $this->formattingFormatter = $formattingFormatter;
+        $this->languageProvider = $languageProvider;
         $this->localizationManager = $localizationManager;
     }
 
     /**
+     * @param bool $onlyEnabled
+     *
      * @return array
      */
-    public function getLanguageChoices()
+    public function getLanguageChoices($onlyEnabled = false)
     {
-        return Intl::getLanguageBundle()->getLanguageNames($this->getSystemLanguage());
+        $result = [];
+
+        foreach ($this->languageProvider->getLanguages($onlyEnabled) as $language) {
+            $result[$this->languageFormatter->formatLocale($language->getCode())] = $language->getId();
+        }
+
+        return $result;
     }
 
     /**
@@ -55,7 +62,7 @@ class LocalizationChoicesProvider
      */
     public function getFormattingChoices()
     {
-        return Intl::getLocaleBundle()->getLocaleNames($this->getSystemLanguage());
+        return array_flip(Intl::getLocaleBundle()->getLocaleNames($this->getSystemLanguage()));
     }
 
     /**
@@ -68,7 +75,7 @@ class LocalizationChoicesProvider
         $data = [];
 
         foreach ($choices as $choice) {
-            $data[$choice->getId()] = $choice->getName();
+            $data[$choice->getName()] = $choice->getId();
         }
 
         return $data;

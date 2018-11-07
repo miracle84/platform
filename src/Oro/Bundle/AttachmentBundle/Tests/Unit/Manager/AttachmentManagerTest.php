@@ -5,20 +5,25 @@ namespace Oro\Bundle\AttachmentBundle\Tests\Unit\Manager;
 use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
 use Oro\Bundle\AttachmentBundle\Tests\Unit\Fixtures\TestAttachment;
 use Oro\Bundle\AttachmentBundle\Tests\Unit\Fixtures\TestClass;
+use Oro\Bundle\EntityExtendBundle\Entity\Manager\AssociationManager;
+use Symfony\Component\Routing\RouterInterface;
 
-class AttachmentManagerTest extends \PHPUnit_Framework_TestCase
+class AttachmentManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AttachmentManager  */
     protected $attachmentManager;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject|RouterInterface */
     protected $router;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject|AssociationManager */
     protected $associationManager;
 
     /** @var TestAttachment */
     protected $attachment;
+
+    /** @var array */
+    protected $fileIcons;
 
     public function setUp()
     {
@@ -26,7 +31,7 @@ class AttachmentManagerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $fileIcons = [
+        $this->fileIcons = [
             'default' => 'icon_default',
             'txt' => 'icon_txt'
         ];
@@ -42,8 +47,10 @@ class AttachmentManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->attachmentManager = new AttachmentManager(
             $this->router,
-            $fileIcons,
-            $this->associationManager
+            $this->fileIcons,
+            $this->associationManager,
+            true,
+            true
         );
     }
 
@@ -60,12 +67,12 @@ class AttachmentManagerTest extends \PHPUnit_Framework_TestCase
         $this->router->expects($this->once())
             ->method('generate')
             ->with(
-                'oro_attachment_file',
+                AttachmentManager::ATTACHMENT_FILE_ROUTE,
                 [
                     'codedString' => $expectsString,
                     'extension' => 'txt'
                 ],
-                true
+                RouterInterface::ABSOLUTE_URL
             );
         $this->attachmentManager->getFileUrl($parentEntity, $fieldName, $this->attachment, 'download', true);
     }

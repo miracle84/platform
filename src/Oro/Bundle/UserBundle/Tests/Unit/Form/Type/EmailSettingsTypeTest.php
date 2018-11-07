@@ -1,19 +1,22 @@
 <?php
 namespace Oro\Bundle\UserBundle\Tests\Unit\Type;
 
+use Oro\Bundle\ImapBundle\Form\Type\ChoiceAccountType;
+use Oro\Bundle\ImapBundle\Form\Type\ConfigurationType;
 use Oro\Bundle\UserBundle\Form\Type\EmailSettingsType;
+use Symfony\Component\Validator\Constraints\Valid;
 
-class EmailSettingsTypeTest extends \PHPUnit_Framework_TestCase
+class EmailSettingsTypeTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EmailSettingsType
      */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $userConfigManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $subscriber;
 
     /**
@@ -42,7 +45,7 @@ class EmailSettingsTypeTest extends \PHPUnit_Framework_TestCase
                 
                 return true;
             }));
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
     }
 
     public function testBuildFormImapAccount()
@@ -56,8 +59,11 @@ class EmailSettingsTypeTest extends \PHPUnit_Framework_TestCase
         $builder->expects($this->once())->method('addEventSubscriber')->with($this->subscriber);
         $builder->expects($this->once())->method('add')->with(
             'imapAccountType',
-            'oro_imap_choice_account_type',
-            ['label' => false]
+            ChoiceAccountType::class,
+            [
+                'label' => false,
+                'constraints' => [new Valid()],
+            ]
         );
         
         $this->type->buildForm($builder, []);
@@ -73,15 +79,13 @@ class EmailSettingsTypeTest extends \PHPUnit_Framework_TestCase
             ->getMock();
         $builder->expects($this->once())->method('add')->with(
             'imapConfiguration',
-            'oro_imap_configuration',
-            ['label' => false]
+            ConfigurationType::class,
+            [
+                'label' => false,
+                'constraints' => [new Valid()],
+            ]
         );
         
         $this->type->buildForm($builder, []);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_user_emailsettings', $this->type->getName());
     }
 }

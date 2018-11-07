@@ -7,8 +7,9 @@ use Oro\Bundle\QueryDesignerBundle\Model\GroupNode;
 use Oro\Bundle\QueryDesignerBundle\Model\Restriction;
 use Oro\Bundle\QueryDesignerBundle\Validator\Constraints\GroupNodeConstraint;
 use Oro\Bundle\QueryDesignerBundle\Validator\GroupNodeValidator;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class GroupNodeValidatorTest extends \PHPUnit_Framework_TestCase
+class GroupNodeValidatorTest extends \PHPUnit\Framework\TestCase
 {
     protected $executionContext;
     protected $validator;
@@ -17,7 +18,7 @@ class GroupNodeValidatorTest extends \PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->executionContext = $this->createMock('\Symfony\Component\Validator\ExecutionContextInterface');
+        $this->executionContext = $this->createMock(ExecutionContextInterface::class);
 
         $this->validator = new GroupNodeValidator();
         $this->validator->initialize($this->executionContext);

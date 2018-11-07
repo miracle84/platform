@@ -1,3 +1,6 @@
+@regression
+@ticket-BAP-11237
+@automatically-ticket-tagged
 Feature: Pin page
   In order to have fast access to some pages in system
   As crm user
@@ -32,8 +35,8 @@ Feature: Pin page
     Then I should be on User Index page
     And there is one record in grid
     And I should see Charlie Sheen in grid with following data:
-      | Email    | charlie@sheen.com |
-      | Username | charlie           |
+      | Primary Email | charlie@sheen.com |
+      | Username      | charlie           |
     And I unpin page
     And Users link must not be in pin holder
 
@@ -56,7 +59,7 @@ Feature: Pin page
   Scenario: Pin filled form
     Given go to Dashboards/Dashboard
     And go to System/User Management/Users
-    And press "Create User"
+    And click "Create User"
     When I fill "User Form" with:
       | Username          | userName       |
       | Enabled           | Enabled        |

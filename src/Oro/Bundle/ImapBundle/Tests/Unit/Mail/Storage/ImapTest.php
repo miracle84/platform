@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\ImapBundle\Tests\Unit\Mail\Storage;
 
+use Oro\Bundle\ImapBundle\Mail\Storage\Imap;
 use Zend\Mail\Storage\Exception\InvalidArgumentException;
 
-use Oro\Bundle\ImapBundle\Mail\Storage\Imap;
-
-class ImapTest extends \PHPUnit_Framework_TestCase
+class ImapTest extends \PHPUnit\Framework\TestCase
 {
     public function testCacheForGetNumberByUniqueId()
     {

@@ -2,23 +2,16 @@
 
 namespace Oro\Bundle\NotificationBundle\Form\Type;
 
-use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\UserBundle\Form\Type\OrganizationUserAclMultiSelectType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class RecipientListType extends AbstractType
 {
-    /**
-     * @var EntityManager
-     */
-    protected $entityManager;
-
-    public function __construct(EntityManager $entityManager)
-    {
-        $this->entityManager = $entityManager;
-    }
+    const NAME = 'oro_notification_recipient_list';
 
     /**
      * {@inheritdoc}
@@ -27,7 +20,7 @@ class RecipientListType extends AbstractType
     {
         $builder->add(
             'users',
-            'oro_user_organization_acl_multiselect',
+            OrganizationUserAclMultiSelectType::class,
             [
                 'required' => false,
                 'label'    => 'oro.user.entity_plural_label'
@@ -37,14 +30,14 @@ class RecipientListType extends AbstractType
         // groups
         $builder->add(
             'groups',
-            'entity',
+            EntityType::class,
             [
                 'label'       => 'oro.user.group.entity_plural_label',
                 'class'       => 'OroUserBundle:Group',
-                'property'      => 'name',
+                'choice_label'      => 'name',
                 'multiple'      => true,
                 'expanded'      => true,
-                'empty_value'   => '',
+                'placeholder'   => '',
                 'empty_data'    => null,
                 'required'      => false,
             ]
@@ -53,30 +46,21 @@ class RecipientListType extends AbstractType
         // custom email
         $builder->add(
             'email',
-            'email',
+            EmailType::class,
             ['label' => 'oro.notification.emailnotification.email.label', 'required' => false]
-        );
-
-        // owner
-        $builder->add(
-            'owner',
-            'checkbox',
-            ['label' => 'oro.notification.emailnotification.owner.label', 'required' => false]
         );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
-            array(
-                'data_class'           => 'Oro\Bundle\NotificationBundle\Entity\RecipientList',
-                'intention'            => 'recipientlist',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
-                'cascade_validation'   => true,
-            )
+            [
+                'data_class' => 'Oro\Bundle\NotificationBundle\Entity\RecipientList',
+                'csrf_token_id' => 'recipientlist',
+            ]
         );
     }
 
@@ -93,6 +77,6 @@ class RecipientListType extends AbstractType
      */
     public function getBlockPrefix()
     {
-        return 'oro_notification_recipient_list';
+        return self::NAME;
     }
 }

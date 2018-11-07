@@ -5,27 +5,27 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Sync;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailBody;
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
+use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Exception\EmailBodyNotFoundException;
 use Oro\Bundle\EmailBundle\Sync\EmailBodySynchronizer;
 use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestEmailOrigin;
 use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
-use Oro\Bundle\EmailBundle\Entity\EmailUser;
 
-class EmailBodySynchronizerTest extends \PHPUnit_Framework_TestCase
+class EmailBodySynchronizerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $logger;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $selector;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrine;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $dispatcher;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
     /** @var EmailBodySynchronizer */
@@ -150,7 +150,7 @@ class EmailBodySynchronizerTest extends \PHPUnit_Framework_TestCase
             ->method('flush');
 
         $this->logger->expects($this->once())
-            ->method('notice');
+            ->method('info');
 
         $this->synchronizer->syncOneEmailBody($email);
 

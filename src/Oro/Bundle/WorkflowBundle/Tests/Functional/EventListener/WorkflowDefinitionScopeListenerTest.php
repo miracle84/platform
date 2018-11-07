@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Functional\EventListener;
 
 use Doctrine\Common\Collections\Collection;
-
 use Oro\Bundle\ScopeBundle\Entity\Scope;
 use Oro\Bundle\TestFrameworkBundle\Entity\TestActivity;
 use Oro\Bundle\TestFrameworkBundle\Tests\Functional\TestActivityScopeProvider;
@@ -12,9 +11,6 @@ use Oro\Bundle\WorkflowBundle\Event\WorkflowEvents;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadTestActivitiesForScopes;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\WorkflowTestCase;
 
-/**
- * @dbIsolation
- */
 class WorkflowDefinitionScopeListenerTest extends WorkflowTestCase
 {
     const WITH_SCOPES_CONFIG_DIR = '/Tests/Functional/DataFixtures/WithScopes';

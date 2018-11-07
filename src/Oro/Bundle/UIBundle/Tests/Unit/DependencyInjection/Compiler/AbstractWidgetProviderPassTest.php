@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\UIBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\UIBundle\DependencyInjection\Compiler\AbstractWidgetProviderPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\UIBundle\DependencyInjection\Compiler\AbstractWidgetProviderPass;
-
-class AbstractWidgetProviderPassTest extends \PHPUnit_Framework_TestCase
+class AbstractWidgetProviderPassTest extends \PHPUnit\Framework\TestCase
 {
     const SERVICE_ID = 'test_service';
     const TAG_NAME   = 'test_tag';

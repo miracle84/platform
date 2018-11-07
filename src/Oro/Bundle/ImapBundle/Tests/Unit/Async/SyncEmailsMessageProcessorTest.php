@@ -1,16 +1,15 @@
 <?php
 namespace Oro\Bundle\ImapBundle\Tests\Unit\Async;
 
-use Oro\Component\MessageQueue\Client\MessageProducerInterface;
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\ImapBundle\Async\SyncEmailsMessageProcessor;
 use Oro\Bundle\ImapBundle\Async\Topics;
+use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
+use Psr\Log\LoggerInterface;
 
-class SyncEmailsMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class SyncEmailsMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -26,7 +25,7 @@ class SyncEmailsMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('Got invalid message. "{"key":"value"}"')
+            ->with('Got invalid message')
         ;
 
         $message = new NullMessage();
@@ -78,7 +77,7 @@ class SyncEmailsMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -86,7 +85,7 @@ class SyncEmailsMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {
@@ -94,7 +93,7 @@ class SyncEmailsMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|MessageProducerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|MessageProducerInterface
      */
     private function createMessageProducerMock()
     {

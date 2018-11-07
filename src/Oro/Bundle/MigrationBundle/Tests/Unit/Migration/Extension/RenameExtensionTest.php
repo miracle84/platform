@@ -12,13 +12,12 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Sequence;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
-
 use Oro\Bundle\MigrationBundle\Migration\Extension\RenameExtension;
 use Oro\Bundle\MigrationBundle\Migration\MigrationQuery;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 use Oro\Bundle\MigrationBundle\Tools\DbIdentifierNameGenerator;
 
-class RenameExtensionTest extends \PHPUnit_Framework_TestCase
+class RenameExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider renameTableProvider

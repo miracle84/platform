@@ -2,12 +2,11 @@
 
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
+use Oro\Component\ConfigExpression\Condition;
+use Oro\Component\ConfigExpression\ContextAccessor;
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-use Oro\Component\ConfigExpression\ContextAccessor;
-use Oro\Component\ConfigExpression\Condition;
-
-class GreaterThanOrEqualTest extends \PHPUnit_Framework_TestCase
+class GreaterThanOrEqualTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Condition\GreaterThanOrEqual */
     protected $condition;

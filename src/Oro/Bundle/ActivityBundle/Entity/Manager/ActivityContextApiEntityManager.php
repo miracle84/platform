@@ -4,10 +4,6 @@ namespace Oro\Bundle\ActivityBundle\Entity\Manager;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Util\ClassUtils;
-
-use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
 use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
 use Oro\Bundle\ActivityBundle\Manager\ActivityManager;
 use Oro\Bundle\ActivityBundle\Model\ActivityInterface;
@@ -16,15 +12,14 @@ use Oro\Bundle\EntityBundle\ORM\EntityAliasResolver;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\SoapBundle\Entity\Manager\ApiEntityManager;
+use Symfony\Component\Routing\RouterInterface;
 
 class ActivityContextApiEntityManager extends ApiEntityManager
 {
     /** @var ActivityManager */
     protected $activityManager;
-
-    /** @var TokenStorageInterface */
-    protected $securityTokenStorage;
 
     /** @var ConfigManager */
     protected $configManager;
@@ -41,35 +36,38 @@ class ActivityContextApiEntityManager extends ApiEntityManager
     /** @var DoctrineHelper */
     protected $doctrineHelper;
 
+    /** @var FeatureChecker */
+    protected $featureChecker;
+
     /**
      * @param ObjectManager                 $om
      * @param ActivityManager               $activityManager
-     * @param TokenStorageInterface         $securityTokenStorage
      * @param ConfigManager                 $configManager
      * @param RouterInterface               $router
      * @param EntityAliasResolver           $entityAliasResolver
      * @param EntityNameResolver            $entityNameResolver
      * @param DoctrineHelper                $doctrineHelper
+     * @param FeatureChecker                $featureChecker
      */
     public function __construct(
         ObjectManager $om,
         ActivityManager $activityManager,
-        TokenStorageInterface $securityTokenStorage,
         ConfigManager $configManager,
         RouterInterface $router,
         EntityAliasResolver $entityAliasResolver,
         EntityNameResolver $entityNameResolver,
-        DoctrineHelper $doctrineHelper
+        DoctrineHelper $doctrineHelper,
+        FeatureChecker $featureChecker
     ) {
         parent::__construct(null, $om);
 
         $this->activityManager      = $activityManager;
-        $this->securityTokenStorage = $securityTokenStorage;
         $this->configManager        = $configManager;
         $this->router               = $router;
         $this->entityAliasResolver  = $entityAliasResolver;
         $this->entityNameResolver   = $entityNameResolver;
         $this->doctrineHelper       = $doctrineHelper;
+        $this->featureChecker       = $featureChecker;
     }
 
     /**
@@ -82,8 +80,6 @@ class ActivityContextApiEntityManager extends ApiEntityManager
      */
     public function getActivityContext($class, $id)
     {
-        $currentUser = $this->securityTokenStorage->getToken()->getUser();
-        $userClass   = ClassUtils::getClass($currentUser);
         $entity      = $this->doctrineHelper->getEntity($class, $id);
         $result = [];
 
@@ -98,7 +94,7 @@ class ActivityContextApiEntityManager extends ApiEntityManager
             $targetClass = ClassUtils::getClass($target);
             $targetId = $target->getId();
 
-            if ($userClass === $targetClass && $currentUser->getId() === $targetId) {
+            if (!$this->featureChecker->isResourceEnabled($targetClass, 'entities')) {
                 continue;
             }
 

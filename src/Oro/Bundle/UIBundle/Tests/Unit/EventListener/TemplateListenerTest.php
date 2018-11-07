@@ -2,20 +2,19 @@
 
 namespace Oro\Bundle\UIBundle\Tests\Unit\EventListener;
 
+use Oro\Bundle\UIBundle\EventListener\TemplateListener;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-use Oro\Bundle\UIBundle\EventListener\TemplateListener;
-
-class TemplateListenerTest extends \PHPUnit_Framework_TestCase
+class TemplateListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $event;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $container;
 
@@ -150,7 +149,7 @@ class TemplateListenerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param string $templateLogicalName
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getTemplateReference($templateLogicalName)
     {

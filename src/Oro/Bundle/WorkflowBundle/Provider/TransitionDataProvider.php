@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Provider;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Model\Transition;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
@@ -36,7 +35,8 @@ class TransitionDataProvider
         $transitionsData = [];
 
         $transitions = $workflow->getTransitionManager()->getStartTransitions();
-        /** @var Transition $transition */
+        $workflowItem = $workflow->createWorkflowItem($entity);
+
         foreach ($transitions as $transition) {
             if (!$transition->isHidden()) {
                 $transitionData = $this->getStartTransitionData($workflow, $transition, $entity);
@@ -56,7 +56,7 @@ class TransitionDataProvider
                 } elseif ($showDisabled) {
                     $transitionsData[$defaultStartTransition->getName()] = [
                         'workflow' => $workflow,
-                        'transition' => $transition,
+                        'transition' => $defaultStartTransition,
                         'isAllowed' => false,
                         'errors' => new ArrayCollection()
                     ];

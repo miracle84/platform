@@ -1,6 +1,6 @@
 services:
   oro_behat_extension.isolation.test_isolation_subscriber:
-    class: 'Oro\Bundle\TestFrameworkBundle\Behat\Isolation\TestIsolationSubscriber'
+    class: 'Oro\Bundle\TestFrameworkBundle\Behat\Isolation\EventListener\TestIsolationSubscriber'
     arguments:
       - ~
     tags:
@@ -65,18 +65,23 @@ services:
   oro_behat_extension.isolation.inital_massage_queue_isolator:
     class: 'Oro\Bundle\TestFrameworkBundle\Behat\Isolation\InitalMessageQueueIsolator'
     arguments:
-      - ~
       - '@symfony2_extension.kernel'
     tags:
       - { name: 'oro_behat.isolator', priority: 50 }
+      - { name: 'message_queue_isolator_aware' }
 
   oro_behat_extension.isolation.doctrine_isolator:
     class: 'Oro\Bundle\TestFrameworkBundle\Behat\Isolation\DoctrineIsolator'
     arguments:
       - '@symfony2_extension.kernel'
       - '@oro_test.context.fixture_loader'
-      - '@oro_test.reference_repository_initializer'
       - '@oro_test.alice_loader'
     tags:
       - { name: 'oro_behat.isolator', priority: 300 }
-      - { name: 'suite_aware' }
+
+  oro_behat_extension.isolation.import_export:
+    class: 'Oro\Bundle\TestFrameworkBundle\Behat\Isolation\ImportExportIsolator'
+    arguments:
+      - '@symfony2_extension.kernel'
+    tags:
+      - { name: 'oro_behat.isolator', priority: 100 }

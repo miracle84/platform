@@ -3,19 +3,19 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Metadata;
 
 use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
+use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 use Oro\Bundle\SecurityBundle\Metadata\AclAnnotationProvider;
 use Oro\Bundle\SecurityBundle\Metadata\AclAnnotationStorage;
-use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 
-class AclAnnotationProviderTest extends \PHPUnit_Framework_TestCase
+class AclAnnotationProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entityClassResolver;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $cache;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $loader;
 
     /** @var AclAnnotationProvider */

@@ -9,16 +9,16 @@ use Oro\Component\ChainProcessor\ProcessorFactoryInterface;
 use Oro\Component\ChainProcessor\ProcessorIterator;
 use Oro\Component\ChainProcessor\SkipGroupApplicableChecker;
 
-class SkipGroupApplicableCheckerTest extends \PHPUnit_Framework_TestCase
+class SkipGroupApplicableCheckerTest extends \PHPUnit\Framework\TestCase
 {
     public function testSkipGroupApplicableChecker()
     {
         $context = new Context();
         $processors = [
-            ['processor' => 'processor1', 'attributes' => ['group' => 'group1']],
-            ['processor' => 'processor2', 'attributes' => ['group' => 'group2']],
-            ['processor' => 'processor3', 'attributes' => ['group' => 'group2']],
-            ['processor' => 'processor4', 'attributes' => ['group' => 'group3']]
+            ['processor1', ['group' => 'group1']],
+            ['processor2', ['group' => 'group2']],
+            ['processor3', ['group' => 'group2']],
+            ['processor4', ['group' => 'group3']]
         ];
 
         $iterator = new ProcessorIterator(

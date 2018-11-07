@@ -3,21 +3,19 @@
 namespace Oro\Bundle\PlatformBundle\Tests\Unit\Form;
 
 use Composer\Package\Package;
-
 use Doctrine\Common\Cache\CacheProvider;
-
 use Oro\Bundle\PlatformBundle\Form\UrlGenerator;
 use Oro\Bundle\PlatformBundle\Provider\PackageProvider;
 
-class UrlGeneratorTest extends \PHPUnit_Framework_TestCase
+class UrlGeneratorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var UrlGenerator */
     protected $generator;
 
-    /** @var PackageProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var PackageProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $packageProvider;
 
-    /** @var CacheProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var CacheProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $cacheProvider;
 
     protected function setUp()
@@ -97,7 +95,7 @@ class UrlGeneratorTest extends \PHPUnit_Framework_TestCase
                 '//r.orocrm.com/a/p/1.10.0/f.js',
                 [
                     $this->getPackage('oro/platform', '1.10.0'),
-                    $this->getPackage('oro/doctrine-extensions', '1.10.0'),
+                    $this->getPackage('oro/doctrine-extensions', '1.1.0'),
                 ],
             ],
         ];

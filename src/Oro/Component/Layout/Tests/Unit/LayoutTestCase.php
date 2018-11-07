@@ -2,11 +2,11 @@
 
 namespace Oro\Component\Layout\Tests\Unit;
 
-use Oro\Component\Layout\BlockViewCollection;
 use Oro\Component\Layout\Block\Type\Options;
 use Oro\Component\Layout\BlockView;
+use Oro\Component\Layout\BlockViewCollection;
 
-class LayoutTestCase extends \PHPUnit_Framework_TestCase
+class LayoutTestCase extends \PHPUnit\Framework\TestCase
 {
     /**
      * @param array     $expected

@@ -5,10 +5,14 @@ namespace Oro\Bundle\SearchBundle\Engine;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Oro\Bundle\EntityBundle\ORM\OroEntityManager;
 use Oro\Bundle\SearchBundle\Entity\Repository\SearchIndexRepository;
+use Oro\Bundle\SearchBundle\Query\LazyResult;
 use Oro\Bundle\SearchBundle\Query\Query;
 use Oro\Bundle\SearchBundle\Query\Result\Item as ResultItem;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * ORM standard search engine
+ */
 class Orm extends AbstractEngine
 {
     const ENGINE_NAME = 'orm';
@@ -21,9 +25,6 @@ class Orm extends AbstractEngine
 
     /** @var ObjectMapper */
     protected $mapper;
-
-    /** @var array */
-    protected $drivers = [];
 
     /**
      * @param ManagerRegistry          $registry
@@ -41,57 +42,60 @@ class Orm extends AbstractEngine
     }
 
     /**
-     * @param array $drivers
+     * {@inheritdoc}
      */
-    public function setDrivers(array $drivers)
+    protected function doSearch(Query $query)
     {
-        $this->drivers = $drivers;
+        $resultsCallback = function () use ($query) {
+            $results = [];
+            $searchResults = $this->getIndexRepository()->search($query);
+            if ($searchResults) {
+                foreach ($searchResults as $item) {
+                    $originalItem = $item;
+                    if (is_array($item)) {
+                        $item = $item['item'];
+                    }
+
+                    $results[] = new ResultItem(
+                        $item['entity'],
+                        $item['recordId'],
+                        $item['title'],
+                        null,
+                        $this->mapper->mapSelectedData($query, $originalItem),
+                        $this->mapper->getEntityConfig($item['entity'])
+                    );
+                }
+            }
+
+            return $results;
+        };
+
+        $recordsCountCallback = function () use ($query) {
+            return $this->getIndexRepository()->getRecordsCount($query);
+        };
+
+        $aggregatedDataCallback = function () use ($query) {
+            return $this->getIndexRepository()->getAggregatedData($query);
+        };
+
+        return [
+            'results' => $resultsCallback,
+            'records_count' => $recordsCountCallback,
+            'aggregated_data' => $aggregatedDataCallback,
+        ];
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function doSearch(Query $query)
+    protected function buildResult(Query $query, array $data)
     {
-        $results       = [];
-
-        $searchResults = $this->getIndexRepository()->search($query);
-        if (($query->getCriteria()->getMaxResults() > 0 || $query->getCriteria()->getFirstResult() > 0)) {
-            $recordsCount = $this->getIndexRepository()->getRecordsCount($query);
-        } else {
-            $recordsCount = count($searchResults);
-        }
-        if ($searchResults) {
-            foreach ($searchResults as $item) {
-                $originalItem = $item;
-                if (is_array($item)) {
-                    $item = $item['item'];
-                }
-
-                /**
-                 * Search result can contains duplicates and we can not use HYDRATE_OBJECT because of performance issue.
-                 * @todo: update after fix BAP-7166. Remove check for existing result.
-                 */
-                $id = $item['id'];
-                if (isset($results[$id])) {
-                    continue;
-                }
-
-                $results[$id] = new ResultItem(
-                    $item['entity'],
-                    $item['recordId'],
-                    $item['title'],
-                    null,
-                    $this->mapper->mapSelectedData($query, $originalItem),
-                    $this->mapper->getEntityConfig($item['entity'])
-                );
-            }
-        }
-
-        return [
-            'results'       => $results,
-            'records_count' => $recordsCount
-        ];
+        return new LazyResult(
+            $query,
+            $data['results'],
+            $data['records_count'],
+            $data['aggregated_data']
+        );
     }
 
     /**
@@ -106,8 +110,6 @@ class Orm extends AbstractEngine
         }
 
         $this->indexRepository = $this->getIndexManager()->getRepository('OroSearchBundle:Item');
-        $this->indexRepository->setDriversClasses($this->drivers);
-        $this->indexRepository->setRegistry($this->registry);
 
         return $this->indexRepository;
     }

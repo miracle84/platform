@@ -2,6 +2,9 @@
 
 namespace Oro\Bundle\EmailBundle\Model;
 
+/**
+ * Provides possible types of folders
+ */
 class FolderType
 {
     const INBOX  = 'inbox';
@@ -11,7 +14,10 @@ class FolderType
     const SPAM   = 'spam';
     const OTHER  = 'other';
 
-    public static function outcomingTypes()
+    /**
+     * @return string[]
+     */
+    public static function outgoingTypes()
     {
         return [
             static::SENT,
@@ -19,6 +25,9 @@ class FolderType
         ];
     }
 
+    /**
+     * @return string[]
+     */
     public static function incomingTypes()
     {
         return [

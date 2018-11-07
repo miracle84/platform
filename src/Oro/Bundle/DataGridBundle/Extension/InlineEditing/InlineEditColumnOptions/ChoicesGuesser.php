@@ -3,11 +3,10 @@
 namespace Oro\Bundle\DataGridBundle\Extension\InlineEditing\InlineEditColumnOptions;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\DataGridBundle\Extension\InlineEditing\Configuration;
 use Oro\Bundle\DataGridBundle\Extension\Formatter\Property\PropertyInterface;
+use Oro\Bundle\DataGridBundle\Extension\InlineEditing\Configuration;
 use Oro\Bundle\DataGridBundle\Tools\ChoiceFieldHelper;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 
 /**
  * Class ChoicesGuesser
@@ -58,9 +57,11 @@ class ChoicesGuesser implements GuesserInterface
                 $targetEntityMetadata = $entityManager->getClassMetadata($targetEntity);
                 $labelField = $this->getLabelField($columnName, $column, $targetEntityMetadata);
                 $keyField = $targetEntityMetadata->getSingleIdentifierFieldName();
+
+                $translatable = isset($column['translatable']) && $column['translatable'] === true;
                 if (empty($column[Configuration::CHOICES_KEY])) {
                     $result[Configuration::CHOICES_KEY] = $this->choiceHelper
-                        ->getChoices($targetEntity, $keyField, $labelField);
+                        ->getChoices($targetEntity, $keyField, $labelField, null, $translatable);
                 }
 
                 if (array_key_exists(PropertyInterface::DATA_NAME_KEY, $column)

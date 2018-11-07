@@ -3,11 +3,6 @@
 namespace Oro\Bundle\EmailBundle\Sync;
 
 use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\Query;
-
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
-
 use Oro\Bundle\EmailBundle\Builder\EmailEntityBuilder;
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
@@ -18,8 +13,10 @@ use Oro\Bundle\EmailBundle\Model\EmailHeader;
 use Oro\Bundle\EmailBundle\Model\FolderType;
 use Oro\Bundle\EmailBundle\Sync\Model\SynchronizationProcessorSettings;
 use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
-use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -39,6 +36,9 @@ abstract class AbstractEmailSynchronizationProcessor implements LoggerAwareInter
 
     /** @var EmailEntityBuilder */
     protected $emailEntityBuilder;
+
+    /** @var KnownEmailAddressCheckerInterface */
+    protected $knownEmailAddressChecker;
 
     /** @var int Number of seconds passed to store last emails batch */
     protected $dbBatchSaveTime = -1;
@@ -137,8 +137,11 @@ abstract class AbstractEmailSynchronizationProcessor implements LoggerAwareInter
         foreach ($emailList as &$emailAddress) {
             $emailAddress = strtolower($helper->extractPureEmailAddress($emailAddress));
         }
-        $query = $qb->where($qb->expr()->in('ce.email', $emailList))->getQuery();
-        $result = $query->getResult();
+
+        $result = $qb->where($qb->expr()->in('ce.email', ':emailList'))
+            ->setParameter('emailList', $emailList)
+            ->getQuery()
+            ->getResult();
 
         if ($result) {
             foreach ($result as $contactEmail) {
@@ -369,8 +372,8 @@ abstract class AbstractEmailSynchronizationProcessor implements LoggerAwareInter
             'Oro\Bundle\EmailBundle\Entity\Email',
             'Oro\Bundle\EmailBundle\Entity\EmailUser',
             'Oro\Bundle\EmailBundle\Entity\EmailRecipient',
-            'Oro\Bundle\ImapBundle\Entity\ImapEmail',
             'Oro\Bundle\EmailBundle\Entity\EmailBody',
+            $this->emailEntityBuilder->getEmailAddressEntityClass(),
         ];
     }
 

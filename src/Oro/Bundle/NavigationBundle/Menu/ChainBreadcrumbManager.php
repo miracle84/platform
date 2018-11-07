@@ -3,7 +3,6 @@
 namespace Oro\Bundle\NavigationBundle\Menu;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Symfony\Component\Routing\Route;
 
 class ChainBreadcrumbManager implements BreadcrumbManagerInterface
@@ -59,9 +58,9 @@ class ChainBreadcrumbManager implements BreadcrumbManagerInterface
     }
 
     /** {@inheritdoc} */
-    public function getBreadcrumbs($menuName, $isInverse = true)
+    public function getBreadcrumbs($menuName, $isInverse = true, $route = null)
     {
-        return $this->getSupportedManager()->getBreadcrumbs($menuName, $isInverse);
+        return $this->getSupportedManager()->getBreadcrumbs($menuName, $isInverse, $route);
     }
 
     /** {@inheritdoc} */

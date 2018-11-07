@@ -3,12 +3,12 @@
 namespace Oro\Component\Layout\Tests\Unit;
 
 use Oro\Component\Layout\BlockView;
-use Oro\Component\Layout\LayoutRenderer;
 use Oro\Component\Layout\Form\RendererEngine\FormRendererEngineInterface;
+use Oro\Component\Layout\LayoutRenderer;
 
-class LayoutRendererTest extends \PHPUnit_Framework_TestCase
+class LayoutRendererTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $innerRenderer;
 
     /** @var LayoutRenderer */

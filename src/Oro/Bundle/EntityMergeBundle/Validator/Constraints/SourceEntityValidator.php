@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\EntityMergeBundle\Validator\Constraints;
 
-use Symfony\Component\Validator\Constraint;
-
 use Oro\Bundle\EntityMergeBundle\Data\EntityData;
 use Oro\Bundle\EntityMergeBundle\Exception\InvalidArgumentException;
+use Symfony\Component\Validator\Constraint;
 
 class SourceEntityValidator extends DoctrineHelperValidator
 {
@@ -29,6 +28,9 @@ class SourceEntityValidator extends DoctrineHelperValidator
 
         foreach ($fields as $field) {
             $sourceEntity = $field->getSourceEntity();
+            if (!is_object($sourceEntity)) {
+                continue;
+            }
             foreach ($entities as $entity) {
                 if ($this->doctrineHelper->isEntityEqual($entity, $sourceEntity)) {
                     break 2;

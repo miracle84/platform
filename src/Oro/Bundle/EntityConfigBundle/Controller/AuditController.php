@@ -2,15 +2,12 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
-use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
+use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 /**
  * EntityBundle controller.
@@ -26,7 +23,7 @@ class AuditController extends Controller
      *      defaults={"entity"="entity", "id"=0, "_format" = "html"}
      * )
      * @Template("OroDataAuditBundle:Audit/widget:history.html.twig")
-     * @AclAncestor("oro_dataaudit_history")
+     * @AclAncestor("oro_dataaudit_view")
      *
      * @param $entity
      * @param $id
@@ -49,7 +46,7 @@ class AuditController extends Controller
      *      defaults={"entity"="entity", "id"=0, "_format" = "html"}
      * )
      * @Template("OroDataAuditBundle:Audit/widget:history.html.twig")
-     * @AclAncestor("oro_dataaudit_history")
+     * @AclAncestor("oro_dataaudit_view")
      *
      * @param $entity
      * @param $id

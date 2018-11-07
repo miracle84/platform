@@ -1,12 +1,23 @@
+{% import 'OroUIBundle::macros.html.twig' as UI %}
+
+{% set exportConfigurableWidgetViewOptions = {
+    view: {
+        view: 'oroimportexport/js/app/views/export-configurable-widget-view',
+        wid: app.request.get('_wid'),
+        errorMessage: 'Errors occured during file export.'|trans
+    }
+} %}
+
 <div class="widget-content import-widget-content">
-    <div class="form-container">
-        <form method="post"
-              data-nohash="true"
-              id="{{ form.vars.id }}"
-              name="{{ form.vars.name }}"
-              action="{{ path('oro_importexport_export_config', {entity: entityName, options: options, exportJob: exportJob}) }}"
-              class="form-horizontal"
-                {{ form_enctype(form) }}>
+    <div class="form-container" {{ UI.renderPageComponentAttributes(exportConfigurableWidgetViewOptions) }}>
+        {{ form_start(form, {
+            'action': path('oro_importexport_export_config', {entity: entityName, options: options, exportJob: exportJob}),
+            'attr': {
+                'id': form.vars.id,
+                'data-nohash': 'true',
+                'class': 'form-horizontal'
+            }
+        }) }}
 
             <fieldset class="form">
                 <div>
@@ -21,31 +32,7 @@
                     {{ 'Export'|trans }}
                 </button>
             </div>
-        </form>
+        {{ form_end(form) }}
         {{ oro_form_js_validation(form) }}
     </div>
-
-    <script type="text/javascript">
-        require(['oroui/js/widget-manager', 'jquery', 'oroimportexport/js/export-handler', 'oroui/js/messenger'],
-                function(WidgetManager, $, exportHandler, messenger) {
-                    WidgetManager.getWidgetInstance({{ app.request.get('_wid')|json_encode|raw }}, function(widget) {
-                        var form = $('[name="oro_importexport_export"]');
-                        form.on('submit', function(e) {
-                            e.preventDefault();
-                            widget.remove();
-                            $.ajax(e.target.action, {
-                                data: form.serialize(),
-                                method: e.target.method
-                            }).done(function(data) {
-                                exportHandler.handleExportResponse(data);
-                            }).fail(function() {
-                                messenger.notificationFlashMessage(
-                                    'error',
-                                    '{{ 'Errors occured during file export.'|trans }}'
-                                );
-                            });
-                        });
-                    });
-                });
-    </script>
 </div>

@@ -1,10 +1,13 @@
-define([
-    'jquery',
-    'underscore',
-    'backbone',
-    'oroui/js/app/components/base/component-container-mixin'
-], function($, _, Backbone, componentContainerMixin) {
+define(function(require) {
     'use strict';
+
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var Backbone = require('backbone');
+    var componentContainerMixin = require('oroui/js/app/components/base/component-container-mixin');
+    var tools = require('oroui/js/tools');
+
+    var console = window.console;
 
     var OriginalBackboneView = Backbone.View;
     Backbone.View = function(original) {
@@ -12,7 +15,9 @@ define([
         this.subviewsByName = {};
         OriginalBackboneView.apply(this, arguments);
     };
-    _.extend(Backbone.View, OriginalBackboneView);
+    _.extend(Backbone.View, OriginalBackboneView, {
+        RENDERING_TIMEOUT: 30000 // 30s
+    });
     Backbone.View.prototype = OriginalBackboneView.prototype;
 
     // Backbone.View
@@ -87,6 +92,10 @@ define([
             return;
         }
 
+        if (this.deferredRender) {
+            this._rejectDeferredRender();
+        }
+        this.disposeControls();
         this.disposePageComponents();
         this.trigger('dispose', this);
 
@@ -95,6 +104,7 @@ define([
             subview = _ref[_i];
             subview.dispose();
         }
+
         Backbone.mediator.unsubscribe(null, null, this);
         this.off();
         this.stopListening();
@@ -103,7 +113,6 @@ define([
             this.$el.remove();
         } else {
             this.undelegateEvents();
-            this.$el.removeData();
         }
 
         properties = ['el', '$el', 'options', 'model', 'collection', 'subviews', 'subviewsByName', '_callbacks'];
@@ -115,6 +124,13 @@ define([
         this.disposed = true;
         return typeof Object.freeze === 'function' ? Object.freeze(this) : void 0;
     };
+    Backbone.View.prototype._ensureElement = _.wrap(Backbone.View.prototype._ensureElement, function(_ensureElement) {
+        // if the element was passed with options -- preserve it in the DOM, if `keepElement` is not set to `false`
+        if (this.el && this.keepElement !== false) {
+            this.keepElement = true;
+        }
+        return _ensureElement.call(this);
+    });
     Backbone.View.prototype.setElement = _.wrap(Backbone.View.prototype.setElement, function(setElement, element) {
         if (this.$el) {
             this.disposePageComponents();
@@ -127,16 +143,24 @@ define([
     Backbone.View.prototype.getLayoutElement = function() {
         return this.$el;
     };
+    Backbone.View.prototype.initControls = function() {
+        Backbone.mediator.execute({name: 'layout:init', silent: true}, this.getLayoutElement());
+    };
+    Backbone.View.prototype.disposeControls = function() {
+        Backbone.mediator.execute({name: 'layout:dispose', silent: true}, this.$el);
+    };
     Backbone.View.prototype.initLayout = function(options) {
-        // initializes layout
-        Backbone.mediator.execute('layout:init', this.getLayoutElement());
+        // initializes controls in layout
+        this.initControls();
         // initializes page components
         var initPromise = this.initPageComponents(options);
         if (!this.deferredRender) {
             this._deferredRender();
             initPromise.always(_.bind(this._resolveDeferredRender, this));
         }
-        return initPromise;
+        return initPromise.fail(function(e) {
+            console.error(e);
+        });
     };
     /**
      * Create flag of deferred render
@@ -146,9 +170,15 @@ define([
     Backbone.View.prototype._deferredRender = function() {
         if (this.deferredRender) {
             // reject previous deferredRender object due to new rendering process is initiated
-            this.deferredRender.reject();
+            this._rejectDeferredRender();
         }
         this.deferredRender = $.Deferred();
+        this.deferredRender.timeoutID =
+            setTimeout(function() {
+                var xpath = tools.getElementXPath(this.el);
+                var error = new Error('Rendering timeout for view of element: "' + xpath + '"');
+                this._rejectDeferredRender(error);
+            }.bind(this), Backbone.View.RENDERING_TIMEOUT);
     };
 
     /**
@@ -160,6 +190,7 @@ define([
         if (this.deferredRender) {
             var promises = [];
             var resolve = _.bind(function() {
+                clearTimeout(this.deferredRender.timeoutID);
                 this.deferredRender.resolve(this);
                 delete this.deferredRender;
             }, this);
@@ -178,6 +209,24 @@ define([
             } else {
                 resolve();
             }
+        }
+    };
+
+    /**
+     * Rejects deferred render promise
+     *
+     * @protected
+     */
+    Backbone.View.prototype._rejectDeferredRender = function(error) {
+        if (this.deferredRender) {
+            clearTimeout(this.deferredRender.timeoutID);
+            if (error) {
+                error.target = this;
+                this.deferredRender.reject(error);
+            } else {
+                this.deferredRender.reject();
+            }
+            delete this.deferredRender;
         }
     };
 

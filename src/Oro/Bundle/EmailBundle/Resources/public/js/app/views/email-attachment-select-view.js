@@ -9,19 +9,34 @@ define(function(require) {
 
     EmailAttachmentSelectView = BaseCollectionView.extend({
         itemView: EmailAttachmentListRowView,
+
         listSelector: '.attachment-list',
+
         fallbackSelector: '.no-items',
+
         isShowed: false,
+
         fileNameFilter: '',
+
         attachedCollection: null,
 
         events: {
-            'click .cancel':                 'cancelClick',
-            'click .upload-new':             'uploadNewClick',
-            'click .attach':                 'attachClick',
-            'input input.filter':            'filterChange'
+            'click .cancel': 'cancelClick',
+            'click .upload-new': 'uploadNewClick',
+            'click .attach': 'attachClick',
+            'input input.filter': 'filterChange'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailAttachmentSelectView() {
+            EmailAttachmentSelectView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             if (!_.has(options, 'attachedCollection')) {
                 throw new Error('Required option "attachedCollection" not found.');
@@ -102,7 +117,7 @@ define(function(require) {
 
         getTemplateFunction: function() {
             if (!this.template) {
-                this.template = $('#email-attachment-select-view').html();
+                this.template = require('tpl!oroemail/templates/email-attachment/email-attachment-select-view.html');
             }
 
             return EmailAttachmentSelectView.__super__.getTemplateFunction.call(this);

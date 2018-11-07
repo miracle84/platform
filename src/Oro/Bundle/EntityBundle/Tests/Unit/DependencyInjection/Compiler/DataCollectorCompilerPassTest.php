@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EntityBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\EntityBundle\DataCollector\DuplicateQueriesDataCollector;
+use Oro\Bundle\EntityBundle\DependencyInjection\Compiler\DataCollectorCompilerPass;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
-use Oro\Bundle\EntityBundle\DataCollector\DuplicateQueriesDataCollector;
-use Oro\Bundle\EntityBundle\DependencyInjection\Compiler\DataCollectorCompilerPass;
-
-class DataCollectorCompilerPassTest extends \PHPUnit_Framework_TestCase
+class DataCollectorCompilerPassTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var DataCollectorCompilerPass
@@ -31,7 +30,7 @@ class DataCollectorCompilerPassTest extends \PHPUnit_Framework_TestCase
 
         $collectorDefinition = new Definition(DuplicateQueriesDataCollector::class);
 
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $containerBuilder */
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $containerBuilder */
         $containerBuilder = $this->createMock(ContainerBuilder::class);
 
         $containerBuilder->expects($this->once())
@@ -43,7 +42,7 @@ class DataCollectorCompilerPassTest extends \PHPUnit_Framework_TestCase
             ->method('has')
             ->willReturn(true);
 
-        /** @var RegistryInterface|\PHPUnit_Framework_MockObject_MockObject $doctrine */
+        /** @var RegistryInterface|\PHPUnit\Framework\MockObject\MockObject $doctrine */
         $doctrine = $this->createMock(RegistryInterface::class);
 
         $doctrine->expects($this->once())

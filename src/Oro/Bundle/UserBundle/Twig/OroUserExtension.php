@@ -2,39 +2,40 @@
 
 namespace Oro\Bundle\UserBundle\Twig;
 
-use Symfony\Component\Security\Core\SecurityContextInterface;
-
 use Oro\Bundle\UserBundle\Provider\GenderProvider;
-use Oro\Bundle\UserBundle\Security\AdvancedApiUserInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * The user related TWIG extensions.
+ */
 class OroUserExtension extends \Twig_Extension
 {
-    /** @var GenderProvider */
-    protected $genderProvider;
-
-    /** @var SecurityContextInterface */
-    protected $securityContext;
+    /** @var ContainerInterface */
+    protected $container;
 
     /**
-     * @param GenderProvider           $genderProvider
-     * @param SecurityContextInterface $securityContext
+     * @param ContainerInterface $container
      */
-    public function __construct(GenderProvider $genderProvider, SecurityContextInterface $securityContext)
+    public function __construct(ContainerInterface $container)
     {
-        $this->genderProvider  = $genderProvider;
-        $this->securityContext = $securityContext;
+        $this->container = $container;
     }
 
     /**
-     * Returns a list of functions to add to the existing list.
-     *
-     * @return array An array of functions
+     * @return GenderProvider
+     */
+    protected function getGenderProvider()
+    {
+        return $this->container->get('oro_user.gender_provider');
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function getFunctions()
     {
         return [
-            'oro_gender'       => new \Twig_SimpleFunction('oro_gender', [$this, 'getGenderLabel']),
-            'get_current_user' => new \Twig_SimpleFunction('get_current_user', [$this, 'getCurrentUser'])
+            new \Twig_SimpleFunction('oro_gender', [$this, 'getGenderLabel'])
         ];
     }
 
@@ -49,26 +50,7 @@ class OroUserExtension extends \Twig_Extension
             return null;
         }
 
-        return $this->genderProvider->getLabelByName($name);
-    }
-
-    /**
-     * Returns currently logged in user
-     *
-     * @return AdvancedApiUserInterface|null
-     */
-    public function getCurrentUser()
-    {
-        $token = $this->securityContext->getToken();
-        if (!$token) {
-            return null;
-        }
-        $user = $token->getUser();
-        if (!$user instanceof AdvancedApiUserInterface) {
-            return null;
-        }
-
-        return $user;
+        return $this->getGenderProvider()->getLabelByName($name);
     }
 
     /**

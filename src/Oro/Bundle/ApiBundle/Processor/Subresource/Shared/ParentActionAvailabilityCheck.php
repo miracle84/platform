@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource\Shared;
 
+use Oro\Bundle\ApiBundle\Exception\ActionNotAllowedException;
+use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
+use Oro\Bundle\ApiBundle\Provider\ResourcesProvider;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Exception\ActionNotAllowedException;
-use Oro\Bundle\ApiBundle\Provider\ResourcesProvider;
-use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
 
 /**
  * Validates whether an access to the requested action of entity specified
- * in the "parentClass" property of the Context is granted.
+ * in the "parentClass" property of the context is granted.
  */
 class ParentActionAvailabilityCheck implements ProcessorInterface
 {

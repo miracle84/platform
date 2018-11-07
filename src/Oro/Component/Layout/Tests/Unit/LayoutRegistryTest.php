@@ -2,19 +2,19 @@
 
 namespace Oro\Component\Layout\Tests\Unit;
 
+use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
 use Oro\Component\Layout\Block\Type\BaseType;
+use Oro\Component\Layout\Block\Type\Options;
 use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\Extension\Core\CoreExtension;
 use Oro\Component\Layout\LayoutRegistry;
-use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
-use Oro\Component\Layout\Block\Type\Options;
 
-class LayoutRegistryTest extends \PHPUnit_Framework_TestCase
+class LayoutRegistryTest extends \PHPUnit\Framework\TestCase
 {
     /** @var LayoutRegistry */
     protected $registry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $extension;
 
     protected function setUp()
@@ -189,7 +189,7 @@ class LayoutRegistryTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($this->registry->findDataProvider('foo'));
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         $name     = 'test';
         /** @var OptionsResolver $resolver */

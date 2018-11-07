@@ -3,24 +3,22 @@
 namespace Oro\Bundle\ActivityListBundle\Tests\Unit\Tools;
 
 use Oro\Bundle\ActivityListBundle\Tools\ActivityListEntityConfigDumperExtension;
-
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
-
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendConfigDumper;
 
-class ActivityListEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
+class ActivityListEntityConfigDumperExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ActivityListEntityConfigDumperExtension */
     protected $extension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $listProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $associationBuilder;
 
     public function setUp()

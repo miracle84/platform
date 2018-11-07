@@ -2,16 +2,14 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Model\ActionGroup;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Bundle\ActionBundle\Model\ActionGroup\PropertyMapper;
 use Oro\Bundle\ActionBundle\Model\ActionGroupExecutionArgs;
-
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class PropertyMapperTest extends \PHPUnit_Framework_TestCase
+class PropertyMapperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContextAccessor */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ContextAccessor */
     protected $mockContextAccessor;
 
     /** @var PropertyMapper */
@@ -58,7 +56,7 @@ class PropertyMapperTest extends \PHPUnit_Framework_TestCase
             ->with([], $pp2)
             ->willReturn('val2');
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ActionGroupExecutionArgs $mockExecutionArgs */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ActionGroupExecutionArgs $mockExecutionArgs */
         $mockExecutionArgs = $this->getMockBuilder('Oro\Bundle\ActionBundle\Model\ActionGroupExecutionArgs')
             ->disableOriginalConstructor()->getMock();
 
@@ -85,7 +83,7 @@ class PropertyMapperTest extends \PHPUnit_Framework_TestCase
      */
     public function testNonTraversableAssertionException()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ActionGroupExecutionArgs $mockExecutionArgs */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ActionGroupExecutionArgs $mockExecutionArgs */
         $mockExecutionArgs = $this->getMockBuilder('Oro\Bundle\ActionBundle\Model\ActionGroupExecutionArgs')
             ->disableOriginalConstructor()->getMock();
 

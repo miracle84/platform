@@ -6,7 +6,7 @@ Table of Contents
  - [Assign Value](#assign-value)
  - [Assign Active User](#assign-active-user)
  - [Unset Value](#unset-value)
- - [Count] (#count)
+ - [Count](#count)
  - [Create Object](#create-object)
  - [Create Entity](#create-entity)
  - [Remove Entity](#remove-entity)
@@ -21,7 +21,7 @@ Table of Contents
  - [Flash Message](#flash-message)
  - [Call Service Method](#call-service-method)
  - [Find Entities](#find-entities)
- 
+ - [Increase Value](#increase-value)
 
 
 Assign Value
@@ -79,7 +79,7 @@ OR
 ```
 
 Unset Value
-------------
+-----------
 
 **Class:** Oro\Component\Action\Action\UnsetValue
 
@@ -109,6 +109,7 @@ OR
 
 Count
 -----
+
 **Class** \Oro\Component\Action\Action\Count
 
 **Alias** count
@@ -570,4 +571,39 @@ Find Entities
     query_parameters:
         age: 10
         cnt: 0
+```
+
+
+Increase Value
+--------------
+
+**Class:** Oro\Component\Action\Action\IncreaseValue
+
+**Alias:** increase_value
+
+**Description:** Increase or decrease the integer value by some value
+
+**Parameters:**
+ - attribute / 0 - attribute where value should be increased;
+ - value / 1 - value to which the attribute should be increased (by default: 1);
+
+**Configuration Example**
+```
+- @increase_value:
+    attribute: $.some_value
+    value: 5
+
+OR
+
+- @increase_value:
+    attribute: $.some_value
+    value: -5
+
+OR
+
+- @increase_value: [$.some_value, 5]
+
+OR
+
+- @increase_value: $.some_value
 ```

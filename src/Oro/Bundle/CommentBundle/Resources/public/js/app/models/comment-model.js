@@ -30,6 +30,13 @@ define(function(require) {
             removable: true
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function CommentModel() {
+            CommentModel.__super__.constructor.apply(this, arguments);
+        },
+
         initialize: function(attrs, options) {
             CommentModel.__super__.initialize.apply(this, arguments);
             this.on('request', this.beginSync);
@@ -42,10 +49,10 @@ define(function(require) {
             var parameters;
             if (this.isNew()) {
                 if (!this.get('relationClass') || !this.get('relationId')) {
-                    throw 'Please specify relationClass and relationId';
+                    throw new Error('Please specify relationClass and relationId');
                 }
                 parameters = {
-                    relationId:    this.get('relationId'),
+                    relationId: this.get('relationId'),
                     relationClass: this.get('relationClass')
                 };
                 url = routing.generate('oro_api_comment_get_items', parameters);

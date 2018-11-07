@@ -2,20 +2,20 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\Select2ChoiceType;
+use Oro\Bundle\IntegrationBundle\Form\Type\IntegrationTypeSelectType;
+use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
-use Oro\Bundle\IntegrationBundle\Form\Type\IntegrationTypeSelectType;
-
-class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
+class IntegrationTypeSelectTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var  IntegrationTypeSelectType */
     protected $type;
 
-    /** @var TypesRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TypesRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject */
     protected $assetHelper;
 
     protected function setUp()
@@ -32,7 +32,7 @@ class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
         unset($this->type, $this->registry, $this->assetHelper);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         $resolver = new OptionsResolver();
         $this->registry->expects($this->once())->method('getAvailableIntegrationTypesDetailedData')
@@ -49,7 +49,7 @@ class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
             ->method('getUrl')
             ->will($this->returnArgument(0));
 
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
         $result = $resolver->resolve([]);
         $choiceAttr = [];
         foreach ($result['choices'] as $label => $choice) {
@@ -58,15 +58,13 @@ class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
         unset($result['choice_attr']);
         $this->assertEquals(
             [
-                'empty_value' => '',
                 'choices'     => [
                     'oro.type1.label' => 'testType1',
                     'oro.type2.label' => 'testType2'
                 ],
                 'configs'     => [
-                    'placeholder'             => 'oro.form.choose_value',
-                    'result_template_twig'    => 'OroIntegrationBundle:Autocomplete:type/result.html.twig',
-                    'selection_template_twig' => 'OroIntegrationBundle:Autocomplete:type/selection.html.twig',
+                    'placeholder' => 'oro.form.choose_value',
+                    'showIcon'    => true,
                 ]
             ],
             $result
@@ -86,9 +84,7 @@ class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()->getMock();
         $form       = $this->getMockBuilder('Symfony\Component\Form\Form')
             ->disableOriginalConstructor()->getMock();
-        $choiceList = $this->getMockBuilder('Symfony\Component\Form\Extension\Core\ChoiceList\SimpleChoiceList')
-            ->disableOriginalConstructor()->getMock();
-        $options    = ['configs' => [], 'choice_list' => $choiceList];
+        $options    = ['configs' => [], 'choices' => []];
 
         $this->type->buildView($view, $form, $options);
 
@@ -97,7 +93,7 @@ class IntegrationTypeSelectTypeTest extends \PHPUnit_Framework_TestCase
 
     public function testGetParent()
     {
-        $this->assertEquals('genemu_jqueryselect2_choice', $this->type->getParent());
+        $this->assertEquals(Select2ChoiceType::class, $this->type->getParent());
     }
 
     public function testGetName()

@@ -12,17 +12,38 @@ define(function(require) {
     var BaseView = require('oroui/js/app/views/base/view');
 
     CheckConnectionView = BaseView.extend({
+        SUCCESS_MESSAGE_DELAY: 5000,
+
         route: 'oro_imap_connection_check',
+
         entity: 'user',
+
         entityId: 0,
+
         organization: '',
+
         formPrefix: '',
+
         requestPrefix: 'oro_imap_configuration',
+
         events: {
             'click [data-role=check-connection-btn]': 'requestAPI',
             'change .critical-field :input': 'clear'
         },
+
+        attributes: {
+            'data-layout': 'separate'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function CheckConnectionView() {
+            CheckConnectionView.__super__.constructor.apply(this, arguments);
+        },
+
         initialize: function(options) {
+            this._setAttributes(this.attributes);
             _.extend(this, _.pick(options, ['entity', 'entityId', 'organization', 'formPrefix']));
             this.model.on('change', this.render, this);
         },
@@ -54,6 +75,7 @@ define(function(require) {
             var $messageContainer = this.$el.find('.check-connection-messages');
             mediator.execute('showLoading');
             this.clear();
+            $messageContainer.find('.alert').remove();
             $.ajax({
                 type: 'POST',
                 url: this.getUrl(),
@@ -76,6 +98,7 @@ define(function(require) {
                         }
                     }
                 }, this),
+                errorHandlerMessage: false,
                 error: _.bind(function() {
                     this.showMessage('error', 'oro.imap.connection.error', $messageContainer);
                 }, this),
@@ -86,9 +109,10 @@ define(function(require) {
         },
 
         showMessage: function(type, message, container) {
+            var delay = type === 'error' ? 0 : this.SUCCESS_MESSAGE_DELAY;
             messenger.notificationFlashMessage(type, __(message), {
                 container: container,
-                delay: 5000
+                delay: delay
             });
         },
 
@@ -114,8 +138,8 @@ define(function(require) {
 
         _getUrlParams: function() {
             var params = {
-                'for_entity': this.entity,
-                'organization': this.organization
+                for_entity: this.entity,
+                organization: this.organization
             };
             if (this.entityId !== null) {
                 params.id = this.entityId;
@@ -125,7 +149,7 @@ define(function(require) {
         },
 
         clear: function() {
-            this.model.set({'imap': {}, 'smtp': []});
+            this.model.set({imap: {}, smtp: []});
         }
     });
 

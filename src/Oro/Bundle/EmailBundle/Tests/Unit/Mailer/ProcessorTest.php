@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Mailer;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-
 use Oro\Bundle\EmailBundle\Entity\InternalEmailOrigin;
-use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\EmailBundle\Form\Model\Email;
 use Oro\Bundle\EmailBundle\Mailer\Processor;
-use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestUser;
 use Oro\Bundle\EmailBundle\Model\FolderType;
+use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestUser;
+use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\EmailBundle\Tools\EmailOriginHelper;
+use Oro\Bundle\SecurityBundle\Encoder\DefaultCrypter;
 use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 
 /**
  * Class ProcessorTest
@@ -21,36 +20,36 @@ use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ProcessorTest extends \PHPUnit_Framework_TestCase
+class ProcessorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $mailer;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $emailEntityBuilder;
 
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject */
     protected $emailActivityManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $dispatcher;
 
     /** @var Processor */
     protected $emailProcessor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $userEmailOrigin;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $mailerTransport;
 
-    /** @var EmailOriginHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EmailOriginHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $emailOriginHelper;
     
     protected function setUp()
@@ -130,7 +129,7 @@ class ProcessorTest extends \PHPUnit_Framework_TestCase
             $this->emailEntityBuilder,
             $this->emailActivityManager,
             $this->dispatcher,
-            new Mcrypt(),
+            new DefaultCrypter(),
             $this->emailOriginHelper
         );
     }
@@ -190,7 +189,7 @@ class ProcessorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @expectedException \Swift_SwiftException
-     * @expectedExceptionMessage An email was not delivered.
+     * @expectedExceptionMessage The email was not delivered.
      */
     public function testProcessSendFailException()
     {

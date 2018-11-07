@@ -2,39 +2,42 @@
 
 namespace Oro\Bundle\AttachmentBundle\Tests\Unit\Manager;
 
+use Gaufrette\Adapter\Cache;
 use Gaufrette\Exception\FileNotFound;
+use Gaufrette\Filesystem;
 use Gaufrette\Stream\InMemoryBuffer;
 use Gaufrette\StreamMode;
-
+use Knp\Bundle\GaufretteBundle\FilesystemMap;
+use Oro\Bundle\AttachmentBundle\Manager\FileManager;
+use Oro\Bundle\AttachmentBundle\Tests\Unit\Fixtures\TestAttachment;
+use Oro\Bundle\AttachmentBundle\Validator\ProtocolValidatorInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
-use Oro\Bundle\AttachmentBundle\Manager\FileManager;
-use Oro\Bundle\AttachmentBundle\Tests\Unit\Fixtures\TestAttachment;
-
-class FileManagerTest extends \PHPUnit_Framework_TestCase
+class FileManagerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var  \PHPUnit_Framework_MockObject_MockObject */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject */
     protected $filesystem;
+
+    /** @var  \PHPUnit\Framework\MockObject\MockObject */
+    protected $protocolValidator;
 
     /** @var FileManager */
     protected $fileManager;
 
     public function setUp()
     {
-        $this->filesystem = $this->getMockBuilder('Gaufrette\Filesystem')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->filesystem = $this->createMock(Filesystem::class);
 
-        $filesystemMap = $this->getMockBuilder('Knp\Bundle\GaufretteBundle\FilesystemMap')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $filesystemMap = $this->createMock(FilesystemMap::class);
         $filesystemMap->expects($this->once())
             ->method('get')
             ->with('attachments')
             ->willReturn($this->filesystem);
 
-        $this->fileManager = new FileManager($filesystemMap);
+        $this->protocolValidator = $this->createMock(ProtocolValidatorInterface::class);
+
+        $this->fileManager = new FileManager($filesystemMap, $this->protocolValidator);
     }
 
     /**
@@ -61,9 +64,7 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
         $fileEntity = $this->createFileEntity();
         $fileContent = 'test data';
 
-        $file = $this->getMockBuilder('Gaufrette\File')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $file = $this->createMock(\Gaufrette\File::class);
         $file->expects($this->once())
             ->method('getContent')
             ->willReturn($fileContent);
@@ -76,28 +77,6 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
             ->willReturn($file);
 
         $this->assertEquals($fileContent, $this->fileManager->getContent($fileEntity));
-    }
-
-    public function testGetContentByFileName()
-    {
-        $fileName = 'testFile.txt';
-        $fileContent = 'test data';
-
-        $file = $this->getMockBuilder('Gaufrette\File')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $file->expects($this->once())
-            ->method('getContent')
-            ->willReturn($fileContent);
-
-        $this->filesystem->expects($this->never())
-            ->method('has');
-        $this->filesystem->expects($this->once())
-            ->method('get')
-            ->with($fileName)
-            ->willReturn($file);
-
-        $this->assertEquals($fileContent, $this->fileManager->getContent($fileName));
     }
 
     /**
@@ -117,47 +96,12 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
         $this->fileManager->getContent($fileName);
     }
 
-    public function testGetContentWhenFileDoesNotExistAndRequestedIgnoreException()
-    {
-        $fileName = 'testFile.txt';
-
-        $this->filesystem->expects($this->once())
-            ->method('has')
-            ->with($fileName)
-            ->willReturn(false);
-        $this->filesystem->expects($this->never())
-            ->method('get');
-
-        $this->assertNull($this->fileManager->getContent($fileName, false));
-    }
-
-    public function testGetContentWhenFileExistsAndRequestedIgnoreException()
-    {
-        $fileName = 'testFile.txt';
-        $fileContent = 'test data';
-
-        $file = $this->getMockBuilder('Gaufrette\File')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $file->expects($this->once())
-            ->method('getContent')
-            ->willReturn($fileContent);
-
-        $this->filesystem->expects($this->once())
-            ->method('has')
-            ->with($fileName)
-            ->willReturn(true);
-        $this->filesystem->expects($this->once())
-            ->method('get')
-            ->with($fileName)
-            ->willReturn($file);
-
-        $this->assertEquals($fileContent, $this->fileManager->getContent($fileName, false));
-    }
-
     public function testCreateFileEntity()
     {
         $path = __DIR__ . '/../Fixtures/testFile/test.txt';
+
+        $this->protocolValidator->expects($this->never())
+            ->method('isSupportedProtocol');
 
         $result = $this->fileManager->createFileEntity($path);
         $this->assertEquals('test.txt', $result->getOriginalFilename());
@@ -167,21 +111,91 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @dataProvider fileWithoutProtocolDataProvider
+     * @expectedException \Symfony\Component\Filesystem\Exception\FileNotFoundException
+     */
+    public function testCreateFileEntityWhenProtocolIsNotSpecified($path)
+    {
+        $this->protocolValidator->expects($this->never())
+            ->method('isSupportedProtocol');
+
+        $this->fileManager->createFileEntity($path);
+    }
+
+    public function fileWithoutProtocolDataProvider()
+    {
+        return [
+            [true, ''],
+            [true, ' '],
+            [true, '/file.txt'],
+            [true, '\\server\file.txt'],
+            [true, 'C:\file.txt'],
+            [true, 'c:/file.txt']
+        ];
+    }
+
+    /**
+     * @dataProvider supportedFileProtocolDataProvider
+     * @expectedException \Symfony\Component\Filesystem\Exception\FileNotFoundException
+     */
+    public function testCreateFileEntityWhenProtocolIsSupported($path, $expectedProtocol)
+    {
+        $this->protocolValidator->expects($this->once())
+            ->method('isSupportedProtocol')
+            ->with($expectedProtocol)
+            ->willReturn(true);
+
+        $this->fileManager->createFileEntity($path);
+    }
+
+    public function supportedFileProtocolDataProvider()
+    {
+        return [
+            ['file://file.txt', 'file'],
+            ['File://file.txt', 'file'],
+            [' FILE://file.txt ', 'file']
+        ];
+    }
+
+    /**
+     * @dataProvider notSupportedFileProtocolDataProvider
+     * @expectedException \Oro\Bundle\AttachmentBundle\Exception\ProtocolNotSupportedException
+     */
+    public function testCreateFileEntityWhenProtocolIsNotSupported($path, $expectedProtocol)
+    {
+        $this->protocolValidator->expects($this->once())
+            ->method('isSupportedProtocol')
+            ->with($expectedProtocol)
+            ->willReturn(false);
+
+        $this->fileManager->createFileEntity($path);
+    }
+
+    public function notSupportedFileProtocolDataProvider()
+    {
+        return [
+            ['phar://test.phar/file.txt', 'phar'],
+            ['Phar://test.phar/file.txt', 'phar'],
+            [' PHAR://test.phar/file.txt ', 'phar']
+        ];
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Filesystem\Exception\FileNotFoundException
+     */
     public function testCreateFileEntityForNotExistingFile()
     {
         $path = __DIR__ . '/../Fixtures/testFile/not_existed.txt';
 
-        $result = $this->fileManager->createFileEntity($path);
-        $this->assertNull($result);
+        $this->fileManager->createFileEntity($path);
     }
 
     public function testCloneFileEntity()
     {
         $fileEntity = $this->createFileEntity();
 
-        $file = $this->getMockBuilder('Gaufrette\File')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $file = $this->createMock(\Gaufrette\File::class);
         $fileContent = 'test';
 
         $this->filesystem->expects($this->once())
@@ -294,9 +308,7 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
             ->with($fileEntity->getFilename())
             ->willReturn($memoryBuffer);
 
-        $adapter = $this->getMockBuilder('Gaufrette\Adapter\Cache')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $adapter = $this->createMock(Cache::class);
         $this->filesystem->expects($this->any())
             ->method('getAdapter')
             ->willReturn($adapter);
@@ -312,82 +324,5 @@ class FileManagerTest extends \PHPUnit_Framework_TestCase
         $memoryBuffer->seek(0);
 
         $this->assertEquals('Test data', $memoryBuffer->read(100));
-    }
-
-    public function testDeleteFile()
-    {
-        $fileName = 'text.txt';
-
-        $this->filesystem->expects($this->once())
-            ->method('has')
-            ->with($fileName)
-            ->willReturn(true);
-        $this->filesystem->expects($this->once())
-            ->method('delete')
-            ->with($fileName);
-
-        $this->fileManager->deleteFile($fileName);
-    }
-
-    public function testDeleteFileForNotExistingFile()
-    {
-        $fileName = 'text.txt';
-
-        $this->filesystem->expects($this->once())
-            ->method('has')
-            ->with($fileName)
-            ->willReturn(false);
-        $this->filesystem->expects($this->never())
-            ->method('delete');
-
-        $this->fileManager->deleteFile($fileName);
-    }
-
-    public function testDeleteFileWhenFileNameIsEmpty()
-    {
-        $this->filesystem->expects($this->never())
-            ->method('has');
-        $this->filesystem->expects($this->never())
-            ->method('delete');
-
-        $this->fileManager->deleteFile(null);
-    }
-
-    public function testWriteFileToStorage()
-    {
-        $localFilePath = __DIR__ . '/../Fixtures/testFile/test.txt';
-        $fileName = 'test2.txt';
-
-        $resultStream = new InMemoryBuffer($this->filesystem, $fileName);
-
-        $this->filesystem->expects($this->once())
-            ->method('createStream')
-            ->with($fileName)
-            ->willReturn($resultStream);
-
-        $this->fileManager->writeFileToStorage($localFilePath, $fileName);
-        $resultStream->open(new StreamMode('rb+'));
-        $resultStream->seek(0);
-
-        $this->assertEquals('Test data', $resultStream->read(100));
-    }
-
-    public function testWriteToStorage()
-    {
-        $content = 'Test data';
-        $fileName = 'test2.txt';
-
-        $resultStream = new InMemoryBuffer($this->filesystem, $fileName);
-
-        $this->filesystem->expects($this->once())
-            ->method('createStream')
-            ->with($fileName)
-            ->willReturn($resultStream);
-
-        $this->fileManager->writeToStorage($content, $fileName);
-        $resultStream->open(new StreamMode('rb+'));
-        $resultStream->seek(0);
-
-        $this->assertEquals($content, $resultStream->read(100));
     }
 }

@@ -5,10 +5,6 @@ namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Permission;
 use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Validator\ConstraintViolationList;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\SecurityBundle\Acl\Permission\PermissionManager;
 use Oro\Bundle\SecurityBundle\Configuration\PermissionConfigurationBuilder;
@@ -20,28 +16,30 @@ use Oro\Bundle\SecurityBundle\Entity\Repository\PermissionRepository;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Configuration\Stub\TestBundle1\TestBundle1;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Configuration\Stub\TestBundle2\TestBundle2;
 use Oro\Component\Config\CumulativeResourceManager;
+use Symfony\Component\Validator\ConstraintViolationList;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class PermissionManagerTest extends \PHPUnit_Framework_TestCase
+class PermissionManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var PermissionManager */
     protected $manager;
 
-    /** @var DoctrineHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var PermissionRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var PermissionRepository|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityRepository;
 
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityManager;
 
-    /** @var PermissionConfigurationProvider */
+    /** @var PermissionConfigurationProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $configurationProvider;
 
     /** @var PermissionConfigurationBuilder */
     protected $configurationBuilder;
 
-    /** @var CacheProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var CacheProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $cacheProvider;
 
     /**
@@ -55,7 +53,10 @@ class PermissionManagerTest extends \PHPUnit_Framework_TestCase
 
         CumulativeResourceManager::getInstance()->clear()->setBundles($bundles);
 
-        $this->configurationProvider = new PermissionConfigurationProvider(new PermissionListConfiguration(), $bundles);
+        $this->configurationProvider = $this->getMockBuilder(PermissionConfigurationProvider::class)
+            ->setConstructorArgs([new PermissionListConfiguration(), $bundles])
+            ->setMethods(['getConfigPath'])
+            ->getMock();
 
         $this->entityRepository = $this
             ->getMockBuilder('Oro\Bundle\SecurityBundle\Entity\Repository\PermissionRepository')
@@ -85,7 +86,7 @@ class PermissionManagerTest extends \PHPUnit_Framework_TestCase
             ->with('OroSecurityBundle:Permission')
             ->willReturn($this->entityManager);
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ValidatorInterface $validator */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ValidatorInterface $validator */
         $validator = $this->createMock('Symfony\Component\Validator\Validator\ValidatorInterface');
         $validator->expects($this->any())
             ->method('validate')
@@ -110,10 +111,9 @@ class PermissionManagerTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertEmpty($this->manager->getPermissionsFromConfig());
 
-        $reflection = new \ReflectionClass('Oro\Bundle\SecurityBundle\Configuration\PermissionConfigurationProvider');
-        $reflectionProperty = $reflection->getProperty('configPath');
-        $reflectionProperty->setAccessible(true);
-        $reflectionProperty->setValue($this->configurationProvider, 'permissions.yml');
+        $this->configurationProvider->expects($this->any())
+            ->method('getConfigPath')->willReturn('permissions.yml');
+
         $permissionNames = [];
 
         foreach ($this->manager->getPermissionsFromConfig() as $permission) {

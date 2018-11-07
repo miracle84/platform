@@ -1,8 +1,9 @@
 define([
+    'tpl!orodatagrid/templates/datagrid/page-size.html',
     'jquery',
     'underscore',
     'backbone'
-], function($, _, Backbone) {
+], function(template, $, _, Backbone) {
     'use strict';
 
     var PageSize;
@@ -16,7 +17,7 @@ define([
      */
     PageSize = Backbone.View.extend({
         /** @property */
-        template: '#template-datagrid-toolbar-page-size',
+        template: template,
 
         /** @property */
         events: {
@@ -32,6 +33,16 @@ define([
 
         /** @property */
         hidden: false,
+
+        /** @property */
+        showLabels: false,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function PageSize() {
+            PageSize.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initializer.
@@ -51,7 +62,10 @@ define([
                 this.items = options.items;
             }
 
-            this.template = _.template($(options.template || this.template).html());
+            if (typeof this.template !== 'function' || options.template) {
+                this.template = _.template($(options.template || this.template).html());
+            }
+
             this.collection = options.collection;
             this.listenTo(this.collection, 'add', this.render);
             this.listenTo(this.collection, 'remove', this.render);
@@ -110,16 +124,16 @@ define([
                 this.items,
                 _.bind(
                     function(item) {
-                        return item.size === undefined ?
-                            this.collection.state.pageSize === item : this.collection.state.pageSize === item.size;
+                        return item.size === undefined
+                            ? this.collection.state.pageSize === item : this.collection.state.pageSize === item.size;
                     },
                     this
                 )
             );
 
             if (currentSizeLabel.length > 0) {
-                currentSizeLabel = _.isUndefined(currentSizeLabel[0].label) ?
-                    currentSizeLabel[0] : currentSizeLabel[0].label;
+                currentSizeLabel = _.isUndefined(currentSizeLabel[0].label)
+                    ? currentSizeLabel[0] : currentSizeLabel[0].label;
             } else {
                 currentSizeLabel = this.items[0];
             }
@@ -128,12 +142,15 @@ define([
                 disabled: !this.enabled || !this.collection.state.totalRecords,
                 collectionState: this.collection.state,
                 items: this.items,
-                currentSizeLabel: currentSizeLabel
+                currentSizeLabel: currentSizeLabel,
+                showLabels: this.showLabels
             })));
 
             if (this.hidden) {
                 this.$el.hide();
             }
+
+            this.initControls();
 
             return this;
         }

@@ -3,12 +3,12 @@
 namespace Oro\Bundle\WorkflowBundle\Model;
 
 use Doctrine\Common\Collections\Collection;
-
-use Oro\Component\Action\Action\ActionInterface;
-use Oro\Component\ConfigExpression\ExpressionInterface;
-
+use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Exception\ForbiddenTransitionException;
+use Oro\Bundle\WorkflowBundle\Resolver\TransitionOptionsResolver;
+use Oro\Component\Action\Action\ActionInterface;
+use Oro\Component\ConfigExpression\ExpressionInterface;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyFields)
@@ -25,6 +25,12 @@ class Transition
 
     /** @var string */
     protected $label;
+
+    /** @var string */
+    protected $buttonLabel;
+
+    /** @var string */
+    protected $buttonTitle;
 
     /** @var ExpressionInterface|null */
     protected $condition;
@@ -63,6 +69,9 @@ class Transition
     protected $unavailableHidden = false;
 
     /** @var string */
+    protected $destinationPage;
+
+    /** @var string */
     protected $pageTemplate;
 
     /** @var string */
@@ -89,6 +98,20 @@ class Transition
     /** @var string */
     protected $initContextAttribute;
 
+    /** @var bool */
+    protected $hasFormConfiguration = false;
+
+    /** @var TransitionOptionsResolver */
+    protected $optionsResolver;
+
+    /**
+     * @param TransitionOptionsResolver $optionsResolver
+     */
+    public function __construct(TransitionOptionsResolver $optionsResolver)
+    {
+        $this->optionsResolver = $optionsResolver;
+    }
+
     /**
      * Set label.
      *
@@ -109,6 +132,44 @@ class Transition
     public function getLabel()
     {
         return $this->label;
+    }
+
+    /**
+     * @param string $buttonLabel
+     *
+     * @return Transition
+     */
+    public function setButtonLabel($buttonLabel)
+    {
+        $this->buttonLabel = $buttonLabel;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getButtonLabel()
+    {
+        return $this->buttonLabel;
+    }
+
+    /**
+     * @param string $buttonTitle
+     *
+     * @return Transition
+     */
+    public function setButtonTitle($buttonTitle)
+    {
+        $this->buttonTitle = $buttonTitle;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getButtonTitle()
+    {
+        return $this->buttonTitle;
     }
 
     /**
@@ -293,11 +354,13 @@ class Transition
      */
     public function isAvailable(WorkflowItem $workflowItem, Collection $errors = null)
     {
-        if ($this->hasForm()) {
-            return $this->isPreConditionAllowed($workflowItem, $errors);
-        } else {
-            return $this->isAllowed($workflowItem, $errors);
-        }
+        $result = $this->hasForm()
+            ? $this->isPreConditionAllowed($workflowItem, $errors)
+            : $this->isAllowed($workflowItem, $errors);
+
+        $this->optionsResolver->resolveTransitionOptions($this, $workflowItem);
+
+        return $result;
     }
 
     /**
@@ -369,7 +432,8 @@ class Transition
      */
     public function hasForm()
     {
-        return !empty($this->formOptions) && !empty($this->formOptions['attribute_fields']);
+        return (!empty($this->formOptions) && !empty($this->formOptions['attribute_fields']))
+            || $this->hasFormConfiguration() || $this->getDisplayType() === 'page';
     }
 
     /**
@@ -482,6 +546,25 @@ class Transition
     }
 
     /**
+     * @param string $destinationPage
+     * @return Transition
+     */
+    public function setDestinationPage($destinationPage)
+    {
+        $this->destinationPage = $destinationPage;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDestinationPage()
+    {
+        return $this->destinationPage;
+    }
+
+    /**
      * @param string $transitionTemplate
      * @return Transition
      */
@@ -581,7 +664,7 @@ class Transition
      */
     public function __toString()
     {
-        return $this->name;
+        return (string)$this->name;
     }
 
     /**
@@ -670,5 +753,45 @@ class Transition
         $this->initContextAttribute = $initContextAttribute;
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFormHandler()
+    {
+        return $this->formOptions[WorkflowConfiguration::NODE_FORM_OPTIONS_CONFIGURATION]['handler'];
+    }
+
+    /**
+     * @return string
+     */
+    public function getFormDataAttribute()
+    {
+        return $this->formOptions[WorkflowConfiguration::NODE_FORM_OPTIONS_CONFIGURATION]['data_attribute'];
+    }
+
+    /**
+     * @return string
+     */
+    public function getFormTemplate()
+    {
+        return $this->formOptions[WorkflowConfiguration::NODE_FORM_OPTIONS_CONFIGURATION]['template'];
+    }
+
+    /**
+     * @return string
+     */
+    public function getFormDataProvider()
+    {
+        return $this->formOptions[WorkflowConfiguration::NODE_FORM_OPTIONS_CONFIGURATION]['data_provider'];
+    }
+
+    /**
+     * @return boolean
+     */
+    public function hasFormConfiguration()
+    {
+        return !empty($this->formOptions[WorkflowConfiguration::NODE_FORM_OPTIONS_CONFIGURATION]);
     }
 }

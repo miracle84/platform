@@ -25,7 +25,7 @@
         {{ ui.renderHtmlProperty(
             dynamicField.label|trans,
             _self.formatDynamicFieldValue(
-                field.entity,
+                entity,
                 field.entity.className,
                 field.fieldName,
                 dynamicField
@@ -39,15 +39,14 @@
     {% set fieldValue = item.value %}
     {% if fieldValue is iterable %}
         {% if fieldValue.values is defined %}
-
-            {% for value in fieldValue.values %}
-                {{ _self.renderField(value) }}
-                {% if not loop.last %}
+            {%- for value in fieldValue.values -%}
+                {{- _self.renderField(value) -}}
+                {%- if not loop.last -%}
                     ,&nbsp;
-                {% endif %}
-            {% else %}
-                {{ 'N/A'|trans }}
-            {% endfor %}
+                {%- endif -%}
+            {%- else -%}
+                {{- 'N/A'|trans -}}
+            {%- endfor -%}
         {% else %}
             {{ _self.renderField(fieldValue) }}
         {% endif %}
@@ -65,7 +64,7 @@
             {{ value|nl2br }}
         {% endset %}
     {% elseif type == 'html' %}
-        {{ value|default('N/A'|trans)|raw }}
+        {{ value|oro_html_sanitize|default('N/A'|trans)|raw }}
     {% elseif type == 'boolean' and value is not null %}
         {% set value = value ? 'Yes'|trans : 'No'|trans %}
     {% elseif type == 'money' %}
@@ -106,7 +105,7 @@
     {% elseif value.raw is defined %}
         {{ value.title|raw }}
     {% else %}
-        {{ value.title|escape }}
+        {{- value.title|escape -}}
     {% endif %}
 {% endmacro %}
 

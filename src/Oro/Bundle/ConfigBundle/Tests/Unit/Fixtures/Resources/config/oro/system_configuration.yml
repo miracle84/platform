@@ -2,12 +2,16 @@ system_configuration:
     fields:
         test_bundle.some_field:
             data_type: string
-            type: text
+            type: Symfony\Component\Form\Extension\Core\Type\TextType
             options: []
 
         test_bundle.some_another_field:
             data_type: string
-            type: choice
+            type: Symfony\Component\Form\Extension\Core\Type\ChoiceType
+
+        test_bundle.service_another_field:
+            data_type: string
+            type: Symfony\Component\Form\Extension\Core\Type\ChoiceType
 
     groups:
         first_group:
@@ -45,3 +49,4 @@ system_configuration:
                                         children:
                                             - test_bundle.some_field
                                             - test_bundle.some_another_field
+                                            - test_bundle.service_another_field

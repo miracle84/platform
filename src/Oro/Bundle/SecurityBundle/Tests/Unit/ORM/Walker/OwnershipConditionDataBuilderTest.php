@@ -2,10 +2,6 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\ORM\Walker;
 
-use Doctrine\ORM\Query\AST\PathExpression;
-
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-
 use Oro\Bundle\SecurityBundle\Acl\AccessLevel;
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdAccessor;
 use Oro\Bundle\SecurityBundle\Acl\Domain\OneShotIsGrantedObserver;
@@ -16,8 +12,12 @@ use Oro\Bundle\SecurityBundle\Owner\OwnerTree;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\User;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Stub\OwnershipMetadataProviderStub;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
+class OwnershipConditionDataBuilderTest extends \PHPUnit\Framework\TestCase
 {
     const BUSINESS_UNIT = 'Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\BusinessUnit';
     const ORGANIZATION  = 'Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization';
@@ -30,10 +30,13 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
     /** @var OwnershipMetadataProviderStub */
     private $metadataProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    private $securityContext;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    private $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    private $tokenStorage;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $aclVoter;
 
     /** @var OwnerTree */
@@ -73,13 +76,9 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
             new OwnershipMetadata('BUSINESS_UNIT', 'owner', 'owner_id')
         );
 
-        $this->securityContext = $this->createMock('Symfony\Component\Security\Core\SecurityContextInterface');
-        $securityContextLink =
-            $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-                ->disableOriginalConstructor()
-                ->getMock();
-        $securityContextLink->expects($this->any())->method('getService')
-            ->will($this->returnValue($this->securityContext));
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenStorage = $this->createMock(TokenStorageInterface::class);
+
         $this->aclVoter = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter')
             ->disableOriginalConstructor()
             ->getMock();
@@ -89,7 +88,8 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
             ->getMock();
 
         $this->builder = new OwnershipConditionDataBuilder(
-            $securityContextLink,
+            $this->authorizationChecker,
+            $this->tokenStorage,
             new ObjectIdAccessor($doctrineHelper),
             $entityMetadataProvider,
             $this->metadataProvider,
@@ -229,13 +229,13 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
             ->method('getOrganizationContext')
             ->will($this->returnValue($organization));
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|AclGroupProviderInterface $aclGroupProvider */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|AclGroupProviderInterface $aclGroupProvider */
         $aclGroupProvider = $this->createMock('Oro\Bundle\SecurityBundle\Acl\Group\AclGroupProviderInterface');
         $aclGroupProvider->expects($this->any())->method('getGroup')->willReturn($expectedGroup);
 
         $this->builder->setAclGroupProvider($aclGroupProvider);
 
-        $this->securityContext->expects($this->any())
+        $this->authorizationChecker->expects($this->any())
             ->method('isGranted')
             ->with(
                 $this->equalTo('VIEW'),
@@ -252,7 +252,7 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 )
             )
             ->will($this->returnValue($isGranted));
-        $this->securityContext->expects($this->any())
+        $this->tokenStorage->expects($this->any())
             ->method('getToken')
             ->will($this->returnValue($userId ? $token : null));
 
@@ -270,7 +270,7 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
         $token->expects($this->any())
             ->method('getUser')
             ->will($this->returnValue('anon'));
-        $this->securityContext->expects($this->any())
+        $this->tokenStorage->expects($this->any())
             ->method('getToken')
             ->will($this->returnValue($token));
         $this->assertNull($this->builder->getUserId());
@@ -316,7 +316,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     null,
                     null,
-                    AccessLevel::GLOBAL_LEVEL,
                     'organization',
                     'org4',
                     true
@@ -329,7 +328,7 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 AccessLevel::GLOBAL_LEVEL,
                 'BUSINESS_UNIT',
                 self::TEST_ENTITY,
-                array(null, null, AccessLevel::GLOBAL_LEVEL, 'organization', 'org4', true)
+                array(null, null, 'organization', 'org4', true)
             ),
             'for the TEST entity with GLOBAL ACL, userId, grant and USER ownerType' => array(
                 'user4',
@@ -338,7 +337,7 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 AccessLevel::GLOBAL_LEVEL,
                 'USER',
                 self::TEST_ENTITY,
-                array(null, null, AccessLevel::GLOBAL_LEVEL, 'organization', 'org4', true)
+                array(null, null, 'organization', 'org4', true)
             ),
             'for the ORGANIZATION entity without ownerType; with GLOBAL ACL, userId, grant' => array(
                 'user4',
@@ -350,7 +349,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'id',
                     array('org4'),
-                    PathExpression::TYPE_STATE_FIELD,
                     null,
                     null,
                     false
@@ -372,7 +370,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'owner',
                     array('bu4', 'bu41', 'bu411'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org4',
                     false
@@ -388,7 +385,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'owner',
                     array('user4', 'user411'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org4',
                     false
@@ -404,7 +400,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'id',
                     array('bu4', 'bu41', 'bu411'),
-                    PathExpression::TYPE_STATE_FIELD,
                     null,
                     null,
                     false
@@ -426,7 +421,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'owner',
                     array('bu4'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org4',
                     false
@@ -442,7 +436,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'owner',
                     array('user4'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org4',
                     false
@@ -458,7 +451,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'id',
                     array('bu4'),
-                    PathExpression::TYPE_STATE_FIELD,
                     null,
                     null,
                     false
@@ -483,7 +475,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'owner',
                     'user4',
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org4',
                     false
@@ -499,7 +490,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 array(
                     'id',
                     'user4',
-                    PathExpression::TYPE_STATE_FIELD,
                     null,
                     null,
                     false
@@ -512,7 +502,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 'user1', '', true, AccessLevel::LOCAL_LEVEL, 'BUSINESS_UNIT', self::TEST_ENTITY, array(
                     'owner',
                     array('bu1', 'bu2'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     null,
                     null,
                     false
@@ -522,7 +511,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 'user1', 'org1', true, AccessLevel::LOCAL_LEVEL, 'BUSINESS_UNIT', self::BUSINESS_UNIT, array(
                     'id',
                     array('bu1'),
-                    PathExpression::TYPE_STATE_FIELD,
                     null,
                     null,
                     false
@@ -532,7 +520,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 'user1', '', true, AccessLevel::LOCAL_LEVEL, 'BUSINESS_UNIT', self::USER, array(
                     'owner',
                     array('bu1', 'bu2'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     null,
                     null,
                     false
@@ -542,7 +529,6 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 'user1', 'org2', true, AccessLevel::DEEP_LEVEL, 'BUSINESS_UNIT', self::TEST_ENTITY, array(
                     'owner',
                     array('bu2'),
-                    PathExpression::TYPE_SINGLE_VALUED_ASSOCIATION,
                     'organization',
                     'org2',
                     false
@@ -561,8 +547,34 @@ class OwnershipConditionDataBuilderTest extends \PHPUnit_Framework_TestCase
                 null,
                 null,
                 self::TEST_ENTITY,
-                [null, null, PathExpression::TYPE_STATE_FIELD, null, null, false]
+                [null, null, null, null, false]
             ),
         );
+    }
+
+    public function testGetUserInCaseOfDifferentUsersInToken()
+    {
+        $user1 = new User(1);
+        $user2 = new User(2);
+
+        $token1 = new UsernamePasswordToken($user1, null, 'main', []);
+        $token2 = new UsernamePasswordToken($user2, null, 'main', []);
+
+        // during first call - return user1 token
+        $this->tokenStorage->expects($this->at(0))
+            ->method('getToken')
+            ->willReturn($token1);
+
+        // during second call - return user2 token
+        $this->tokenStorage->expects($this->at(1))
+            ->method('getToken')
+            ->willReturn($token2);
+
+        $user = $this->builder->getUser();
+        $this->assertSame($user1, $user);
+
+        // at the second call should be the second user in token
+        $user = $this->builder->getUser();
+        $this->assertSame($user2, $user);
     }
 }

@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\NotificationBundle\Tests\Unit\Provider;
 
-use Symfony\Bundle\FrameworkBundle\Tests\TestCase;
-
 use Oro\Bundle\NotificationBundle\Provider\DoctrineListener;
+use Symfony\Bundle\FrameworkBundle\Tests\TestCase;
 
 class DoctrineListenerTest extends TestCase
 {
@@ -14,12 +13,12 @@ class DoctrineListenerTest extends TestCase
     protected $listener;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityPool;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $eventDispatcher;
 

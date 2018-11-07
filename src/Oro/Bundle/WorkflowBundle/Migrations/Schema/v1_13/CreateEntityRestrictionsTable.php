@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Migrations\Schema\v1_13;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 
@@ -30,7 +29,7 @@ class CreateEntityRestrictionsTable implements Migration
         $table->addColumn('field', 'string', ['length' => 255]);
         $table->addColumn('entity_class', 'string', ['length' => 255]);
         $table->addColumn('mode', 'string', ['length' => 255]);
-        $table->addColumn('mode_values', 'json_array', ['notnull' => false]);
+        $table->addColumn('mode_values', 'json_array', ['notnull' => false, 'comment' => '(DC2Type:json_array)']);
         $table->setPrimaryKey(['id']);
         $table->addUniqueIndex(
             ['workflow_name', 'workflow_step_id', 'field', 'entity_class', 'mode'],

@@ -1,28 +1,32 @@
 {% import 'OroUIBundle::macros.html.twig' as UI %}
-<div class="widget-content">
-    {% if saved %}
-        <script type="text/javascript">
-            require(['oroui/js/widget-manager', 'oroui/js/mediator'],
-            function(widgetManager, mediator) {
-                widgetManager.getWidgetInstance({{ app.request.get('_wid')|json_encode|raw }}, function(widget) {
-                    mediator.trigger('auto_response_rule:save', {{ form.vars.value.id }});
-                    mediator.trigger('widget_success:' + widget.getWid());
-                    mediator.trigger('widget_success:' + widget.getAlias());
-                    widget.remove();
-                });
-            });
-        </script>
-    {% else %}
+{% import 'OroQueryDesignerBundle::macros.html.twig' as QD %}
+
+{% if saved %}
+    {% set widgetResponse = {
+        widget: {
+            triggerSuccess: true,
+            trigger: [{
+                name: 'auto_response_rule:save',
+                args: [form.vars.value.id],
+            }],
+            remove: true
+        }
+    } %}
+
+    {{ widgetResponse|json_encode|raw }}
+{% else %}
+    <div class="widget-content">
         {% set pageComponent = {
-            'module': 'oroui/js/app/components/view-component',
-            'options': {'view': 'oroemail/js/app/views/email-template-editor-view'},
+            'view': 'oroemail/js/app/views/email-template-editor-view',
             'layout': 'separate'
         } %}
         <div class="form-container" {{ UI.renderPageComponentAttributes(pageComponent) }}>
-            {% form_theme form 'OroEmailBundle:Form:autoresponseFields.html.twig' %}
             {{ form_start(
                 form,
                 {
+                    attr: {
+                        id: form.vars.id,
+                    },
                     action: path(
                         app.request.attributes.get('_route'),
                         app.request.attributes.get('_route_params')
@@ -30,7 +34,24 @@
                 }
             ) }}
                 <fieldset class="form form-horizontal">
-                    <div class="span8">
+                    <div>
+                        {{ form_row(form.active) }}
+                        {{ form_row(form.name) }}
+                        <div class="control-group">
+                            <label class="required control-label">
+                                {{ 'oro.email.autoresponserule.conditions.label'|trans }}
+                            </label>
+                            <div class="controls">
+                                {{ QD.query_designer_condition_builder({
+                                    'id': 'oro_email_autoresponserule-condition-builder',
+                                    'fieldConditionModule': 'oroemail/js/app/views/email-field-condition-view',
+                                    'fieldConditionOptions': {
+                                        'entityData': emailEntityData
+                                    },
+                                    'metadata': metadata
+                                }) }}
+                            </div>
+                        </div>
                         {{ form_rest(form) }}
                     </div>
                     <div class="widget-actions form-actions" style="display: none;">
@@ -40,6 +61,10 @@
                     </div>
                 </fieldset>
             {{ form_end(form) }}
+            {{ oro_form_js_validation(form) }}
+            <div{{ UI.renderPageComponentAttributes({
+                'module': 'oroemail/js/app/components/auto-response-rule-component'
+            }) }}></div>
         </div>
-    {% endif %}
-</div>
+    </div>
+{% endif %}

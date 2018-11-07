@@ -1,31 +1,36 @@
 <?php
 
-
 namespace Oro\Bundle\NoteBundle\Tests\Unit\Entity\Manager;
 
+use Doctrine\ORM\EntityManager;
 use Oro\Bundle\AttachmentBundle\Entity\File;
-use Oro\Bundle\NoteBundle\Entity\Note;
+use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
+use Oro\Bundle\AttachmentBundle\Tools\AttachmentAssociationHelper;
+use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\NoteBundle\Entity\Manager\NoteManager;
+use Oro\Bundle\NoteBundle\Entity\Note;
 use Oro\Bundle\NoteBundle\Tests\Unit\Stub\AttachmentProviderStub;
+use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class NoteManagerTest extends \PHPUnit_Framework_TestCase
+class NoteManagerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $aclHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entityNameResolver;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $attachmentManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $attachmentAssociationHelper;
 
     /** @var NoteManager */
@@ -33,26 +38,12 @@ class NoteManagerTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->em                 = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->securityFacade     = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->aclHelper          = $this->getMockBuilder('Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->entityNameResolver = $this->getMockBuilder('Oro\Bundle\EntityBundle\Provider\EntityNameResolver')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->attachmentManager  = $this->getMockBuilder('Oro\Bundle\AttachmentBundle\Manager\AttachmentManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->attachmentAssociationHelper =
-            $this->getMockBuilder('Oro\Bundle\AttachmentBundle\Tools\AttachmentAssociationHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->em = $this->createMock(EntityManager::class);
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->aclHelper = $this->createMock(AclHelper::class);
+        $this->entityNameResolver = $this->createMock(EntityNameResolver::class);
+        $this->attachmentManager = $this->createMock(AttachmentManager::class);
+        $this->attachmentAssociationHelper = $this->createMock(AttachmentAssociationHelper::class);
 
         $attachmentProvider = new AttachmentProviderStub(
             $this->em,
@@ -62,7 +53,7 @@ class NoteManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->manager = new NoteManager(
             $this->em,
-            $this->securityFacade,
+            $this->authorizationChecker,
             $this->aclHelper,
             $this->entityNameResolver,
             $attachmentProvider,
@@ -101,7 +92,7 @@ class NoteManagerTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnSelf());
         $this->aclHelper->expects($this->once())
             ->method('apply')
-            ->with($this->identicalTo($qb))
+            ->with($this->identicalTo($qb), 'VIEW', ['checkRelations' => false])
             ->will($this->returnValue($query));
         $query->expects($this->once())
             ->method('getResult')
@@ -136,19 +127,19 @@ class NoteManagerTest extends \PHPUnit_Framework_TestCase
             ->setOwner($createdBy)
             ->setUpdatedBy($updatedBy);
 
-        $this->securityFacade->expects($this->at(0))
+        $this->authorizationChecker->expects($this->at(0))
             ->method('isGranted')
             ->with('EDIT', $this->identicalTo($note))
             ->will($this->returnValue(true));
-        $this->securityFacade->expects($this->at(1))
+        $this->authorizationChecker->expects($this->at(1))
             ->method('isGranted')
             ->with('DELETE', $this->identicalTo($note))
             ->will($this->returnValue(false));
-        $this->securityFacade->expects($this->at(2))
+        $this->authorizationChecker->expects($this->at(2))
             ->method('isGranted')
             ->with('VIEW', $this->identicalTo($createdBy))
             ->will($this->returnValue(true));
-        $this->securityFacade->expects($this->at(3))
+        $this->authorizationChecker->expects($this->at(3))
             ->method('isGranted')
             ->with('VIEW', $this->identicalTo($updatedBy))
             ->will($this->returnValue(false));

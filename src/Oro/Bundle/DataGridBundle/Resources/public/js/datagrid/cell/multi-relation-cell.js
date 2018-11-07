@@ -46,6 +46,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function MultiRelationCell() {
+            MultiRelationCell.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         render: function() {
             var value = this.model.get(this.column.get('name'));
 
@@ -70,7 +77,9 @@ define([
                 html = value.count > 0 ? (
                     '<span class="multiselect-value-wrapper"><span class="value-item">' +
                     value.data
-                        .map(function(item) {return item.label;})
+                        .map(function(item) {
+                            return item.label;
+                        })
                         .join('</span><span class="value-item">') +
                     '</span></span>'
                 ) : '';

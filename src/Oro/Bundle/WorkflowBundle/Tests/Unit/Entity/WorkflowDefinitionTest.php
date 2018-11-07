@@ -3,6 +3,7 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use JMS\Serializer as JMS;
 use Oro\Bundle\ScopeBundle\Entity\Scope;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
@@ -14,7 +15,7 @@ use Oro\Component\Testing\Unit\EntityTestCaseTrait;
 /**
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class WorkflowDefinitionTest extends \PHPUnit_Framework_TestCase
+class WorkflowDefinitionTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTestCaseTrait;
 
@@ -33,11 +34,38 @@ class WorkflowDefinitionTest extends \PHPUnit_Framework_TestCase
         unset($this->workflowDefinition);
     }
 
+    public function testGetVirtualAttributes()
+    {
+        $this->workflowDefinition->setConfiguration([
+            'attributes' => [
+                'normal_attribute' => [],
+                'virtual_attribute' => [
+                    'options' => [
+                        'virtual' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->assertEquals(
+            [
+                'virtual_attribute' => [
+                    'options' => [
+                        'virtual' => true,
+                    ],
+                ],
+            ],
+            $this->workflowDefinition->getVirtualAttributes()
+        );
+    }
+
     public function testAccessors()
     {
         $this->assertPropertyCollections($this->workflowDefinition, [
             ['scopes', new Scope()],
         ]);
+
+        $this->assertPropertyAccessors($this->workflowDefinition, [['applications', ['some_application'], true]]);
     }
 
     public function testSetScopesConfig()
@@ -157,6 +185,13 @@ class WorkflowDefinitionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(['group1', 'group2'], $this->workflowDefinition->getExclusiveRecordGroups());
 
         $this->assertTrue($this->workflowDefinition->hasExclusiveRecordGroups());
+    }
+
+    public function testIsForceAutostart()
+    {
+        $this->assertFalse($this->workflowDefinition->isForceAutostart());
+        $this->workflowDefinition->setConfiguration([WorkflowDefinition::CONFIG_FORCE_AUTOSTART => true]);
+        $this->assertTrue($this->workflowDefinition->isForceAutostart());
     }
 
     /**
@@ -296,5 +331,27 @@ class WorkflowDefinitionTest extends \PHPUnit_Framework_TestCase
             $configuration[WorkflowConfiguration::NODE_DISABLE_OPERATIONS],
             $this->workflowDefinition->getDisabledOperations()
         );
+    }
+
+    public function testExcludeRestrictionsField()
+    {
+        $step = new WorkflowStep();
+        $step->setName('step');
+
+        $restriction          = new WorkflowRestriction();
+        $restrictionAttribute = 'test attribute';
+        $restriction->setStep($step)->setAttribute($restrictionAttribute);
+
+        $definitionName = 'Definition name';
+        $this->workflowDefinition->setName($definitionName);
+        $this->workflowDefinition->setRestrictions([$restriction]);
+
+        $serializer  = JMS\SerializerBuilder::create()->build();
+        $jsonContent = $serializer->serialize($this->workflowDefinition, 'json');
+
+        $this->assertJson($jsonContent);
+        $this->assertNotContains('restrictions', $jsonContent);
+        $this->assertNotContains($restrictionAttribute, $jsonContent);
+        $this->assertContains($definitionName, $jsonContent);
     }
 }

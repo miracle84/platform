@@ -5,10 +5,10 @@ namespace Oro\Bundle\ApiBundle\Tests\Unit\Provider;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Provider\ExpandedAssociationExtractor;
 
-class ExpandedAssociationExtractorTest extends \PHPUnit_Framework_TestCase
+class ExpandedAssociationExtractorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExpandedAssociationExtractor */
-    protected $extractor;
+    private $extractor;
 
     protected function setUp()
     {
@@ -90,7 +90,7 @@ class ExpandedAssociationExtractorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testGetExpandedAssociationsWnenAssociationShouldBeReturnedAsField()
+    public function testGetExpandedAssociationsWhenAssociationShouldBeReturnedAsField()
     {
         $config = new EntityDefinitionConfig();
         $associationField = $config->addField('association');
@@ -107,7 +107,7 @@ class ExpandedAssociationExtractorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testGetExpandedAssociationsWnenAssociationHasMetaPropertyInAdditionalToId()
+    public function testGetExpandedAssociationsWhenAssociationHasMetaPropertyInAdditionalToId()
     {
         $config = new EntityDefinitionConfig();
         $associationField = $config->addField('association');
@@ -120,6 +120,57 @@ class ExpandedAssociationExtractorTest extends \PHPUnit_Framework_TestCase
         self::assertEquals(
             [],
             $this->extractor->getExpandedAssociations($config)
+        );
+    }
+
+    public function testGetFirstLevelOfExpandedAssociationsByPath()
+    {
+        $pathsToExpand = ['field1.field11'];
+        $config = new EntityDefinitionConfig();
+
+        self::assertEquals(
+            [
+                'field1' => ['field11']
+            ],
+            $this->extractor->getFirstLevelOfExpandedAssociations($config, $pathsToExpand)
+        );
+    }
+
+    public function testGetFirstLevelOfExpandedAssociationsForFieldWithoutPropertyPath()
+    {
+        $pathsToExpand = ['field1'];
+        $config = new EntityDefinitionConfig();
+        $config->addField('field1');
+
+        self::assertEquals(
+            [],
+            $this->extractor->getFirstLevelOfExpandedAssociations($config, $pathsToExpand)
+        );
+    }
+
+    public function testGetFirstLevelOfExpandedAssociationsForRenamedFieldWithPropertyPath()
+    {
+        $pathsToExpand = ['field1'];
+        $config = new EntityDefinitionConfig();
+        $config->addField('field1')->setPropertyPath('realField1');
+
+        self::assertEquals(
+            [],
+            $this->extractor->getFirstLevelOfExpandedAssociations($config, $pathsToExpand)
+        );
+    }
+
+    public function testGetFirstLevelOfExpandedAssociationsForFieldWithPropertyPath()
+    {
+        $pathsToExpand = ['field1'];
+        $config = new EntityDefinitionConfig();
+        $config->addField('field1')->setPropertyPath('field2.field21');
+
+        self::assertEquals(
+            [
+                'field2' => ['field21']
+            ],
+            $this->extractor->getFirstLevelOfExpandedAssociations($config, $pathsToExpand)
         );
     }
 }

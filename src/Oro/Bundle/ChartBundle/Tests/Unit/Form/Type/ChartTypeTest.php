@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\ChartBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
-use Oro\Bundle\ChartBundle\Form\Type\ChartType;
 use Oro\Bundle\ChartBundle\Form\Type\ChartSettingsType;
-use Oro\Bundle\ChartBundle\Form\Type\ChartSettingsCollectionType;
+use Oro\Bundle\ChartBundle\Form\Type\ChartType;
 use Oro\Bundle\TestFrameworkBundle\Test\Form\MutableFormEventSubscriber;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
 
 class ChartTypeTest extends FormIntegrationTestCase
 {
@@ -18,12 +17,12 @@ class ChartTypeTest extends FormIntegrationTestCase
     protected $type;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $configProvider;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $formBuilder;
 
@@ -58,7 +57,7 @@ class ChartTypeTest extends FormIntegrationTestCase
             ->method('getChartConfigs')
             ->will($this->returnValue($chartConfigs));
 
-        $form = $this->factory->create($this->type, null, []);
+        $form = $this->factory->create(ChartType::class, null, []);
 
         $this->assertTrue($form->has('name'));
         $this->assertTrue($form->has('settings'));
@@ -83,7 +82,7 @@ class ChartTypeTest extends FormIntegrationTestCase
                             'field' => [
                                 'name'  => 'name',
                                 'label' => 'Name',
-                                'type'  => 'text',
+                                'type'  => TextType::class,
                             ]
                         ],
                         'data_schema'      => []
@@ -95,7 +94,7 @@ class ChartTypeTest extends FormIntegrationTestCase
                             'field' => [
                                 'name'  => 'name2',
                                 'label' => 'Name2',
-                                'type'  => 'text',
+                                'type'  => TextType::class,
                             ]
                         ],
                         'data_schema'      => [
@@ -112,14 +111,13 @@ class ChartTypeTest extends FormIntegrationTestCase
      */
     protected function getExtensions()
     {
-        $childType      = new ChartSettingsType($this->configProvider);
-        $collectionType = new ChartSettingsCollectionType();
+        $childType = new ChartSettingsType($this->configProvider);
 
         return [
             new PreloadedExtension(
                 [
-                    $childType->getName()      => $childType,
-                    $collectionType->getName() => $collectionType,
+                    $this->type,
+                    ChartSettingsType::class => $childType
                 ],
                 []
             )

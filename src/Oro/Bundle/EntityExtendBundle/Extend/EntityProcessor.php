@@ -2,15 +2,17 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Extend;
 
-use Psr\Log\LoggerInterface;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\HttpKernel\Profiler\Profiler;
-
 use Oro\Bundle\EntityConfigBundle\Tools\CommandExecutor;
 use Oro\Bundle\EntityExtendBundle\Event\UpdateSchemaEvent;
 use Oro\Bundle\PlatformBundle\Maintenance\Mode as MaintenanceMode;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpKernel\Profiler\Profiler;
 
+/**
+ * This Processor provide functionality to updates database and all related caches
+ * according to changes of extended entities
+ */
 class EntityProcessor
 {
     /** @var MaintenanceMode */
@@ -53,11 +55,9 @@ class EntityProcessor
      *                                after database schema is changed
      * @param bool $updateRouting     Whether routes should be updated after database schema is changed
      *
-     * @param bool $attributesOnly Run command for update schema for fields which are attributes
-     *
      * @return bool
      */
-    public function updateDatabase($warmUpConfigCache = false, $updateRouting = false, $attributesOnly = false)
+    public function updateDatabase($warmUpConfigCache = false, $updateRouting = false)
     {
         set_time_limit(0);
 
@@ -68,7 +68,7 @@ class EntityProcessor
         }
 
         $this->maintenance->activate();
-        $commands = $this->getCommandsToExecute($warmUpConfigCache, $updateRouting, $attributesOnly);
+        $commands = $this->getCommandsToExecute($warmUpConfigCache, $updateRouting);
         $result = $this->executeCommands($commands);
         if ($result) {
             try {
@@ -92,28 +92,15 @@ class EntityProcessor
     /**
      * @param bool $warmUpConfigCache
      * @param bool $updateRouting
-     * @param bool $attributesOnly
      * @return array
      */
-    private function getCommandsToExecute($warmUpConfigCache = false, $updateRouting = false, $attributesOnly = false)
+    private function getCommandsToExecute($warmUpConfigCache = false, $updateRouting = false)
     {
         $commands = [
             'oro:entity-extend:update-config' => ['--update-custom' => true],
-            'oro:entity-extend:cache:warmup'  => [],
+            'oro:entity-extend:cache:warmup' => [],
             'oro:entity-extend:update-schema' => []
         ];
-
-      /*  Should be changed in scope of #BB-6620
-      if ($attributesOnly) {
-            $commands = [
-                'oro:entity-extend:update-config' => [
-                        '--update-custom' => true,
-                        '--attributes-only' => true
-                ],
-                'oro:entity-extend:cache:warmup'  => [],
-                'oro:entity-extend:update-schema' => ['--attributes-only' => true]
-            ];
-        }*/
 
         if ($warmUpConfigCache) {
             $commands = array_merge(
@@ -128,7 +115,7 @@ class EntityProcessor
             $commands = array_merge(
                 $commands,
                 [
-                    'router:cache:clear'  => [],
+                    'router:cache:clear' => [],
                     'fos:js-routing:dump' => []
                 ]
             );

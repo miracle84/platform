@@ -2,12 +2,10 @@
 
 namespace Oro\Bundle\ApiBundle\Processor;
 
-use Oro\Component\ChainProcessor\ParameterBag;
-use Oro\Component\ChainProcessor\ParameterBagInterface;
 use Oro\Bundle\ApiBundle\Collection\CaseInsensitiveParameterBag;
 use Oro\Bundle\ApiBundle\Config\Config;
+use Oro\Bundle\ApiBundle\Config\ConfigExtraCollection;
 use Oro\Bundle\ApiBundle\Config\ConfigExtraInterface;
-use Oro\Bundle\ApiBundle\Config\ConfigExtraSectionInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Config\FiltersConfig;
 use Oro\Bundle\ApiBundle\Config\FiltersConfigExtra;
@@ -19,39 +17,31 @@ use Oro\Bundle\ApiBundle\Filter\FilterValueAccessorInterface;
 use Oro\Bundle\ApiBundle\Filter\NullFilterValueAccessor;
 use Oro\Bundle\ApiBundle\Metadata\ActionMetadataExtra;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
+use Oro\Bundle\ApiBundle\Metadata\MetadataExtraCollection;
 use Oro\Bundle\ApiBundle\Metadata\MetadataExtraInterface;
-use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Provider\ConfigProvider;
 use Oro\Bundle\ApiBundle\Provider\MetadataProvider;
 use Oro\Bundle\ApiBundle\Request\DocumentBuilderInterface;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
+use Oro\Component\ChainProcessor\ParameterBag;
+use Oro\Component\ChainProcessor\ParameterBagInterface;
 
 /**
+ * The base execution context for Data API processors for public actions.
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  */
-class Context extends ApiContext implements ContextInterface
+class Context extends NormalizeResultContext implements ContextInterface
 {
     /** FQCN of an entity */
     const CLASS_NAME = 'class';
 
-    /**
-     * a value indicates whether errors should just stop processing
-     * or an exception should be thrown is any error occurred
-     */
-    const SOFT_ERRORS_HANDLING = 'softErrorsHandling';
-
     /** a prefix for all configuration sections */
     const CONFIG_PREFIX = 'config_';
 
-    /** a list of requests for configuration data */
-    const CONFIG_EXTRAS = 'configExtras';
-
     /** metadata of an entity */
     const METADATA = 'metadata';
-
-    /** a list of requests for additional metadata info */
-    const METADATA_EXTRAS = 'metadataExtras';
 
     /** a query is used to get result data */
     const QUERY = 'query';
@@ -68,17 +58,17 @@ class Context extends ApiContext implements ContextInterface
      */
     const INCLUDE_HEADER = 'X-Include';
 
-    /** a list of filters is used to add additional restrictions to a query is used to get result data */
-    const FILTERS = 'filters';
+    /** indicates whether the current action processes a master API request */
+    const MASTER_REQUEST = 'masterRequest';
 
-    /** @var array[]|null */
-    private $processed;
+    /** indicates whether the current request is CORS request */
+    const CORS = 'cors';
+
+    /** @var FilterCollection */
+    private $filters;
 
     /** @var FilterValueAccessorInterface */
     private $filterValues;
-
-    /** @var Error[] */
-    private $errors;
 
     /** @var ConfigProvider */
     protected $configProvider;
@@ -95,6 +85,12 @@ class Context extends ApiContext implements ContextInterface
     /** @var DocumentBuilderInterface|null */
     private $responseDocumentBuilder;
 
+    /** @var ConfigExtraCollection */
+    private $configExtras;
+
+    /** @var MetadataExtraCollection|null */
+    private $metadataExtras;
+
     /**
      * @param ConfigProvider   $configProvider
      * @param MetadataProvider $metadataProvider
@@ -102,8 +98,11 @@ class Context extends ApiContext implements ContextInterface
     public function __construct(ConfigProvider $configProvider, MetadataProvider $metadataProvider)
     {
         parent::__construct();
+        $this->configExtras = new ConfigExtraCollection();
         $this->configProvider = $configProvider;
         $this->metadataProvider = $metadataProvider;
+        $this->set(self::MASTER_REQUEST, false);
+        $this->set(self::CORS, false);
     }
 
     /**
@@ -120,6 +119,16 @@ class Context extends ApiContext implements ContextInterface
     public function setClassName($className)
     {
         $this->set(self::CLASS_NAME, $className);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function hasIdentifierFields()
+    {
+        $metadata = $this->getMetadata();
+
+        return null !== $metadata && $metadata->hasIdentifierFields();
     }
 
     /**
@@ -199,7 +208,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function setResponseDocumentBuilder(DocumentBuilderInterface $documentBuilder = null)
+    public function setResponseDocumentBuilder(?DocumentBuilderInterface $documentBuilder)
     {
         $this->responseDocumentBuilder = $documentBuilder;
     }
@@ -209,11 +218,11 @@ class Context extends ApiContext implements ContextInterface
      */
     public function getFilters()
     {
-        if (!$this->has(self::FILTERS)) {
-            $this->set(self::FILTERS, new FilterCollection());
+        if (null === $this->filters) {
+            $this->filters = new FilterCollection();
         }
 
-        return $this->get(self::FILTERS);
+        return $this->filters;
     }
 
     /**
@@ -234,6 +243,38 @@ class Context extends ApiContext implements ContextInterface
     public function setFilterValues(FilterValueAccessorInterface $accessor)
     {
         $this->filterValues = $accessor;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isMasterRequest(): bool
+    {
+        return $this->get(self::MASTER_REQUEST);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setMasterRequest(bool $master): void
+    {
+        $this->set(self::MASTER_REQUEST, $master);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isCorsRequest(): bool
+    {
+        return $this->get(self::CORS);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setCorsRequest(bool $cors): void
+    {
+        $this->set(self::CORS, $cors);
     }
 
     /**
@@ -283,99 +324,9 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function hasErrors()
-    {
-        return !empty($this->errors);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getErrors()
-    {
-        return null !== $this->errors
-            ? $this->errors
-            : [];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function addError(Error $error)
-    {
-        if (null === $this->errors) {
-            $this->errors = [];
-        }
-        $this->errors[] = $error;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function resetErrors()
-    {
-        $this->errors = null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isSoftErrorsHandling()
-    {
-        return (bool)$this->get(self::SOFT_ERRORS_HANDLING);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setSoftErrorsHandling($softErrorsHandling)
-    {
-        if ($softErrorsHandling) {
-            $this->set(self::SOFT_ERRORS_HANDLING, true);
-        } else {
-            $this->remove(self::SOFT_ERRORS_HANDLING);
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setProcessed($operationName)
-    {
-        $this->processed[$operationName] = true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clearProcessed($operationName)
-    {
-        if ($this->isProcessed($operationName)) {
-            unset($this->processed[$operationName]);
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isProcessed($operationName)
-    {
-        return
-            null !== $this->processed
-            && array_key_exists($operationName, $this->processed)
-            && $this->processed[$operationName];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getConfigExtras()
     {
-        $extras = $this->get(self::CONFIG_EXTRAS);
-
-        return null !== $extras
-            ? $extras
-            : [];
+        return $this->configExtras->getConfigExtras();
     }
 
     /**
@@ -383,19 +334,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function setConfigExtras(array $extras)
     {
-        foreach ($extras as $configExtra) {
-            if (!$configExtra instanceof ConfigExtraInterface) {
-                throw new \InvalidArgumentException(
-                    'Expected an array of "Oro\Bundle\ApiBundle\Config\ConfigExtraInterface".'
-                );
-            }
-        }
-
-        if (empty($extras)) {
-            $this->remove(self::CONFIG_EXTRAS);
-        } else {
-            $this->set(self::CONFIG_EXTRAS, $extras);
-        }
+        $this->configExtras->setConfigExtras($extras);
     }
 
     /**
@@ -403,14 +342,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function hasConfigExtra($extraName)
     {
-        $configExtras = $this->getConfigExtras();
-        foreach ($configExtras as $configExtra) {
-            if ($configExtra->getName() === $extraName) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->configExtras->hasConfigExtra($extraName);
     }
 
     /**
@@ -418,14 +350,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function getConfigExtra($extraName)
     {
-        $configExtras = $this->getConfigExtras();
-        foreach ($configExtras as $configExtra) {
-            if ($configExtra->getName() === $extraName) {
-                return $configExtra;
-            }
-        }
-
-        return null;
+        return $this->configExtras->getConfigExtra($extraName);
     }
 
     /**
@@ -433,14 +358,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function addConfigExtra(ConfigExtraInterface $extra)
     {
-        if ($this->hasConfigExtra($extra->getName())) {
-            throw new \InvalidArgumentException(
-                sprintf('The "%s" config extra already exists.', $extra->getName())
-            );
-        }
-        $extras = $this->getConfigExtras();
-        $extras[] = $extra;
-        $this->setConfigExtras($extras);
+        $this->configExtras->addConfigExtra($extra);
     }
 
     /**
@@ -448,14 +366,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function removeConfigExtra($extraName)
     {
-        $configExtras = $this->getConfigExtras();
-        $keys = array_keys($configExtras);
-        foreach ($keys as $key) {
-            if ($configExtras[$key]->getName() === $extraName) {
-                unset($configExtras[$key]);
-            }
-        }
-        $this->setConfigExtras(array_values($configExtras));
+        $this->configExtras->removeConfigExtra($extraName);
     }
 
     /**
@@ -463,15 +374,7 @@ class Context extends ApiContext implements ContextInterface
      */
     public function getConfigSections()
     {
-        $sections = [];
-        $configExtras = $this->getConfigExtras();
-        foreach ($configExtras as $configExtra) {
-            if ($configExtra instanceof ConfigExtraSectionInterface) {
-                $sections[] = $configExtra->getName();
-            }
-        }
-
-        return $sections;
+        return $this->configExtras->getConfigSections();
     }
 
     /**
@@ -498,17 +401,13 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function setConfig(EntityDefinitionConfig $definition = null)
+    public function setConfig(?EntityDefinitionConfig $definition)
     {
-        if ($definition) {
-            $this->set($this->getConfigKey(), $definition);
-            // make sure that all config sections are added to the context
-            $this->ensureAllConfigSectionsSet();
-        } else {
-            $this->remove($this->getConfigKey());
-            // make sure that all config sections are removed from the context
-            $this->ensureAllConfigSectionsSet(true);
+        $this->set($this->getConfigKey(), $definition);
+        if (null === $definition) {
+            $this->removeAllConfigSections();
         }
+        $this->ensureAllConfigSectionsSet();
     }
 
     /**
@@ -530,7 +429,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function setConfigOfFilters(FiltersConfig $config = null)
+    public function setConfigOfFilters(?FiltersConfig $config)
     {
         $this->setConfigOf(FiltersConfigExtra::NAME, $config);
     }
@@ -554,7 +453,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function setConfigOfSorters(SortersConfig $config = null)
+    public function setConfigOfSorters(?SortersConfig $config)
     {
         $this->setConfigOf(SortersConfigExtra::NAME, $config);
     }
@@ -653,7 +552,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * @param Config|null $config
      */
-    protected function processLoadedConfig(Config $config = null)
+    protected function processLoadedConfig(?Config $config)
     {
         // add loaded config sections to the context
         if ($config && !$config->isEmpty()) {
@@ -672,25 +571,29 @@ class Context extends ApiContext implements ContextInterface
     }
 
     /**
-     * Makes sure that all config sections are added to (or removed from) the context.
-     *
-     * @param bool $remove
+     * Makes sure that all config sections are added to the context.
      */
-    protected function ensureAllConfigSectionsSet($remove = false)
+    protected function ensureAllConfigSectionsSet()
     {
-        $configExtras = $this->getConfigExtras();
-        foreach ($configExtras as $configExtra) {
-            if ($configExtra instanceof ConfigExtraSectionInterface) {
-                $key = self::CONFIG_PREFIX . $configExtra->getName();
-                if ($remove) {
-                    if ($this->has($key)) {
-                        $this->remove($key);
-                    }
-                } else {
-                    if (!$this->has($key)) {
-                        $this->set($key, null);
-                    }
-                }
+        $configSections = $this->getConfigSections();
+        foreach ($configSections as $name) {
+            $key = self::CONFIG_PREFIX . $name;
+            if (!$this->has($key)) {
+                $this->set($key, null);
+            }
+        }
+    }
+
+    /**
+     * Removes all config sections from the context.
+     */
+    protected function removeAllConfigSections()
+    {
+        $configSections = $this->getConfigSections();
+        foreach ($configSections as $name) {
+            $key = self::CONFIG_PREFIX . $name;
+            if ($this->has($key)) {
+                $this->remove($key);
             }
         }
     }
@@ -699,20 +602,10 @@ class Context extends ApiContext implements ContextInterface
      * @param string $configSection
      *
      * @return bool
-     * @throws \InvalidArgumentException if undefined configuration section is specified
      */
     protected function isKnownConfigSection($configSection)
     {
-        $result = false;
-        $configExtras = $this->getConfigExtras();
-        foreach ($configExtras as $configExtra) {
-            if ($configExtra instanceof ConfigExtraSectionInterface && $configSection === $configExtra->getName()) {
-                $result = true;
-                break;
-            }
-        }
-
-        return $result;
+        return $this->configExtras->hasConfigSection($configSection);
     }
 
     /**
@@ -720,15 +613,9 @@ class Context extends ApiContext implements ContextInterface
      */
     public function getMetadataExtras()
     {
-        $extras = $this->get(self::METADATA_EXTRAS);
-        $extras = null !== $extras ? $extras : [];
-        $action = $this->getAction();
-        if ($action && (empty($extras) || !$this->hasActionMetadataExtra($extras))) {
-            $extras[] = new ActionMetadataExtra($action);
-            $this->set(self::METADATA_EXTRAS, $extras);
-        }
+        $this->ensureMetadataExtrasInitialized();
 
-        return $extras;
+        return $this->metadataExtras->getMetadataExtras();
     }
 
     /**
@@ -736,18 +623,13 @@ class Context extends ApiContext implements ContextInterface
      */
     public function setMetadataExtras(array $extras)
     {
-        foreach ($extras as $metadataExtra) {
-            if (!$metadataExtra instanceof MetadataExtraInterface) {
-                throw new \InvalidArgumentException(
-                    'Expected an array of "Oro\Bundle\ApiBundle\Metadata\MetadataExtraInterface".'
-                );
-            }
-        }
-
         if (empty($extras)) {
-            $this->remove(self::METADATA_EXTRAS);
+            $this->metadataExtras = null;
         } else {
-            $this->set(self::METADATA_EXTRAS, $extras);
+            if (null === $this->metadataExtras) {
+                $this->metadataExtras = new MetadataExtraCollection();
+            }
+            $this->metadataExtras->setMetadataExtras($extras);
         }
     }
 
@@ -756,14 +638,19 @@ class Context extends ApiContext implements ContextInterface
      */
     public function hasMetadataExtra($extraName)
     {
-        $metadataExtras = $this->getMetadataExtras();
-        foreach ($metadataExtras as $metadataExtra) {
-            if ($metadataExtra->getName() === $extraName) {
-                return true;
-            }
-        }
+        $this->ensureMetadataExtrasInitialized();
 
-        return false;
+        return $this->metadataExtras->hasMetadataExtra($extraName);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getMetadataExtra($extraName)
+    {
+        $this->ensureMetadataExtrasInitialized();
+
+        return $this->metadataExtras->getMetadataExtra($extraName);
     }
 
     /**
@@ -771,14 +658,8 @@ class Context extends ApiContext implements ContextInterface
      */
     public function addMetadataExtra(MetadataExtraInterface $extra)
     {
-        if ($this->hasMetadataExtra($extra->getName())) {
-            throw new \InvalidArgumentException(
-                sprintf('The "%s" metadata extra already exists.', $extra->getName())
-            );
-        }
-        $extras = $this->getMetadataExtras();
-        $extras[] = $extra;
-        $this->setMetadataExtras($extras);
+        $this->ensureMetadataExtrasInitialized();
+        $this->metadataExtras->addMetadataExtra($extra);
     }
 
     /**
@@ -786,14 +667,8 @@ class Context extends ApiContext implements ContextInterface
      */
     public function removeMetadataExtra($extraName)
     {
-        $metadataExtras = $this->getMetadataExtras();
-        $keys = array_keys($metadataExtras);
-        foreach ($keys as $key) {
-            if ($metadataExtras[$key]->getName() === $extraName) {
-                unset($metadataExtras[$key]);
-            }
-        }
-        $this->setMetadataExtras(array_values($metadataExtras));
+        $this->ensureMetadataExtrasInitialized();
+        $this->metadataExtras->removeMetadataExtra($extraName);
     }
 
     /**
@@ -819,7 +694,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * {@inheritdoc}
      */
-    public function setMetadata(EntityMetadata $metadata = null)
+    public function setMetadata(?EntityMetadata $metadata)
     {
         if ($metadata) {
             $this->set(self::METADATA, $metadata);
@@ -829,19 +704,22 @@ class Context extends ApiContext implements ContextInterface
     }
 
     /**
-     * @param MetadataExtraInterface[] $extras
-     *
-     * @return bool
+     * Makes sure that a list of requests for additional metadata info is initialized.
      */
-    protected function hasActionMetadataExtra(array $extras)
+    private function ensureMetadataExtrasInitialized()
     {
-        foreach ($extras as $extra) {
-            if ($extra->getName() === ActionMetadataExtra::NAME) {
-                return true;
-            }
+        if (null === $this->metadataExtras) {
+            $this->metadataExtras = new MetadataExtraCollection();
         }
-
-        return false;
+        $action = $this->getAction();
+        if ($action
+            && (
+                $this->metadataExtras->isEmpty()
+                || !$this->metadataExtras->hasMetadataExtra(ActionMetadataExtra::NAME)
+            )
+        ) {
+            $this->metadataExtras->addMetadataExtra(new ActionMetadataExtra($action));
+        }
     }
 
     /**
@@ -857,13 +735,17 @@ class Context extends ApiContext implements ContextInterface
         }
 
         try {
-            $metadata = $this->metadataProvider->getMetadata(
-                $entityClass,
-                $this->getVersion(),
-                $this->getRequestType(),
-                $this->getConfig(),
-                $this->getMetadataExtras()
-            );
+            $metadata = null;
+            $config = $this->getConfig();
+            if (null !== $config) {
+                $metadata = $this->metadataProvider->getMetadata(
+                    $entityClass,
+                    $this->getVersion(),
+                    $this->getRequestType(),
+                    $config,
+                    $this->getMetadataExtras()
+                );
+            }
             $this->processLoadedMetadata($metadata);
         } catch (\Exception $e) {
             $this->processLoadedMetadata(null);
@@ -875,7 +757,7 @@ class Context extends ApiContext implements ContextInterface
     /**
      * @param EntityMetadata|null $metadata
      */
-    protected function processLoadedMetadata(EntityMetadata $metadata = null)
+    protected function processLoadedMetadata(?EntityMetadata $metadata)
     {
         // add loaded metadata to the context
         $this->set(self::METADATA, $metadata);

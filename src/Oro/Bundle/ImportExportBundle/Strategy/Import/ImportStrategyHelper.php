@@ -5,62 +5,56 @@ namespace Oro\Bundle\ImportExportBundle\Strategy\Import;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\Security\Acl\Voter\FieldVote;
-use Symfony\Component\Translation\TranslatorInterface;
-use Symfony\Component\Validator\ConstraintViolationInterface;
-use Symfony\Component\Validator\ValidatorInterface;
-
 use Oro\Bundle\EntityBundle\Helper\FieldHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\ImportExportBundle\Context\BatchContextInterface;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
+use Oro\Bundle\ImportExportBundle\Converter\ConfigurableTableDataConverter;
 use Oro\Bundle\ImportExportBundle\Exception\InvalidArgumentException;
 use Oro\Bundle\ImportExportBundle\Exception\LogicException;
-use Oro\Bundle\ImportExportBundle\Converter\ConfigurableTableDataConverter;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException;
+use Symfony\Component\Security\Acl\Voter\FieldVote;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\ConstraintViolationInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class ImportStrategyHelper
 {
-    /**
-     * @var ManagerRegistry
-     */
+    /** @var ManagerRegistry */
     protected $managerRegistry;
 
-    /**
-     * @var ValidatorInterface
-     */
+    /** @var ValidatorInterface */
     protected $validator;
 
-    /**
-     * @var TranslatorInterface
-     */
+    /** @var TranslatorInterface */
     protected $translator;
 
-    /**
-     * @var FieldHelper
-     */
+    /** @var FieldHelper */
     protected $fieldHelper;
 
     /** @var ConfigProvider */
     protected $extendConfigProvider;
 
-    /**
-     * @var ConfigurableTableDataConverter
-     */
+    /** @var ConfigurableTableDataConverter */
     protected $configurableDataConverter;
 
-    /**
-     * @var SecurityFacade
-     */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * @param ManagerRegistry $managerRegistry
-     * @param ValidatorInterface $validator
-     * @param TranslatorInterface $translator
-     * @param FieldHelper $fieldHelper
+     * @param ManagerRegistry                $managerRegistry
+     * @param ValidatorInterface             $validator
+     * @param TranslatorInterface            $translator
+     * @param FieldHelper                    $fieldHelper
      * @param ConfigurableTableDataConverter $configurableDataConverter
-     * @param SecurityFacade $securityFacade
+     * @param AuthorizationCheckerInterface  $authorizationChecker
+     * @param TokenAccessorInterface         $tokenAccessor
      */
     public function __construct(
         ManagerRegistry $managerRegistry,
@@ -68,14 +62,16 @@ class ImportStrategyHelper
         TranslatorInterface $translator,
         FieldHelper $fieldHelper,
         ConfigurableTableDataConverter $configurableDataConverter,
-        SecurityFacade $securityFacade
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor
     ) {
         $this->managerRegistry = $managerRegistry;
         $this->validator = $validator;
         $this->translator = $translator;
         $this->fieldHelper = $fieldHelper;
         $this->configurableDataConverter = $configurableDataConverter;
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -93,21 +89,26 @@ class ImportStrategyHelper
      *                                    string in format "permission;descriptor"
      *                                    (VIEW;entity:AcmeDemoBundle:AcmeEntity, EDIT;action:acme_action)
      *                                    or something else, it depends on registered security voters
-     * @param  object         $obj        A domain object, object identity or object identity descriptor
+     * @param  object|string $obj        A domain object, object identity or object identity descriptor
      *
      * @param  string         $property
      * @return bool
      */
     public function isGranted($attributes, $obj, $property = null)
     {
-        if (!$this->securityFacade->hasLoggedUser()) {
+        if (!$this->tokenAccessor->hasUser()) {
             return true;
         }
         if ($property && !($obj instanceof FieldVote)) {
             $obj = new FieldVote($obj, $property);
         }
 
-        return $this->securityFacade->isGranted($attributes, $obj);
+        try {
+            return $this->authorizationChecker->isGranted($attributes, $obj);
+        } catch (InvalidDomainObjectException $exception) {
+            // if object do not have identity we skipp check
+            return true;
+        }
     }
 
     /**
@@ -133,21 +134,16 @@ class ImportStrategyHelper
      * @param array $excludedProperties
      * @throws InvalidArgumentException
      */
-    public function importEntity($basicEntity, $importedEntity, array $excludedProperties = array())
+    public function importEntity($basicEntity, $importedEntity, array $excludedProperties = [])
     {
         $basicEntityClass = ClassUtils::getClass($basicEntity);
         if ($basicEntityClass != ClassUtils::getClass($importedEntity)) {
             throw new InvalidArgumentException('Basic and imported entities must be instances of the same class');
         }
 
-        $entityMetadata = $this->getEntityManager($basicEntityClass)->getClassMetadata($basicEntityClass);
-        $importedEntityProperties = array_diff(
-            array_merge(
-                $entityMetadata->getFieldNames(),
-                $entityMetadata->getAssociationNames()
-            ),
-            $excludedProperties
-        );
+        $entityProperties = $this->getEntityPropertiesByClassName($basicEntityClass);
+        $importedEntityProperties = array_diff($entityProperties, $excludedProperties);
+
         foreach ($importedEntityProperties as $propertyName) {
             // we should not overwrite deleted fields
             if ($this->isDeletedField($basicEntityClass, $propertyName)) {
@@ -163,13 +159,14 @@ class ImportStrategyHelper
      * Validate entity, returns list of errors or null
      *
      * @param object $entity
-     * @param null   $groups
+     * @param Constraint|Constraint[]|null $constraints
+     * @param array|null $groups
      *
      * @return array|null
      */
-    public function validateEntity($entity, $groups = null)
+    public function validateEntity($entity, $constraints = null, $groups = null)
     {
-        $violations = $this->validator->validate($entity, $groups);
+        $violations = $this->validator->validate($entity, $constraints, $groups);
         if (count($violations)) {
             $errors = [];
 
@@ -198,17 +195,36 @@ class ImportStrategyHelper
      */
     public function addValidationErrors(array $validationErrors, ContextInterface $context, $errorPrefix = null)
     {
+        $batchSize = null;
+        $batchNumber = null;
+        if ($context instanceof BatchContextInterface) {
+            $batchSize = $context->getBatchSize();
+            $batchNumber = $context->getBatchNumber();
+        }
+
         if (null === $errorPrefix) {
+            $rowNumber = $context->getReadOffset();
+            if ($batchNumber && $batchSize) {
+                $rowNumber += --$batchNumber * $batchSize;
+            }
             $errorPrefix = $this->translator->trans(
                 'oro.importexport.import.error %number%',
-                array(
-                    '%number%' => $context->getReadOffset()
-                )
+                [
+                    '%number%' => $rowNumber
+                ]
             );
         }
         foreach ($validationErrors as $validationError) {
             $context->addError($errorPrefix . ' ' . $validationError);
         }
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function getLoggedUser()
+    {
+        return $this->tokenAccessor->getUser();
     }
 
     /**
@@ -226,5 +242,36 @@ class ImportStrategyHelper
         }
 
         return false;
+    }
+
+    /**
+     * @param string $entityClassName
+     *
+     * @return array
+     */
+    private function getEntityPropertiesByClassName($entityClassName)
+    {
+        /**
+         * In case if we work with configured entities then we should use fieldHelper
+         * to getting fields because it won't returns any hidden fields (f.e snapshot fields)
+         * that mustn't be changed by import/export
+         */
+        if ($this->extendConfigProvider->hasConfig($entityClassName)) {
+            $properties = $this->fieldHelper->getFields(
+                $entityClassName,
+                true
+            );
+
+            return array_column($properties, 'name');
+        }
+
+        $entityMetadata = $this
+            ->getEntityManager($entityClassName)
+            ->getClassMetadata($entityClassName);
+
+        return array_merge(
+            $entityMetadata->getFieldNames(),
+            $entityMetadata->getAssociationNames()
+        );
     }
 }

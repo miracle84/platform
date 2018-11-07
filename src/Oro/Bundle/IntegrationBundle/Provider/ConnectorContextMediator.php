@@ -2,28 +2,28 @@
 
 namespace Oro\Bundle\IntegrationBundle\Provider;
 
-use Symfony\Bridge\Doctrine\RegistryInterface;
-
-use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\EntityManager;
-
-use Oro\Bundle\IntegrationBundle\Exception\LogicException;
-use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
-use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Doctrine\ORM\UnitOfWork;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
-
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
+use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
+use Oro\Bundle\IntegrationBundle\Exception\LogicException;
+use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class ConnectorContextMediator
 {
     /** @var TypesRegistry */
     protected $registry;
 
+    /** @var ServiceLink */
+    protected $registryLink;
+
     /** @var RegistryInterface */
     protected $doctrineRegistry;
 
     /** @var TransportInterface[] */
-    protected $transportByIntegration;
+    protected $transportByIntegration = [];
 
     /**
      * @param ServiceLink       $registryLink
@@ -54,7 +54,10 @@ class ConnectorContextMediator
 
         $transport = $source->getTransport();
         if ($markReadOnly) {
-            $this->getUow()->markReadOnly($transport);
+            $uow = $this->getUow();
+            if ($uow->getEntityState($transport, UnitOfWork::STATE_DETACHED) === UnitOfWork::STATE_MANAGED) {
+                $uow->markReadOnly($transport);
+            }
         }
 
         return clone $this->registryLink->getService()
@@ -69,7 +72,7 @@ class ConnectorContextMediator
      */
     public function getInitializedTransport(Integration $integration, $markReadOnly = false)
     {
-        if (!empty($this->transportByIntegration[$integration->getId()])) {
+        if (array_key_exists($integration->getId(), $this->transportByIntegration)) {
             return $this->transportByIntegration[$integration->getId()];
         }
 
@@ -86,7 +89,12 @@ class ConnectorContextMediator
      */
     public function resetInitializedTransport()
     {
-        $this->transportByIntegration = null;
+        $this->transportByIntegration = [];
+    }
+
+    public function onClear()
+    {
+        $this->resetInitializedTransport();
     }
 
     /**

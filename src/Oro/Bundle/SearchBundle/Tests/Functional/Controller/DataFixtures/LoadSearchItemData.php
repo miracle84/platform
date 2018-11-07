@@ -5,9 +5,7 @@ namespace Oro\Bundle\SearchBundle\Tests\Functional\Controller\DataFixtures;
 use Doctrine\Common\DataFixtures\AbstractFixture;
 use Doctrine\Common\DataFixtures\OrderedFixtureInterface;
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Oro\Bundle\SecurityBundle\Tools\UUIDGenerator;
-
 use Oro\Bundle\TestFrameworkBundle\Entity\Item;
 
 class LoadSearchItemData extends AbstractFixture implements OrderedFixtureInterface
@@ -31,7 +29,7 @@ class LoadSearchItemData extends AbstractFixture implements OrderedFixtureInterf
             //float
             $item->floatValue = $ind / 10.0 + 10;
             //boolean
-            $item->booleanValue = rand(0, 1) == true;
+            $item->booleanValue = $ind % 3 === 0;
             //blob
             $item->blobValue = "blob-{$ind}";
             //array
@@ -45,9 +43,10 @@ class LoadSearchItemData extends AbstractFixture implements OrderedFixtureInterf
             //object
             $item->objectValue = new \stdClass();
             //phone
-            $item->phone = sprintf($ind % 2 ? '123-456-%s00' : '%s00987654', $ind);
+            $item->phone = sprintf($ind % 2 ? '0123-456%s00' : '%s00987654', $ind);
 
             $manager->persist($item);
+            $this->addReference(sprintf('item_%d', $ind), $item);
         }
 
         $manager->flush();

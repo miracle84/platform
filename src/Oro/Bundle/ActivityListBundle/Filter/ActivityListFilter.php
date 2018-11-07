@@ -5,10 +5,6 @@ namespace Oro\Bundle\ActivityListBundle\Filter;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\Form\FormFactoryInterface;
-
-use Oro\Component\DependencyInjection\ServiceLink;
 use Oro\Bundle\ActivityBundle\Tools\ActivityAssociationHelper;
 use Oro\Bundle\ActivityListBundle\Form\Type\ActivityListFilterType;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListQueryDesigner;
@@ -23,6 +19,9 @@ use Oro\Bundle\FilterBundle\Filter\EntityFilter;
 use Oro\Bundle\FilterBundle\Filter\FilterInterface;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\QueryDesignerBundle\QueryDesigner\Manager;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+use Symfony\Component\Form\FormFactoryInterface;
 
 class ActivityListFilter extends EntityFilter
 {
@@ -150,6 +149,7 @@ class ActivityListFilter extends EntityFilter
         array $data,
         $entityIdField
     ) {
+        QueryBuilderUtil::checkIdentifier($entityIdField);
         $entityClass = $data['entityClassName'];
 
         $joinField = sprintf(
@@ -177,7 +177,7 @@ class ActivityListFilter extends EntityFilter
                 ->join($joinField, $this->activityAlias)
                 ->andWhere(sprintf('%s.id = %s.%s', $this->activityAlias, $this->getEntityAlias(), $entityIdField));
 
-        $entityField = $this->getField();
+        $entityField = $this->getField($data);
         $dateRangeField = strpos($entityField, '$') === 0 ? substr($entityField, 1) : null;
         if ($dateRangeField) {
             $data['dateRange'] = $data['filter']['data'];
@@ -219,7 +219,7 @@ class ActivityListFilter extends EntityFilter
             $alias = end($lastGroup)->getAlias();
         }
 
-        $field = $this->getField();
+        $field = $this->getField($data);
         $ds = new OrmFilterDatasourceAdapter($grid->getDatasource()->getQueryBuilder());
         $this->applyFilter(
             $ds,
@@ -301,7 +301,6 @@ class ActivityListFilter extends EntityFilter
             ->setDefinition(json_encode([
                 'filters' => [
                     [
-                        'columnName' => $this->getEntityField(),
                         'criterion' => $data['filter'],
                     ],
                 ],
@@ -357,6 +356,7 @@ class ActivityListFilter extends EntityFilter
     protected function getEntityAlias()
     {
         list($alias) = explode('.', $this->getOr(FilterUtility::DATA_NAME_KEY));
+        QueryBuilderUtil::checkIdentifier($alias);
 
         return $alias;
     }
@@ -364,19 +364,17 @@ class ActivityListFilter extends EntityFilter
     /**
      * @return string
      */
-    protected function getEntityField()
+    protected function getEntityField(array $data)
     {
-        list(, $field) = explode('.', $this->getOr(FilterUtility::DATA_NAME_KEY));
-
-        return base64_decode($field);
+        return $data['activityFieldName'];
     }
 
     /**
      * @return string
      */
-    protected function getField()
+    protected function getField(array $data)
     {
-        $fieldName = $this->getEntityField();
+        $fieldName = $this->getEntityField($data);
         if (strpos($fieldName, '\\') === false) {
             return $fieldName;
         }
@@ -392,6 +390,6 @@ class ActivityListFilter extends EntityFilter
      */
     protected function getFormType()
     {
-        return ActivityListFilterType::NAME;
+        return ActivityListFilterType::class;
     }
 }

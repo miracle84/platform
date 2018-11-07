@@ -15,11 +15,19 @@ define(function(require) {
             id: '',
             name: ''
         },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityContextActivityModel() {
+            ActivityContextActivityModel.__super__.constructor.apply(this, arguments);
+        },
+
         url: function() {
             var param = {
                 activity: this.get('activityClassAlias'),
                 id: this.get('entityId'),
-                entity:  this.get('targetClassName'),
+                entity: this.get('targetClassName'),
                 entityId: this.get('targetId')
             };
 

@@ -45,11 +45,15 @@ define(function(require) {
         /** @property {String} */
         icon: undefined,
 
-        /** @property {Boolean} */
-        iconHideText: config.iconHideText,
-
         /** @property {String} */
         iconClassName: undefined,
+
+        /** @property {Boolean} */
+        /** @deprecated use launcherMode */
+        iconHideText: config.iconHideText,
+
+        /** @property {String}: 'icon-text' | 'icon-only' | 'text-only' */
+        launcherMode: '',
 
         /** @property {String} */
         className: undefined,
@@ -67,6 +71,11 @@ define(function(require) {
         template: require('tpl!orodatagrid/templates/datagrid/action-launcher.html'),
 
         /**
+         * @property {Object}
+         */
+        attributes: null,
+
+        /**
          * Defines map of events => handlers
          * @return {Object}
          */
@@ -82,6 +91,13 @@ define(function(require) {
         },
 
         /**
+         * @inheritDoc
+         */
+        constructor: function ActionLauncher() {
+            ActionLauncher.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Initialize
          *
          * @param {Object} options
@@ -90,6 +106,7 @@ define(function(require) {
          * @param {String} [options.label]
          * @param {String} [options.icon]
          * @param {Boolean} [options.iconHideText]
+         * @param {String} [options.launcherMode]
          * @param {String} [options.link]
          * @param {Boolean} [options.runAction]
          * @param {Boolean} [options.onClickReturnValue]
@@ -97,58 +114,35 @@ define(function(require) {
          * @throws {TypeError} If mandatory option is undefined
          */
         initialize: function(options) {
-            var opts = options || {};
-
-            if (!opts.action) {
+            if (!options.action) {
                 throw new TypeError('"action" is required');
             }
 
-            if (opts.template) {
-                this.template = opts.template;
+            var truthy = _.pick(options, 'template', 'label', 'title', 'icon', 'link',
+                'launcherMode', 'iconClassName', 'className', 'action', 'attributes');
+
+            _.extend(
+                this,
+                _.pick(options, 'iconHideText', 'runAction', 'onClickReturnValue', 'links'),
+                _.pick(truthy, Boolean)
+            );
+
+            if (!this.launcherMode) {
+                this.launcherMode = this._convertToLauncherMode();
             }
 
-            if (opts.label) {
-                this.label = opts.label;
-            }
-
-            if (opts.title) {
-                this.title = opts.title;
-            }
-
-            if (opts.icon) {
-                this.icon = opts.icon;
-            }
-
-            if (opts.iconHideText !== undefined) {
-                this.iconHideText = opts.iconHideText;
-            }
-
-            if (opts.link) {
-                this.link = opts.link;
-            }
-
-            if (opts.iconClassName) {
-                this.iconClassName = opts.iconClassName;
-            }
-
-            if (opts.className) {
-                this.className = opts.className;
-            }
-
-            if (_.has(opts, 'runAction')) {
-                this.runAction = opts.runAction;
-            }
-
-            if (_.has(opts, 'onClickReturnValue')) {
-                this.onClickReturnValue = opts.onClickReturnValue;
-            }
-
-            if (_.has(opts, 'links')) {
-                this.links = options.links;
-            }
-
-            this.action = opts.action;
             ActionLauncher.__super__.initialize.apply(this, arguments);
+        },
+
+        /**
+         * @return {String}
+         */
+        _convertToLauncherMode: function() {
+            if (this.icon) {
+                return this.iconHideText ? 'icon-only' : 'icon-text';
+            } else {
+                return 'text-only';
+            }
         },
 
         /**
@@ -160,26 +154,28 @@ define(function(require) {
             }
             delete this.action;
             delete this.runAction;
+            delete this.attributes;
+
             ActionLauncher.__super__.dispose.apply(this, arguments);
         },
 
         getTemplateData: function() {
-            var label = this.label || this.action.label;
+            var data = _.pick(this, 'icon', 'title', 'label', 'className', 'iconClassName', 'launcherMode', 'link',
+                'links', 'action', 'attributes', 'enabled', 'tagName');
 
-            return {
-                label: label,
-                icon: this.icon,
-                iconHideText: this.iconHideText,
-                title: this.title || label,
-                className: this.className,
-                iconClassName: this.iconClassName,
-                link: this.link,
-                links: this.links,
-                action: this.action,
-                attributes: this.attributes,
-                enabled: this.enabled,
-                tagName: this.tagName
-            };
+            if (!data.label) {
+                data.label = this.action.label;
+            }
+
+            if (!data.title) {
+                data.title = data.label;
+            }
+
+            if (!data.launcherMode) {
+                data.launcherMode = this._convertToLauncherMode();
+            }
+
+            return data;
         },
 
         /**
@@ -191,6 +187,9 @@ define(function(require) {
             this.$el.empty();
             var $el = $(this.template(this.getTemplateData()));
             this.setElement($el);
+
+            this.trigger('render');
+
             return this;
         },
 
@@ -214,7 +213,6 @@ define(function(require) {
                     key = $link.data('key');
                     if (!_.isUndefined(key)) {
                         this.action.actionKey = key;
-                        $link.closest('.btn-group').toggleClass('open');
                     }
                 }
                 if (tools.isTargetBlankEvent(e)) {

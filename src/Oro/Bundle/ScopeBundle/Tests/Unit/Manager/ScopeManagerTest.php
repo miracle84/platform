@@ -19,31 +19,27 @@ use Oro\Component\TestUtils\Mocks\ServiceLink;
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
-class ScopeManagerTest extends \PHPUnit_Framework_TestCase
+class ScopeManagerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ScopeManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ScopeManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $manager;
 
     /**
-     * @var ScopeEntityStorage|\PHPUnit_Framework_MockObject_MockObject
+     * @var ScopeEntityStorage|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityStorage;
 
     /**
-     * @var EntityFieldProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityFieldProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityFieldProvider;
 
     public function setUp()
     {
-        $this->entityStorage = $this->getMockBuilder(ScopeEntityStorage::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->entityFieldProvider = $this->getMockBuilder(EntityFieldProvider::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->entityStorage = $this->createMock(ScopeEntityStorage::class);
+        $this->entityFieldProvider = $this->createMock(EntityFieldProvider::class);
 
         $serviceLink = new ServiceLink($this->entityFieldProvider);
         $this->manager = new ScopeManager($this->entityStorage, $serviceLink);
@@ -58,7 +54,7 @@ class ScopeManagerTest extends \PHPUnit_Framework_TestCase
     {
         $this->entityFieldProvider->expects($this->once())
             ->method('getRelations')
-            ->with(Scope::class)
+            ->with(Scope::class, false, true, false)
             ->willReturn([['name' => 'relation']]);
         $expectedCriteria = new ScopeCriteria(['relation' => null], [['name' => 'relation']]);
         $repository = $this->getMockBuilder(ScopeRepository::class)->disableOriginalConstructor()->getMock();
@@ -231,7 +227,7 @@ class ScopeManagerTest extends \PHPUnit_Framework_TestCase
                 ['name' => 'fieldName2'],
             ]
         );
-        /** @var ScopeCriteriaProviderInterface|\PHPUnit_Framework_MockObject_MockObject $provider */
+        /** @var ScopeCriteriaProviderInterface|\PHPUnit\Framework\MockObject\MockObject $provider */
         $provider = $this->createMock(ScopeCriteriaProviderInterface::class);
         $provider->method('getCriteriaByContext')
             ->willReturn([]);
@@ -263,7 +259,7 @@ class ScopeManagerTest extends \PHPUnit_Framework_TestCase
                 ['name' => 'fieldName2'],
             ]
         );
-        /** @var ScopeCriteriaProviderInterface|\PHPUnit_Framework_MockObject_MockObject $provider */
+        /** @var ScopeCriteriaProviderInterface|\PHPUnit\Framework\MockObject\MockObject $provider */
         $provider = $this->createMock(ScopeCriteriaProviderInterface::class);
         $provider->method('getCriteriaByContext')
             ->willReturn([]);
@@ -295,7 +291,7 @@ class ScopeManagerTest extends \PHPUnit_Framework_TestCase
                 ['name' => 'fieldName2'],
             ]
         );
-        /** @var ScopeCriteriaProviderInterface|\PHPUnit_Framework_MockObject_MockObject $provider */
+        /** @var ScopeCriteriaProviderInterface|\PHPUnit\Framework\MockObject\MockObject $provider */
         $provider = $this->createMock(ScopeCriteriaProviderInterface::class);
         $provider->method('getCriteriaByContext')
             ->willReturn([]);
@@ -448,5 +444,54 @@ class ScopeManagerTest extends \PHPUnit_Framework_TestCase
         $this->manager->addProvider('testScope', $provider);
         $actualScope = $this->manager->findMostSuitable('testScope');
         $this->assertEquals($scope, $actualScope);
+    }
+
+    /**
+     * @dataProvider isScopeMatchCriteriaDataProvider
+     *
+     * @param $expectedResult
+     * @param $criteriaContext
+     * @param $scopeFieldValue
+     */
+    public function testIsScopeMatchCriteria($expectedResult, $criteriaContext, $scopeFieldValue)
+    {
+        $criteria = new ScopeCriteria($criteriaContext, []);
+
+        $this->manager->addProvider('some_type', new StubScopeCriteriaProvider());
+        $scope = new StubScope();
+        $scope->setScopeField($scopeFieldValue);
+        $this->entityFieldProvider->method('getRelations')->willReturn([]);
+
+        $result = $this->manager->isScopeMatchCriteria($scope, $criteria, 'some_type');
+        $this->assertEquals($expectedResult, $result);
+    }
+
+    /**
+     * @return array
+     */
+    public function isScopeMatchCriteriaDataProvider()
+    {
+        return [
+            'scope match criteria' => [
+                'expectedResult' => true,
+                'criteriaContext' => [StubScopeCriteriaProvider::STUB_FIELD => 'expected_value'],
+                'scopeFieldValue' => 'expected_value'
+            ],
+            'scope dont match criteria' => [
+                'expectedResult' => false,
+                'criteriaContext' => [StubScopeCriteriaProvider::STUB_FIELD => 'unexpected_value'],
+                'scopeFieldValue' => 'expected_value'
+            ],
+            'scope match criteria with null value' => [
+                'expectedResult' => true,
+                'criteriaContext' => [StubScopeCriteriaProvider::STUB_FIELD => 'unexpected_value'],
+                'scopeFieldValue' => null
+            ],
+            'scope dont match criteria with different objects' => [
+                'expectedResult' => false,
+                'criteriaContext' => [StubScopeCriteriaProvider::STUB_FIELD => new \stdClass()],
+                'scopeFieldValue' => new \stdClass()
+            ],
+        ];
     }
 }

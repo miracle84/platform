@@ -2,37 +2,37 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Collection\IncludedEntityData;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Processor\ActionProcessorBagInterface;
 use Oro\Bundle\ApiBundle\Processor\FormContext;
 use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
 use Oro\Bundle\ApiBundle\Request\ApiActions;
-use Oro\Bundle\ApiBundle\Request\ErrorCompleterInterface;
+use Oro\Bundle\ApiBundle\Request\ErrorCompleterRegistry;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Validates and fill included entities.
  */
-abstract class ProcessIncludedEntities implements ProcessorInterface
+class ProcessIncludedEntities implements ProcessorInterface
 {
     /** @var ActionProcessorBagInterface */
     protected $processorBag;
 
-    /** @var ErrorCompleterInterface */
-    protected $errorCompleter;
+    /** @var ErrorCompleterRegistry */
+    protected $errorCompleterRegistry;
 
     /**
      * @param ActionProcessorBagInterface $processorBag
-     * @param ErrorCompleterInterface     $errorCompleter
+     * @param ErrorCompleterRegistry      $errorCompleterRegistry
      */
     public function __construct(
         ActionProcessorBagInterface $processorBag,
-        ErrorCompleterInterface $errorCompleter
+        ErrorCompleterRegistry $errorCompleterRegistry
     ) {
         $this->processorBag = $processorBag;
-        $this->errorCompleter = $errorCompleter;
+        $this->errorCompleterRegistry = $errorCompleterRegistry;
     }
 
     /**
@@ -50,10 +50,16 @@ abstract class ProcessIncludedEntities implements ProcessorInterface
 
         $includedEntities = $context->getIncludedEntities();
         if (null === $includedEntities) {
-            // the Context does not have included entities
+            // the context does not have included entities
             return;
         }
 
+        $entityMapper = $context->getEntityMapper();
+        if (null !== $entityMapper) {
+            foreach ($includedEntities as $entity) {
+                $entityMapper->registerEntity($entity);
+            }
+        }
         foreach ($includedEntities as $entity) {
             $entityData = $includedEntities->getData($entity);
             $this->processIncludedEntity(
@@ -92,6 +98,7 @@ abstract class ProcessIncludedEntities implements ProcessorInterface
         $actionContext->setVersion($context->getVersion());
         $actionContext->getRequestType()->set($context->getRequestType());
         $actionContext->setRequestHeaders($context->getRequestHeaders());
+        $actionContext->setEntityMapper($context->getEntityMapper());
         $actionContext->setIncludedEntities($context->getIncludedEntities());
 
         $actionContext->setClassName($entityClass);
@@ -99,21 +106,25 @@ abstract class ProcessIncludedEntities implements ProcessorInterface
         $actionContext->setRequestData($entityRequestData);
         $actionContext->setResult($entity);
 
+        $actionContext->skipFormValidation(true);
         $actionContext->setLastGroup('transform_data');
         $actionContext->setSoftErrorsHandling(true);
 
         $actionProcessor->process($actionContext);
 
         if ($actionContext->hasErrors()) {
+            $requestType = $actionContext->getRequestType();
+            $errorCompleter = $this->errorCompleterRegistry->getErrorCompleter($requestType);
             $actionMetadata = $actionContext->getMetadata();
             $errors = $actionContext->getErrors();
             foreach ($errors as $error) {
-                $this->errorCompleter->complete($error, $actionMetadata);
-                $this->fixErrorPath($error, $entityData->getPath());
+                $errorCompleter->complete($error, $requestType, $actionMetadata);
+                $this->fixIncludedEntityErrorPath($error, $entityData->getPath());
                 $context->addError($error);
             }
         } else {
             $entityData->setMetadata($actionContext->getMetadata());
+            $entityData->setForm($actionContext->getForm());
         }
     }
 
@@ -121,5 +132,8 @@ abstract class ProcessIncludedEntities implements ProcessorInterface
      * @param Error  $error
      * @param string $entityPath
      */
-    abstract protected function fixErrorPath(Error $error, $entityPath);
+    protected function fixIncludedEntityErrorPath(Error $error, string $entityPath): void
+    {
+        // no default implementation, the path to an included entity depends on the request type
+    }
 }

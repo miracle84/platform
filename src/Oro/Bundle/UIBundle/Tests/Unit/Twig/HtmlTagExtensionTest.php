@@ -4,25 +4,29 @@ namespace Oro\Bundle\UIBundle\Tests\Unit\Twig;
 
 use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
 use Oro\Bundle\UIBundle\Twig\HtmlTagExtension;
+use Oro\Component\Testing\Unit\TwigExtensionTestCaseTrait;
 
-class HtmlTagExtensionTest extends \PHPUnit_Framework_TestCase
+class HtmlTagExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var HtmlTagExtension
-     */
-    protected $extension;
+    use TwigExtensionTestCaseTrait;
 
-    /**
-     * @var HtmlTagHelper|\PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $htmlTagHelper;
+
+    /* @var HtmlTagExtension */
+    protected $extension;
 
     protected function setUp()
     {
-        $this->htmlTagHelper = $this->getMockBuilder('Oro\Bundle\UIBundle\Tools\HtmlTagHelper')
-            ->disableOriginalConstructor()->getMock();
+        $this->htmlTagHelper = $this->getMockBuilder(HtmlTagHelper::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        $this->extension = new HtmlTagExtension($this->htmlTagHelper);
+        $container = self::getContainerBuilder()
+            ->add('oro_ui.html_tag_helper', $this->htmlTagHelper)
+            ->getContainer($this);
+
+        $this->extension = new HtmlTagExtension($container);
     }
 
     public function testGetName()
@@ -30,15 +34,74 @@ class HtmlTagExtensionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('oro_ui.html_tag', $this->extension->getName());
     }
 
-    public function testGetFilters()
+    public function testHtmlSanitize()
     {
+        $html = '<html>HTML</html>';
+
+        $this->htmlTagHelper
+            ->expects($this->once())
+            ->method('sanitize')
+            ->with($html)
+            ->willReturn('HTML');
+
         $this->assertEquals(
-            [
-                new \Twig_SimpleFilter('oro_tag_filter', [$this->extension, 'tagFilter'], ['is_safe' => ['all']]),
-                new \Twig_SimpleFilter('oro_html_purify', [$this->extension, 'htmlPurify']),
-                new \Twig_SimpleFilter('oro_html_sanitize', [$this->extension, 'htmlSanitize'], ['is_safe' => ['html']])
-            ],
-            $this->extension->getFilters()
+            'HTML',
+            self::callTwigFilter($this->extension, 'oro_html_sanitize', [$html])
         );
+    }
+
+    public function testHtmlStripTags()
+    {
+        $html = '<html>HTML</html>';
+
+        $this->htmlTagHelper
+            ->expects($this->once())
+            ->method('stripTags')
+            ->with($html)
+            ->willReturn('HTML');
+
+        $this->assertEquals(
+            'HTML',
+            self::callTwigFilter($this->extension, 'oro_html_strip_tags', [$html])
+        );
+    }
+
+    public function testHtmlEscape()
+    {
+        $html = '<div>HTML</div><script type="text/javascript"></script>';
+
+        $this->htmlTagHelper
+            ->expects($this->once())
+            ->method('escape')
+            ->with($html)
+            ->willReturn('<div>HTML</div>');
+        $this->assertEquals(
+            '<div>HTML</div>',
+            self::callTwigFilter($this->extension, 'oro_html_escape', [$html])
+        );
+    }
+
+    /**
+     * @dataProvider attributeDataProvider
+     * @param string $string
+     * @param string $expected
+     */
+    public function testAttributeNamePurify($string, $expected)
+    {
+        $this->assertSame(
+            $expected,
+            self::callTwigFilter($this->extension, 'oro_attribute_name_purify', [$string])
+        );
+    }
+
+    /**
+     * @return array
+     */
+    public function attributeDataProvider()
+    {
+        return [
+            [' onclick=alert(1)', 'onclickalert1'],
+            ['тест\/"\'attribute_some-123 HelloFake%20attr', 'attribute_some-123HelloFake20attr']
+        ];
     }
 }

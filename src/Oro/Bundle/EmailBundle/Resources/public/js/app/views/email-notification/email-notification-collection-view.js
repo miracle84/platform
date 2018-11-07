@@ -1,4 +1,3 @@
-/*global define*/
 define(function(require) {
     'use strict';
 
@@ -11,7 +10,6 @@ define(function(require) {
     var emailsGridRouteBuilder = require('oroemail/js/util/emails-grid-route-builder');
     var EmailNotificationView = require('./email-notification-item-view');
     var BaseCollectionView = require('oroui/js/app/views/base/collection-view');
-    var messenger = require('oroui/js/messenger');
     var LoadingMask = require('oroui/js/app/views/loading-mask-view');
 
     EmailNotificationCollectionView = BaseCollectionView.extend({
@@ -46,6 +44,16 @@ define(function(require) {
             'click button.mark-visible-as-read': 'onClickMarkVisibleAsRead'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailNotificationCollectionView() {
+            EmailNotificationCollectionView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             EmailNotificationCollectionView.__super__.initialize.call(this, options);
             _.extend(this, _.pick(options, ['folderId', 'hasMarkAllButton', 'hasMarkVisibleButton']));
@@ -79,7 +87,7 @@ define(function(require) {
 
         updateViewMode: function() {
             if (!this.isActiveTypeDropDown('notification')) {
-                var $iconEnvelope = this.$el.find('.oro-dropdown-toggle .fa-envelope');
+                var $iconEnvelope = this.$el.find('.dropdown-toggle .fa-envelope');
                 if (this.collection.models.length === 0) {
                     this.setModeDropDownMenu('empty');
                     $iconEnvelope.removeClass('highlight');
@@ -122,9 +130,7 @@ define(function(require) {
                         mediator.trigger('datagrid:doRefresh:user-email-grid');
                     }
                 }, this),
-                error: function(model, response) {
-                    messenger.showErrorMessage(__('oro.email.error.mark_as_read'), response.responseJSON || {});
-                }
+                errorHandlerMessage: __('oro.email.error.mark_as_read')
             });
         },
 
@@ -135,7 +141,7 @@ define(function(require) {
                     ids.push(email.get('id'));
                 }
             });
-            this._markAsRead({'ids': ids});
+            this._markAsRead({ids: ids});
         },
 
         onClickMarkAsRead: function() {
@@ -178,15 +184,15 @@ define(function(require) {
         },
 
         isOpen: function() {
-            this.$el.hasClass('open');
+            this.$el.hasClass('show');
         },
 
         close: function() {
-            this.$el.removeClass('open');
+            this.$el.removeClass('show');
         },
 
         open: function() {
-            this.$el.addClass('open');
+            this.$el.addClass('show');
         },
 
         onCollectionRequest: function() {

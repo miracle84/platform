@@ -2,36 +2,31 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Form\EventListener;
 
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\UserBundle\Form\EventListener\ChangePasswordSubscriber;
-
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\Test\FormIntegrationTestCase;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 class ChangePasswordSubscriberTest extends FormIntegrationTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityContext;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
     /** @var  ChangePasswordSubscriber */
     protected $subscriber;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $token;
 
     protected function setUp()
     {
         parent::setUp();
 
-        $this->securityContext = $this->getMockForAbstractClass(
-            'Symfony\Component\Security\Core\SecurityContextInterface'
-        );
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->token = $this->createMock(TokenInterface::class);
 
-        $this->token = $this
-            ->getMockBuilder('Symfony\Component\Security\Core\Authentication\Token\TokenInterface')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->subscriber = new ChangePasswordSubscriber($this->factory, $this->securityContext);
+        $this->subscriber = new ChangePasswordSubscriber($this->factory, $this->tokenAccessor);
     }
 
     /**
@@ -94,7 +89,7 @@ class ChangePasswordSubscriberTest extends FormIntegrationTestCase
             ->method('getUser')
             ->will($this->returnValue($currentUser));
 
-        $this->securityContext->expects($this->once())
+        $this->tokenAccessor->expects($this->once())
             ->method('getToken')
             ->will($this->returnValue($this->token));
 
@@ -192,7 +187,7 @@ class ChangePasswordSubscriberTest extends FormIntegrationTestCase
             ->method('getUser')
             ->will($this->returnValue(null));
 
-        $this->securityContext->expects($this->once())
+        $this->tokenAccessor->expects($this->once())
             ->method('getToken')
             ->will($this->returnValue($this->token));
 

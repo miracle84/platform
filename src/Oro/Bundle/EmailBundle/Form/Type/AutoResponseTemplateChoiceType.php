@@ -2,49 +2,49 @@
 
 namespace Oro\Bundle\EmailBundle\Form\Type;
 
+use Oro\Bundle\EmailBundle\Entity\Email;
+use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
+use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateSelectType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\ChoiceList\View\ChoiceView;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\EmailBundle\Entity\Email;
-use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
-use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 
 class AutoResponseTemplateChoiceType extends AbstractType
 {
     const NAME = 'oro_email_autoresponse_template_choice';
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var TranslatorInterface */
     protected $translator;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param TranslatorInterface $translator
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param TranslatorInterface    $translator
      */
-    public function __construct(SecurityFacade $securityFacade, TranslatorInterface $translator)
+    public function __construct(TokenAccessorInterface $tokenAccessor, TranslatorInterface $translator)
     {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
         $this->translator = $translator;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
             'selectedEntity' => Email::ENTITY_CLASS,
             'query_builder' => function (EmailTemplateRepository $repository) {
                 return $repository->getEntityTemplatesQueryBuilder(
                     Email::ENTITY_CLASS,
-                    $this->securityFacade->getOrganization(),
+                    $this->tokenAccessor->getOrganization(),
                     true
                 );
             },
@@ -78,7 +78,7 @@ class AutoResponseTemplateChoiceType extends AbstractType
      */
     public function getParent()
     {
-        return 'oro_email_template_list';
+        return EmailTemplateSelectType::class;
     }
 
     /**

@@ -1,13 +1,11 @@
-/** @lends RoutingCollection */
 define([
     'underscore',
     'orotranslation/js/translator',
     'chaplin',
     './model',
     '../route-model',
-    './collection',
-    'oroui/js/mediator'
-], function(_, __, Chaplin, BaseModel, RouteModel, BaseCollection, mediator) {
+    './collection'
+], function(_, __, Chaplin, BaseModel, RouteModel, BaseCollection) {
     'use strict';
 
     /**
@@ -55,7 +53,7 @@ define([
      */
     var RoutingCollection;
 
-    RoutingCollection = BaseCollection.extend(/** @exports RoutingCollection.prototype */{
+    RoutingCollection = BaseCollection.extend(/** @lends RoutingCollection.prototype */{
 
         /**
          * Route object which used to generate urls. Collection will reload whenever route is changed.
@@ -124,6 +122,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function RoutingCollection() {
+            RoutingCollection.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(models, options) {
             if (!options) {
                 options = {};
@@ -139,7 +144,7 @@ define([
             this._route.on('change', _.bind(this.trigger, this, 'routeChange'));
             this._route.on('change', this.checkUrlChange, this);
 
-            //listen base events
+            // listen base events
             this.on('add', this._onAdd);
             this.on('remove', this._onRemove);
 
@@ -267,12 +272,6 @@ define([
          */
         _onErrorResponse: function(collection, jqxhr) {
             this.finishSync();
-            if (jqxhr.status === 403) {
-                mediator.execute('showFlashMessage', 'error', __('oro.ui.forbidden_error'));
-            } else if (jqxhr.status !== 400) {
-                // handling of 400 response should be implemented
-                mediator.execute('showFlashMessage', 'error', __('oro.ui.unexpected_error'));
-            }
         },
 
         /**

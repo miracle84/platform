@@ -2,20 +2,21 @@
 
 namespace Oro\Bundle\LayoutBundle\DataCollector;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\DataCollector\DataCollector;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\LayoutBundle\Layout\LayoutContextHolder;
-
 use Oro\Component\Layout\BlockInterface;
 use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\ContextDataCollection;
 use Oro\Component\Layout\ContextInterface;
 use Oro\Component\Layout\ContextItemInterface;
 use Oro\Component\Layout\LayoutContext;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\DataCollector\DataCollector;
 
+/**
+ * Collector of layouts
+ */
 class LayoutDataCollector extends DataCollector
 {
     const NAME = 'layout';
@@ -30,10 +31,13 @@ class LayoutDataCollector extends DataCollector
     private $isDebug;
 
     /** @var array */
-    private $dataByBlock;
+    private $dataByBlock = [];
 
     /** @var BlockView */
     private $rootBlockView;
+
+    /** @var array */
+    private $notAppliedActions = [];
 
     /** @var array */
     private $excludedOptions = [
@@ -96,6 +100,8 @@ class LayoutDataCollector extends DataCollector
         $this->buildFinalBlockTree();
 
         $this->data['count'] = count($this->dataByBlock);
+        $this->data['not_applied_actions_count'] = count($this->notAppliedActions);
+        $this->data['not_applied_actions'] = $this->notAppliedActions;
     }
 
     /**
@@ -282,13 +288,10 @@ class LayoutDataCollector extends DataCollector
         $property->setAccessible(true);
 
         foreach ($property->getValue($context->data()) as $key => $value) {
-            if (is_array($value)) {
-                $value = json_encode($value);
-            } elseif (is_object($value)) {
+            if (is_object($value)) {
                 $value = get_class($value);
             }
-
-            $this->data['context']['data'][$key] = $value;
+            $this->data['context']['data'][$key] =  $value;
         }
     }
 
@@ -302,5 +305,16 @@ class LayoutDataCollector extends DataCollector
         }
 
         return $this->debugDeveloperToolbar;
+    }
+
+    /**
+     * @param array $notAppliedActions
+     * @return $this
+     */
+    public function setNotAppliedActions(array $notAppliedActions)
+    {
+        $this->notAppliedActions = $notAppliedActions;
+
+        return $this;
     }
 }

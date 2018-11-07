@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Datagrid\Extension\MassAction\Actions;
 
+use Oro\Bundle\DataGridBundle\Extension\Action\ActionConfiguration;
 use Oro\Bundle\EmailBundle\Datagrid\Extension\MassAction\Actions\MarkReadMassAction;
 use Oro\Bundle\EmailBundle\Datagrid\Extension\MassAction\Actions\MarkUnreadMassAction;
-use Oro\Bundle\DataGridBundle\Extension\Action\ActionConfiguration;
 use Oro\Bundle\EmailBundle\Datagrid\Extension\MassAction\MarkMassActionHandler;
 
-class MarkMassActionTest extends \PHPUnit_Framework_TestCase
+class MarkMassActionTest extends \PHPUnit\Framework\TestCase
 {
     /** @var MarkReadMassAction */
     protected $readAction;

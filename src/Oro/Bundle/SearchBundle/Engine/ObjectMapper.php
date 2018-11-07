@@ -2,15 +2,19 @@
 
 namespace Oro\Bundle\SearchBundle\Engine;
 
-use Symfony\Component\Security\Core\Util\ClassUtils;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
-use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
-use Oro\Bundle\SearchBundle\Query\Query;
-use Oro\Bundle\SearchBundle\Query\Mode;
 use Oro\Bundle\SearchBundle\Event\PrepareEntityMapEvent;
 use Oro\Bundle\SearchBundle\Exception\InvalidConfigurationException;
+use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
+use Oro\Bundle\SearchBundle\Query\Mode;
+use Oro\Bundle\SearchBundle\Query\Query;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
 
+/**
+ * Preparing storable index data from entities.
+ *
+ * @package Oro\Bundle\SearchBundle\Engine
+ */
 class ObjectMapper extends AbstractMapper
 {
     /**
@@ -171,7 +175,7 @@ class ObjectMapper extends AbstractMapper
         $result = [];
 
         foreach ($dataFields as $column => $dataField) {
-            list ($type, $columnName) = Criteria::explodeFieldTypeName($column);
+            list($type, $columnName) = Criteria::explodeFieldTypeName($column);
 
             $value = '';
 
@@ -185,6 +189,14 @@ class ObjectMapper extends AbstractMapper
 
             if (is_array($value)) {
                 $value = array_shift($value);
+            }
+
+            if (is_numeric($value)) {
+                if ($type === Query::TYPE_INTEGER) {
+                    $value = (int)$value;
+                } elseif ($type === Query::TYPE_DECIMAL) {
+                    $value = (float)$value;
+                }
             }
 
             $result[$dataField] = $value;
@@ -294,5 +306,20 @@ class ObjectMapper extends AbstractMapper
         }
 
         return $objectData;
+    }
+
+    /**
+     * Keep HTML in text fields except all_text* fields
+     *
+     * {@inheritdoc}
+     */
+    protected function clearTextValue($fieldName, $value)
+    {
+        if (strpos($fieldName, Indexer::TEXT_ALL_DATA_FIELD) === 0) {
+            $value = $this->htmlTagHelper->stripTags((string)$value);
+            $value = $this->htmlTagHelper->stripLongWords($value);
+        }
+
+        return $value;
     }
 }

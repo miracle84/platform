@@ -40,7 +40,7 @@ Each of users was created two Account records in different organizations:
 
 ![User-ownership][1]
 
-###John 
+### John 
 
 If user **John** will login into the **Main organization**, he should see the next data:
 
@@ -61,7 +61,7 @@ If user **John** will login into the **Second organization**, he should see the 
 | **Organization**   | Account E, Account C, Account D, Account F, Account J |
 
 
-###Mary
+### Mary
 
 If user **Mary** will login into the **Main organization**, she should see the next data:
 
@@ -81,7 +81,7 @@ If user **Mary** will login into the **Second organization**, she should see the
 | **Division**       | Account F, Account D, Account C, Account E            |
 | **Organization**   | Account F, Account D, Account C, Account E, Account J |
 
-###Mike
+### Mike
 
 User **Mike** can not login into the **Main organization**.
 
@@ -94,7 +94,7 @@ If user **Mike** will login into the **Second organization**, he should see the 
 | **Division**       | Account C, Account E                                  |
 | **Organization**   | Account C, Account E, Account D, Account F, Account J |
 
-###Robert
+### Robert
 
 If user **Robert** will login into the **Main organization**, he should see the next data:
 
@@ -114,7 +114,7 @@ If user **Robert** will login into the **Second organization**, he should see th
 | **Division**       | Account D, Account F, Account C, Account E            |
 | **Organization**   | Account D, Account F, Account C, Account E, Account J |
 
-###Mark
+### Mark
 
 User **Mark** can not login into the **Main organization**.
 
@@ -144,7 +144,7 @@ We have the next data:
 
 ![Business-unit-ownership][2]
 
-###John 
+### John 
 
 If user **John** will login into the **Main organization**, he should see the next data:
 
@@ -162,7 +162,7 @@ If user **John** will login into the **Second organization**, he should see the 
 | **Division**       | Account C                       |
 | **Organization**   | Account C, Account D, Account E |
 
-###Mary 
+### Mary 
 
 If user **Mary** will login into the **Main organization**, she should see the next data:
 
@@ -180,7 +180,7 @@ If user **John** will login into the **Second organization**, he should see the 
 | **Division**       | Account D, Account E, Account C |
 | **Organization**   | Account D, Account E, Account C |
 
-###Mike 
+### Mike 
 
 User **Mike** can not login into the **Main organization**.
 
@@ -192,7 +192,7 @@ If user **Mike** will login into the **Second organization**, he should see the 
 | **Division**       | Account C                       |
 | **Organization**   | Account C, Account D, Account E |
 
-###Robert 
+### Robert 
 
 If user **Robert** will login into the **Main organization**, he should see the next data:
 
@@ -204,13 +204,24 @@ If user **Robert** will login into the **Main organization**, he should see the 
 
 If user **Robert** will login into the **Second organization**, he should see the next data:
 
+| Access level       | Data                 |
+|:------------------ | :------------------- |
+| **Business Unit**  | Account A, Account B |
+| **Division**       | Account A, Account B |
+| **Organization**   | Account A, Account B |
+
 | Access level       | Data                            |
 |:------------------ | :------------------------------ |
 | **Business Unit**  | Account D, Account E            |
 | **Division**       | Account C, Account D, Account E |
 | **Organization**   | Account C, Account D, Account E |
-   
-###Mark
+
+Column1 | Column2 | Column3
+---|---|---
+Text | Text | Text
+Text2 | Text2 | Text2
+
+### Mark
 
 User **Mark** can not login into the **Main organization**.
 
@@ -221,10 +232,17 @@ If user **Mark** will login into the **Second organization**, he should see the 
 | **Business Unit**  | -                               |
 | **Division**       | -                               |
 | **Organization**   | Account C, Account D, Account E |
-      
+
+
+| Access level       | Data                            |
+|:------------------ | :------------------------------ |
+| **Business Unit**  | -                               |
+| **Division**       | -                               |
+| **Organization**   | Account C, Account D, Account E |
+
    
-Organization ownersip type
----------
+Organization Ownership type
+---------------------------
 
 Ownreship type for accounts is **Organization**.
 
@@ -240,7 +258,7 @@ We have the next data:
 
 ![Organization-ownership][3]
 
-###John, Mary, Robert
+### John, Mary, Robert
 
 If this users will login into the **Main organization**, they should see next data:
 
@@ -252,7 +270,7 @@ If this users will login into the **Second organization**, they should see next 
 - in Organization access level: Account C, Account D, Account E
 
 
-###Mike, Mark
+### Mike, Mark
 
 This users does can not login into the First Organization.
 

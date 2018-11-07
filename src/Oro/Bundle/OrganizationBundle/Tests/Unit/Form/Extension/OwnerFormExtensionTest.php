@@ -2,101 +2,78 @@
 
 namespace Oro\Bundle\OrganizationBundle\Tests\Unit\Form\Extension;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
 use Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager;
 use Oro\Bundle\OrganizationBundle\Form\EventListener\OwnerFormSubscriber;
+use Oro\Bundle\OrganizationBundle\Form\Extension\OwnerFormExtension;
+use Oro\Bundle\OrganizationBundle\Form\Type\BusinessUnitSelectAutocomplete;
+use Oro\Bundle\OrganizationBundle\Form\Type\OwnershipType;
+use Oro\Bundle\OrganizationBundle\Tests\Unit\Fixture\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Acl\Voter\AclVoter;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\Owner\EntityOwnerAccessor;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
 use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProvider;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Bundle\UserBundle\Form\Type\UserAclSelectType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilder;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\OrganizationBundle\Tests\Unit\Fixture\Entity\Organization;
-use Oro\Bundle\OrganizationBundle\Form\Extension\OwnerFormExtension;
-use Oro\Bundle\OrganizationBundle\Form\Type\OwnershipType;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
-
-class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
+class OwnerFormExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     private $doctrineHelper;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|OwnershipMetadataProvider
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|OwnershipMetadataProviderInterface */
     private $ownershipMetadataProvider;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|BusinessUnitManager
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|BusinessUnitManager */
     private $businessUnitManager;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|SecurityFacade
-     */
-    private $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AuthorizationCheckerInterface */
+    private $authorizationChecker;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FormBuilder
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TokenAccessorInterface */
+    private $tokenAccessor;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject|FormBuilder */
     private $builder;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|User
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|User */
     private $user;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     private $organizations;
 
-    /**
-     * @var ArrayCollection
-     */
+    /** @var ArrayCollection */
     private $businessUnits;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $fieldName;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $fieldLabel;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     private $entityClassName;
 
-    /**
-     * @var OwnerFormExtension
-     */
+    /** @var OwnerFormExtension */
     private $extension;
 
-    /**
-     * @var Organization
-     */
+    /** @var Organization */
     private $organization;
 
-    /**
-     * @var EntityOwnerAccessor|\PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var EntityOwnerAccessor|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityOwnerAccessor;
 
     protected function setUp()
@@ -109,7 +86,7 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
             ->willReturn(true);
 
         $this->ownershipMetadataProvider =
-            $this->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider')
+            $this->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface')
                 ->disableOriginalConstructor()
                 ->getMock();
         $this->businessUnitManager =
@@ -140,9 +117,8 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
         $this->organization = new Organization();
         $this->organization->setId(1);
         $this->entityClassName = get_class($this->user);
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
         $config = $this->getMockBuilder('Symfony\Component\Form\FormConfigInterface')
             ->disableOriginalConstructor()
             ->getMock();
@@ -180,7 +156,8 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
             $this->doctrineHelper,
             $this->ownershipMetadataProvider,
             $this->businessUnitManager,
-            $this->securityFacade,
+            $this->authorizationChecker,
+            $this->tokenAccessor,
             $aclVoter,
             $treeProvider,
             $this->entityOwnerAccessor
@@ -232,7 +209,7 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
         $this->mockConfigs(array('is_granted' => true, 'owner_type' => OwnershipType::OWNER_TYPE_USER));
         $this->builder->expects($this->once())->method('add')->with(
             $this->fieldName,
-            'oro_user_acl_select'
+            UserAclSelectType::class
         );
         $this->extension->buildForm($this->builder, array('ownership_disabled' => false));
     }
@@ -256,9 +233,9 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
 
         $this->builder->expects($this->once())->method('add')->with(
             $this->fieldName,
-            'oro_type_business_unit_select_autocomplete',
+            BusinessUnitSelectAutocomplete::class,
             array(
-                'empty_value' => 'oro.business_unit.form.choose_business_user',
+                'placeholder' => 'oro.business_unit.form.choose_business_user',
                 'label' => 'oro.user.owner.label',
                 'configs' => [
                     'multiple' => false,
@@ -278,14 +255,14 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
      */
     public function testBusinessUnitOwnerBuildFormAssignGrantedViewBusinessUnitNotGranted()
     {
-        $this->securityFacade->expects($this->any())->method('getOrganization')
+        $this->tokenAccessor->expects($this->any())->method('getOrganization')
             ->will($this->returnValue($this->organization));
-        $this->securityFacade->expects($this->any())->method('getOrganizationId')
+        $this->tokenAccessor->expects($this->any())->method('getOrganizationId')
             ->will($this->returnValue($this->organization->getId()));
-        $this->securityFacade->expects($this->any())->method('getLoggedUser')
+        $this->tokenAccessor->expects($this->any())->method('getUser')
             ->will($this->returnValue($this->user));
 
-        $this->securityFacade->expects($this->any())->method('isGranted')
+        $this->authorizationChecker->expects($this->any())->method('isGranted')
             ->withConsecutive(['CREATE', 'entity:' . $this->entityClassName], ['VIEW', 'entity:' . BusinessUnit::class])
             ->willReturnOnConsecutiveCalls(true, false);
         $metadata = new OwnershipMetadata(OwnershipType::OWNER_TYPE_BUSINESS_UNIT, 'owner', 'owner_id');
@@ -294,17 +271,17 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
             ->with($this->entityClassName)
             ->will($this->returnValue($metadata));
 
-        /** @var AclVoter|\PHPUnit_Framework_MockObject_MockObject $aclVoter */
+        /** @var AclVoter|\PHPUnit\Framework\MockObject\MockObject $aclVoter */
         $aclVoter = $this->getMockBuilder(AclVoter::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var OwnerTreeProvider|\PHPUnit_Framework_MockObject_MockObject $treeProvider */
+        /** @var OwnerTreeProvider|\PHPUnit\Framework\MockObject\MockObject $treeProvider */
         $treeProvider = $this->getMockBuilder(OwnerTreeProvider::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var ClassMetadataInfo|\PHPUnit_Framework_MockObject_MockObject $classMetadata */
+        /** @var ClassMetadataInfo|\PHPUnit\Framework\MockObject\MockObject $classMetadata */
         $classMetadata = $this->getMockBuilder(ClassMetadataInfo::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -328,7 +305,8 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
             $this->doctrineHelper,
             $this->ownershipMetadataProvider,
             $this->businessUnitManager,
-            $this->securityFacade,
+            $this->authorizationChecker,
+            $this->tokenAccessor,
             $aclVoter,
             $treeProvider,
             $this->entityOwnerAccessor
@@ -355,17 +333,18 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
         $this->mockConfigs(array('is_granted' => false, 'owner_type' => OwnershipType::OWNER_TYPE_BUSINESS_UNIT));
         $this->builder->expects($this->once())->method('add')->with(
             $this->fieldName,
-            'entity',
-            array(
-                'class' => 'OroOrganizationBundle:BusinessUnit',
+            EntityType::class,
+            [
+                'class' => BusinessUnit::class,
                 'property' => 'name',
-                'choices' => $this->businessUnits,
                 'mapped' => true,
                 'required' => true,
                 'constraints' => array(new NotBlank()),
                 'label' => 'oro.user.owner.label',
-                'translatable_options' => false
-            )
+                'translatable_options' => false,
+                'query_builder' => function () {
+                },
+            ]
         );
         $this->extension->buildForm($this->builder, array('ownership_disabled' => false));
     }
@@ -428,14 +407,14 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
 
     protected function mockConfigs(array $values)
     {
-        $this->securityFacade->expects($this->any())->method('getOrganization')
+        $this->tokenAccessor->expects($this->any())->method('getOrganization')
             ->will($this->returnValue($this->organization));
-        $this->securityFacade->expects($this->any())->method('getOrganizationId')
+        $this->tokenAccessor->expects($this->any())->method('getOrganizationId')
             ->will($this->returnValue($this->organization->getId()));
-        $this->securityFacade->expects($this->any())->method('getLoggedUser')
+        $this->tokenAccessor->expects($this->any())->method('getUser')
             ->will($this->returnValue($this->user));
 
-        $this->securityFacade->expects($this->any())->method('isGranted')
+        $this->authorizationChecker->expects($this->any())->method('isGranted')
             ->will($this->returnValue($values['is_granted']));
         $metadata = OwnershipType::OWNER_TYPE_NONE === $values['owner_type']
             ? new OwnershipMetadata($values['owner_type'])
@@ -457,7 +436,8 @@ class OwnerFormExtensionTest extends \PHPUnit_Framework_TestCase
             $this->doctrineHelper,
             $this->ownershipMetadataProvider,
             $this->businessUnitManager,
-            $this->securityFacade,
+            $this->authorizationChecker,
+            $this->tokenAccessor,
             $aclVoter,
             $treeProvider,
             $this->entityOwnerAccessor

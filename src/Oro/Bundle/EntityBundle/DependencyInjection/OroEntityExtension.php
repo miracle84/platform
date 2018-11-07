@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EntityBundle\DependencyInjection;
 
+use Oro\Component\Config\CumulativeResourceInfo;
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
-
-use Oro\Component\Config\CumulativeResourceInfo;
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 
 class OroEntityExtension extends Extension
 {
@@ -32,8 +31,10 @@ class OroEntityExtension extends Extension
         $loader->load('form_type.yml');
         $loader->load('services.yml');
         $loader->load('fallbacks.yml');
-        $loader->load('twig.yml');
+        $loader->load('services_api.yml');
+        $loader->load('commands.yml');
 
+        $container->setParameter('oro_entity.default_query_cache_lifetime', $config['default_query_cache_lifetime']);
         $container->setParameter('oro_entity.exclusions', $config['exclusions']);
         $container->setParameter('oro_entity.virtual_fields', $config['virtual_fields']);
         $container->setParameter('oro_entity.virtual_relations', $config['virtual_relations']);

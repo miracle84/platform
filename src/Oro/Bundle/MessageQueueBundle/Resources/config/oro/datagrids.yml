@@ -7,7 +7,7 @@ datagrids:
                 select:
                     - j
                 from:
-                    - { table: OroMessageQueueBundle:Job, alias:j }
+                    - { table: OroMessageQueueBundle:Job, alias: j }
                 where:
                     and:
                         - j.rootJob IS NULL
@@ -30,13 +30,25 @@ datagrids:
                 frontend_type: boolean
             createdAt:
                 label: oro.message_queue_job.grid.columns.createdAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: createdAt}
             startedAt:
                 label: oro.message_queue_job.grid.columns.startedAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: startedAt}
             stoppedAt:
                 label: oro.message_queue_job.grid.columns.stoppedAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: stoppedAt}
+            lastActiveAt:
+                label: oro.message_queue_job.grid.columns.lastActiveAt
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: lastActiveAt}
+                renderable: false
             percent:
                 label: 'Progress'
                 type: twig
@@ -49,6 +61,7 @@ datagrids:
                 createdAt: { data_name: j.createdAt }
                 startedAt: { data_name: j.startedAt }
                 stoppedAt: { data_name: j.stoppedAt }
+                lastActiveAt: { data_name: j.lastActiveAt }
             default:
                 id: DESC
         filters:
@@ -67,6 +80,7 @@ datagrids:
                                 oro.message_queue_job.status.success: oro.message_queue_job.status.success
                                 oro.message_queue_job.status.failed: oro.message_queue_job.status.failed
                                 oro.message_queue_job.status.cancelled: oro.message_queue_job.status.cancelled
+                                oro.message_queue_job.status.stale: oro.message_queue_job.status.stale
                 createdAt:
                     type:      datetime
                     data_name: j.createdAt
@@ -76,6 +90,9 @@ datagrids:
                 stoppedAt:
                     type:      datetime
                     data_name: j.stoppedAt
+                lastActiveAt:
+                    type:      datetime
+                    data_name: j.lastActiveAt
         properties:
             id: ~
             child_jobs_link:
@@ -109,7 +126,7 @@ datagrids:
                 select:
                     - j
                 from:
-                    - { table: OroMessageQueueBundle:Job, alias:j }
+                    - { table: OroMessageQueueBundle:Job, alias: j }
                 where:
                     and:
                         - j.rootJob = :root_job_id
@@ -128,13 +145,19 @@ datagrids:
                 frontend_type: html
             createdAt:
                 label: oro.message_queue_job.grid.columns.createdAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: createdAt}
             startedAt:
                 label: oro.message_queue_job.grid.columns.startedAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: startedAt}
             stoppedAt:
                 label: oro.message_queue_job.grid.columns.stoppedAt
-                frontend_type: datetime
+                type: callback
+                callable: ['@oro_locale.twig.date_time', 'dateTimeMediumFormat']
+                params: {fieldName: stoppedAt}
         sorters:
             columns:
                 id: { data_name: j.id }
@@ -160,6 +183,7 @@ datagrids:
                                 oro.message_queue_job.status.success: oro.message_queue_job.status.success
                                 oro.message_queue_job.status.failed: oro.message_queue_job.status.failed
                                 oro.message_queue_job.status.cancelled: oro.message_queue_job.status.cancelled
+                                oro.message_queue_job.status.stale: oro.message_queue_job.status.stale
                 createdAt:
                     type:      datetime
                     data_name: j.createdAt

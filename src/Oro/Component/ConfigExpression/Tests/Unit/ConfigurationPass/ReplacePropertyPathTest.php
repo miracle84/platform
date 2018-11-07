@@ -2,11 +2,10 @@
 
 namespace Oro\Component\ConfigExpression\Tests\Unit\ConfigurationPass;
 
+use Oro\Component\ConfigExpression\ConfigurationPass\ReplacePropertyPath;
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-use Oro\Component\ConfigExpression\ConfigurationPass\ReplacePropertyPath;
-
-class ReplacePropertyPathTest extends \PHPUnit_Framework_TestCase
+class ReplacePropertyPathTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider passDataProvider

@@ -3,15 +3,13 @@
 namespace Oro\Component\Action\Tests\Unit\Action;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
-use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\Action\Action\CreateEntity;
 use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class CreateEntityTest extends \PHPUnit_Framework_TestCase
+class CreateEntityTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var CreateEntity
@@ -24,7 +22,7 @@ class CreateEntityTest extends \PHPUnit_Framework_TestCase
     protected $contextAccessor;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry
+     * @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry
      */
     protected $registry;
 

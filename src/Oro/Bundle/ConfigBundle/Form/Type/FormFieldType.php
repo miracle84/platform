@@ -2,17 +2,21 @@
 
 namespace Oro\Bundle\ConfigBundle\Form\Type;
 
+use Oro\Bundle\FormBundle\Utils\FormUtils;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
-use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\OptionsResolver\Options;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\FormBundle\Utils\FormUtils;
-
+/**
+ * Form type for global fields of system configuration.
+ */
 class FormFieldType extends AbstractType
 {
     /**
@@ -24,9 +28,9 @@ class FormFieldType extends AbstractType
             [
                 'target_field_options' => [],
                 'use_parent_field_options' => [],
-                'target_field_type'    => 'text',
+                'target_field_type' => TextType::class,
+                'target_field_alias' => 'text',
                 'resettable'           => true,
-                'cascade_validation'   => true,
                 'parent_checkbox_label' => ''
             ]
         );
@@ -41,7 +45,7 @@ class FormFieldType extends AbstractType
                 $attr['class'] = '';
             }
 
-            $attr['class'] = sprintf('%s, control-group-%s', $attr['class'], $options['target_field_type']);
+            $attr['class'] = sprintf('%s control-group-%s', $attr['class'], $options['target_field_alias']);
 
             return $attr;
         });
@@ -53,10 +57,10 @@ class FormFieldType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $useParentOptions = $options['use_parent_field_options'];
-        $useParentType    = 'oro_config_parent_scope_checkbox_type';
+        $useParentType    = ParentScopeCheckbox::class;
         if (!$options['resettable']) {
             $useParentOptions = ['data' => 0];
-            $useParentType    = 'hidden';
+            $useParentType    = HiddenType::class;
         }
         $useParentOptions['label'] = $options['parent_checkbox_label'];
 
@@ -81,8 +85,13 @@ class FormFieldType extends AbstractType
             function (FormEvent $event) {
                 $form = $event->getForm();
                 $data = $event->getData();
+                $parentValueDisabled = $form->get('value')->getConfig()->getOption('disabled');
                 $disabled = isset($data['use_parent_scope_value']) ? $data['use_parent_scope_value'] : false;
+                $disabled = $disabled || $parentValueDisabled;
                 FormUtils::replaceField($form, 'value', ['disabled' => $disabled]);
+                if ($parentValueDisabled) {
+                    FormUtils::replaceField($form, 'use_parent_scope_value', ['disabled' => $disabled]);
+                }
             }
         );
 
@@ -91,8 +100,7 @@ class FormFieldType extends AbstractType
             FormEvents::POST_SUBMIT,
             function (FormEvent $event) {
                 $form = $event->getForm()->getParent();
-                $data = $event->getForm()->getData();
-                $disabled = isset($data['use_parent_scope_value']) ? $data['use_parent_scope_value'] : false;
+                $disabled = $event->getForm()->getData();
                 FormUtils::replaceField($form, 'value', ['disabled' => $disabled]);
             }
         );

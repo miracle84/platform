@@ -2,28 +2,16 @@
 
 namespace Oro\Bundle\UserBundle\Form\Type;
 
-use Symfony\Component\Form\FormBuilderInterface;
+use Oro\Bundle\FormBundle\Form\Type\EntityIdentifierType;
+use Oro\Bundle\UserBundle\Form\EventListener\ChangeRoleSubscriber;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
-use Oro\Bundle\SecurityBundle\Form\Type\AclPrivilegeType;
-use Oro\Bundle\SecurityBundle\Form\Type\PrivilegeCollectionType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class AclRoleType extends AbstractType
 {
-    /**
-     * @var array privilege fields config
-     */
-    protected $privilegeConfig;
-
-    /**
-     * @param array $privilegeTypeConfig
-     */
-    public function __construct(array $privilegeTypeConfig)
-    {
-        $this->privilegeConfig = $privilegeTypeConfig;
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -31,7 +19,7 @@ class AclRoleType extends AbstractType
     {
         $builder->add(
             'label',
-            'text',
+            TextType::class,
             [
                 'required' => true,
                 'label'    => 'oro.user.role.role.label'
@@ -40,7 +28,7 @@ class AclRoleType extends AbstractType
 
         $builder->add(
             'appendUsers',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             [
                 'class'    => 'OroUserBundle:User',
                 'required' => false,
@@ -51,7 +39,7 @@ class AclRoleType extends AbstractType
 
         $builder->add(
             'removeUsers',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             [
                 'class'    => 'OroUserBundle:User',
                 'required' => false,
@@ -61,22 +49,24 @@ class AclRoleType extends AbstractType
         );
         $builder->add(
             'privileges',
-            'hidden',
+            HiddenType::class,
             [
                 'mapped' => false,
             ]
         );
+
+        $builder->addEventSubscriber(new ChangeRoleSubscriber());
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
                 'data_class' => 'Oro\Bundle\UserBundle\Entity\Role',
-                'intention'  => 'role',
+                'csrf_token_id' => 'role',
             ]
         );
     }

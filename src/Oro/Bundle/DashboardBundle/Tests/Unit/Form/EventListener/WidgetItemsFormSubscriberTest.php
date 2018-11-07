@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\DashboardBundle\Tests\Unit\Form\EventListener;
 
+use Oro\Bundle\DashboardBundle\Form\EventListener\WidgetItemsFormSubscriber;
 use Symfony\Component\Form\FormEvent;
 
-use Oro\Bundle\DashboardBundle\Form\EventListener\WidgetItemsFormSubscriber;
-
-class WidgetItemsFormSubscriberTest extends \PHPUnit_Framework_TestCase
+class WidgetItemsFormSubscriberTest extends \PHPUnit\Framework\TestCase
 {
     protected $widgetConfigs;
     protected $widgetItemsFormSubscriber;

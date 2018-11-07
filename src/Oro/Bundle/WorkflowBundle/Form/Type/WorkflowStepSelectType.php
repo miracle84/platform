@@ -4,19 +4,20 @@ namespace Oro\Bundle\WorkflowBundle\Form\Type;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
+use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
+use Oro\Bundle\WorkflowBundle\Model\Workflow;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\ChoiceList\View\ChoiceView;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Translation\MessageCatalogueInterface;
+use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
-use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
-use Oro\Bundle\WorkflowBundle\Model\Workflow;
-use Oro\Bundle\WorkflowBundle\Model\WorkflowRegistry;
 
 class WorkflowStepSelectType extends AbstractType
 {
@@ -27,6 +28,9 @@ class WorkflowStepSelectType extends AbstractType
 
     /** @var TranslatorInterface */
     protected $translator;
+
+    /** @var MessageCatalogueInterface */
+    private $translatorCatalogue;
 
     /**
      * @param WorkflowRegistry $workflowRegistry
@@ -47,7 +51,7 @@ class WorkflowStepSelectType extends AbstractType
         $resolver->setDefaults(
             [
                 'class' => 'OroWorkflowBundle:WorkflowStep',
-                'property' => 'label'
+                'choice_label' => 'label'
             ]
         );
 
@@ -86,21 +90,44 @@ class WorkflowStepSelectType extends AbstractType
                 $step = $choiceView->data;
                 $choiceView->label = sprintf(
                     '%s: %s',
-                    $this->translator->trans(
-                        $step->getDefinition()->getLabel(),
-                        [],
-                        WorkflowTranslationHelper::TRANSLATION_DOMAIN
-                    ),
-                    $this->translator->trans($choiceView->label, [], WorkflowTranslationHelper::TRANSLATION_DOMAIN)
+                    $this->getTranslation($step->getDefinition()->getLabel()),
+                    $this->getTranslation($choiceView->label)
                 );
             } else {
-                $choiceView->label = $this->translator->trans(
-                    $choiceView->label,
-                    [],
-                    WorkflowTranslationHelper::TRANSLATION_DOMAIN
-                );
+                $choiceView->label = $this->getTranslation($choiceView->label);
             }
         }
+    }
+
+    /**
+     * @param string $value
+     * @return string
+     */
+    private function getTranslation($value)
+    {
+        if ($this->hasTranslation($value, WorkflowTranslationHelper::TRANSLATION_DOMAIN)) {
+            $value = $this->translator->trans($value, [], WorkflowTranslationHelper::TRANSLATION_DOMAIN);
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param string $value
+     * @param string $domain
+     * @return bool
+     */
+    private function hasTranslation($value, $domain)
+    {
+        if ($this->translator instanceof TranslatorBagInterface) {
+            if (!$this->translatorCatalogue) {
+                $this->translatorCatalogue = $this->translator->getCatalogue();
+            }
+
+            return $this->translatorCatalogue->has($value, $domain);
+        }
+
+        return true;
     }
 
     /**
@@ -124,7 +151,7 @@ class WorkflowStepSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'entity';
+        return EntityType::class;
     }
 
     /**

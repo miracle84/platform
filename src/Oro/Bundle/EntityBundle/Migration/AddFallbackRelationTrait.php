@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityBundle\Migration;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Migration\Extension\ExtendExtension;
@@ -17,6 +16,7 @@ trait AddFallbackRelationTrait
      * @param string $fieldName
      * @param string $label
      * @param array $fallbackList
+     * @param string|null $fallbackType
      */
     protected function addFallbackRelation(
         Schema $schema,
@@ -24,10 +24,17 @@ trait AddFallbackRelationTrait
         $tableName,
         $fieldName,
         $label,
-        $fallbackList
+        $fallbackList,
+        $fallbackType = null
     ) {
         $table = $schema->getTable($tableName);
         $fallbackTable = $schema->getTable('oro_entity_fallback_value');
+
+        $fallbackConfig = ['fallbackList' => $fallbackList];
+        if ($fallbackType) {
+            $fallbackConfig['fallbackType'] = $fallbackType;
+        }
+
         $extendExtension->addManyToOneRelation(
             $schema,
             $table,
@@ -51,9 +58,7 @@ trait AddFallbackRelationTrait
                 'datagrid' => [
                     'is_visible' => DatagridScope::IS_VISIBLE_FALSE,
                 ],
-                'fallback' => [
-                    'fallbackList' => $fallbackList,
-                ],
+                'fallback' => $fallbackConfig
             ]
         );
     }

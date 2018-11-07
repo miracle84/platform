@@ -4,15 +4,12 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Functional\ImportExport;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
-
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
-
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * @dbIsolation
  * @SuppressWarnings(PHPMD.TooManyMethods)
  */
 class ImportExportTest extends WebTestCase
@@ -33,35 +30,6 @@ class ImportExportTest extends WebTestCase
             ->findOneBy(['className' => 'Oro\Bundle\UserBundle\Entity\Role']);
 
         $this->fields = $this->getEntityFields();
-    }
-
-    /**
-     * Delete data required because there is commit to job repository in import/export controller action
-     * Please use
-     *   $this->getContainer()->get('akeneo_batch.job_repository')->getJobManager()->beginTransaction();
-     *   $this->getContainer()->get('akeneo_batch.job_repository')->getJobManager()->rollback();
-     *   $this->getContainer()->get('akeneo_batch.job_repository')->getJobManager()->getConnection()->clear();
-     * if you don't use controller
-     */
-    protected function tearDown()
-    {
-        // clear DB from separate connection
-        $batchJobManager = $this->getContainer()->get('akeneo_batch.job_repository')->getJobManager();
-        $batchJobManager->createQuery('DELETE AkeneoBatchBundle:JobInstance')->execute();
-        $batchJobManager->createQuery('DELETE AkeneoBatchBundle:JobExecution')->execute();
-        $batchJobManager->createQuery('DELETE AkeneoBatchBundle:StepExecution')->execute();
-
-        $manager = $this->getManager(self::CLASS_NAME);
-
-        foreach ($this->getEntityFields() as $field) {
-            if (!array_key_exists($field->getId(), $this->fields)) {
-                $manager->remove($field);
-            }
-        }
-
-        $manager->flush();
-
-        parent::tearDown();
     }
 
     public function testImport()
@@ -220,6 +188,7 @@ class ImportExportTest extends WebTestCase
         $this->assertEquals(
             [
                 'success' => true,
+                'message' => 'Import started successfully. You will receive an email notification upon completion.'
             ],
             $data
         );

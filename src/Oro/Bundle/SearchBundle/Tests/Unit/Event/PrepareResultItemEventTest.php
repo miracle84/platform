@@ -4,7 +4,7 @@ namespace Oro\Bundle\SearchBundle\Tests\Unit\Event;
 
 use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
 
-class PrepareResultItemEventTest extends \PHPUnit_Framework_TestCase
+class PrepareResultItemEventTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var PrepareResultItemEvent
@@ -25,11 +25,6 @@ class PrepareResultItemEventTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $this->event = new PrepareResultItemEvent($this->resultItem);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_search.prepare_result_item', $this->event->getName());
     }
 
     public function testGetResultItem()

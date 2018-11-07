@@ -4,12 +4,8 @@ namespace Oro\Bundle\EntityExtendBundle\Tests\Functional;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class ExtendedRelationsTest extends WebTestCase
 {
     protected function setUp()

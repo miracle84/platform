@@ -2,13 +2,13 @@
 
 namespace Oro\Bundle\ActivityListBundle\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Validator\Constraints as Assert;
-
 use Oro\Bundle\ActivityListBundle\Filter\ActivityListFilter;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\FilterType as BaseFilterType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class ActivityListFilterType extends AbstractType
 {
@@ -22,6 +22,7 @@ class ActivityListFilterType extends AbstractType
         $builder
             ->add('filter')
             ->add('entityClassName')
+            ->add('activityFieldName')
             ->add('activityType', null, [
                 'constraints' => [
                     new Assert\Collection([
@@ -31,7 +32,7 @@ class ActivityListFilterType extends AbstractType
                     ]),
                 ],
             ])
-            ->add('filterType', 'choice', [
+            ->add('filterType', ChoiceType::class, [
                 'choices' => [
                     ActivityListFilter::TYPE_HAS_ACTIVITY     => ActivityListFilter::TYPE_HAS_ACTIVITY,
                     ActivityListFilter::TYPE_HAS_NOT_ACTIVITY => ActivityListFilter::TYPE_HAS_NOT_ACTIVITY,
@@ -46,7 +47,7 @@ class ActivityListFilterType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
             'csrf_protection' => false,
@@ -58,7 +59,7 @@ class ActivityListFilterType extends AbstractType
      */
     public function getParent()
     {
-        return BaseFilterType::NAME;
+        return BaseFilterType::class;
     }
 
     /**

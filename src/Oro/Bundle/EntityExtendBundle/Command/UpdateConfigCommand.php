@@ -2,14 +2,16 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Command;
 
+use Oro\Bundle\EntityExtendBundle\Tools\ConfigFilter\ByInitialStateFilter;
+use Oro\Bundle\EntityExtendBundle\Tools\ConfigFilter\ByOriginFilter;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use Oro\Bundle\EntityExtendBundle\Tools\ConfigFilter\ByInitialStateFilter;
-use Oro\Bundle\EntityExtendBundle\Tools\ConfigFilter\ByOriginFilter;
-
+/**
+ * The CLI command to update extend entity config
+ */
 class UpdateConfigCommand extends ContainerAwareCommand
 {
     /**
@@ -37,12 +39,6 @@ class UpdateConfigCommand extends ContainerAwareCommand
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'A path to a file contains initial states of entity configs'
-            )
-            ->addOption(
-                'attributes-only',
-                null,
-                InputOption::VALUE_NONE,
-                'Executes update config only for entities which has attributes.'
             );
     }
 
@@ -54,11 +50,7 @@ class UpdateConfigCommand extends ContainerAwareCommand
         $output->writeln($this->getDescription());
 
         $dumper = $this->getContainer()->get('oro_entity_extend.tools.dumper');
-        $dumper->updateConfig(
-            $this->getFilter($input),
-            $input->getOption('update-custom'),
-            $input->getOption('attributes-only')
-        );
+        $dumper->updateConfig($this->getFilter($input), $input->getOption('update-custom'));
     }
 
     /**

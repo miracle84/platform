@@ -2,13 +2,14 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Processor\ActionProcessorBagInterface;
 use Oro\Bundle\ApiBundle\Processor\Get\GetContext;
+use Oro\Bundle\ApiBundle\Processor\NormalizeResultActionProcessor;
 use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
-use Oro\Bundle\ApiBundle\Processor\RequestActionProcessor;
 use Oro\Bundle\ApiBundle\Request\ApiActions;
+use Oro\Component\ChainProcessor\ActionProcessorInterface;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Loads whole entity by its identifier using "get" action.
@@ -17,6 +18,8 @@ use Oro\Bundle\ApiBundle\Request\ApiActions;
  */
 class LoadNormalizedEntity implements ProcessorInterface
 {
+    public const OPERATION_NAME = 'normalized_entity_loaded';
+
     /** @var ActionProcessorBagInterface */
     protected $processorBag;
 
@@ -42,31 +45,51 @@ class LoadNormalizedEntity implements ProcessorInterface
     {
         /** @var SingleItemContext $context */
 
-        $entityId = $context->getId();
-        if (null === $entityId) {
-            // undefined entity
+        if ($context->isProcessed(self::OPERATION_NAME)) {
+            // the normalized entity was already loaded
             return;
         }
 
-        $getProcessor = $this->processorBag->getProcessor(ApiActions::GET);
+        $entityId = $context->getId();
+        if (null !== $entityId) {
+            $getProcessor = $this->processorBag->getProcessor(ApiActions::GET);
+            $getContext = $this->createGetContext($context, $getProcessor);
+            $getProcessor->process($getContext);
+            $this->processGetResult($getContext, $context);
+            $context->setProcessed(self::OPERATION_NAME);
+        } elseif (!$context->hasIdentifierFields()) {
+            // remove the result if it was not normalized yet
+            if ($context->hasResult() && \is_object($context->getResult())) {
+                $context->removeResult();
+            }
+            $context->setProcessed(self::OPERATION_NAME);
+        }
+    }
 
+    /**
+     * @param SingleItemContext        $context
+     * @param ActionProcessorInterface $processor
+     *
+     * @return GetContext
+     */
+    protected function createGetContext(SingleItemContext $context, ActionProcessorInterface $processor)
+    {
         /** @var GetContext $getContext */
-        $getContext = $getProcessor->createContext();
+        $getContext = $processor->createContext();
         $getContext->setVersion($context->getVersion());
         $getContext->getRequestType()->set($context->getRequestType());
         $getContext->setRequestHeaders($context->getRequestHeaders());
         $getContext->setClassName($context->getClassName());
-        $getContext->setId($entityId);
+        $getContext->setId($context->getId());
         if ($this->reuseExistingEntity && $context->hasResult()) {
             $getContext->setResult($context->getResult());
         }
         $getContext->skipGroup('security_check');
-        $getContext->skipGroup(RequestActionProcessor::NORMALIZE_RESULT_GROUP);
+        $getContext->skipGroup('data_security_check');
+        $getContext->skipGroup(NormalizeResultActionProcessor::NORMALIZE_RESULT_GROUP);
         $getContext->setSoftErrorsHandling(true);
 
-        $getProcessor->process($getContext);
-
-        $this->processGetResult($getContext, $context);
+        return $getContext;
     }
 
     /**
@@ -82,8 +105,9 @@ class LoadNormalizedEntity implements ProcessorInterface
             }
         } else {
             $context->setConfigExtras($getContext->getConfigExtras());
-            if ($getContext->hasConfig()) {
-                $context->setConfig($getContext->getConfig());
+            $getConfig = $getContext->getConfig();
+            if (null !== $getConfig) {
+                $context->setConfig($getConfig);
             }
             $getConfigSections = $getContext->getConfigSections();
             foreach ($getConfigSections as $configSection) {
@@ -92,12 +116,13 @@ class LoadNormalizedEntity implements ProcessorInterface
                 }
             }
 
-            if ($getContext->hasMetadata()) {
-                $context->setMetadata($getContext->getMetadata());
+            $getMetadata = $getContext->getMetadata();
+            if (null !== $getMetadata) {
+                $context->setMetadata($getMetadata);
             }
 
-            $getResponseHeaders = $getContext->getResponseHeaders();
             $responseHeaders = $context->getResponseHeaders();
+            $getResponseHeaders = $getContext->getResponseHeaders();
             foreach ($getResponseHeaders as $key => $value) {
                 $responseHeaders->set($key, $value);
             }

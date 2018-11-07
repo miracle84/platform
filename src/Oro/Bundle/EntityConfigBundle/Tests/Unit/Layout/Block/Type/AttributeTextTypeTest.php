@@ -2,33 +2,31 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Layout\Block\Type;
 
-use Symfony\Component\ExpressionLanguage\Expression;
-
+use Oro\Bundle\EntityConfigBundle\Attribute\AttributeConfigurationProvider;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
 use Oro\Bundle\EntityConfigBundle\Layout\Block\Type\AttributeTextType;
 use Oro\Bundle\LayoutBundle\Tests\Unit\BlockTypeTestCase;
-
 use Oro\Component\Layout\Block\Type\BaseType;
 use Oro\Component\Layout\LayoutFactoryBuilderInterface;
+use Symfony\Component\ExpressionLanguage\Expression;
 
 class AttributeTextTypeTest extends BlockTypeTestCase
 {
-    /** @var AttributeManager|\PHPUnit_Framework_MockObject_MockObject $attributeManager */
-    protected $attributeManager;
+    /** @var AttributeConfigurationProvider|\PHPUnit\Framework\MockObject\MockObject $attributeManager */
+    private $attributeConfigurationProvider;
 
     /**
      * @param LayoutFactoryBuilderInterface $layoutFactoryBuilder
      */
     protected function initializeLayoutFactoryBuilder(LayoutFactoryBuilderInterface $layoutFactoryBuilder)
     {
-        $this->attributeManager = $this->getMockBuilder(AttributeManager::class)
+        $this->attributeConfigurationProvider = $this->getMockBuilder(AttributeConfigurationProvider::class)
             ->setMethods(['getAttributeLabel'])
             ->disableOriginalConstructor()
             ->getMock();
 
-        $attributeTextType = new AttributeTextType($this->attributeManager);
+        $attributeTextType = new AttributeTextType($this->attributeConfigurationProvider);
 
         $layoutFactoryBuilder
             ->addType($attributeTextType);
@@ -42,7 +40,7 @@ class AttributeTextTypeTest extends BlockTypeTestCase
         $attribute->setEntity(new EntityConfigModel('attributeClassName'));
 
 
-        $this->attributeManager->expects($this->once())
+        $this->attributeConfigurationProvider->expects($this->once())
             ->method('getAttributeLabel')
             ->with($this->isInstanceOf(FieldConfigModel::class))
             ->willReturn('attribute_label');
@@ -64,16 +62,9 @@ class AttributeTextTypeTest extends BlockTypeTestCase
         $this->assertEquals('attribute_label', $view->vars['label']);
         $this->assertEquals('=data["property_accessor"].getValue(entity, fieldName)', $view->vars['value']);
         $this->assertEquals(
-            '=data["attribute_config"].getConfig(className,fieldName).is("visible") && value',
+            '=data["attribute_config"].getConfig(className,fieldName).is("visible") && value !== null',
             $view->vars['visible']
         );
-    }
-
-    public function testGetName()
-    {
-        $type = $this->getBlockType(AttributeTextType::NAME);
-
-        $this->assertSame(AttributeTextType::NAME, $type->getName());
     }
 
     public function testGetParent()

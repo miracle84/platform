@@ -6,30 +6,38 @@ use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Processor\Shared\CompleteErrors;
+use Oro\Bundle\ApiBundle\Request\ErrorCompleterInterface;
+use Oro\Bundle\ApiBundle\Request\ErrorCompleterRegistry;
 use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Get\GetProcessorTestCase;
 
 class CompleteErrorsTest extends GetProcessorTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $errorCompleter;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ErrorCompleterInterface */
+    private $errorCompleter;
 
     /** @var CompleteErrors */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
         parent::setUp();
 
-        $this->errorCompleter = $this->createMock('Oro\Bundle\ApiBundle\Request\ErrorCompleterInterface');
+        $this->errorCompleter = $this->createMock(ErrorCompleterInterface::class);
 
-        $this->processor = new CompleteErrors($this->errorCompleter);
+        $errorCompleterRegistry = $this->createMock(ErrorCompleterRegistry::class);
+        $errorCompleterRegistry->expects(self::any())
+            ->method('getErrorCompleter')
+            ->with($this->context->getRequestType())
+            ->willReturn($this->errorCompleter);
+
+        $this->processor = new CompleteErrors($errorCompleterRegistry);
     }
 
     public function testProcessWithoutErrors()
     {
         $metadata = new EntityMetadata();
 
-        $this->errorCompleter->expects($this->never())
+        $this->errorCompleter->expects(self::never())
             ->method('complete');
 
         $this->context->setMetadata($metadata);
@@ -42,9 +50,13 @@ class CompleteErrorsTest extends GetProcessorTestCase
 
         $error = Error::createByException(new \Exception('some exception'));
 
-        $this->errorCompleter->expects($this->once())
+        $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with($this->identicalTo($error), $this->identicalTo($metadata))
+            ->with(
+                self::identicalTo($error),
+                self::identicalTo($this->context->getRequestType()),
+                self::identicalTo($metadata)
+            )
             ->willReturnCallback(
                 function (Error $error) {
                     $error->setDetail($error->getInnerException()->getMessage());
@@ -59,16 +71,16 @@ class CompleteErrorsTest extends GetProcessorTestCase
         $expectedError = Error::createByException(new \Exception('some exception'))
             ->setDetail('some exception');
 
-        $this->assertEquals([$expectedError], $this->context->getErrors());
+        self::assertEquals([$expectedError], $this->context->getErrors());
     }
 
     public function testProcessWhenNoEntityClass()
     {
         $error = Error::createByException(new \Exception('some exception'));
 
-        $this->errorCompleter->expects($this->once())
+        $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with($this->identicalTo($error), null)
+            ->with(self::identicalTo($error), self::identicalTo($this->context->getRequestType()), null)
             ->willReturnCallback(
                 function (Error $error) {
                     $error->setDetail($error->getInnerException()->getMessage());
@@ -81,16 +93,16 @@ class CompleteErrorsTest extends GetProcessorTestCase
         $expectedError = Error::createByException(new \Exception('some exception'))
             ->setDetail('some exception');
 
-        $this->assertEquals([$expectedError], $this->context->getErrors());
+        self::assertEquals([$expectedError], $this->context->getErrors());
     }
 
     public function testProcessWhenEntityTypeWasNotConvertedToEntityClass()
     {
         $error = Error::createByException(new \Exception('some exception'));
 
-        $this->errorCompleter->expects($this->once())
+        $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with($this->identicalTo($error), null)
+            ->with(self::identicalTo($error), self::identicalTo($this->context->getRequestType()), null)
             ->willReturnCallback(
                 function (Error $error) {
                     $error->setDetail($error->getInnerException()->getMessage());
@@ -104,19 +116,19 @@ class CompleteErrorsTest extends GetProcessorTestCase
         $expectedError = Error::createByException(new \Exception('some exception'))
             ->setDetail('some exception');
 
-        $this->assertEquals([$expectedError], $this->context->getErrors());
+        self::assertEquals([$expectedError], $this->context->getErrors());
     }
 
     public function testProcessWhenLoadConfigFailed()
     {
         $error = Error::createByException(new \Exception('some exception'));
 
-        $this->configProvider->expects($this->once())
+        $this->configProvider->expects(self::once())
             ->method('getConfig')
             ->willThrowException(new \Exception('load config exception'));
-        $this->errorCompleter->expects($this->once())
+        $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with($this->identicalTo($error), null)
+            ->with(self::identicalTo($error), self::identicalTo($this->context->getRequestType()), null)
             ->willReturnCallback(
                 function (Error $error) {
                     $error->setDetail($error->getInnerException()->getMessage());
@@ -130,19 +142,19 @@ class CompleteErrorsTest extends GetProcessorTestCase
         $expectedError = Error::createByException(new \Exception('some exception'))
             ->setDetail('some exception');
 
-        $this->assertEquals([$expectedError], $this->context->getErrors());
+        self::assertEquals([$expectedError], $this->context->getErrors());
     }
 
     public function testProcessWhenLoadMetadataFailed()
     {
         $error = Error::createByException(new \Exception('some exception'));
 
-        $this->metadataProvider->expects($this->once())
+        $this->metadataProvider->expects(self::once())
             ->method('getMetadata')
             ->willThrowException(new \Exception('load metadata exception'));
-        $this->errorCompleter->expects($this->once())
+        $this->errorCompleter->expects(self::once())
             ->method('complete')
-            ->with($this->identicalTo($error), null)
+            ->with(self::identicalTo($error), self::identicalTo($this->context->getRequestType()), null)
             ->willReturnCallback(
                 function (Error $error) {
                     $error->setDetail($error->getInnerException()->getMessage());
@@ -157,6 +169,6 @@ class CompleteErrorsTest extends GetProcessorTestCase
         $expectedError = Error::createByException(new \Exception('some exception'))
             ->setDetail('some exception');
 
-        $this->assertEquals([$expectedError], $this->context->getErrors());
+        self::assertEquals([$expectedError], $this->context->getErrors());
     }
 }

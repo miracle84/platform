@@ -11,7 +11,6 @@ define(function(require) {
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
     var messenger = require('oroui/js/messenger');
-    var tools = require('oroui/js/tools');
     var routing = require('routing');
     var helper = require('oroworkflow/js/tools/workflow-helper');
     var WorkflowManagementView = require('../views/workflow-management-view');
@@ -20,8 +19,8 @@ define(function(require) {
     var StepEditView = require('../views/step/step-edit-view');
     var StepModel = require('../models/step-model');
     var workflowModelFactory = require('../../tools/workflow-model-factory');
+    var EntityStructureDataProvider = require('oroentity/js/app/services/entity-structure-data-provider');
     var DeleteConfirmation = require('oroui/js/delete-confirmation');
-    var console = window.console;
 
     /**
      * Builds workflow editor UI.
@@ -30,27 +29,6 @@ define(function(require) {
      * @augments WorkflowViewerComponent
      */
     WorkflowEditorComponent = WorkflowViewerComponent.extend(/** @lends WorkflowEditorComponent.prototype */{
-
-        /**
-         * @inheritDoc
-         */
-        initViews: function($el, flowchartOptions) {
-            this.workflowManagementView = new WorkflowManagementView({
-                el: $el,
-                stepsEl: '.workflow-definition-steps-list-container',
-                model: this.model
-            });
-            this.historyManager = new HistoryNavigationComponent({
-                observedModel: this.model,
-                _sourceElement: $el.find('.workflow-history-container')
-            });
-            this.workflowManagementView.render();
-            if (this.flowchartEnabled) {
-                this.FlowchartWorkflowView = FlowchartEditorWorkflowView;
-            }
-            WorkflowEditorComponent.__super__.initViews.apply(this, arguments);
-        },
-
         /**
          * @inheritDoc
          */
@@ -64,8 +42,56 @@ define(function(require) {
             'requestRemoveTransition model': 'removeTransition',
             'requestCloneTransition model': 'cloneTransition',
             'requestEditTransition model': 'openManageTransitionForm',
-            'change:entity model': 'resetWorkflow',
+            'change:entity model': 'onEntityChange',
             'saveWorkflow model': 'saveConfiguration'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function WorkflowEditorComponent() {
+            WorkflowEditorComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
+        initialize: function(options) {
+            this._deferredInit();
+            var providerOptions = {
+                filterPreset: 'workflow'
+            };
+            var entity = _.result(options, 'entity') || _.result(this.options, 'entity');
+            if (entity) {
+                providerOptions.rootEntity = _.result(entity, 'entity');
+            }
+            EntityStructureDataProvider.createDataProvider(providerOptions, this).then(function(provider) {
+                this.entityFieldsProvider = provider;
+                this._resolveDeferredInit();
+            }.bind(this));
+
+            WorkflowEditorComponent.__super__.initialize.call(this, options);
+        },
+
+        /**
+         * @inheritDoc
+         */
+        initViews: function($el, flowchartOptions) {
+            this.workflowManagementView = new WorkflowManagementView({
+                autoRender: true,
+                el: $el,
+                stepsEl: '.workflow-definition-steps-list-container',
+                model: this.model,
+                entityFieldsProvider: this.entityFieldsProvider
+            });
+            this.historyManager = new HistoryNavigationComponent({
+                observedModel: this.model,
+                _sourceElement: $el.find('.workflow-history-container')
+            });
+            if (this.flowchartEnabled) {
+                this.FlowchartWorkflowView = FlowchartEditorWorkflowView;
+            }
+            WorkflowEditorComponent.__super__.initViews.call(this, $el, flowchartOptions);
         },
 
         /**
@@ -107,15 +133,16 @@ define(function(require) {
             }
 
             var transitionEditView = new TransitionEditFormView({
-                'model': transition,
-                'workflow': this.model,
-                'step_from': stepFrom,
-                'step_to': stepTo,
-                'entity_select_el': this.workflowManagementView.getEntitySelect(),
-                'workflowContainer': this.workflowManagementView.$el
+                autoRender: true,
+                model: transition,
+                workflow: this.model,
+                entityFieldsProvider: this.entityFieldsProvider,
+                step_from: stepFrom,
+                step_to: stepTo,
+                entity: this.workflowManagementView.getEntitySelectValue(),
+                workflowContainer: this.workflowManagementView.$el
             });
             transitionEditView.on('transitionAdd', this.addTransition, this);
-            transitionEditView.render();
         },
 
         /**
@@ -130,9 +157,9 @@ define(function(require) {
             }
 
             var stepEditView = new StepEditView({
-                'model': step,
-                'workflow': this.model,
-                'workflowContainer': this.workflowManagementView.$el
+                model: step,
+                workflow: this.model,
+                workflowContainer: this.workflowManagementView.$el
             });
             stepEditView.on('stepAdd', this.addStep, this);
             stepEditView.render();
@@ -203,11 +230,16 @@ define(function(require) {
             confirm.open();
         },
 
+        onEntityChange: function(model, value) {
+            this.entityFieldsProvider.setRootEntityClassName(value);
+            this.resetWorkflow();
+        },
+
         /**
          * Clean ups workflow model
          */
         resetWorkflow: function() {
-            //Need to manually destroy collection elements to trigger all appropriate events
+            // Need to manually destroy collection elements to trigger all appropriate events
             var resetCollection = function(collection) {
                 if (collection.length) {
                     for (var i = collection.length - 1; i > -1; i--) {
@@ -265,7 +297,7 @@ define(function(require) {
 
             mediator.execute('showLoading');
             this.model.save(null, {
-                'success': _.bind(function() {
+                success: _.bind(function() {
                     mediator.execute('hideLoading');
 
                     var redirectUrl = '';
@@ -290,14 +322,16 @@ define(function(require) {
                     });
                     mediator.execute('redirectTo', {url: redirectUrl}, {redirect: true});
                 }, this),
-                'error': function(model, response) {
-                    mediator.execute('hideLoading');
-                    var jsonResponse = response.responseJSON || {};
-
-                    if (tools.debug && !_.isUndefined(console) && !_.isUndefined(jsonResponse.error)) {
-                        console.error(jsonResponse.error);
+                errorHandlerMessage: function(event, response) {
+                    var message = __('Could not save workflow.');
+                    if (response.responseJSON && response.responseJSON.error) {
+                        message = response.responseJSON.error;
                     }
-                    messenger.notificationFlashMessage('error', __('Could not save workflow.'));
+
+                    return message;
+                },
+                error: function(model, response) {
+                    mediator.execute('hideLoading');
                 }
             });
         },

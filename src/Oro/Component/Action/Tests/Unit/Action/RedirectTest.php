@@ -2,14 +2,13 @@
 
 namespace Oro\Component\Action\Tests\Unit\Action;
 
-use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\Routing\RouterInterface;
-
 use Oro\Component\Action\Action\Redirect;
 use Oro\Component\ConfigExpression\ContextAccessor;
 use Oro\Component\ConfigExpression\Tests\Unit\Fixtures\ItemStub;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\Routing\RouterInterface;
 
-class RedirectTest extends \PHPUnit_Framework_TestCase
+class RedirectTest extends \PHPUnit\Framework\TestCase
 {
     const REDIRECT_PATH = 'redirectUrl';
 
@@ -19,7 +18,7 @@ class RedirectTest extends \PHPUnit_Framework_TestCase
     protected $action;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|RouterInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|RouterInterface
      */
     protected $router;
 

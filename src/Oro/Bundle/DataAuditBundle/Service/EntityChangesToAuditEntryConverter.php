@@ -1,15 +1,16 @@
 <?php
+
 namespace Oro\Bundle\DataAuditBundle\Service;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Oro\Bundle\DataAuditBundle\Entity\AbstractAudit;
 use Oro\Bundle\DataAuditBundle\Loggable\AuditEntityMapper;
+use Oro\Bundle\DataAuditBundle\Model\EntityReference;
 use Oro\Bundle\DataAuditBundle\Provider\AuditConfigProvider;
 use Oro\Bundle\DataAuditBundle\Provider\EntityNameProvider;
-use Oro\Bundle\DataAuditBundle\Model\EntityReference;
 
 class EntityChangesToAuditEntryConverter
 {
@@ -30,6 +31,14 @@ class EntityChangesToAuditEntryConverter
 
     /** @var ChangeSetToAuditFieldsConverter */
     private $changeSetToAuditFieldsConverter;
+
+    /**
+     * Local cache of entities metadata.
+     * To avoid performance impact of getting entities metadata in "convert" method.
+     *
+     * @var array
+     */
+    private $entityMetadataCache = [];
 
     /**
      * @param ManagerRegistry                 $doctrine
@@ -56,12 +65,15 @@ class EntityChangesToAuditEntryConverter
     }
 
     /**
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @param array           $entityChanges
      * @param string          $transactionId
      * @param \DateTime       $loggedAt
      * @param EntityReference $user
      * @param EntityReference $organization
      * @param EntityReference $impersonation
+     * @param string|null     $ownerDescription
      * @param string|null     $auditDefaultAction
      */
     public function convert(
@@ -71,60 +83,75 @@ class EntityChangesToAuditEntryConverter
         EntityReference $user,
         EntityReference $organization,
         EntityReference $impersonation,
+        $ownerDescription = null,
         $auditDefaultAction = null
     ) {
+        $needFlush = false;
         $auditEntryClass = $this->auditEntityMapper->getAuditEntryClass($this->getEntityByReference($user));
+        /** @var EntityManagerInterface $auditEntityManager */
         $auditEntityManager = $this->doctrine->getManagerForClass($auditEntryClass);
-
         foreach ($entityChanges as $entityChange) {
             $entityClass = $entityChange['entity_class'];
             $entityId = $entityChange['entity_id'];
-            /** @var EntityManagerInterface $entityManager */
-            $entityManager = $this->doctrine->getManagerForClass($entityClass);
-            $entityMetadata = $entityManager->getClassMetadata($entityClass);
+
             if (!$this->configProvider->isAuditableEntity($entityClass)) {
                 continue;
             }
 
+            $entityMetadata = $this->getEntityMetadata($entityClass);
             $fields = $this->changeSetToAuditFieldsConverter->convert(
                 $auditEntryClass,
                 $entityMetadata,
                 $entityChange['change_set']
             );
+
             if (empty($fields)) {
                 continue;
             }
 
-            $audit = $this->findAuditEntity($auditEntryClass, $transactionId, $entityClass, $entityId);
-            if (null === $audit) {
-                $audit = $this->createAuditEntity(
-                    $auditEntityManager,
-                    $auditEntryClass,
-                    $transactionId,
-                    $entityClass,
-                    $entityId,
-                    $loggedAt,
-                    $user,
-                    $organization,
-                    $impersonation
-                );
-            }
-            if (!$audit->getAction()) {
-                $audit->setAction($this->guessAuditAction($audit, $auditDefaultAction));
-                $auditEntityManager->flush();
-            }
+            $auditEntry = $this->findOrCreateAuditEntry(
+                $auditEntityManager,
+                $auditEntryClass,
+                $transactionId,
+                $entityClass,
+                $entityId,
+                $loggedAt,
+                $user,
+                $organization,
+                $impersonation,
+                null
+            );
 
             foreach ($fields as $field) {
-                $existingField = $audit->getField($field->getField());
+                $existingField = $auditEntry->getField($field->getField());
                 if ($existingField && $entityMetadata->isCollectionValuedAssociation($existingField->getField())) {
                     $existingField->mergeCollectionField($field);
                 } else {
-                    $audit->addField($field);
+                    $auditEntry->addField($field);
                 }
+                $needFlush = true;
+            }
+
+            if (!$auditEntry->getAction()) {
+                $auditEntry->setAction($this->guessAuditAction($auditEntry, $auditDefaultAction));
+                $needFlush = true;
+            }
+
+            if ($ownerDescription) {
+                $auditEntry->setOwnerDescription($ownerDescription);
+                $needFlush = true;
+            }
+
+            if (isset($entityChange['additional_fields']) && !empty($entityChange['additional_fields'])) {
+                $auditEntry->setAdditionalFields($entityChange['additional_fields']);
+                $needFlush = true;
             }
         }
 
-        $auditEntityManager->flush();
+        if ($needFlush) {
+            $auditEntityManager->flush();
+            $this->entityMetadataCache = [];
+        }
     }
 
     /**
@@ -134,6 +161,7 @@ class EntityChangesToAuditEntryConverter
      * @param EntityReference $user
      * @param EntityReference $organization
      * @param EntityReference $impersonation
+     * @param string          $ownerDescription
      * @param string          $auditDefaultAction
      */
     public function convertSkipFields(
@@ -143,9 +171,11 @@ class EntityChangesToAuditEntryConverter
         EntityReference $user,
         EntityReference $organization,
         EntityReference $impersonation,
-        $auditDefaultAction
+        $ownerDescription = null,
+        $auditDefaultAction = null
     ) {
         $auditEntryClass = $this->auditEntityMapper->getAuditEntryClass($this->getEntityByReference($user));
+        /** @var EntityManagerInterface $auditEntityManager */
         $auditEntityManager = $this->doctrine->getManagerForClass($auditEntryClass);
 
         foreach ($entityChanges as $entityChange) {
@@ -155,20 +185,25 @@ class EntityChangesToAuditEntryConverter
                 continue;
             }
 
-            $audit = $this->findAuditEntity($auditEntryClass, $transactionId, $entityClass, $entityId);
-            if (null === $audit) {
-                $this->createAuditEntity(
-                    $auditEntityManager,
-                    $auditEntryClass,
-                    $transactionId,
-                    $entityClass,
-                    $entityId,
-                    $loggedAt,
-                    $user,
-                    $organization,
-                    $impersonation,
-                    $auditDefaultAction
-                );
+            $audit = $this->findOrCreateAuditEntry(
+                $auditEntityManager,
+                $auditEntryClass,
+                $transactionId,
+                $entityClass,
+                $entityId,
+                $loggedAt,
+                $user,
+                $organization,
+                $impersonation,
+                $auditDefaultAction
+            );
+
+            if (isset($entityChange['additional_fields']) && !empty($entityChange['additional_fields'])) {
+                $audit->setAdditionalFields($entityChange['additional_fields']);
+            }
+
+            if ($ownerDescription) {
+                $audit->setOwnerDescription($ownerDescription);
             }
         }
 
@@ -188,10 +223,10 @@ class EntityChangesToAuditEntryConverter
         }
 
         if ($audit->getVersion() < 2) {
-            return $defaultAction ?: AbstractAudit::ACTION_CREATE;
+            return $defaultAction ? : AbstractAudit::ACTION_CREATE;
         }
 
-        return $defaultAction ?: AbstractAudit::ACTION_UPDATE;
+        return $defaultAction ? : AbstractAudit::ACTION_UPDATE;
     }
 
     /**
@@ -211,44 +246,23 @@ class EntityChangesToAuditEntryConverter
     }
 
     /**
-     * @param string $auditEntryClass
-     * @param string $transactionId
-     * @param string $entityClass
-     * @param string $entityId
-     *
-     * @return AbstractAudit
-     */
-    private function findAuditEntity($auditEntryClass, $transactionId, $entityClass, $entityId)
-    {
-        return $this->getAuditRepository($auditEntryClass)
-            ->createQueryBuilder('a')
-            ->select('a')
-            ->where('a.transactionId = :transactionId AND a.objectClass = :objectClass AND a.objectId = :objectId')
-            ->setParameter('transactionId', $transactionId)
-            ->setParameter('objectClass', $entityClass)
-            ->setParameter('objectId', $entityId)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
-     * @param EntityManager   $auditEntityManager
-     * @param string          $auditEntryClass
-     * @param string          $transactionId
-     * @param string          $entityClass
-     * @param int             $entityId
-     * @param \DateTime       $loggedAt
-     * @param EntityReference $user
-     * @param EntityReference $organization
-     * @param EntityReference $impersonation
-     * @param string|null     $action
+     * @param EntityManagerInterface $auditEntityManager
+     * @param string                 $auditEntryClass
+     * @param string                 $transactionId
+     * @param string                 $entityClass
+     * @param int                    $entityId
+     * @param \DateTime              $loggedAt
+     * @param EntityReference        $user
+     * @param EntityReference        $organization
+     * @param EntityReference        $impersonation
+     * @param string|null            $action
      *
      * @return AbstractAudit
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
-    private function createAuditEntity(
-        EntityManager $auditEntityManager,
+    private function findOrCreateAuditEntry(
+        EntityManagerInterface $auditEntityManager,
         $auditEntryClass,
         $transactionId,
         $entityClass,
@@ -259,26 +273,38 @@ class EntityChangesToAuditEntryConverter
         EntityReference $impersonation,
         $action = null
     ) {
-        /** @var AbstractAudit $audit */
-        $audit = $auditEntityManager->getClassMetadata($auditEntryClass)->newInstance();
-        $audit->setTransactionId($transactionId);
-        $audit->setObjectClass($entityClass);
-        $audit->setObjectId($entityId);
-        $audit->setLoggedAt($loggedAt);
-        $audit->setUser($this->getEntityByReference($user));
-        $audit->setOrganization($this->getEntityByReference($organization));
-        $audit->setImpersonation($this->getEntityByReference($impersonation));
-        $audit->setObjectName(
-            $this->entityNameProvider->getEntityName($auditEntryClass, $entityClass, $entityId)
-        );
-        $audit->setAction($action);
+        $auditEntry = $this->getAuditRepository($auditEntryClass)
+            ->createQueryBuilder('a')
+            ->select('a')
+            ->where('a.transactionId = :transactionId AND a.objectClass = :objectClass AND a.objectId = :objectId')
+            ->setParameter('transactionId', $transactionId)
+            ->setParameter('objectClass', $entityClass)
+            ->setParameter('objectId', $entityId)
+            ->getQuery()
+            ->getOneOrNullResult();
 
-        $auditEntityManager->persist($audit);
-        $auditEntityManager->flush();
+        if (null === $auditEntry) {
+            /** @var AbstractAudit $auditEntry */
+            $auditEntry = $auditEntityManager->getClassMetadata($auditEntryClass)->newInstance();
+            $auditEntry->setTransactionId($transactionId);
+            $auditEntry->setObjectClass($entityClass);
+            $auditEntry->setObjectId($entityId);
+            $auditEntry->setLoggedAt($loggedAt);
+            $auditEntry->setUser($this->getEntityByReference($user));
+            $auditEntry->setOrganization($this->getEntityByReference($organization));
+            $auditEntry->setImpersonation($this->getEntityByReference($impersonation));
+            $auditEntry->setObjectName(
+                $this->entityNameProvider->getEntityName($auditEntryClass, $entityClass, $entityId)
+            );
+            $auditEntry->setAction($action);
 
-        $this->setNewAuditVersionService->setVersion($audit);
+            $auditEntityManager->persist($auditEntry);
+            $auditEntityManager->flush();
 
-        return $audit;
+            $this->setNewAuditVersionService->setVersion($auditEntry);
+        }
+
+        return $auditEntry;
     }
 
     /**
@@ -289,5 +315,22 @@ class EntityChangesToAuditEntryConverter
     private function getAuditRepository($auditEntryClass)
     {
         return $this->doctrine->getRepository($auditEntryClass);
+    }
+
+    /**
+     * @param string $entityClass
+     *
+     * @return ClassMetadata
+     */
+    private function getEntityMetadata($entityClass)
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = $this->doctrine->getManagerForClass($entityClass);
+
+        if (!isset($this->entityMetadataCache[$entityClass])) {
+            $this->entityMetadataCache[$entityClass] = $entityManager->getClassMetadata($entityClass);
+        }
+
+        return $this->entityMetadataCache[$entityClass];
     }
 }

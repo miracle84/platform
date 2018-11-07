@@ -29,7 +29,7 @@ define([
 
         if (!_.isUndefined(target)) {
             $(target).attr({
-                tabindex: 0,
+                'tabindex': 0,
                 'data-scroll-focus': ''
             }).one('blur', function() {
                 $(this).removeAttr('data-scroll-focus tabindex');
@@ -38,6 +38,13 @@ define([
     }
 
     PageContentView = PageRegionView.extend({
+        /**
+         * @inheritDoc
+         */
+        constructor: function PageContentView() {
+            PageContentView.__super__.constructor.apply(this, arguments);
+        },
+
         template: function(data) {
             return data.content;
         },
@@ -54,6 +61,10 @@ define([
             var data = this.getTemplateData();
             if (data && data.scripts) {
                 this.$el.append(data.scripts);
+            }
+
+            if (data) {
+                this.initLayout();
             }
 
             return this;
@@ -77,7 +88,7 @@ define([
          */
         initFocus: function() {
             var activeElement = document.activeElement;
-            if ($(activeElement)[0].hasAttribute('autofocus')) {
+            if (tools.isTouchDevice() || $(activeElement).is('[autofocus]')) {
                 return;
             }
 

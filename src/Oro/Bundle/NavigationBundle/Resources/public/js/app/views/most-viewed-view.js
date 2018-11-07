@@ -1,14 +1,20 @@
-define([
-    'oroui/js/app/views/base/page-region-view'
-], function(PageRegionView) {
+define(function(require) {
     'use strict';
 
     var MostViewedView;
+    var PageRegionView = require('oroui/js/app/views/base/page-region-view');
 
     MostViewedView = PageRegionView.extend({
         template: function() {},
         pageItems: [],
         dataItems: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function MostViewedView() {
+            MostViewedView.__super__.constructor.apply(this, arguments);
+        },
 
         initialize: function(options) {
             this.dataItems = options.dataItems || 'mostviewed';

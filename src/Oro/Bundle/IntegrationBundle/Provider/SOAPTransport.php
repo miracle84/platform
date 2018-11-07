@@ -2,22 +2,18 @@
 
 namespace Oro\Bundle\IntegrationBundle\Provider;
 
+use FOS\RestBundle\Util\Codes;
 use Guzzle\Http\Url;
 use Guzzle\Parser\ParserRegistry;
-
-use FOS\RestBundle\Util\Codes;
-
+use Oro\Bundle\IntegrationBundle\Entity\Transport;
+use Oro\Bundle\IntegrationBundle\Exception\InvalidConfigurationException;
+use Oro\Bundle\IntegrationBundle\Exception\SoapConnectionException;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\HttpFoundation\ParameterBag;
 
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\LoggerAwareInterface;
-
-use Oro\Bundle\IntegrationBundle\Entity\Transport;
-use Oro\Bundle\IntegrationBundle\Exception\SoapConnectionException;
-use Oro\Bundle\IntegrationBundle\Exception\InvalidConfigurationException;
-
 /**
- * @package Oro\Bundle\IntegrationBundle
+ * Base class for interacting with 3rd party system using SOAP
  */
 abstract class SOAPTransport implements TransportInterface, LoggerAwareInterface
 {
@@ -26,7 +22,7 @@ abstract class SOAPTransport implements TransportInterface, LoggerAwareInterface
     /** @var ParameterBag */
     protected $settings;
 
-    /** @var SoapClient */
+    /** @var NonPrintableCharsSanitizedSoapClient */
     protected $client;
 
     /** @var int */
@@ -132,10 +128,19 @@ abstract class SOAPTransport implements TransportInterface, LoggerAwareInterface
     }
 
     /**
+     * @param array $sleepBetweenAttempt
+     */
+    public function setSleepBetweenAttempt(array $sleepBetweenAttempt)
+    {
+        $this->sleepBetweenAttempt = $sleepBetweenAttempt;
+    }
+
+    /**
      * @param string $wsdlUrl
      *
      * @param array $options
-     * @return SoapClient
+     *
+     * @return NonPrintableCharsSanitizedSoapClient
      */
     protected function getSoapClient($wsdlUrl, array $options = [])
     {
@@ -149,7 +154,7 @@ abstract class SOAPTransport implements TransportInterface, LoggerAwareInterface
         }
         $wsdlUrl = Url::buildUrl($urlParts);
 
-        return new SoapClient($wsdlUrl, $options);
+        return new NonPrintableCharsSanitizedSoapClient($wsdlUrl, $options);
     }
 
     /**

@@ -2,21 +2,25 @@
 
 namespace Oro\Bundle\UserBundle\Controller;
 
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
+use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
+use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
+use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Bundle\UserBundle\Util\ObfuscatedEmailTrait;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
-use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
-use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
-use Oro\Bundle\UserBundle\Entity\User;
-
+/**
+ * Handles request and reset password logic
+ */
 class ResetController extends Controller
 {
+    use ObfuscatedEmailTrait;
+
     const SESSION_EMAIL = 'oro_user_reset_email';
 
     /**
@@ -53,7 +57,7 @@ class ResetController extends Controller
             $user->setConfirmationToken($user->generateToken());
         }
 
-        $this->get('session')->set(static::SESSION_EMAIL, $this->getObfuscatedEmail($user));
+        $this->get('session')->set(static::SESSION_EMAIL, $this->getObfuscatedEmail($user->getEmail()));
         try {
             $this->get('oro_user.mailer.processor')->sendResetPasswordEmail($user);
         } catch (\Exception $e) {
@@ -113,7 +117,7 @@ class ResetController extends Controller
         $resetPasswordHandler = $this->get('oro_user.handler.reset_password_handler');
         $translator = $this->get('translator');
 
-        $session->set(static::SESSION_EMAIL, $this->getObfuscatedEmail($user));
+        $session->set(static::SESSION_EMAIL, $this->getObfuscatedEmail($user->getEmail()));
 
         $resetPasswordSuccess = $resetPasswordHandler->resetPasswordAndNotify($user);
         $em->flush();
@@ -216,7 +220,7 @@ class ResetController extends Controller
         if ($this->get('oro_user.form.handler.reset')->process($user)) {
             // force user logout
             $session->invalidate();
-            $this->get('security.context')->setToken(null);
+            $this->get('security.token_storage')->setToken(null);
 
             $session->getFlashBag()->add(
                 'success',
@@ -238,14 +242,17 @@ class ResetController extends Controller
      * @Method({"GET", "POST"})
      * @Route("/set-password/{id}", name="oro_user_reset_set_password", requirements={"id"="\d+"})
      * @Template("OroUserBundle:Reset/dialog:update.html.twig")
+     * @param Request $request
+     * @param User $entity
+     * @return array
      */
-    public function setPasswordAction(User $entity)
+    public function setPasswordAction(Request $request, User $entity)
     {
         $entityRoutingHelper = $this->getEntityRoutingHelper();
 
         $formAction = $entityRoutingHelper->generateUrlByRequest(
             'oro_user_reset_set_password',
-            $this->getRequest(),
+            $request,
             ['id' => $entity->getId()]
         );
 
@@ -262,25 +269,6 @@ class ResetController extends Controller
         $responseData['formAction'] = $formAction;
 
         return $responseData;
-    }
-
-    /**
-     * Get the truncated email displayed when requesting the resetting.
-     * The default implementation only keeps the part following @ in the address.
-     *
-     * @param User $user
-     *
-     * @return string
-     */
-    protected function getObfuscatedEmail(User $user)
-    {
-        $email = $user->getEmail();
-
-        if (false !== $pos = strpos($email, '@')) {
-            $email = '...' . substr($email, $pos);
-        }
-
-        return $email;
     }
 
     /**

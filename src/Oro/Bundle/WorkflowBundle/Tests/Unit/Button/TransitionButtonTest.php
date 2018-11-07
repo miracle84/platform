@@ -4,24 +4,23 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Button;
 
 use Oro\Bundle\ActionBundle\Button\ButtonContext;
 use Oro\Bundle\ActionBundle\Button\ButtonInterface;
-
 use Oro\Bundle\WorkflowBundle\Button\TransitionButton;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Model\Transition;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 
-class TransitionButtonTest extends \PHPUnit_Framework_TestCase
+class TransitionButtonTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Workflow|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Workflow|\PHPUnit\Framework\MockObject\MockObject */
     protected $workflow;
 
-    /** @var WorkflowDefinition|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowDefinition|\PHPUnit\Framework\MockObject\MockObject */
     protected $definition;
 
-    /** @var Transition|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Transition|\PHPUnit\Framework\MockObject\MockObject */
     protected $transition;
 
-    /** @var ButtonContext|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ButtonContext|\PHPUnit\Framework\MockObject\MockObject */
     protected $buttonContext;
 
     /** @var TransitionButton */
@@ -72,7 +71,7 @@ class TransitionButtonTest extends \PHPUnit_Framework_TestCase
     public function testGetLabel()
     {
         $label = 'test_label';
-        $this->transition->expects($this->once())->method('getLabel')->willReturn($label);
+        $this->transition->expects($this->once())->method('getButtonLabel')->willReturn($label);
 
         $this->assertEquals($label, $this->button->getLabel());
     }
@@ -117,6 +116,7 @@ class TransitionButtonTest extends \PHPUnit_Framework_TestCase
                 'route' => $this->buttonContext->getRouteName(),
                 'datagrid' => $this->buttonContext->getDatagridName(),
                 'group' => $this->buttonContext->getGroup(),
+                'originalUrl' => $this->buttonContext->getOriginalUrl(),
                 'workflowItemId' => null
             ],
             'executionRoute' => $this->buttonContext->getExecutionRoute(),
@@ -162,5 +162,15 @@ class TransitionButtonTest extends \PHPUnit_Framework_TestCase
     public function testGetTranslationDomain()
     {
         $this->assertEquals('workflows', $this->button->getTranslationDomain());
+    }
+
+    public function testClone()
+    {
+        $newButton = clone $this->button;
+        $this->assertEquals($newButton, $this->button);
+        $this->assertEquals($newButton->getTransition(), $this->button->getTransition());
+
+        $this->assertNotSame($newButton, $this->button);
+        $this->assertNotSame($newButton->getTransition(), $this->button->getTransition());
     }
 }

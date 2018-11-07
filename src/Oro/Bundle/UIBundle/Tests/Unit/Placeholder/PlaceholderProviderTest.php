@@ -2,36 +2,34 @@
 
 namespace Oro\Bundle\UIBundle\Tests\Unit\Placeholder;
 
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\UIBundle\Placeholder\PlaceholderProvider;
 use Oro\Component\Config\Resolver\ResolverInterface;
-use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
+class PlaceholderProviderTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_PLACEHOLDER = 'test_placeholder';
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ResolverInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|ResolverInterface
      */
     protected $resolver;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|SecurityFacade
+     * @var \PHPUnit\Framework\MockObject\MockObject|AuthorizationCheckerInterface
      */
-    protected $securityFacade;
+    protected $authorizationChecker;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FeatureChecker
+     * @var \PHPUnit\Framework\MockObject\MockObject|FeatureChecker
      */
     protected $featureChecker;
 
     protected function setUp()
     {
         $this->resolver       = $this->createMock('Oro\Component\Config\Resolver\ResolverInterface');
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
         $this->featureChecker = $this->getMockBuilder('Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker')
             ->disableOriginalConstructor()
             ->getMock();
@@ -178,7 +176,7 @@ class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
         $variables = ['foo' => 'bar'];
 
         $provider = $this->createProvider($items);
-        $this->securityFacade->expects($this->at(0))
+        $this->authorizationChecker->expects($this->at(0))
             ->method('isGranted')
             ->with('acl_ancestor')
             ->will($this->returnValue(true));
@@ -199,7 +197,7 @@ class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
         $variables = ['foo' => 'bar'];
 
         $provider = $this->createProvider($items);
-        $this->securityFacade->expects($this->at(0))
+        $this->authorizationChecker->expects($this->at(0))
             ->method('isGranted')
             ->with('acl_ancestor')
             ->will($this->returnValue(false));
@@ -221,11 +219,11 @@ class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
 
         $provider = $this->createProvider($items);
 
-        $this->securityFacade->expects($this->at(0))
+        $this->authorizationChecker->expects($this->at(0))
             ->method('isGranted')
             ->with('acl_ancestor1')
             ->will($this->returnValue(true));
-        $this->securityFacade->expects($this->at(1))
+        $this->authorizationChecker->expects($this->at(1))
             ->method('isGranted')
             ->with('acl_ancestor2')
             ->will($this->returnValue(true));
@@ -251,7 +249,7 @@ class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
         $variables = ['foo' => 'bar'];
 
         $provider = $this->createProvider($items);
-        $this->securityFacade->expects($this->at(0))
+        $this->authorizationChecker->expects($this->at(0))
             ->method('isGranted')
             ->with('acl_ancestor1')
             ->will($this->returnValue(false));
@@ -277,6 +275,11 @@ class PlaceholderProviderTest extends \PHPUnit_Framework_TestCase
             'items' => $items
         ];
 
-        return new PlaceholderProvider($placeholders, $this->resolver, $this->securityFacade, $this->featureChecker);
+        return new PlaceholderProvider(
+            $placeholders,
+            $this->resolver,
+            $this->authorizationChecker,
+            $this->featureChecker
+        );
     }
 }

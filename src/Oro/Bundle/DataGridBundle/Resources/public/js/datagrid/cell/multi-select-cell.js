@@ -40,6 +40,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function MultiSelectCell() {
+            MultiSelectCell.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         render: function() {
             var value = this.model.get(this.column.get('name'));
             var choices = this.choices;
@@ -63,7 +70,14 @@ define([
                 html = value.length > 0 ? (
                     '<span class="multiselect-value-wrapper"><span class="value-item">' +
                     value
-                        .map(function(item) {return choices[item];})
+                        .map(function(item) {
+                            return _.findKey(choices, function(value) {
+                                return value === item;
+                            });
+                        })
+                        .filter(function(item) {
+                            return item;
+                        })
                         .join('</span><span class="value-item">') +
                     '</span></span>'
                 ) : '';

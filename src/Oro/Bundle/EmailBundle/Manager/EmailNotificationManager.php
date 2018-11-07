@@ -3,15 +3,13 @@
 namespace Oro\Bundle\EmailBundle\Manager;
 
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Bundle\FrameworkBundle\Routing\Router;
-use Symfony\Component\Routing\Exception\RouteNotFoundException;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
 use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Bundle\FrameworkBundle\Routing\Router;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 /**
  * Class EmailNotificationManager
@@ -83,9 +81,9 @@ class EmailNotificationManager
                 'forwardRoute' => $this->router->generate('oro_email_email_forward', ['id' => $emailId]),
                 'id' => $emailId,
                 'seen' => $emailUser->isSeen(),
-                'subject' => $email->getSubject(),
-                'bodyContent' => $bodyContent,
-                'fromName' => $email->getFromName(),
+                'subject' => $this->htmlTagHelper->purify($email->getSubject()),
+                'bodyContent' => $this->htmlTagHelper->purify($bodyContent),
+                'fromName' => $this->htmlTagHelper->purify($email->getFromName()),
                 'linkFromName' => $this->getFromNameLink($email)
             ];
         }

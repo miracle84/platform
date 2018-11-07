@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
 use Oro\Bundle\ApiBundle\Metadata\AssociationMetadata;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
@@ -11,6 +10,9 @@ use Oro\Bundle\ApiBundle\Metadata\EntityMetadataFactory as MetadataFactory;
 use Oro\Bundle\ApiBundle\Metadata\FieldMetadata;
 use Oro\Bundle\ApiBundle\Metadata\MetaPropertyMetadata;
 
+/**
+ * The metadata factory for manageable entities.
+ */
 class EntityMetadataFactory
 {
     /** @var MetadataHelper */

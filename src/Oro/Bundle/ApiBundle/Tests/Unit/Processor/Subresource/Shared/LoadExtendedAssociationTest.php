@@ -3,30 +3,32 @@
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\Shared;
 
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
+use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
+use Oro\Bundle\ApiBundle\Metadata\FieldMetadata;
 use Oro\Bundle\ApiBundle\Processor\Subresource\Shared\LoadExtendedAssociation;
-use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorOrmRelatedTestCase;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
+use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorOrmRelatedTestCase;
+use Oro\Bundle\ApiBundle\Util\EntityIdHelper;
 use Oro\Component\EntitySerializer\EntitySerializer;
 
 class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $entitySerializer;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntitySerializer */
+    private $entitySerializer;
 
     /** @var LoadExtendedAssociation */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
         parent::setUp();
 
-        $this->entitySerializer = $this->getMockBuilder(EntitySerializer::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->entitySerializer = $this->createMock(EntitySerializer::class);
 
         $this->processor = new LoadExtendedAssociation(
             $this->entitySerializer,
-            $this->doctrineHelper
+            $this->doctrineHelper,
+            new EntityIdHelper()
         );
     }
 
@@ -36,6 +38,7 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setResult($result);
         $this->processor->process($this->context);
+
         self::assertSame($result, $this->context->getResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -48,6 +51,7 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
         $this->processor->process($this->context);
+
         self::assertFalse($this->context->hasResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -61,6 +65,7 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
         $this->processor->process($this->context);
+
         self::assertFalse($this->context->hasResult());
         self::assertCount(0, $this->context->getSkippedGroups());
     }
@@ -85,6 +90,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:manyToOne:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -103,9 +111,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertEquals(
             ['id' => 1],
             $this->context->getResult()
@@ -118,6 +128,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:manyToOne:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -136,9 +149,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertNull($this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -148,6 +163,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:manyToMany:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -166,9 +184,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertSame([], $this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -178,6 +198,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:multipleManyToOne:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -196,9 +219,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertSame([], $this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -208,6 +233,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:manyToOne:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -224,9 +252,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertNull($this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -236,6 +266,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:manyToMany:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -252,9 +285,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertSame([], $this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }
@@ -264,6 +299,9 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
         $associationName = 'testAssociation';
         $parentConfig = new EntityDefinitionConfig();
         $parentConfig->addField($associationName)->setDataType('association:multipleManyToOne:kind');
+        $parentMetadata = new EntityMetadata();
+        $parentMetadata->setIdentifierFieldNames(['id']);
+        $parentMetadata->addField(new FieldMetadata('id'));
         $parentClassName = Entity\Product::class;
         $parentId = 123;
 
@@ -280,9 +318,11 @@ class LoadExtendedAssociationTest extends GetSubresourceProcessorOrmRelatedTestC
 
         $this->context->setAssociationName($associationName);
         $this->context->setParentConfig($parentConfig);
+        $this->context->setParentMetadata($parentMetadata);
         $this->context->setParentClassName($parentClassName);
         $this->context->setParentId($parentId);
         $this->processor->process($this->context);
+
         self::assertSame([], $this->context->getResult());
         self::assertEquals(['normalize_data'], $this->context->getSkippedGroups());
     }

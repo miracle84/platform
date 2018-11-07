@@ -2,20 +2,20 @@
 
 namespace Oro\Bundle\TranslationBundle\Command;
 
-use Symfony\Component\Console\Input\InputOption;
+use Oro\Bundle\TranslationBundle\Provider\AbstractAPIAdapter;
+use Oro\Bundle\TranslationBundle\Provider\TranslationPackDumper;
+use Oro\Bundle\TranslationBundle\Provider\TranslationServiceProvider;
+use Oro\Component\Log\OutputLogger;
+use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-
-use Oro\Component\Log\OutputLogger;
-
-use Oro\Bundle\TranslationBundle\Provider\AbstractAPIAdapter;
-use Oro\Bundle\TranslationBundle\Provider\TranslationServiceProvider;
-use Oro\Bundle\TranslationBundle\Provider\TranslationPackDumper;
-
+/**
+ * Dumps translation messages and optionally uploads them to third-party service
+ */
 class OroTranslationPackCommand extends ContainerAwareCommand
 {
     /** @var string */
@@ -73,8 +73,8 @@ class OroTranslationPackCommand extends ContainerAwareCommand
                         'path',
                         null,
                         InputOption::VALUE_OPTIONAL,
-                        'Dump destination (or upload source), relative to %kernel.root_dir%',
-                        '/Resources/language-pack/'
+                        'Dump destination (or upload source), relative to %kernel.project_dir%',
+                        '/var/language-pack/'
                     ),
                     new InputOption(
                         'dump',
@@ -106,7 +106,7 @@ class OroTranslationPackCommand extends ContainerAwareCommand
                 <<<EOF
 The <info>%command.name%</info> command extract translation files for each bundle in
 specified vendor namespace(project) and creates language pack that's placed at
-%kernel.root_dir%/Resources/language-pack
+%kernel.project_dir%/var/language-pack
 
     <info>php %command.full_name% --dump OroCRM</info>
     <info>php %command.full_name% --upload OroCRM</info>
@@ -138,7 +138,7 @@ EOF
             return 1;
         }
 
-        $this->path = $this->getContainer()->getParameter('kernel.root_dir')
+        $this->path = $this->getContainer()->getParameter('kernel.project_dir')
             . str_replace('//', '/', $input->getOption('path') . '/');
 
         $locale           = $input->getArgument('locale');
@@ -285,7 +285,7 @@ EOF
         $dumper = new TranslationPackDumper(
             $container->get('translation.writer'),
             $container->get('translation.extractor'),
-            $container->get('translation.loader'),
+            $container->get('translation.reader'),
             new Filesystem(),
             $container->get('oro_translation.packages_provider.translation'),
             $container->get('kernel')->getBundles()

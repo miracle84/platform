@@ -2,29 +2,29 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource\Shared;
 
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormFactoryInterface;
-
+use Oro\Bundle\ApiBundle\Exception\RuntimeException;
+use Oro\Bundle\ApiBundle\Form\FormHelper;
+use Oro\Bundle\ApiBundle\Processor\Subresource\ChangeRelationshipContext;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Form\FormUtil;
-use Oro\Bundle\ApiBundle\Processor\Subresource\ChangeRelationshipContext;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\FormBuilderInterface;
 
 /**
  * Builds the form builder based on the parent entity configuration
- * and sets it to the Context.
+ * and sets it to the context.
  */
 class BuildFormBuilder implements ProcessorInterface
 {
-    /** @var FormFactoryInterface */
-    protected $formFactory;
+    /** @var FormHelper */
+    protected $formHelper;
 
     /**
-     * @param FormFactoryInterface $formFactory
+     * @param FormHelper $formHelper
      */
-    public function __construct(FormFactoryInterface $formFactory)
+    public function __construct(FormHelper $formHelper)
     {
-        $this->formFactory = $formFactory;
+        $this->formHelper = $formHelper;
     }
 
     /**
@@ -43,6 +43,13 @@ class BuildFormBuilder implements ProcessorInterface
             return;
         }
 
+        if (!$context->hasParentEntity()) {
+            // the entity is not defined
+            throw new RuntimeException(
+                'The parent entity object must be added to the context before creation of the form builder.'
+            );
+        }
+
         $context->setFormBuilder($this->getFormBuilder($context));
     }
 
@@ -53,24 +60,31 @@ class BuildFormBuilder implements ProcessorInterface
      */
     protected function getFormBuilder(ChangeRelationshipContext $context)
     {
-        $formBuilder = $this->formFactory->createNamedBuilder(
-            null,
-            'form',
-            $context->getParentEntity(),
-            array_merge(
-                FormUtil::getFormDefaultOptions(),
-                ['data_class' => $context->getParentClassName()]
-            )
-        );
-
+        $parentConfig = $context->getParentConfig();
         $associationName = $context->getAssociationName();
-        $associationConfig = $context->getParentConfig()->getField($associationName);
-        $association = $context->getParentMetadata()->getAssociation($associationName);
 
-        $formBuilder->add(
+        $formOptions = $parentConfig->getFormOptions();
+        if (null === $formOptions) {
+            $formOptions = [];
+        }
+        if (!\array_key_exists('data_class', $formOptions)) {
+            $formOptions['data_class'] = $context->getParentClassName();
+        }
+        $formEventSubscribers = null;
+        if (!$parentConfig->getFormType()) {
+            $formEventSubscribers = $parentConfig->getFormEventSubscribers();
+        }
+        $formBuilder = $this->formHelper->createFormBuilder(
+            FormType::class,
+            $context->getParentEntity(),
+            $formOptions,
+            $formEventSubscribers
+        );
+        $this->formHelper->addFormField(
+            $formBuilder,
             $associationName,
-            $associationConfig->getFormType(),
-            FormUtil::getFormFieldOptions($association, $associationConfig)
+            $parentConfig->getField($associationName),
+            $context->getParentMetadata()->getAssociation($associationName)
         );
 
         return $formBuilder;

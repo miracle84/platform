@@ -1,26 +1,30 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Client;
 
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
+use Oro\Component\MessageQueue\Exception\MessageProcessorNotFoundException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class ContainerAwareMessageProcessorRegistry implements MessageProcessorRegistryInterface, ContainerAwareInterface
+/**
+ * Registry of all registered message queue processors
+ */
+class ContainerAwareMessageProcessorRegistry implements MessageProcessorRegistryInterface
 {
-    use ContainerAwareTrait;
+    /** @var MessageProcessorInterface[] */
+    private $processors;
+
+    /** @var ContainerInterface */
+    private $container;
 
     /**
-     * @var MessageProcessorInterface[]
+     * @param MessageProcessorInterface[] $processors [processor name => processor service id, ...]
+     * @param ContainerInterface          $container
      */
-    protected $processors;
-
-    /**
-     * @param array $processors
-     */
-    public function __construct(array $processors = [])
+    public function __construct(array $processors, ContainerInterface $container)
     {
         $this->processors = $processors;
+        $this->container = $container;
     }
 
     /**
@@ -37,17 +41,13 @@ class ContainerAwareMessageProcessorRegistry implements MessageProcessorRegistry
      */
     public function get($processorName)
     {
-        if (false == isset($this->processors[$processorName])) {
-            throw new \LogicException(sprintf('MessageProcessor was not found. processorName: "%s"', $processorName));
-        }
-
-        if (null === $this->container) {
-            throw new \LogicException('Container was not set');
+        if (!isset($this->processors[$processorName])) {
+            throw MessageProcessorNotFoundException::create($processorName);
         }
 
         $processor = $this->container->get($this->processors[$processorName]);
 
-        if (false == $processor instanceof MessageProcessorInterface) {
+        if (!$processor instanceof MessageProcessorInterface) {
             throw new \LogicException(sprintf(
                 'Invalid instance of message processor. expected: "%s", got: "%s"',
                 MessageProcessorInterface::class,

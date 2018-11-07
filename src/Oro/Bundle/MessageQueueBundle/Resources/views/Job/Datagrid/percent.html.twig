@@ -1,22 +1,9 @@
+{% import 'OroMessageQueueBundle::macros.html.twig' as UI %}
+
 {% set job = record.rootEntity %}
-{% set percent = job.calculateRootJobProgress|default(0) %}
+{% set progress = job.jobProgress * 100 %}
 
-{% if job.status == constant('STATUS_FAILED', job) %}
-    {% set classOfBar = 'label-warning'%}
-{% elseif job.status == constant('STATUS_CANCELLED', job) %}
-    {% set classOfBar = 'label-inverse'%}
-{% elseif job.status == constant('STATUS_RUNNING', job) %}
-    {% set classOfBar = 'label-info'%}
-{% elseif job.status is constant('STATUS_CANCELLED', job) %}
-    {% set class = 'label-inverse' %}
-{% elseif job.jobProgress == 100 %}
-    {% set classOfBar = 'label-success'%}
-{% else %}
-    {% set classOfBar = '' %}
-{% endif %}
-
-<div class="progress job-progress">
-    <div class="label {{ classOfBar }}" style="width:{{ job.jobProgress }}%;">
-        <span> {{ job.jobProgress }}%</span>
-    </div>
+<div class="progress">
+    <div class="progress-bar {{ UI.getJobStatusClass(job) }}" style="width:{{ progress }}%;"></div>
 </div>
+<b class="progress-label"> {{ progress }}%</b>

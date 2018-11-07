@@ -4,16 +4,28 @@ namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
+use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Processor\Context;
+use Oro\Component\DoctrineUtils\ORM\QueryHintResolverInterface;
 
 /**
  * Loads entity using ORM QueryBuilder object.
  */
 class LoadEntityByOrmQuery implements ProcessorInterface
 {
+    /** @var QueryHintResolverInterface */
+    protected $queryHintResolver;
+
+    /**
+     * @param QueryHintResolverInterface $queryHintResolver
+     */
+    public function __construct(QueryHintResolverInterface $queryHintResolver)
+    {
+        $this->queryHintResolver = $queryHintResolver;
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -28,9 +40,26 @@ class LoadEntityByOrmQuery implements ProcessorInterface
 
         $query = $context->getQuery();
         if ($query instanceof QueryBuilder) {
-            $context->setResult($query->getQuery()->getOneOrNullResult());
+            $query = $query->getQuery();
+            $this->queryHintResolver->resolveHints($query, $this->getHints($context->getConfig()));
+            $context->setResult($query->getOneOrNullResult());
         } elseif ($query instanceof Query) {
+            $this->queryHintResolver->resolveHints($query, $this->getHints($context->getConfig()));
             $context->setResult($query->getOneOrNullResult());
         }
+    }
+
+    /**
+     * @param EntityDefinitionConfig|null $config
+     *
+     * @return array
+     */
+    private function getHints(?EntityDefinitionConfig $config): array
+    {
+        if (null === $config) {
+            return [];
+        }
+
+        return $config->getHints();
     }
 }

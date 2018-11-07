@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\EmailBundle\Datagrid;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecordInterface;
 use Oro\Bundle\EntityBundle\Grid\GridHelper as BaseGridHelper;
 use Oro\Bundle\EntityBundle\Provider\EntityProvider;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class EmailTemplateGridHelper extends BaseGridHelper
 {
@@ -34,7 +33,7 @@ class EmailTemplateGridHelper extends BaseGridHelper
     {
         return function (ResultRecordInterface $record) {
             if ($record->getValue('isSystem')) {
-                return array('delete' => false);
+                return ['delete' => false];
             }
         };
     }
@@ -47,8 +46,8 @@ class EmailTemplateGridHelper extends BaseGridHelper
     public function getTypeChoices()
     {
         return [
-            'html' => 'oro.email.datagrid.emailtemplate.filter.type.html',
-            'txt'  => 'oro.email.datagrid.emailtemplate.filter.type.txt'
+            'oro.email.datagrid.emailtemplate.filter.type.html' => 'html',
+            'oro.email.datagrid.emailtemplate.filter.type.txt' => 'txt',
         ];
     }
 
@@ -57,8 +56,8 @@ class EmailTemplateGridHelper extends BaseGridHelper
      */
     public function getEntityNames()
     {
-        $result            = [];
-        $result['_empty_'] = $this->translator->trans('oro.email.datagrid.emailtemplate.filter.entityName.empty');
+        $result = [];
+        $result[$this->translator->trans('oro.email.datagrid.emailtemplate.filter.entityName.empty')] = '_empty_';
 
         $result = array_merge($result, parent::getEntityNames());
 

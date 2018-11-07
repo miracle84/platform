@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Migrations\Schema\v1_6;
 
-use Psr\Log\LoggerInterface;
-
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\MigrationBundle\Migration\ConnectionAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\MigrationQuery;
+use Psr\Log\LoggerInterface;
 
 class FixEntityConfigQuery implements MigrationQuery, ConnectionAwareInterface
 {
@@ -58,6 +56,8 @@ class FixEntityConfigQuery implements MigrationQuery, ConnectionAwareInterface
 
     /**
      * @param array $row
+     *
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     private function processRow(array $row)
     {

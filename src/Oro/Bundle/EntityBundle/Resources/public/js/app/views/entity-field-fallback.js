@@ -26,15 +26,15 @@ define(function(require) {
         /**
          * @inheritDoc
          */
-        initialize: function(options) {
-            this.options = _.defaults(options || {}, this.options);
-            var self = this;
-            this.initLayout().done(function() {
-                self.handleLayoutInit();
-            });
+        constructor: function EntityFallbackView() {
+            EntityFallbackView.__super__.constructor.apply(this, arguments);
         },
 
-        handleLayoutInit: function() {
+        /**
+         * @inheritDoc
+         */
+        initialize: function(options) {
+            this.options = _.defaults(options || {}, this.options);
             this.handleUseFallbackCheckbox();
         },
 

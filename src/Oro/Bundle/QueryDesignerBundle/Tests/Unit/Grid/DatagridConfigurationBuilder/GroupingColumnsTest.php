@@ -3,7 +3,6 @@
 namespace Oro\Bundle\QueryDesignerBundle\Tests\Unit\Grid\DatagridConfigurationBuilder;
 
 use Doctrine\ORM\Query;
-
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\QueryDesignerBundle\Tests\Unit\Fixtures\QueryDesignerModel;
 
@@ -76,7 +75,7 @@ class GroupingColumnsTest extends DatagridConfigurationBuilderTestCase
                 'hints'        => [
                     [
                         'name'  => Query::HINT_CUSTOM_OUTPUT_WALKER,
-                        'value' => 'Gedmo\Translatable\Query\TreeWalker\TranslationWalker',
+                        'value' => 'Oro\Bundle\QueryDesignerBundle\QueryDesigner\SqlWalker',
                     ]
                 ]
             ],
@@ -298,7 +297,7 @@ class GroupingColumnsTest extends DatagridConfigurationBuilderTestCase
                 'hints'        => [
                     [
                         'name'  => Query::HINT_CUSTOM_OUTPUT_WALKER,
-                        'value' => 'Gedmo\Translatable\Query\TreeWalker\TranslationWalker',
+                        'value' => 'Oro\Bundle\QueryDesignerBundle\QueryDesigner\SqlWalker',
                     ]
                 ]
             ],

@@ -34,6 +34,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function EmailTreadView() {
+            EmailTreadView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, _.pick(options, ['actionPanelSelector']));
             EmailTreadView.__super__.initialize.apply(this, arguments);
@@ -114,8 +121,8 @@ define(function(require) {
             var target = $target[0];
             var parentRect = this.el.getBoundingClientRect();
             $target.removeAttr('data-uid').removeClass('fixed-width').css({
-                'width': '',
-                'left': ''
+                width: '',
+                left: ''
             });
             var limitWidth = Math.min(target.clientWidth, parentRect.width);
             if (target.scrollWidth > limitWidth) {
@@ -127,7 +134,7 @@ define(function(require) {
             var shift = rect.right - parentRect.right;
             if (shift > 0) {
                 $target.css({
-                    'left': left - shift + 'px'
+                    left: left - shift + 'px'
                 });
                 // move dropdown triangle to fit to open button
                 $target.attr('data-uid', uid);
@@ -180,7 +187,6 @@ define(function(require) {
                 return;
             }
             this.$(this.selectors.loadMore).removeClass('process');
-            mediator.execute('showFlashMessage', 'error', __('oro.ui.unexpected_error'));
         },
 
         /**
@@ -209,8 +215,8 @@ define(function(require) {
             });
             this.subview('email:' + emailItemView.cid, emailItemView);
             this.listenTo(emailItemView, {
-                'toggle': this.onEmailItemToggle,
-                'commentCountChanged': this.onCommentCountChange
+                toggle: this.onEmailItemToggle,
+                commentCountChanged: this.onCommentCountChange
             });
             return emailItemView.getDeferredRenderPromise();
         },

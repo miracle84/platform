@@ -2,28 +2,26 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\ImportExport\Reader;
 
-use Symfony\Bridge\Doctrine\ManagerRegistry;
-
-use Doctrine\ORM\Query;
-use Doctrine\ORM\EntityManager;
 use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
-
+use Doctrine\ORM\Query;
 use Oro\Bundle\ImportExportBundle\Context\ContextRegistry;
 use Oro\Bundle\IntegrationBundle\Reader\EntityReaderById;
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\OrmTestCase;
+use Oro\Component\TestUtils\ORM\OrmTestCase;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 class EntityReaderByIdTest extends OrmTestCase
 {
     const TEST_ENTITY_ID = 11;
 
-    /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $managerRegistry;
 
-    /** @var ContextRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContextRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $contextRegistry;
 
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
     /** @var EntityReaderById */
@@ -44,7 +42,7 @@ class EntityReaderByIdTest extends OrmTestCase
         );
 
         $ownershipMetadataProvider =
-            $this->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider')
+            $this->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface')
                 ->disableOriginalConstructor()
                 ->getMock();
 
@@ -103,7 +101,7 @@ class EntityReaderByIdTest extends OrmTestCase
     /**
      * @param mixed $context
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject+
+     * @return \PHPUnit\Framework\MockObject\MockObject+
      */
     protected function getMockStepExecution($context)
     {

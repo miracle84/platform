@@ -3,12 +3,11 @@
 namespace Oro\Bundle\DataAuditBundle\Tests\Unit\Entity;
 
 use DateTime;
-
 use Oro\Bundle\DataAuditBundle\Entity\Audit;
 use Oro\Bundle\DataAuditBundle\Entity\AuditField;
 use Oro\Bundle\UserBundle\Entity\User;
 
-class AuditTest extends \PHPUnit_Framework_TestCase
+class AuditTest extends \PHPUnit\Framework\TestCase
 {
     public function testUser()
     {
@@ -62,6 +61,9 @@ class AuditTest extends \PHPUnit_Framework_TestCase
         $audit->addField(new AuditField('field2', 'string', 'new_', '_old'));
         $audit->addField(new AuditField('field3', 'date', $newDate, $oldDate));
         $audit->addField(new AuditField('field4', 'datetime', $newDate, $oldDate));
+        $auditFieldWithTranslationDomain = new AuditField('field5', 'string', 'new_translatable', 'old_translatable');
+        $auditFieldWithTranslationDomain->setTranslationDomain('message');
+        $audit->addField($auditFieldWithTranslationDomain);
 
         $this->assertEquals(
             [
@@ -92,6 +94,11 @@ class AuditTest extends \PHPUnit_Framework_TestCase
                         'value' => $oldDate,
                         'type'  => 'datetime',
                     ],
+                ],
+                'field5' => [
+                    'new' => 'new_translatable',
+                    'old' => 'old_translatable',
+                    'translationDomain' => 'message',
                 ],
             ],
             $audit->getData()

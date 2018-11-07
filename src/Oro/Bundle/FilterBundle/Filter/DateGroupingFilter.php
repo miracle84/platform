@@ -2,49 +2,63 @@
 
 namespace Oro\Bundle\FilterBundle\Filter;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Query\Expr\Join;
+use Doctrine\ORM\Query\Expr\Select;
+use Doctrine\ORM\Query\Parameter;
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
 use Oro\Bundle\FilterBundle\Datasource\Orm\OrmFilterDatasourceAdapter;
-use Oro\Bundle\FilterBundle\Form\Type\Filter\DateGroupingFilterType;
+use Oro\Bundle\FilterBundle\Utils\ArrayTrait;
+use Oro\Bundle\ReportBundle\Entity\CalendarDate;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+use Symfony\Component\Form\FormFactoryInterface;
 
 class DateGroupingFilter extends ChoiceFilter
 {
-    const COLUMN_NAME_SUFFIX = 'DateGroupingFilter';
-    const CALENDAR_TABLE = 'calendarDate';
-    const CALENDAR_COLUMN = 'date';
-    const FIRST_CALENDAR_TABLE_FOR_GROUPING = 'calendarDate1';
-    const SECOND_CALENDAR_TABLE_FOR_GROUPING = 'calendarDate2';
-    const CALENDAR_COLUMN_FOR_GROUPING = 'date';
-    const FIRST_JOINED_TABLE = 'order1';
-    const SECOND_JOINED_TABLE = 'order2';
-    const JOINED_COLUMN = 'createdAt';
-    const TARGET_COLUMN = 'date';
+    use ArrayTrait;
 
-    /** @var array */
-    protected $groupingNames = [];
+    const NAME = 'date_grouping';
 
-    /** @var EntityManager */
-    protected $entityManager;
+    const COLUMN_NAME = 'column_name';
 
-    /** @var array */
-    protected $config = [];
+    const CALENDAR_ENTITY = 'calendar_entity';
+    const TARGET_ENTITY = 'target_entity';
+    const NOT_NULLABLE_FIELD = 'not_nullable_field';
+    const JOINED_COLUMN = 'joined_column';
+    const JOINED_TABLE = 'joined_table';
+
+    const TYPE_DAY = 'day';
+    const TYPE_MONTH = 'month';
+    const TYPE_QUARTER = 'quarter';
+    const TYPE_YEAR = 'year';
+
+    /** @var ManagerRegistry */
+    protected $registry;
 
     /**
-     * @param EntityManager $entityManager
+     * @param FormFactoryInterface $factory
+     * @param FilterUtility $util
+     * @param ManagerRegistry $registry
      */
-    public function setEntityManager(EntityManager $entityManager)
+    public function __construct(FormFactoryInterface $factory, FilterUtility $util, ManagerRegistry $registry)
     {
-        $this->entityManager = $entityManager;
+        parent::__construct($factory, $util);
+
+        $this->registry = $registry;
     }
 
     /**
-     * {@inheritdoc}
+     * {@inheritDoc}
      */
-    protected function getFormType()
+    public function init($name, array $params)
     {
-        return DateGroupingFilterType::NAME;
+        $params[FilterUtility::FRONTEND_TYPE_KEY] = 'select';
+
+        parent::init($name, $params);
     }
 
     /**
@@ -57,76 +71,155 @@ class DateGroupingFilter extends ChoiceFilter
             return false;
         }
 
-        $this->resolveConfiguration();
-
         /** @var OrmFilterDatasourceAdapter $ds */
         $qb = $ds->getQueryBuilder();
-        $dataName = $this->generateDataName($this->get(FilterUtility::DATA_NAME_KEY) . self::COLUMN_NAME_SUFFIX);
-        $columnName = $this->getOr('column_name', $dataName);
+        $columnName = $this->get(self::COLUMN_NAME);
 
         switch ($data['value']) {
-            case DateGroupingFilterType::TYPE_DAY:
-                $this->addFilter(DateGroupingFilterType::TYPE_DAY, $qb);
-                $this->addFilter(DateGroupingFilterType::TYPE_MONTH, $qb);
-                $this->addFilter(DateGroupingFilterType::TYPE_YEAR, $qb);
-                $qb->addSelect(
-                    sprintf(
-                        "CONCAT(%s, '-', %s, '-', %s) as $columnName",
-                        $this->groupingNames[DateGroupingFilterType::TYPE_DAY],
-                        $this->groupingNames[DateGroupingFilterType::TYPE_MONTH],
-                        $this->groupingNames[DateGroupingFilterType::TYPE_YEAR]
-                    )
+            case self::TYPE_DAY:
+                $dayGroupingName = $this->addFilter(self::TYPE_DAY, $qb);
+                $monthGroupingName = $this->addFilter(self::TYPE_MONTH, $qb);
+                $yearGroupingName = $this->addFilter(self::TYPE_YEAR, $qb);
+
+                $this->addSelect(
+                    $qb,
+                    [
+                        $dayGroupingName,
+                        $monthGroupingName,
+                        $yearGroupingName,
+                    ],
+                    $columnName
                 );
+
                 break;
-            case DateGroupingFilterType::TYPE_MONTH:
-                $this->addFilter(DateGroupingFilterType::TYPE_MONTH, $qb);
-                $this->addFilter(DateGroupingFilterType::TYPE_YEAR, $qb);
-                $qb->addSelect(
-                    sprintf(
-                        "CONCAT(%s, '-', %s) as $columnName",
-                        $this->groupingNames[DateGroupingFilterType::TYPE_MONTH],
-                        $this->groupingNames[DateGroupingFilterType::TYPE_YEAR]
-                    )
+            case self::TYPE_MONTH:
+                $monthGroupingName = $this->addFilter(self::TYPE_MONTH, $qb);
+                $yearGroupingName = $this->addFilter(self::TYPE_YEAR, $qb);
+
+                $this->addSelect(
+                    $qb,
+                    [
+                        $monthGroupingName,
+                        $yearGroupingName,
+                    ],
+                    $columnName
                 );
-                $this->addWhereClause($qb, DateGroupingFilterType::TYPE_MONTH);
+
+                $this->addWhereClause($qb, self::TYPE_MONTH);
                 break;
-            case DateGroupingFilterType::TYPE_QUARTER:
-                $this->addFilter(DateGroupingFilterType::TYPE_QUARTER, $qb);
-                $this->addFilter(DateGroupingFilterType::TYPE_YEAR, $qb);
-                $qb->addSelect(
-                    sprintf(
-                        "CONCAT(%s, '-', %s) as $columnName",
-                        $this->groupingNames[DateGroupingFilterType::TYPE_QUARTER],
-                        $this->groupingNames[DateGroupingFilterType::TYPE_YEAR]
-                    )
+            case self::TYPE_QUARTER:
+                $quarterGroupingName = $this->addFilter(self::TYPE_QUARTER, $qb);
+                $yearGroupingName = $this->addFilter(self::TYPE_YEAR, $qb);
+
+                $this->addSelect(
+                    $qb,
+                    [
+                        $quarterGroupingName,
+                        $yearGroupingName,
+                    ],
+                    $columnName
                 );
-                $this->addWhereClause($qb, DateGroupingFilterType::TYPE_QUARTER);
+
+                $this->addWhereClause($qb, self::TYPE_QUARTER);
                 break;
             default:
-                $this->addFilter(DateGroupingFilterType::TYPE_YEAR, $qb);
-                $qb->addSelect(
-                    sprintf(
-                        "%s as $columnName",
-                        $this->groupingNames[DateGroupingFilterType::TYPE_YEAR]
-                    )
-                );
-                $this->addWhereClause($qb, DateGroupingFilterType::TYPE_YEAR);
+                $yearGroupingName = $this->addFilter(self::TYPE_YEAR, $qb);
+
+                $qb->addSelect(sprintf('%s as %s', $yearGroupingName, $columnName));
+
+                $this->addWhereClause($qb, self::TYPE_YEAR);
+                break;
         }
+
+        $qb->addGroupBy($columnName);
 
         return true;
     }
 
     /**
-     * @param $groupBy
+     * If grouping by Day or Month make sure Year order is in same direction and keep multisort.
+     *
+     * @param OrmDatasource $datasource
+     * @param String $sortKey
+     * @param String $direction
+     */
+    public function applyOrderBy(OrmDatasource $datasource, String $sortKey, String $direction)
+    {
+        QueryBuilderUtil::checkField($sortKey);
+        $direction = QueryBuilderUtil::getSortOrder($direction);
+
+        /* @var OrmDatasource $datasource */
+        $qb = $datasource->getQueryBuilder();
+        $added = false;
+
+        foreach ([self::TYPE_YEAR, self::TYPE_QUARTER, self::TYPE_MONTH, self::TYPE_DAY] as $groupBy) {
+            $columnName = $this->getSelectAlias($groupBy);
+            $groupingName = $this->getSelectClause($groupBy);
+
+            /** @var Select $select */
+            foreach ($qb->getDQLPart('select') as $select) {
+                foreach ($select->getParts() as $part) {
+                    if ($groupingName === $part) {
+                        $qb->addOrderBy($columnName, $direction);
+                        $added = true;
+                    }
+                }
+            }
+        }
+
+        if (!$added) {
+            $qb->addOrderBy($sortKey, $direction);
+        }
+    }
+
+    /**
+     * @param string $groupBy
      * @param QueryBuilder $qb
+     * @return string
      */
     protected function addFilter($groupBy, QueryBuilder $qb)
     {
-        $dataName = $this->generateDataName($this->get(FilterUtility::DATA_NAME_KEY) . self::COLUMN_NAME_SUFFIX);
-        $columnName = $this->getOr('column_name', $dataName) . $groupBy;
-        $this->groupingNames[$groupBy] = sprintf('%s(%s)', $groupBy, $this->get(FilterUtility::DATA_NAME_KEY));
-        $select = sprintf('%s as %s', $this->groupingNames[$groupBy], $columnName);
-        $qb->addSelect($select)->addGroupBy($columnName);
+        $columnName = $this->getSelectAlias($groupBy);
+        $groupingName = $this->getSelectClause($groupBy);
+
+        $qb->addSelect(sprintf('%s as %s', $groupingName, $columnName))
+            ->addGroupBy($columnName);
+
+        return $groupingName;
+    }
+
+    /**
+     * @param string $postfix
+     * @return string
+     */
+    private function getSelectAlias($postfix)
+    {
+        $selectAlias = $this->get(self::COLUMN_NAME) . ucfirst($postfix);
+        QueryBuilderUtil::checkField($selectAlias);
+
+        return $selectAlias;
+    }
+
+    /**
+     * @param string $groupBy
+     * @return string
+     */
+    private function getSelectClause($groupBy)
+    {
+        return sprintf('%s(%s)', $groupBy, $this->getDataFieldName());
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param array $parts
+     * @param string $columnName
+     */
+    protected function addSelect(QueryBuilder $qb, array $parts, $columnName)
+    {
+        QueryBuilderUtil::checkIdentifier($columnName);
+        $select = implode(', \'-\', ', $parts);
+
+        $qb->addSelect(sprintf('CONCAT(%s) as %s', $select, $columnName));
     }
 
     /**
@@ -136,7 +229,7 @@ class DateGroupingFilter extends ChoiceFilter
     protected function parseData($data)
     {
         if (is_array($data) && !$data['value']) {
-            $data['value'] = DateGroupingFilterType::TYPE_DAY;
+            $data['value'] = self::TYPE_DAY;
         }
 
         return $data;
@@ -144,73 +237,76 @@ class DateGroupingFilter extends ChoiceFilter
 
     /**
      * @param QueryBuilder $qb
-     * @param $filterType
+     * @param string $filterType
      */
     protected function addWhereClause(QueryBuilder $qb, $filterType)
     {
-        $whereClauseParameters = $qb->getParameters();
-        $extraWhereClauses = $qb->getDQLPart('where') ?
-            $this->getExtraWhereClauses($qb->getDQLPart('where')->getParts()) :
-            '';
-
-        $firstSubQueryBuilder = $this->generateSubQuery(
+        $extraWhereClauses = !$qb->getDQLPart('where')
+            ? null :
+            $this->getExtraWhereClauses($qb->getDQLPart('where')->getParts());
+        
+        $whereClauseParameters = $this->getExtraWhereParameters($qb->getParameters(), $extraWhereClauses);
+        
+        $usedDates = $this->getUsedDates(
             $filterType,
-            $this->config['first_calendar_table_for_grouping'],
-            $this->config['calendar_column_for_grouping'],
-            $this->config['first_joined_table'],
-            $this->config['joined_column'],
+            'calendarDateTableForGrouping',
+            'date',
+            $this->get(self::JOINED_TABLE),
+            $this->get(self::JOINED_COLUMN),
             $extraWhereClauses,
             $whereClauseParameters
         );
 
-        $secondSubQueryBuilder = $this->generateSubQuery(
-            $filterType,
-            $this->config['second_calendar_table_for_grouping'],
-            $this->config['calendar_column_for_grouping'],
-            $this->config['second_joined_table'],
-            $this->config['joined_column'],
-            $extraWhereClauses,
-            $whereClauseParameters
-        );
+        if (!$usedDates) {
+            return;
+        }
+
+        $dataFieldName = $this->getDataFieldName();
+        $notNullableField = $this->get(self::NOT_NULLABLE_FIELD);
+        QueryBuilderUtil::checkField($notNullableField);
 
         $qb->andWhere(
             $qb->expr()->orX(
-                $qb->expr()->notIn(
-                    sprintf(
-                        '%s(%s.%s)',
-                        $filterType,
-                        $this->config['calendar_table'],
-                        $this->config['calendar_column']
-                    ),
-                    $firstSubQueryBuilder->getDQL()
+                $qb->expr()->andX(
+                    $qb->expr()->notIn(
+                        sprintf(
+                            "CONCAT(%s(%s), '-', %s(%s))",
+                            $filterType,
+                            $dataFieldName,
+                            self::TYPE_YEAR,
+                            $dataFieldName
+                        ),
+                        $usedDates
+                    )
                 ),
                 $qb->expr()->andX(
                     $qb->expr()->in(
                         sprintf(
-                            '%s(%s.%s)',
+                            "CONCAT(%s(%s), '-', %s(%s))",
                             $filterType,
-                            $this->config['calendar_table'],
-                            $this->config['calendar_column']
+                            $dataFieldName,
+                            self::TYPE_YEAR,
+                            $dataFieldName
                         ),
-                        $secondSubQueryBuilder->getDQL()
+                        $usedDates
                     ),
-                    $qb->expr()->isNotNull($this->config['not_nullable_field'])
+                    $qb->expr()->isNotNull($notNullableField)
                 )
             )
         );
     }
 
     /**
-     * @param $filterType
-     * @param $calendarTableForGrouping
-     * @param $calendarColumnForGrouping
-     * @param $joinedTable
-     * @param $joinedColumn
+     * @param string $filterType
+     * @param string $calendarTableForGrouping
+     * @param string $calendarColumnForGrouping
+     * @param string $joinedTable
+     * @param string $joinedColumn
      * @param $extraWhereClauses
      * @param $extraWhereParameters
-     * @return QueryBuilder
+     * @return array|bool
      */
-    private function generateSubQuery(
+    private function getUsedDates(
         $filterType,
         $calendarTableForGrouping,
         $calendarColumnForGrouping,
@@ -219,85 +315,107 @@ class DateGroupingFilter extends ChoiceFilter
         $extraWhereClauses,
         $extraWhereParameters
     ) {
-        $subQueryBuilder = $this->entityManager->createQueryBuilder();
+        QueryBuilderUtil::checkIdentifier($calendarTableForGrouping);
+        QueryBuilderUtil::checkIdentifier($calendarColumnForGrouping);
+        QueryBuilderUtil::checkIdentifier($joinedTable);
+        QueryBuilderUtil::checkIdentifier($joinedColumn);
+
+        /** @var EntityManager $manager */
+        $manager = $this->registry->getManagerForClass(CalendarDate::class);
+
+        $subQueryBuilder = $manager->createQueryBuilder();
         $extraWhereClauses = str_replace(
-            $this->config['data_name'],
+            $this->getDataFieldName(),
             sprintf('%s.%s', $calendarTableForGrouping, $calendarColumnForGrouping),
             $extraWhereClauses
         );
 
-        return $subQueryBuilder
+        $subQueryBuilder
             ->select(
                 sprintf(
-                    '%s(%s.%s)',
+                    "DISTINCT CONCAT(%s(%s.%s), '-', %s(%s.%s))",
                     $filterType,
+                    $calendarTableForGrouping,
+                    $calendarColumnForGrouping,
+                    self::TYPE_YEAR,
                     $calendarTableForGrouping,
                     $calendarColumnForGrouping
                 )
             )
-            ->from($this->config['calendar_entity'], $calendarTableForGrouping)
-            ->innerJoin($this->config['target_entity'], $joinedTable)
-            ->where(
+            ->from($this->getCalendarEntity(), $calendarTableForGrouping)
+            ->innerJoin(
+                $this->getTargetEntity(),
+                $joinedTable,
+                Join::WITH,
                 sprintf(
                     '(CAST(%s.%s as %s) = CAST(%s.%s as %s) %s)',
                     $calendarTableForGrouping,
                     $calendarColumnForGrouping,
-                    $this->config['target_column'],
+                    'date',
                     $joinedTable,
                     $joinedColumn,
-                    $this->config['target_column'],
+                    'date',
                     $extraWhereClauses
                 )
-            )
-            ->setParameters($extraWhereParameters)
-            ->groupBy(sprintf('%s.%s', $calendarTableForGrouping, $calendarColumnForGrouping));
-    }
+            );
 
-    /**
-     * Resolve options from configuration or constants.
-     */
-    private function resolveConfiguration()
-    {
-        $this->config['data_name'] = $this->get(FilterUtility::DATA_NAME_KEY);
-        $this->config['calendar_table'] = $this->getOr('calendar_table', self::CALENDAR_TABLE);
-        $this->config['calendar_column'] = $this->getOr('calendar_column', self::CALENDAR_COLUMN);
-        $this->config['first_calendar_table_for_grouping'] = $this
-            ->getOr('first_calendar_table_for_grouping', self::FIRST_CALENDAR_TABLE_FOR_GROUPING);
-        $this->config['second_calendar_table_for_grouping'] = $this
-            ->getOr('second_calendar_table_for_grouping', self::SECOND_CALENDAR_TABLE_FOR_GROUPING);
-        $this->config['calendar_column_for_grouping'] = $this
-            ->getOr('calendar_column_for_grouping', self::CALENDAR_COLUMN_FOR_GROUPING);
-        $this->config['first_joined_table'] = $this->getOr('first_joined_table', self::FIRST_JOINED_TABLE);
-        $this->config['second_joined_table'] = $this->getOr('second_joined_table', self::SECOND_JOINED_TABLE);
-        $this->config['joined_column'] = $this->getOr('joined_column', self::JOINED_COLUMN);
-        $this->config['target_column'] = $this->getOr('target_column', self::TARGET_COLUMN);
-        $this->config['not_nullable_field'] = $this->get('not_nullable_field');
-        $this->config['calendar_entity'] = $this->get('calendar_entity');
-        $this->config['target_entity'] = $this->get('target_entity');
-    }
+        if ($extraWhereClauses != '') {
+            $subQueryBuilder->setParameters($extraWhereParameters);
+        }
 
-    /**
-     * @param string $dataName
-     * @return mixed
-     */
-    private function generateDataName($dataName)
-    {
-        return str_replace('.', '', $dataName);
+        $datesArray = $subQueryBuilder->getQuery()->getArrayResult();
+
+        return $this->arrayFlatten($datesArray);
     }
 
     /**
      * @param $whereClauseParts
      * @return string
      */
-    public function getExtraWhereClauses($whereClauseParts)
+    protected function getExtraWhereClauses($whereClauseParts)
     {
         $extraWhereClauses = '';
         foreach ($whereClauseParts as $whereClausePart) {
-            if (strpos($whereClausePart, $this->config['data_name']) !== false) {
+            if (strpos($whereClausePart, $this->getDataFieldName()) !== false) {
                 $extraWhereClauses = sprintf('%s AND ( %s )', $extraWhereClauses, $whereClausePart);
             }
         }
 
         return $extraWhereClauses;
+    }
+
+    /**
+     * @param ArrayCollection $parameters
+     * @param string $whereClauseParts
+     * @return ArrayCollection
+     */
+    protected function getExtraWhereParameters(ArrayCollection $parameters, $whereClauseParts)
+    {
+        $extraParameters = new ArrayCollection();
+
+        foreach ($parameters as $parameter) {
+            /* @var $parameter Parameter */
+            if (false !== strpos($whereClauseParts, sprintf(':%s', $parameter->getName()))) {
+                $extraParameters->add($parameter);
+            }
+        }
+
+        return $extraParameters;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getCalendarEntity()
+    {
+        return $this->get(self::CALENDAR_ENTITY);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getTargetEntity()
+    {
+        return $this->get(self::TARGET_ENTITY);
     }
 }

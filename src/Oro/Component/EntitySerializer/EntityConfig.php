@@ -3,36 +3,14 @@
 namespace Oro\Component\EntitySerializer;
 
 /**
+ * Represents the configuration of an entity.
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class EntityConfig
 {
-    /** a list of fields */
-    const FIELDS = 'fields';
-
-    /** a type of the exclusion strategy that should be used for the entity */
-    const EXCLUSION_POLICY = 'exclusion_policy';
-
-    /** exclude all fields are not configured explicitly */
-    const EXCLUSION_POLICY_ALL = 'all';
-
-    /** exclude only fields are marked as excluded */
-    const EXCLUSION_POLICY_NONE = 'none';
-
-    /** a flag indicates whether using of Doctrine partial object is disabled */
-    const DISABLE_PARTIAL_LOAD = 'disable_partial_load';
-
-    /** the ordering of the result */
-    const ORDER_BY = 'order_by';
-
-    /** the maximum number of items in the result */
-    const MAX_RESULTS = 'max_results';
-
-    /** a list Doctrine query hints */
-    const HINTS = 'hints';
-
-    /** a handler that can be used to modify serialized data */
-    const POST_SERIALIZE = 'post_serialize';
+    /** @var string|null */
+    protected $exclusionPolicy;
 
     /** @var array */
     protected $items = [];
@@ -48,10 +26,12 @@ class EntityConfig
     public function toArray()
     {
         $result = $this->items;
-
+        if (null !== $this->exclusionPolicy && ConfigUtil::EXCLUSION_POLICY_NONE !== $this->exclusionPolicy) {
+            $result[ConfigUtil::EXCLUSION_POLICY] = $this->exclusionPolicy;
+        }
         if (!empty($this->fields)) {
             foreach ($this->fields as $fieldName => $fieldConfig) {
-                $result[self::FIELDS][$fieldName] = $fieldConfig->toArray();
+                $result[ConfigUtil::FIELDS][$fieldName] = $fieldConfig->toArray();
             }
         }
 
@@ -66,7 +46,8 @@ class EntityConfig
     public function isEmpty()
     {
         return
-            empty($this->items)
+            null === $this->exclusionPolicy
+            && empty($this->items)
             && empty($this->fields);
     }
 
@@ -88,21 +69,24 @@ class EntityConfig
      */
     public function has($key)
     {
-        return array_key_exists($key, $this->items);
+        return \array_key_exists($key, $this->items);
     }
 
     /**
      * Gets the configuration value.
      *
      * @param string $key
+     * @param mixed  $defaultValue
      *
      * @return mixed
      */
-    public function get($key)
+    public function get($key, $defaultValue = null)
     {
-        return array_key_exists($key, $this->items)
-            ? $this->items[$key]
-            : null;
+        if (!\array_key_exists($key, $this->items)) {
+            return $defaultValue;
+        }
+
+        return $this->items[$key];
     }
 
     /**
@@ -157,9 +141,11 @@ class EntityConfig
      */
     public function getField($fieldName)
     {
-        return isset($this->fields[$fieldName])
-            ? $this->fields[$fieldName]
-            : null;
+        if (!isset($this->fields[$fieldName])) {
+            return null;
+        }
+
+        return $this->fields[$fieldName];
     }
 
     /**
@@ -194,27 +180,26 @@ class EntityConfig
     /**
      * Gets the exclusion strategy that should be used for the entity.
      *
-     * @return string One of EXCLUSION_POLICY_* constant
+     * @return string An exclusion strategy, e.g. "none" or "all"
      */
     public function getExclusionPolicy()
     {
-        return array_key_exists(self::EXCLUSION_POLICY, $this->items)
-            ? $this->items[self::EXCLUSION_POLICY]
-            : self::EXCLUSION_POLICY_NONE;
+        if (null === $this->exclusionPolicy) {
+            return ConfigUtil::EXCLUSION_POLICY_NONE;
+        }
+
+        return $this->exclusionPolicy;
     }
 
     /**
      * Sets the exclusion strategy that should be used for the entity.
      *
-     * @param string $exclusionPolicy One of EXCLUSION_POLICY_* constant
+     * @param string|null $exclusionPolicy An exclusion strategy, e.g. "none" or "all",
+     *                                     or NULL to remove this option
      */
     public function setExclusionPolicy($exclusionPolicy)
     {
-        if ($exclusionPolicy && self::EXCLUSION_POLICY_NONE !== $exclusionPolicy) {
-            $this->items[self::EXCLUSION_POLICY] = $exclusionPolicy;
-        } else {
-            unset($this->items[self::EXCLUSION_POLICY]);
-        }
+        $this->exclusionPolicy = $exclusionPolicy;
     }
 
     /**
@@ -224,7 +209,7 @@ class EntityConfig
      */
     public function isExcludeAll()
     {
-        return self::EXCLUSION_POLICY_ALL === $this->getExclusionPolicy();
+        return ConfigUtil::EXCLUSION_POLICY_ALL === $this->exclusionPolicy;
     }
 
     /**
@@ -232,7 +217,7 @@ class EntityConfig
      */
     public function setExcludeAll()
     {
-        $this->setExclusionPolicy(self::EXCLUSION_POLICY_ALL);
+        $this->exclusionPolicy = ConfigUtil::EXCLUSION_POLICY_ALL;
     }
 
     /**
@@ -240,7 +225,7 @@ class EntityConfig
      */
     public function setExcludeNone()
     {
-        $this->setExclusionPolicy(self::EXCLUSION_POLICY_NONE);
+        $this->exclusionPolicy = ConfigUtil::EXCLUSION_POLICY_NONE;
     }
 
     /**
@@ -250,9 +235,7 @@ class EntityConfig
      */
     public function isPartialLoadEnabled()
     {
-        return array_key_exists(self::DISABLE_PARTIAL_LOAD, $this->items)
-            ? !$this->items[self::DISABLE_PARTIAL_LOAD]
-            : true;
+        return !$this->get(ConfigUtil::DISABLE_PARTIAL_LOAD, false);
     }
 
     /**
@@ -260,7 +243,7 @@ class EntityConfig
      */
     public function enablePartialLoad()
     {
-        unset($this->items[self::DISABLE_PARTIAL_LOAD]);
+        unset($this->items[ConfigUtil::DISABLE_PARTIAL_LOAD]);
     }
 
     /**
@@ -268,7 +251,7 @@ class EntityConfig
      */
     public function disablePartialLoad()
     {
-        $this->items[self::DISABLE_PARTIAL_LOAD] = true;
+        $this->items[ConfigUtil::DISABLE_PARTIAL_LOAD] = true;
     }
 
     /**
@@ -281,9 +264,7 @@ class EntityConfig
      */
     public function getOrderBy()
     {
-        return array_key_exists(self::ORDER_BY, $this->items)
-            ? $this->items[self::ORDER_BY]
-            : [];
+        return $this->get(ConfigUtil::ORDER_BY, []);
     }
 
     /**
@@ -296,10 +277,10 @@ class EntityConfig
      */
     public function setOrderBy(array $orderBy = [])
     {
-        if (!empty($orderBy)) {
-            $this->items[self::ORDER_BY] = $orderBy;
+        if ($orderBy) {
+            $this->items[ConfigUtil::ORDER_BY] = $orderBy;
         } else {
-            unset($this->items[self::ORDER_BY]);
+            unset($this->items[ConfigUtil::ORDER_BY]);
         }
     }
 
@@ -310,9 +291,7 @@ class EntityConfig
      */
     public function getMaxResults()
     {
-        return array_key_exists(self::MAX_RESULTS, $this->items)
-            ? $this->items[self::MAX_RESULTS]
-            : null;
+        return $this->get(ConfigUtil::MAX_RESULTS);
     }
 
     /**
@@ -323,9 +302,9 @@ class EntityConfig
     public function setMaxResults($maxResults = null)
     {
         if (null === $maxResults || $maxResults < 0) {
-            unset($this->items[self::MAX_RESULTS]);
+            unset($this->items[ConfigUtil::MAX_RESULTS]);
         } else {
-            $this->items[self::MAX_RESULTS] = $maxResults;
+            $this->items[ConfigUtil::MAX_RESULTS] = $maxResults;
         }
     }
 
@@ -337,9 +316,7 @@ class EntityConfig
      */
     public function getHints()
     {
-        return array_key_exists(self::HINTS, $this->items)
-            ? $this->items[self::HINTS]
-            : [];
+        return $this->get(ConfigUtil::HINTS, []);
     }
 
     /**
@@ -350,12 +327,14 @@ class EntityConfig
      */
     public function addHint($name, $value = null)
     {
-        $hints   = $this->getHints();
-        $hints[] = null === $value
-            ? $name
-            : ['name' => $name, 'value' => $value];
+        $hints = $this->getHints();
+        if (null === $value) {
+            $hints[] = $name;
+        } else {
+            $hints[] = ['name' => $name, 'value' => $value];
+        }
 
-        $this->items[self::HINTS] = $hints;
+        $this->items[ConfigUtil::HINTS] = $hints;
     }
 
     /**
@@ -366,17 +345,17 @@ class EntityConfig
      */
     public function removeHint($name, $value = null)
     {
-        $hints    = $this->getHints();
+        $hints = $this->getHints();
         $toRemove = [];
         if (null === $value) {
             foreach ($hints as $key => $hint) {
-                if (is_string($hint) && $hint === $name) {
+                if (\is_string($hint) && $hint === $name) {
                     $toRemove[] = $key;
                 }
             }
         } else {
             foreach ($hints as $key => $hint) {
-                if (is_array($hint) && $hint['name'] === $name && $hint['value'] === $value) {
+                if (\is_array($hint) && $hint['name'] === $name && $hint['value'] === $value) {
                     $toRemove[] = $key;
                 }
             }
@@ -386,10 +365,10 @@ class EntityConfig
             foreach ($toRemove as $key) {
                 unset($hints[$key]);
             }
-            if (!empty($hints)) {
-                $this->items[self::HINTS] = array_values($hints);
+            if ($hints) {
+                $this->items[ConfigUtil::HINTS] = \array_values($hints);
             } else {
-                unset($this->items[self::HINTS]);
+                unset($this->items[ConfigUtil::HINTS]);
             }
         }
     }
@@ -401,9 +380,7 @@ class EntityConfig
      */
     public function getPostSerializeHandler()
     {
-        return array_key_exists(self::POST_SERIALIZE, $this->items)
-            ? $this->items[self::POST_SERIALIZE]
-            : null;
+        return $this->get(ConfigUtil::POST_SERIALIZE);
     }
 
     /**
@@ -414,9 +391,9 @@ class EntityConfig
     public function setPostSerializeHandler($handler = null)
     {
         if (null !== $handler) {
-            $this->items[self::POST_SERIALIZE] = $handler;
+            $this->items[ConfigUtil::POST_SERIALIZE] = $handler;
         } else {
-            unset($this->items[self::POST_SERIALIZE]);
+            unset($this->items[ConfigUtil::POST_SERIALIZE]);
         }
     }
 }

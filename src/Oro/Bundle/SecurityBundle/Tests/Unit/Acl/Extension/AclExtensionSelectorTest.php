@@ -2,33 +2,35 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Extension;
 
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-
+use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdAccessor;
 use Oro\Bundle\SecurityBundle\Acl\Extension\AclExtensionSelector;
 use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException;
 use Symfony\Component\Security\Acl\Voter\FieldVote;
 
-class AclExtensionSelectorTest extends \PHPUnit_Framework_TestCase
+class AclExtensionSelectorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AclExtensionSelector */
     protected $selector;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entityExtension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $fieldExtension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $actionExtension;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $objectIdAccessor;
 
     protected function setUp()
     {
-        $objectIdAccessor = $this->getMockBuilder('Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdAccessor')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->objectIdAccessor = $this->createMock(ObjectIdAccessor::class);
 
-        $this->selector = new AclExtensionSelector($objectIdAccessor);
+        $this->selector = new AclExtensionSelector($this->objectIdAccessor);
 
         $this->entityExtension = $this->getMockExtension('entity');
         $this->actionExtension = $this->getMockExtension('action');
@@ -188,6 +190,34 @@ class AclExtensionSelectorTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @expectedException \Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException
+     * @expectedExceptionMessage An ACL extension was not found for: stdClass. Type: . Id: .
+     */
+    public function testSelectByInvalidDomainObject()
+    {
+        $val = new \stdClass();
+
+        $this->objectIdAccessor->expects(self::once())
+            ->method('getId')
+            ->with(self::identicalTo($val))
+            ->willThrowException(new InvalidDomainObjectException());
+
+        $this->selector->select($val);
+    }
+
+    public function testSelectByInvalidDomainObjectAndThrowExceptionIsNotRequested()
+    {
+        $val = new \stdClass();
+
+        $this->objectIdAccessor->expects(self::once())
+            ->method('getId')
+            ->with(self::identicalTo($val))
+            ->willThrowException(new InvalidDomainObjectException());
+
+        self::assertNull($this->selector->select($val, false));
+    }
+
     public function testAll()
     {
         $result = $this->selector->all();
@@ -198,7 +228,7 @@ class AclExtensionSelectorTest extends \PHPUnit_Framework_TestCase
      * @param string $supportedType
      * @param bool   $setSupportsExpectation
      *
-     * @return \Oro\Bundle\SecurityBundle\Acl\Extension\AclExtensionInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return \Oro\Bundle\SecurityBundle\Acl\Extension\AclExtensionInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getMockExtension($supportedType, $setSupportsExpectation = true)
     {

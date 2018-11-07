@@ -2,23 +2,26 @@
 
 namespace Oro\Bundle\ApiBundle\Request;
 
+use Oro\Bundle\ApiBundle\Exception\ExceptionInterface as ApiException;
+use Oro\Bundle\ApiBundle\Exception\ValidationExceptionInterface;
+use Oro\Bundle\ApiBundle\Util\ExceptionUtil;
+use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
+use Oro\Bundle\SecurityBundle\Exception\ForbiddenException;
+use Oro\Component\ChainProcessor\Exception\ExecutionFailedException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
-use Oro\Component\ChainProcessor\Exception\ExecutionFailedException;
-use Oro\Bundle\ApiBundle\Exception\ExceptionInterface as ApiException;
-use Oro\Bundle\ApiBundle\Util\ExceptionUtil;
-use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
-use Oro\Bundle\SecurityBundle\Exception\ForbiddenException;
-
+/**
+ * The default implementation of extractor that retrieves information from an exception object.
+ */
 class ExceptionTextExtractor implements ExceptionTextExtractorInterface
 {
     /** @var bool */
-    protected $debug;
+    private $debug;
 
     /** @var string[] */
-    protected $safeExceptions;
+    private $safeExceptions;
 
     /**
      * @param bool     $debug
@@ -49,6 +52,17 @@ class ExceptionTextExtractor implements ExceptionTextExtractorInterface
             return Response::HTTP_FORBIDDEN;
         }
 
+        /**
+         * check for ValidationExceptionInterface should be at the end,
+         * because some exceptions can implement several interfaces and
+         * ValidationExceptionInterface should have lowest priority
+         * e.g. an exception can implement both ValidationExceptionInterface and HttpExceptionInterface,
+         * but the status code for it should be retrieved from HttpExceptionInterface
+         */
+        if ($underlyingException instanceof ValidationExceptionInterface) {
+            return Response::HTTP_BAD_REQUEST;
+        }
+
         return Response::HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -66,7 +80,7 @@ class ExceptionTextExtractor implements ExceptionTextExtractorInterface
     public function getExceptionType(\Exception $exception)
     {
         return ValueNormalizerUtil::humanizeClassName(
-            get_class(ExceptionUtil::getProcessorUnderlyingException($exception)),
+            \get_class(ExceptionUtil::getProcessorUnderlyingException($exception)),
             'Exception'
         );
     }
@@ -90,7 +104,7 @@ class ExceptionTextExtractor implements ExceptionTextExtractorInterface
             $text = null;
         }
         if (null !== $text) {
-            if (substr($text, -1) !== '.') {
+            if (\substr($text, -1) !== '.') {
                 $text .= '.';
             }
             if ($underlyingException !== $exception && $exception instanceof ExecutionFailedException) {
@@ -112,10 +126,10 @@ class ExceptionTextExtractor implements ExceptionTextExtractorInterface
      *
      * @return bool
      */
-    protected function isSafeException(\Exception $exception)
+    private function isSafeException(\Exception $exception)
     {
         foreach ($this->safeExceptions as $class) {
-            if (is_a($exception, $class)) {
+            if (\is_a($exception, $class)) {
                 return true;
             }
         }
@@ -128,7 +142,7 @@ class ExceptionTextExtractor implements ExceptionTextExtractorInterface
      *
      * @return string
      */
-    protected function getSafeExceptionText(\Exception $exception)
+    private function getSafeExceptionText(\Exception $exception)
     {
         if ($exception instanceof ForbiddenException) {
             return $exception->getReason();

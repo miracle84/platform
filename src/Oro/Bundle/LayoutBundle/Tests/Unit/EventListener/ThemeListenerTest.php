@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\EventListener;
 
+use Oro\Bundle\LayoutBundle\EventListener\ThemeListener;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
 
-use Oro\Bundle\LayoutBundle\EventListener\ThemeListener;
-
-class ThemeListenerTest extends \PHPUnit_Framework_TestCase
+class ThemeListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ThemeListener */
     protected $listener;

@@ -1,27 +1,20 @@
 <?php
 namespace Oro\Bundle\DataAuditBundle\Tests\Functional;
 
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataChild;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataOwner;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataChild;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataOwner;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
+/**
+ * @dbIsolationPerTest
+ */
 class SendDeletedEntitiesToMessageQueueTest extends WebTestCase
 {
     use SendChangedEntitiesToMessageQueueExtensionTrait;
     
     protected function setUp()
     {
-        parent::setUp();
-
-        $this->initClient([], [], true);
-        $this->startTransaction();
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
+        $this->initClient();
     }
 
     public function testShouldSendAllDeletedEntities()
@@ -120,6 +113,7 @@ class SendDeletedEntitiesToMessageQueueTest extends WebTestCase
                     'entity_id' => $ownerId,
                     'entity_class' => TestAuditDataOwner::class,
                     'change_set' => [],
+                    'additional_fields' => []
                 ],
                 null
             ]

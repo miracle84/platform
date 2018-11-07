@@ -6,14 +6,14 @@ use Oro\Component\ChainProcessor\MatchApplicableChecker as BaseMatchApplicableCh
 
 /**
  * {@inheritdoc}
- * Also this applicable checker can checks whether a value in the Context
+ * Also this applicable checker can checks whether a value in the context
  * is instance of a value of processor's attribute.
  * Such attributes should be marked as "class" attributes.
  */
 class MatchApplicableChecker extends BaseMatchApplicableChecker
 {
-    /** @var string[] */
-    protected $classAttributes;
+    /** @var array [attribute name => true, ...] */
+    private $classAttributes;
 
     /**
      * @param string[] $ignoredAttributes
@@ -22,7 +22,7 @@ class MatchApplicableChecker extends BaseMatchApplicableChecker
     public function __construct(array $ignoredAttributes = ['group'], array $classAttributes = [])
     {
         parent::__construct($ignoredAttributes);
-        $this->classAttributes = array_fill_keys($classAttributes, true);
+        $this->classAttributes = \array_fill_keys($classAttributes, true);
     }
 
     /**
@@ -41,8 +41,8 @@ class MatchApplicableChecker extends BaseMatchApplicableChecker
      */
     protected function isMatchScalars($value, $contextValue, $name)
     {
-        return isset($this->classAttributes[$name]) && is_string($value) && $value
-            ? is_a($contextValue, $value, true)
+        return isset($this->classAttributes[$name]) && \is_string($value) && $value
+            ? \is_a($contextValue, $value, true)
             : parent::isMatchScalars($value, $contextValue, $name);
     }
 }

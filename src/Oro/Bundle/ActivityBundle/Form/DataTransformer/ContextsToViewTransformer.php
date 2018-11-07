@@ -6,38 +6,44 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
-
 use Symfony\Component\Form\DataTransformerInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Translation\TranslatorInterface;
 
 class ContextsToViewTransformer implements DataTransformerInterface
 {
+    const SEPARATOR = '-|-';
+
     /** @var EntityManager */
     protected $entityManager;
 
     /** @var TranslatorInterface */
     protected $translator;
 
-    /* @var TokenStorageInterface */
-    protected $securityTokenStorage;
-
     /** @var bool */
     protected $collectionModel;
 
+    /** @var string */
+    protected $separator = self::SEPARATOR;
+
     /**
-     * @param EntityManager         $entityManager
-     * @param TokenStorageInterface $securityTokenStorage
-     * @param bool                  $collectionModel True if result should be Collection instead of array
+     * @param EntityManager $entityManager
+     * @param bool $collectionModel True if result should be Collection instead of array
+     * @param string $separator
      */
     public function __construct(
         EntityManager $entityManager,
-        TokenStorageInterface $securityTokenStorage,
         $collectionModel = false
     ) {
         $this->entityManager = $entityManager;
-        $this->securityTokenStorage = $securityTokenStorage;
         $this->collectionModel = $collectionModel;
+    }
+
+    /**
+     * @param string $separator
+     */
+    public function setSeparator($separator)
+    {
+        $this->separator = $separator;
     }
 
     /**
@@ -51,13 +57,8 @@ class ContextsToViewTransformer implements DataTransformerInterface
 
         if (is_array($value) || $value instanceof Collection) {
             $result = [];
-            $user   = $this->securityTokenStorage->getToken()->getUser();
             foreach ($value as $target) {
-                // Exclude current user
                 $targetClass = ClassUtils::getClass($target);
-                if (ClassUtils::getClass($user) === $targetClass && $user->getId() === $target->getId()) {
-                    continue;
-                }
 
                 $result[] = json_encode(
                     [
@@ -67,7 +68,7 @@ class ContextsToViewTransformer implements DataTransformerInterface
                 );
             }
 
-            $value = implode(';', $result);
+            $value = implode($this->separator, $result);
         }
 
         return $value;
@@ -82,7 +83,7 @@ class ContextsToViewTransformer implements DataTransformerInterface
             return [];
         }
 
-        $targets = explode(';', $value);
+        $targets = explode($this->separator, $value);
         $result  = [];
         $filters = [];
 

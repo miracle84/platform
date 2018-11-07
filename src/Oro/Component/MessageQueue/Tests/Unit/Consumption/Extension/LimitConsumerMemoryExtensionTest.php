@@ -8,7 +8,7 @@ use Oro\Component\MessageQueue\Transport\MessageConsumerInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class LimitConsumerMemoryExtensionTest extends \PHPUnit_Framework_TestCase
+class LimitConsumerMemoryExtensionTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -28,7 +28,7 @@ class LimitConsumerMemoryExtensionTest extends \PHPUnit_Framework_TestCase
         $context->getLogger()
             ->expects($this->once())
             ->method('debug')
-            ->with($this->stringContains('[LimitConsumerMemoryExtension] Interrupt execution as memory limit reached.'))
+            ->with($this->stringContains('Interrupt execution as memory limit reached.'))
         ;
 
         // guard
@@ -47,7 +47,7 @@ class LimitConsumerMemoryExtensionTest extends \PHPUnit_Framework_TestCase
         $context->getLogger()
             ->expects($this->once())
             ->method('debug')
-            ->with($this->stringContains('[LimitConsumerMemoryExtension] Interrupt execution as memory limit reached.'))
+            ->with($this->stringContains('Interrupt execution as memory limit reached.'))
         ;
 
         // guard
@@ -66,7 +66,7 @@ class LimitConsumerMemoryExtensionTest extends \PHPUnit_Framework_TestCase
         $context->getLogger()
             ->expects($this->once())
             ->method('debug')
-            ->with($this->stringContains('[LimitConsumerMemoryExtension] Interrupt execution as memory limit reached.'))
+            ->with($this->stringContains('Interrupt execution as memory limit reached.'))
         ;
 
         // guard

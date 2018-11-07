@@ -2,9 +2,11 @@
 
 namespace Oro\Bundle\ReminderBundle\Form\Type;
 
+use Oro\Bundle\ReminderBundle\Form\Type\MethodType;
+use Oro\Bundle\ReminderBundle\Form\Type\ReminderIntervalType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class ReminderType extends AbstractType
 {
@@ -15,7 +17,7 @@ class ReminderType extends AbstractType
     {
         $builder->add(
             'method',
-            'oro_reminder_method',
+            MethodType::class,
             array(
                 'required' => true,
                 'attr'     => array('class' => 'method'),
@@ -24,7 +26,7 @@ class ReminderType extends AbstractType
 
         $builder->add(
             'interval',
-            'oro_reminder_interval',
+            ReminderIntervalType::class,
             array('required' => true)
         );
     }
@@ -32,14 +34,12 @@ class ReminderType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             array(
                 'data_class'           => 'Oro\\Bundle\\ReminderBundle\\Entity\\Reminder',
-                'intention'            => 'reminder',
-                'extra_fields_message' => 'This form should not contain extra fields: "{{ extra_fields }}"',
-                'cascade_validation'   => true,
+                'csrf_token_id'        => 'reminder',
                 'error_bubbling'       => false,
             )
         );

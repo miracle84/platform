@@ -7,16 +7,18 @@ use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\ActionBundle\Model\AttributeGuesser;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Model\AttributeAssembler;
+use Oro\Component\Action\Exception\AssemblerException;
+use Symfony\Bundle\FrameworkBundle\Tests\Templating\Helper\Fixtures\StubTranslator;
 use Symfony\Component\Translation\TranslatorInterface;
 
-class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
+class AttributeAssemblerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TranslatorInterface */
     protected $translator;
 
     protected function setUp()
     {
-        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->translator = new StubTranslator();
     }
 
     /**
@@ -37,18 +39,18 @@ class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return WorkflowDefinition|\PHPUnit_Framework_MockObject_MockObject
+     * @return WorkflowDefinition|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getWorkflowDefinition()
     {
-        $definition = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $definition = $this->createMock(WorkflowDefinition::class);
+        $definition->expects($this->any())->method('getLabel')->willReturn('test_workflow_label');
+
         return $definition;
     }
 
     /**
-     * @return AttributeGuesser|\PHPUnit_Framework_MockObject_MockObject
+     * @return AttributeGuesser|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getAttributeGuesser()
     {
@@ -85,6 +87,12 @@ class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
                 'Invalid attribute type "text", allowed types are "bool", "boolean", "int", "integer", ' .
                     '"float", "string", "array", "object", "entity"'
             ),
+            'can_not_guess_type' => [
+                ['test_name' => ['property_path' => 'test.property']],
+                AssemblerException::class,
+                'Workflow "[trans]test_workflow_label[/trans]": Option "type" for attribute "test_name" ' .
+                'with property path "test.property" can not be guessed'
+            ],
             'invalid_type_class' => array(
                 array(
                     'name' => array(
@@ -147,7 +155,7 @@ class AttributeAssemblerTest extends \PHPUnit_Framework_TestCase
         $attributeConfiguration = current($configuration);
         if ($guessedParameters && array_key_exists('property_path', $attributeConfiguration)) {
             $attributeGuesser->expects($this->any())
-                ->method('guessAttributeParameters')
+                ->method('guessParameters')
                 ->with($relatedEntity, $attributeConfiguration['property_path'])
                 ->will($this->returnValue($guessedParameters));
         }

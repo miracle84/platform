@@ -1,4 +1,3 @@
-/** @lends TextEditorView */
 define(function(require) {
     'use strict';
 
@@ -7,7 +6,7 @@ define(function(require) {
      *
      * ### Column configuration samples:
      * ``` yml
-     * datagrid:
+     * datagrids:
      *   {grid-uid}:
      *     inline_editing:
      *       enable: true
@@ -36,6 +35,11 @@ define(function(require) {
      *             Length:
      *               min: 3
      *               max: 255
+     *           save_api_accessor:
+     *               route: '<route>'
+     *               query_parameter_names:
+     *                  - '<parameter1>'
+     *                  - '<parameter2>'
      * ```
      *
      * ### Options in yml:
@@ -45,17 +49,20 @@ define(function(require) {
      * inline_editing.editor.view_options.placeholder      | Optional. Placeholder translation key for an empty element
      * inline_editing.editor.view_options.placeholder_raw  | Optional. Raw placeholder value
      * inline_editing.editor.view_options.css_class_name   | Optional. Additional css class name for editor view DOM el
-     * inline_editing.editor.validation_rules | Optional. Validation rules. See [documentation](https://goo.gl/j9dj4Y)
+     * inline_editing.validation_rules | Optional. Validation rules. See [documentation](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * inline_editing.save_api_accessor                    | Optional. Sets accessor module, route, parameters etc.
      *
      * ### Constructor parameters
      *
      * @class
      * @param {Object} options - Options container
      * @param {Object} options.model - Current row model
+     * @param {string} options.className - CSS class name for editor element
      * @param {string} options.fieldName - Field name to edit in model
      * @param {string} options.placeholder - Placeholder translation key for an empty element
      * @param {string} options.placeholder_raw - Raw placeholder value. It overrides placeholder translation key
-     * @param {Object} options.validationRules - Validation rules. See [documentation here](https://goo.gl/j9dj4Y)
+     * @param {Object} options.validationRules - Validation rules. See [documentation here](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * @param {string} options.value - initial value of edited field
      *
      * @augments BaseView
      * @exports TextEditorView
@@ -66,7 +73,7 @@ define(function(require) {
     var $ = require('jquery');
     var BaseView = require('oroui/js/app/views/base/view');
 
-    TextEditorView = BaseView.extend(/** @exports TextEditorView.prototype */{
+    TextEditorView = BaseView.extend(/** @lends TextEditorView.prototype */{
         autoRender: true,
         tagName: 'form',
         template: require('tpl!../../../../templates/editor/text-editor.html'),
@@ -74,9 +81,10 @@ define(function(require) {
         inputType: 'text',
         events: {
             'change input[name=value]': 'onChange',
-            'keyup input[name=value]': 'onChange',
+            'keyup input[name=value]': 'onKeyUp',
             'mousedown': 'onMousedown',
             'click [data-action]': 'rethrowAction',
+            'click [type=submit]': 'onClickSubmit',
             'keydown input[name=value]': 'onGenericKeydown',
             'keydown': 'rethrowEvent',
             'keypress': 'rethrowEvent',
@@ -103,7 +111,7 @@ define(function(require) {
          */
         _isFocused: false,
 
-        constructor: function(options) {
+        constructor: function TextEditorView(options) {
             var optionsClassName;
             var prototypeClassName;
             if (options.className) {
@@ -145,8 +153,8 @@ define(function(require) {
             if (emptyValue === void 0) {
                 emptyValue = '';
             }
-            return this.placeholderRaw !== void 0 ? this.placeholderRaw :
-                (this.placeholder !== void 0 ? __(this.placeholder) : emptyValue);
+            return this.placeholderRaw !== void 0 ? this.placeholderRaw
+                : (this.placeholder !== void 0 ? __(this.placeholder) : emptyValue);
         },
 
         getTemplateData: function() {
@@ -241,6 +249,12 @@ define(function(require) {
                 this.blur();
             } else {
                 delete this._isSelected;
+            }
+        },
+
+        onClickSubmit: function() {
+            if (!this.isValid()) {
+                return false;
             }
         },
 
@@ -366,19 +380,28 @@ define(function(require) {
          * @returns {boolean}
          */
         isValid: function() {
-            return this.validator.form();
+            var isValid = this.validator.form();
+            return isValid;
+        },
+
+        onChange: function() {
+            this.updateSubmitButtonState();
+            this.trigger('change');
+        },
+
+        onKeyUp: function() {
+            this.updateSubmitButtonState();
         },
 
         /**
-         * Change handler. In this realization, it tracks a submit button disabled attribute
+         * Set a submit button disabled state relevant input value
          */
-        onChange: function() {
+        updateSubmitButtonState: function() {
             if (!this.isChanged()) {
                 this.$('[type=submit]').attr('disabled', 'disabled');
             } else {
                 this.$('[type=submit]').removeAttr('disabled');
             }
-            this.trigger('change');
         },
 
         /**

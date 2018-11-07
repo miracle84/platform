@@ -4,16 +4,15 @@ namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Tools\GeneratorExtensions;
 
 use CG\Core\DefaultGeneratorStrategy;
 use CG\Generator\PhpClass;
-
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
-use Oro\Bundle\EntityExtendBundle\Tools\GeneratorExtensions\AbstractAssociationEntityGeneratorExtension;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
+use Oro\Bundle\EntityExtendBundle\Tools\GeneratorExtensions\AbstractAssociationEntityGeneratorExtension;
 
-class ManyToOneAbstractAssociationEntityGeneratorExtensionTest extends \PHPUnit_Framework_TestCase
+class ManyToOneAbstractAssociationEntityGeneratorExtensionTest extends \PHPUnit\Framework\TestCase
 {
     const ASSOCIATION_KIND = 'test';
 
-    /** @var AbstractAssociationEntityGeneratorExtension|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var AbstractAssociationEntityGeneratorExtension|\PHPUnit\Framework\MockObject\MockObject */
     protected $extension;
 
     public function setUp()
@@ -57,7 +56,8 @@ class ManyToOneAbstractAssociationEntityGeneratorExtensionTest extends \PHPUnit_
                                 ExtendHelper::buildAssociationName('Test\TargetEntity', self::ASSOCIATION_KIND),
                                 'manyToOne'
                             ),
-                            'target_entity' => 'Test\TargetEntity'
+                            'target_entity' => 'Test\TargetEntity',
+                            'state' => 'Active'
                         ]
                     ]
                 ],
@@ -137,6 +137,7 @@ class ManyToOneAbstractAssociationEntityGeneratorExtensionTest extends \PHPUnit_
                         'manyToOne'
                     ),
                     'target_entity' => 'Test\TargetEntity1',
+                    'state' => 'Active'
                 ],
                 [
                     'field_id' => new FieldConfigId(
@@ -146,6 +147,7 @@ class ManyToOneAbstractAssociationEntityGeneratorExtensionTest extends \PHPUnit_
                         'manyToOne'
                     ),
                     'target_entity' => 'Test\TargetEntity2',
+                    'state' => 'Active'
                 ],
                 [ // should be ignored because field type is not manyToOne
                     'field_id' => new FieldConfigId(

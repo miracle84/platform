@@ -6,10 +6,19 @@ define([
 
     var NotesCollection;
 
-    NotesCollection =  BaseCollection.extend({
+    NotesCollection = BaseCollection.extend({
         model: NoteModel,
+
         baseUrl: '',
+
         sorting: 'DESC',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function NotesCollection() {
+            NotesCollection.__super__.constructor.apply(this, arguments);
+        },
 
         url: function() {
             return this.baseUrl + '?sorting=' + this.sorting;

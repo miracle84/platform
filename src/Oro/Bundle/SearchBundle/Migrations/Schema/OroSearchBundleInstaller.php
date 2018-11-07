@@ -4,16 +4,14 @@ namespace Oro\Bundle\SearchBundle\Migrations\Schema;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\Schema;
-
-use Oro\Bundle\EntityBundle\ORM\DatabasePlatformInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 use Oro\Bundle\MigrationBundle\Migration\Extension\DatabasePlatformAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\Installation;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 use Oro\Bundle\SearchBundle\Engine\Orm\PdoMysql;
-use Oro\Bundle\SearchBundle\Migrations\Schema\v1_3\OroSearchBundleUseInnoDbQuery;
+use Oro\Bundle\SearchBundle\Migration\MysqlVersionCheckTrait;
+use Oro\Bundle\SearchBundle\Migration\UseMyIsamEngineQuery;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyMethods)
@@ -21,6 +19,8 @@ use Oro\Bundle\SearchBundle\Migrations\Schema\v1_3\OroSearchBundleUseInnoDbQuery
  */
 class OroSearchBundleInstaller implements Installation, ContainerAwareInterface, DatabasePlatformAwareInterface
 {
+    use MysqlVersionCheckTrait;
+
     /**
      * @var ContainerInterface
      */
@@ -36,7 +36,7 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
      */
     public function getMigrationVersion()
     {
-        return 'v1_3';
+        return 'v1_7';
     }
 
     /**
@@ -66,21 +66,13 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $this->createOroSearchQueryTable($schema);
         $this->createOroSearchIndexDatetimeTable($schema);
         $this->createOroSearchItemTable($schema);
-        $this->createOroSearchIndexTextTable($schema);
+        $this->createOroSearchIndexTextTable($schema, $queries);
 
         /** Foreign keys generation **/
         $this->addOroSearchIndexDecimalForeignKeys($schema);
         $this->addOroSearchIndexIntegerForeignKeys($schema);
         $this->addOroSearchIndexDatetimeForeignKeys($schema);
         $this->addOroSearchIndexTextForeignKeys($schema);
-
-        // add search fulltext index query (only for ORM search engine)
-        if ($this->container->has('oro_search.fulltext_index_manager')) {
-            $query = $this->container->get('oro_search.fulltext_index_manager')->getQuery();
-            $queries->addQuery($query);
-            // switch oro_search_index_text table to InnoDB in case of MySQL >= 5.6
-            $queries->addPostQuery(new OroSearchBundleUseInnoDbQuery());
-        }
     }
 
     /**
@@ -94,8 +86,10 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $table->addColumn('id', 'integer', ['autoincrement' => true]);
         $table->addColumn('item_id', 'integer', []);
         $table->addColumn('field', 'string', ['length' => 250]);
-        $table->addColumn('value', 'decimal', ['scale' => 2]);
+        $table->addColumn('value', 'decimal', ['precision' => 21, 'scale' => 6]);
         $table->addIndex(['item_id'], 'idx_e0b9bb33126f525e', []);
+        $table->addIndex(['field'], 'oro_search_index_decimal_field_idx');
+        $table->addIndex(['item_id', 'field'], 'oro_search_index_decimal_item_field_idx');
         $table->setPrimaryKey(['id']);
     }
 
@@ -112,6 +106,8 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $table->addColumn('field', 'string', ['length' => 250]);
         $table->addColumn('value', 'integer', []);
         $table->addIndex(['item_id'], 'idx_e04ba3ab126f525e', []);
+        $table->addIndex(['field'], 'oro_search_index_integer_field_idx');
+        $table->addIndex(['item_id', 'field'], 'oro_search_index_integer_item_field_idx');
         $table->setPrimaryKey(['id']);
     }
 
@@ -144,6 +140,8 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $table->addColumn('field', 'string', ['length' => 250]);
         $table->addColumn('value', 'datetime', ['comment' => '(DC2Type:datetime)']);
         $table->addIndex(['item_id'], 'idx_459f212a126f525e', []);
+        $table->addIndex(['field'], 'oro_search_index_datetime_field_idx');
+        $table->addIndex(['item_id', 'field'], 'oro_search_index_datetime_item_field_idx');
         $table->setPrimaryKey(['id']);
     }
 
@@ -160,6 +158,7 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $table->addColumn('alias', 'string', ['length' => 255]);
         $table->addColumn('record_id', 'integer', ['notnull' => false]);
         $table->addColumn('title', 'string', ['notnull' => false, 'length' => 255]);
+        $table->addColumn('weight', 'decimal', ['precision' => 21, 'scale' => 8, 'default' => 1]);
         $table->addColumn('changed', 'boolean', []);
         $table->addColumn('created_at', 'datetime', ['comment' => '(DC2Type:datetime)']);
         $table->addColumn('updated_at', 'datetime', ['comment' => '(DC2Type:datetime)']);
@@ -173,8 +172,9 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
      * Create oro_search_index_text table
      *
      * @param Schema $schema
+     * @param QueryBag $queries
      */
-    protected function createOroSearchIndexTextTable(Schema $schema)
+    protected function createOroSearchIndexTextTable(Schema $schema, QueryBag $queries)
     {
         $table = $schema->createTable('oro_search_index_text');
         $table->addColumn('id', 'integer', ['autoincrement' => true]);
@@ -182,11 +182,17 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
         $table->addColumn('field', 'string', ['length' => 250]);
         $table->addColumn('value', 'text', []);
         $table->addIndex(['item_id'], 'idx_a0243539126f525e', []);
+        $table->addIndex(['field'], 'oro_search_index_text_field_idx');
+        $table->addIndex(['item_id', 'field'], 'oro_search_index_text_item_field_idx');
         $table->setPrimaryKey(['id']);
 
-        if ($this->platform->getName() === DatabasePlatformInterface::DATABASE_MYSQL) {
+        if ($this->isMysqlPlatform() && !$this->isInnoDBFulltextIndexSupported()) {
             $table->addOption('engine', PdoMysql::ENGINE_MYISAM);
+            $queries->addPostQuery(new UseMyIsamEngineQuery('oro_search_index_text'));
         }
+
+        $createFulltextIndexQuery = $this->container->get('oro_search.fulltext_index_manager')->getQuery();
+        $queries->addPostQuery($createFulltextIndexQuery);
     }
 
     /**
@@ -201,7 +207,7 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
             $schema->getTable('oro_search_item'),
             ['item_id'],
             ['id'],
-            ['onUpdate' => null, 'onDelete' => null]
+            ['onUpdate' => null, 'onDelete' => 'CASCADE']
         );
     }
 
@@ -217,7 +223,7 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
             $schema->getTable('oro_search_item'),
             ['item_id'],
             ['id'],
-            ['onUpdate' => null, 'onDelete' => null]
+            ['onUpdate' => null, 'onDelete' => 'CASCADE']
         );
     }
 
@@ -233,7 +239,7 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
             $schema->getTable('oro_search_item'),
             ['item_id'],
             ['id'],
-            ['onUpdate' => null, 'onDelete' => null]
+            ['onUpdate' => null, 'onDelete' => 'CASCADE']
         );
     }
 
@@ -244,12 +250,14 @@ class OroSearchBundleInstaller implements Installation, ContainerAwareInterface,
      */
     protected function addOroSearchIndexTextForeignKeys(Schema $schema)
     {
-        $table = $schema->getTable('oro_search_index_text');
-        $table->addForeignKeyConstraint(
-            $schema->getTable('oro_search_item'),
-            ['item_id'],
-            ['id'],
-            ['onUpdate' => null, 'onDelete' => null]
-        );
+        if (!$this->isMysqlPlatform() || $this->isInnoDBFulltextIndexSupported()) {
+            $table = $schema->getTable('oro_search_index_text');
+            $table->addForeignKeyConstraint(
+                $schema->getTable('oro_search_item'),
+                ['item_id'],
+                ['id'],
+                ['onUpdate' => null, 'onDelete' => null]
+            );
+        }
     }
 }

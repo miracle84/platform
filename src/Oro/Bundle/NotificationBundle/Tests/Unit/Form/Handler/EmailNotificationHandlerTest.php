@@ -2,117 +2,129 @@
 
 namespace Oro\Bundle\TagBundle\Tests\Unit\Form\Handler;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
-
+use Oro\Bundle\NotificationBundle\Entity\EmailNotification;
+use Oro\Bundle\NotificationBundle\Form\Handler\EmailNotificationHandler;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-use Oro\Bundle\NotificationBundle\Entity\EmailNotification;
-use Oro\Bundle\NotificationBundle\Form\Handler\EmailNotificationHandler;
-
-class EmailNotificationHandlerTest extends \PHPUnit_Framework_TestCase
+class EmailNotificationHandlerTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FormInterface
-     */
+    const FORM_DATA = ['field' => 'value'];
+
+    /** @var FormInterface |\PHPUnit\Framework\MockObject\MockObject*/
     protected $form;
 
-    /**
-     * @var Request
-     */
-    protected $request;
-
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ObjectManager
-     */
+    /** @var ObjectManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $manager;
 
-    /**
-     * @var EmailNotificationHandler
-     */
-    protected $handler;
+    /** @var Request */
+    protected $request;
 
-    /**
-     * @var EmailNotification
-     */
+    /** @var EmailNotification */
     protected $entity;
+
+    /** @var EmailNotificationHandler */
+    protected $handler;
 
     protected function setUp()
     {
-        $this->form = $this->getMockBuilder('Symfony\Component\Form\Form')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->request = new Request();
-        $this->manager = $this->getMockBuilder('Doctrine\Common\Persistence\ObjectManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->form = $this->createMock(FormInterface::class);
 
-        $this->entity  = new EmailNotification();
-        $this->handler = new EmailNotificationHandler($this->form, $this->request, $this->manager);
+        $this->manager = $this->createMock(ObjectManager::class);
+
+        /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject $registry */
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->expects($this->any())->method('getManagerForClass')->willReturn($this->manager);
+
+        $this->request = new Request();
+        $this->entity = new EmailNotification();
+
+        $this->handler = new EmailNotificationHandler($registry);
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Argument data should be instance of EmailNotification entity
+     */
+    public function testProcessException()
+    {
+        $this->handler->process(new \stdClass(), $this->form, $this->request);
     }
 
     public function testProcessUnsupportedRequest()
     {
-        $this->form->expects($this->once())
-            ->method('setData')
-            ->with($this->entity);
+        $this->form->expects($this->once())->method('setData')->with($this->entity);
+        $this->form->expects($this->never())->method('submit');
 
-        $this->form->expects($this->never())
-            ->method('submit');
-
-        $this->assertFalse($this->handler->process($this->entity));
+        $this->assertFalse($this->handler->process($this->entity, $this->form, $this->request));
     }
 
     /**
-     * @dataProvider supportedMethods
+     * @dataProvider processDataProvider
+     *
      * @param string $method
+     * @param string $marker
+     * @param bool $expectedHandleRequest
      */
-    public function testProcessSupportedRequest($method)
+    public function testProcess($method, $marker, $expectedHandleRequest)
     {
-        $this->form->expects($this->once())
-            ->method('setData')
-            ->with($this->entity);
+        $this->form->expects($this->once())->method('setData')->with($this->entity);
+        $this->form->expects($expectedHandleRequest ? $this->once() : $this->never())->method('submit');
 
         $this->request->setMethod($method);
+        $this->request->request->set($marker, true);
 
-        $this->form->expects($this->once())
-            ->method('submit')
-            ->with($this->request);
-
-        $this->assertFalse($this->handler->process($this->entity));
+        $this->assertFalse($this->handler->process($this->entity, $this->form, $this->request));
     }
 
-    public function supportedMethods()
+    /**
+     * @return \Generator
+     */
+    public function processDataProvider()
     {
-        return array(
-            array('POST'),
-            array('PUT')
-        );
+        yield 'put request without marker' => [
+            'method' => Request::METHOD_PUT,
+            'marker' => 'fake',
+            'expectedHandleRequest' => false
+        ];
+
+        yield 'post request without marker' => [
+            'method' => Request::METHOD_POST,
+            'marker' => 'fake',
+            'expectedHandleRequest' => false
+        ];
+
+        yield 'put request with marker' => [
+            'method' => Request::METHOD_PUT,
+            'marker' => EmailNotificationHandler::SUBMIT_MARKER,
+            'expectedHandleRequest' => true
+        ];
+
+        yield 'post request with marker' => [
+            'method' => Request::METHOD_POST,
+            'marker' => EmailNotificationHandler::SUBMIT_MARKER,
+            'expectedHandleRequest' => true
+        ];
     }
 
     public function testProcessValidData()
     {
-        $this->form->expects($this->once())
-            ->method('setData')
-            ->with($this->entity);
+        $this->form->expects($this->any())->method('getName')->willReturn('formName');
+        $this->form->expects($this->once())->method('setData')->with($this->entity);
+        $this->form->expects($this->once())->method('submit')->with(self::FORM_DATA);
+        $this->form->expects($this->once())->method('isValid')->willReturn(true);
 
+        $this->request->initialize([], [
+            EmailNotificationHandler::SUBMIT_MARKER => true,
+            'formName' => self::FORM_DATA
+        ]);
         $this->request->setMethod('POST');
 
-        $this->form->expects($this->once())
-            ->method('submit')
-            ->with($this->request);
+        $this->manager->expects($this->once())->method('persist')->with($this->entity);
+        $this->manager->expects($this->once())->method('flush');
 
-        $this->form->expects($this->once())
-            ->method('isValid')
-            ->will($this->returnValue(true));
-
-        $this->manager->expects($this->once())
-            ->method('persist')
-            ->with($this->entity);
-
-        $this->manager->expects($this->once())
-            ->method('flush');
-
-        $this->assertTrue($this->handler->process($this->entity));
+        $this->assertTrue($this->handler->process($this->entity, $this->form, $this->request));
     }
 }

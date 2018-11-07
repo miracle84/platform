@@ -8,8 +8,7 @@ define(function(require) {
     var _gel;
 
     /* original jsPlumb methods */
-    /* jshint ignore:start */
-    // jscs:disable
+    /* eslint-disable */
     var _uuid = function() {
         return ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
@@ -31,8 +30,7 @@ define(function(require) {
         el._katavorio = el._katavorio || _uuid();
         return el;
     };
-    // jscs:enable
-    /* jshint ignore:end */
+    /* eslint-enable */
     /* original jsPlumb methods:end */
 
     // Returns a function, that, when invoked, will only be triggered at most once
@@ -41,16 +39,15 @@ define(function(require) {
     // as much as it can, without ever going more than once per `wait` duration;
     // but if you'd like to disable the execution on the leading edge, pass
     // `{leading: false}`. To disable execution on the trailing edge, ditto.
-    var throttleAndWaitRepaint = !_.isFunction(window.requestAnimationFrame) ?
-        _.throttle :
-        function(func, wait, options) {
+    var throttleAndWaitRepaint = !_.isFunction(window.requestAnimationFrame)
+        ? _.throttle
+        : function(func, wait, options) {
             var context;
             var args;
             var result;
             var timeout = null;
             var previous = 0;
             var locked = false;
-            var animationLockId;
             if (!options) {
                 options = {};
             }
@@ -85,11 +82,11 @@ define(function(require) {
                     previous = now;
                     timeout = setTimeout(later, 0);
                     locked = true;
-                    animationLockId = requestAnimationFrame(unlock);
+                    requestAnimationFrame(unlock);
                 } else if (!timeout && options.trailing !== false) {
                     timeout = setTimeout(later, remaining);
                     locked = true;
-                    animationLockId = requestAnimationFrame(unlock);
+                    requestAnimationFrame(unlock);
                 }
                 return result;
             };

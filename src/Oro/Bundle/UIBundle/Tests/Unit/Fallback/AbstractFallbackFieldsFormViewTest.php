@@ -2,46 +2,44 @@
 
 namespace Oro\Bundle\UIBundle\Tests\Unit\Fallback;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\ORM\EntityManager;
+use Oro\Bundle\UIBundle\Event\BeforeListRenderEvent;
+use Oro\Bundle\UIBundle\Tests\Unit\Fallback\ProductStub;
+use Oro\Bundle\UIBundle\View\ScrollData;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Translation\TranslatorInterface;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManager;
-
-use Oro\Bundle\UIBundle\Tests\Unit\Fallback\ProductStub;
-use Oro\Bundle\UIBundle\View\ScrollData;
-use Oro\Bundle\UIBundle\Event\BeforeListRenderEvent;
-
-class AbstractFallbackFieldsFormViewTest extends \PHPUnit_Framework_TestCase
+class AbstractFallbackFieldsFormViewTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $translator;
 
     /**
-     * @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject
+     * @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $doctrine;
 
     /**
-     * @var RequestStack|\PHPUnit_Framework_MockObject_MockObject
+     * @var RequestStack|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $requestStack;
 
     /**
-     * @var BeforeListRenderEvent|\PHPUnit_Framework_MockObject_MockObject
+     * @var BeforeListRenderEvent|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $event;
 
     /**
-     * @var  FallbackFieldsFormViewStub|\PHPUnit_Framework_MockObject_MockObject
+     * @var  FallbackFieldsFormViewStub|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $fallbackFieldsFormView;
 
     /**
-     * @var  ScrollData|\PHPUnit_Framework_MockObject_MockObject
+     * @var  ScrollData|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $scrollData;
 

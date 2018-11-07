@@ -1,4 +1,3 @@
-/** @lends ApiAccessor */
 define(function(require) {
     'use strict';
 
@@ -61,7 +60,7 @@ define(function(require) {
     var RouteModel = require('../app/models/route-model');
     var apiAccessorUnloadMessagesGroup = require('./api-accessor-unload-messages-group');
 
-    ApiAccessor = BaseClass.extend(/** @exports ApiAccessor.prototype */{
+    ApiAccessor = BaseClass.extend(/** @lends ApiAccessor.prototype */{
         DEFAULT_HEADERS: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
@@ -72,6 +71,13 @@ define(function(require) {
         clientCacheExpires: 30 * 60 * 1000,
 
         formName: void 0,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ApiAccessor() {
+            ApiAccessor.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @param {Object} options passed to the constructor
@@ -157,7 +163,8 @@ define(function(require) {
                 headers: this.getHeaders(headers),
                 type: this.httpMethod,
                 url: this.getUrl(urlParameters),
-                data: JSON.stringify(this.formatBody(body))
+                data: JSON.stringify(this.formatBody(body)),
+                errorHandlerMessage: this.getErrorHandlerMessage(options)
             });
             var resultPromise = promise.then(_.bind(this.formatResult, this), _.bind(this.onAjaxError, this));
             if (options && options.processingMessage) {
@@ -171,6 +178,22 @@ define(function(require) {
             }
             resultPromise.abort = _.bind(promise.abort, promise);
             return resultPromise;
+        },
+
+        /**
+         * Get error handler message attribute
+         *
+         * @param options
+         * @returns {boolean} true if need to use global handler and false if not
+         * @protected
+         */
+        getErrorHandlerMessage: function(options) {
+            var errorHandlerMessage = true;
+            if (_.has(options, 'errorHandlerMessage') && options.errorHandlerMessage !== undefined) {
+                errorHandlerMessage = options.errorHandlerMessage;
+            }
+
+            return errorHandlerMessage;
         },
 
         /**

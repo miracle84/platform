@@ -2,15 +2,14 @@
 
 namespace Oro\Bundle\AsseticBundle\Command;
 
+use Oro\Bundle\AsseticBundle\Command\Proxy\ContainerProxy;
+use Oro\Bundle\AsseticBundle\Command\Proxy\KernelProxy;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand as BaseAssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Oro\Bundle\AsseticBundle\Command\Proxy\ContainerProxy;
-use Oro\Bundle\AsseticBundle\Command\Proxy\KernelProxy;
 
 /**
  * Extends Symfony 'assets:install' with '--exclude' option
@@ -54,8 +53,8 @@ class AssetsInstallCommand extends BaseAssetsInstallCommand
             $containerProxy->replace('kernel', $kernelProxy);
         }
 
-        $defaultWebDirectory = $this->getContainer()->getParameter('kernel.root_dir') .
-            DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'web';
+        $defaultWebDirectory = $this->getContainer()->getParameter('kernel.project_dir') .
+            DIRECTORY_SEPARATOR . 'public';
         $this->getDefinition()->getArgument('target')->setDefault($defaultWebDirectory);
 
         parent::execute($input, $output);

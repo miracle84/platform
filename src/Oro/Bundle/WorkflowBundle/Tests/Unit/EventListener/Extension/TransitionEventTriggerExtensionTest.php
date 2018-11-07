@@ -2,6 +2,7 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\EventListener\Extension;
 
+use Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueExtension;
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerMessage;
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerProcessor;
 use Oro\Bundle\WorkflowBundle\Entity\EventTriggerInterface;
@@ -12,19 +13,17 @@ use Oro\Bundle\WorkflowBundle\EventListener\Extension\TransitionEventTriggerExte
 use Oro\Bundle\WorkflowBundle\Handler\TransitionEventTriggerHandler;
 use Oro\Bundle\WorkflowBundle\Helper\TransitionEventTriggerHelper;
 
-use Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueExtension;
-
 class TransitionEventTriggerExtensionTest extends AbstractEventTriggerExtensionTest
 {
     use MessageQueueExtension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TransitionEventTriggerRepository */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TransitionEventTriggerRepository */
     protected $repository;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TransitionEventTriggerHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TransitionEventTriggerHelper */
     protected $helper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TransitionEventTriggerHandler */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TransitionEventTriggerHandler */
     protected $handler;
 
     protected function setUp()
@@ -88,13 +87,18 @@ class TransitionEventTriggerExtensionTest extends AbstractEventTriggerExtensionT
 
         $this->helper->expects($this->exactly(count($triggers)))
             ->method('isRequirePass')
-            ->willReturnMap(
-                array_map(
-                    function (EventTriggerInterface $trigger) use ($entity) {
-                        return [$trigger, $entity, true];
-                    },
-                    $triggers
-                )
+            ->willReturnCallback(
+                function ($trigger, $mainEntity, $prevEntity) use ($entity, $changeSet, $triggers) {
+                    $expectedPrevEntity = $changeSet ?
+                        $this->getMainEntity(self::ENTITY_ID, [self::FIELD => $changeSet[self::FIELD]['old']]) :
+                        clone $entity;
+
+                    $this->assertEquals($expectedPrevEntity, $prevEntity);
+                    $this->assertSame($entity, $mainEntity);
+                    $this->assertTrue(in_array($trigger, $triggers));
+
+                    return true;
+                }
             );
 
         $this->callPreFunctionByEventName($event, $entity, $changeSet);

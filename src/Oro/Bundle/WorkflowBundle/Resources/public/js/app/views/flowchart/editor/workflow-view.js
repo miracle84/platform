@@ -11,13 +11,22 @@ define(function(require) {
     var FlowchartEditorStepView = require('./step-view');
 
     FlowchartEditorWorkflowView = FlowchartViewerWorkflowView.extend({
-
         autoRender: true,
+
         isConnected: false,
 
         transitionOverlayView: FlowChartEditorTransitionOverlayView,
+
         stepView: FlowchartEditorStepView,
+
         className: 'workflow-flowchart-editor',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function FlowchartEditorWorkflowView() {
+            FlowchartEditorWorkflowView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @type {function(): Object|Object}
@@ -78,9 +87,7 @@ define(function(require) {
                 mediator.execute(
                     'showFlashMessage',
                     'error',
-                    __(
-                        'Cannot set end step to <i>(Start)</i> step. Please select another one'
-                    )
+                    __('oro.workflow.error.cannot.set.step')
                 );
             }
             // never allow jsplumb just draw new connections, create connection model instead

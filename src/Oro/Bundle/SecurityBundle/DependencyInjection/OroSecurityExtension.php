@@ -2,16 +2,15 @@
 
 namespace Oro\Bundle\SecurityBundle\DependencyInjection;
 
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
+use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
-
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
-use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
 
 class OroSecurityExtension extends Extension implements PrependExtensionInterface
 {
@@ -32,8 +31,21 @@ class OroSecurityExtension extends Extension implements PrependExtensionInterfac
         $loader->load('layouts.yml');
         $loader->load('ownership.yml');
         $loader->load('services.yml');
+        $loader->load('commands.yml');
+
+        if ($container->getParameter('kernel.debug')) {
+            $loader->load('debug.yml');
+        }
 
         $this->addClassesToCompile(['Oro\Bundle\SecurityBundle\Http\Firewall\ContextListener']);
+
+        if ('test' === $container->getParameter('kernel.environment')) {
+            $loader = new Loader\YamlFileLoader(
+                $container,
+                new FileLocator(__DIR__ . '/../Tests/Functional/Environment')
+            );
+            $loader->load('services.yml');
+        }
     }
 
     /**

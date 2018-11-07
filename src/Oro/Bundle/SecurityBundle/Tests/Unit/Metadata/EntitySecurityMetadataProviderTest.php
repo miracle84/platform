@@ -3,9 +3,6 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Metadata;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
@@ -13,22 +10,23 @@ use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadata;
 use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider as Provider;
 use Oro\Bundle\SecurityBundle\Metadata\FieldSecurityMetadata;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class EntitySecurityMetadataProviderTest extends \PHPUnit_Framework_TestCase
+class EntitySecurityMetadataProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $cache;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $securityConfigProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entityConfigProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $extendConfigProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrine;
 
     /** @var EntitySecurityMetadata */
@@ -270,7 +268,7 @@ class EntitySecurityMetadataProviderTest extends \PHPUnit_Framework_TestCase
             ->method('getConfigs')
             ->willReturnMap(
                 [
-                    [null, false, $securityConfigs],
+                    [null, true, $securityConfigs],
                     [\stdClass::class, false, $fieldsConfig]
                 ]
             );

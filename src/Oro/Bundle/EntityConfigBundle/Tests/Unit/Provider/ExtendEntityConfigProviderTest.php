@@ -2,24 +2,27 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Provider;
 
-use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Config;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityConfigBundle\Provider\ExtendEntityConfigProvider;
 
-class ExtendEntityConfigProviderTest extends \PHPUnit_Framework_TestCase
+class ExtendEntityConfigProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExtendEntityConfigProvider */
     private $extendEntityConfigProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ConfigManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigManager */
     private $configManager;
 
-    /** @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
     private $attributeProvider;
 
-    /** @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
+    private $enumProvider;
+
+    /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
     private $extendProvider;
 
     protected function setUp()
@@ -38,10 +41,14 @@ class ExtendEntityConfigProviderTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->configManager->expects($this->exactly(2))
+        $this->enumProvider = $this->getMockBuilder(ConfigProvider::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->configManager->expects($this->any())
             ->method('getProvider')
-            ->withConsecutive(['attribute'], ['extend'])
-            ->willReturnOnConsecutiveCalls($this->attributeProvider, $this->extendProvider);
+            ->with('extend')
+            ->willReturn($this->extendProvider);
     }
 
     public function testGetExtendEntityConfigs()
@@ -59,31 +66,12 @@ class ExtendEntityConfigProviderTest extends \PHPUnit_Framework_TestCase
         $this->assertSame([$extendConfig], $returnedConfigs);
     }
 
-    public function testGetExtendEntityConfigsAttributesOnly()
+    public function testGetExtendEntityConfigsFilter()
     {
         $configId = new EntityConfigId('extend', 'Class1');
-        $attributeExtendConfig = new Config($configId, ['is_extend' => true, 'has_attributes' => true]);
+        $extendConfig = new Config($configId, ['is_extend' => true]);
         $notExtendConfig = new Config($configId, ['is_extend' => false]);
 
-        $this->extendProvider->expects($this->once())
-            ->method('getConfigs')
-            ->with(null, true)
-            ->willReturn([$attributeExtendConfig, $notExtendConfig]);
-
-        $this->attributeProvider->expects($this->once())
-            ->method('getConfig')
-            ->with('Class1')
-            ->willReturn($attributeExtendConfig);
-
-        $returnedConfigs = $this->extendEntityConfigProvider->getExtendEntityConfigs(true);
-        $this->assertSame([$attributeExtendConfig], $returnedConfigs);
-    }
-
-    public function testGetExtendEntityConfigsAttributesOnlyAndFilter()
-    {
-        $configId = new EntityConfigId('extend', 'Class1');
-        $attributeExtendConfig = new Config($configId, ['is_extend' => true, 'has_attributes' => true]);
-        $notAttributeConfig = new Config($configId, ['is_extend' => true, 'has_attributes' => false]);
         $filter = function () {
             //Callable filter
         };
@@ -91,14 +79,9 @@ class ExtendEntityConfigProviderTest extends \PHPUnit_Framework_TestCase
         $this->extendProvider->expects($this->once())
             ->method('filter')
             ->with($filter, null, true)
-            ->willReturn([$attributeExtendConfig, $notAttributeConfig]);
+            ->willReturn([$extendConfig, $notExtendConfig]);
 
-        $this->attributeProvider->expects($this->exactly(2))
-            ->method('getConfig')
-            ->with('Class1')
-            ->willReturnOnConsecutiveCalls($attributeExtendConfig, $notAttributeConfig);
-
-        $returnedConfigs = $this->extendEntityConfigProvider->getExtendEntityConfigs(true, $filter);
-        $this->assertSame([$attributeExtendConfig], $returnedConfigs);
+        $returnedConfigs = $this->extendEntityConfigProvider->getExtendEntityConfigs($filter);
+        $this->assertSame([$extendConfig], $returnedConfigs);
     }
 }

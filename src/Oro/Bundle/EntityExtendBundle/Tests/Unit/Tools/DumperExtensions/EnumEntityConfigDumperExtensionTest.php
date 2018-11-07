@@ -7,6 +7,7 @@ use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
+use Oro\Bundle\EntityConfigBundle\Provider\ExtendEntityConfigProviderInterface;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Extend\FieldTypeHelper;
 use Oro\Bundle\EntityExtendBundle\Tools\DumperExtensions\EnumEntityConfigDumperExtension;
@@ -14,12 +15,12 @@ use Oro\Bundle\EntityExtendBundle\Tools\ExtendConfigDumper;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendDbIdentifierNameGenerator;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 
-class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
+class EnumEntityConfigDumperExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $relationBuilder;
 
     /** @var ExtendDbIdentifierNameGenerator */
@@ -27,6 +28,9 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
 
     /** @var EnumEntityConfigDumperExtension */
     protected $extension;
+
+    /** @var ExtendEntityConfigProviderInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $extendEntityConfigProvider;
 
     public function setUp()
     {
@@ -38,11 +42,14 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
             ->getMock();
         $this->nameGenerator   = new ExtendDbIdentifierNameGenerator();
 
+        $this->extendEntityConfigProvider = $this->createMock(ExtendEntityConfigProviderInterface::class);
+
         $this->extension = new EnumEntityConfigDumperExtension(
             $this->configManager,
             $this->relationBuilder,
             new FieldTypeHelper(['enum' => 'manyToOne', 'multiEnum' => 'manyToMany']),
-            $this->nameGenerator
+            $this->nameGenerator,
+            $this->extendEntityConfigProvider
         );
     }
 
@@ -114,13 +121,17 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
                     ]
                 )
             );
-        $extendConfigProvider->expects($this->at(0))
-            ->method('getConfigs')
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
-        $extendConfigProvider->expects($this->at(1))
+        $extendConfigProvider->expects($this->at(0))
             ->method('getConfigs')
             ->with($entityConfig1->getId()->getClassName())
             ->will($this->returnValue($fieldConfigs));
+        $extendConfigProvider->expects($this->at(1))
+            ->method('getConfigs')
+            ->with($entityConfig2->getId()->getClassName())
+            ->will($this->returnValue([]));
         $enumConfigProvider->expects($this->at(0))
             ->method('getConfig')
             ->with($entityConfig1->getId()->getClassName(), 'field1')
@@ -277,10 +288,10 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
                     ]
                 )
             );
-        $extendConfigProvider->expects($this->at(0))
-            ->method('getConfigs')
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
-        $extendConfigProvider->expects($this->at(1))
+        $extendConfigProvider->expects($this->at(0))
             ->method('getConfigs')
             ->with($entityConfig1->getId()->getClassName())
             ->will($this->returnValue($fieldConfigs));
@@ -468,9 +479,8 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getProvider')
             ->with('extend')
             ->will($this->returnValue($extendConfigProvider));
-        $extendConfigProvider->expects($this->once())
-            ->method('getConfigs')
-            ->with(null, true)
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
 
         $this->configManager->expects($this->once())
@@ -531,11 +541,10 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getProvider')
             ->with('extend')
             ->will($this->returnValue($extendConfigProvider));
-        $extendConfigProvider->expects($this->at(0))
-            ->method('getConfigs')
-            ->with(null, true)
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
-        $extendConfigProvider->expects($this->at(1))
+        $extendConfigProvider->expects($this->at(0))
             ->method('getConfigs')
             ->with($entityConfig1->getId()->getClassName())
             ->will($this->returnValue($fieldConfigs));
@@ -606,11 +615,10 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getProvider')
             ->with('extend')
             ->will($this->returnValue($extendConfigProvider));
-        $extendConfigProvider->expects($this->at(0))
-            ->method('getConfigs')
-            ->with(null, true)
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
-        $extendConfigProvider->expects($this->at(1))
+        $extendConfigProvider->expects($this->at(0))
             ->method('getConfigs')
             ->with($entityConfig1->getId()->getClassName())
             ->will($this->returnValue($fieldConfigs));
@@ -679,11 +687,10 @@ class EnumEntityConfigDumperExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getProvider')
             ->with('extend')
             ->will($this->returnValue($extendConfigProvider));
-        $extendConfigProvider->expects($this->at(0))
-            ->method('getConfigs')
-            ->with(null, true)
+        $this->extendEntityConfigProvider->expects($this->once())
+            ->method('getExtendEntityConfigs')
             ->will($this->returnValue($entityConfigs));
-        $extendConfigProvider->expects($this->at(1))
+        $extendConfigProvider->expects($this->at(0))
             ->method('getConfigs')
             ->with($entityConfig->getId()->getClassName())
             ->will($this->returnValue($fieldConfigs));

@@ -5,7 +5,6 @@ namespace Oro\Bundle\ActionBundle\Model\Assembler;
 use Oro\Bundle\ActionBundle\Form\Type\OperationType;
 use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationDefinition;
-
 use Oro\Component\Action\Action\ActionFactoryInterface;
 use Oro\Component\ConfigExpression\ExpressionFactory as ConditionFactory;
 
@@ -72,8 +71,9 @@ class OperationAssembler extends AbstractAssembler
             ->setLabel($this->getOption($options, 'label'))
             ->setSubstituteOperation($this->getOption($options, 'substitute_operation', null))
             ->setEnabled($this->getOption($options, 'enabled', true))
+            ->setPageReload($this->getOption($options, 'page_reload', true))
             ->setOrder($this->getOption($options, 'order', 0))
-            ->setFormType($this->getOption($options, 'form_type', OperationType::NAME))
+            ->setFormType($this->getOption($options, 'form_type', OperationType::class))
             ->setButtonOptions($this->getOption($options, 'button_options', []))
             ->setFrontendOptions($this->getOption($options, 'frontend_options', []))
             ->setDatagridOptions($this->getOption($options, 'datagrid_options', []))

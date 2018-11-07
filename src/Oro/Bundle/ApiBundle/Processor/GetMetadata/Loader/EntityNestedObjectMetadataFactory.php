@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
 use Oro\Bundle\ApiBundle\Metadata\AssociationMetadata;
@@ -54,6 +53,7 @@ class EntityNestedObjectMetadataFactory
         $associationMetadata = $this->nestedObjectMetadataHelper->addNestedObjectAssociation(
             $entityMetadata,
             $entityClass,
+            $config,
             $fieldName,
             $field,
             $targetAction

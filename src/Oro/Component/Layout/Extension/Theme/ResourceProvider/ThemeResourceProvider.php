@@ -3,14 +3,15 @@
 namespace Oro\Component\Layout\Extension\Theme\ResourceProvider;
 
 use Doctrine\Common\Cache\Cache;
-
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-
 use Oro\Component\Config\Loader\CumulativeConfigLoader;
 use Oro\Component\Layout\BlockViewCache;
 use Oro\Component\Layout\Config\Loader\LayoutUpdateCumulativeResourceLoader;
 use Oro\Component\Layout\Loader\LayoutUpdateLoaderInterface;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
+/**
+ * The provider of layout theme resources.
+ */
 class ThemeResourceProvider implements ResourceProviderInterface
 {
     const CACHE_KEY = 'oro_layout.theme_updates_resources';
@@ -64,10 +65,14 @@ class ThemeResourceProvider implements ResourceProviderInterface
     public function getResources()
     {
         if (!$this->resources) {
-            if ($this->cache instanceof Cache && $this->cache->contains(self::CACHE_KEY)) {
-                $this->resources = $this->cache->fetch(self::CACHE_KEY);
-            } else {
+            $resources = false;
+            if (null !== $this->cache) {
+                $resources = $this->cache->fetch(self::CACHE_KEY);
+            }
+            if (false === $resources) {
                 $this->loadResources();
+            } else {
+                $this->resources = $resources;
             }
         }
 

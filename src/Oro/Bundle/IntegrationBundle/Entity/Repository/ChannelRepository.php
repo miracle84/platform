@@ -5,10 +5,14 @@ namespace Oro\Bundle\IntegrationBundle\Entity\Repository;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
+use Oro\Bundle\IntegrationBundle\Entity\Channel;
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\IntegrationBundle\Entity\Status;
 
+/**
+ * Doctrine repository for Channel entity
+ */
 class ChannelRepository extends EntityRepository
 {
     const BUFFER_SIZE = 100;
@@ -41,7 +45,7 @@ class ChannelRepository extends EntityRepository
      */
     public function getConnectorStatuses(Integration $integration, $connector, $code = null)
     {
-        $iterator = new BufferedQueryResultIterator(
+        $iterator = new BufferedIdentityQueryResultIterator(
             $this->getConnectorStatusesQueryBuilder($integration, $connector, $code)
         );
         $iterator->setBufferSize(self::BUFFER_SIZE);
@@ -131,19 +135,6 @@ class ChannelRepository extends EntityRepository
     /**
      * Adds status to integration, manual persist of newly created statuses and do flush.
      *
-     * @deprecated 1.9.0:1.11.0 Use $this->addStatusAndFlush() instead
-     *
-     * @param Integration $integration
-     * @param Status      $status
-     */
-    public function addStatus(Integration $integration, Status $status)
-    {
-        $this->addStatusAndFlush($integration, $status);
-    }
-
-    /**
-     * Adds status to integration, manual persist of newly created statuses and do flush.
-     *
      * @param Integration $integration
      * @param Status      $status
      */
@@ -192,5 +183,27 @@ class ChannelRepository extends EntityRepository
         return $this->findBy([
             'type' => $type
         ]);
+    }
+
+    /**
+     * @param string    $type
+     * @param Channel[]|int[] $excludedChannels
+     *
+     * @return Channel[]
+     */
+    public function findByTypeAndExclude($type, array $excludedChannels)
+    {
+        $qb = $this->createQueryBuilder('channel');
+        $qb
+            ->where($qb->expr()->eq('channel.type', ':type'))
+            ->setParameter('type', $type);
+
+        if (count($excludedChannels) > 0) {
+            $qb
+                ->andWhere($qb->expr()->notIn('channel', ':channels'))
+                ->setParameter('channels', $excludedChannels);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 }

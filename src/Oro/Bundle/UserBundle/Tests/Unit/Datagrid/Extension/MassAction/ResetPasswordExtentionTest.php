@@ -3,12 +3,12 @@
 namespace Oro\Bundle\UserBundle\Tests\Unit\Datagrid\Extension\MassAction;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-
+use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
 use Oro\Bundle\UserBundle\Datagrid\Extension\MassAction\ResetPasswordExtension;
 
-class ResetPasswordExtensionTest extends \PHPUnit_Framework_TestCase
+class ResetPasswordExtentionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var  \PHPUnit_Framework_MockObject_MockObject|DatagridConfiguration */
+    /** @var  \PHPUnit\Framework\MockObject\MockObject|DatagridConfiguration */
     protected $configuration;
 
     /** @var  ResetPasswordExtension */
@@ -21,6 +21,7 @@ class ResetPasswordExtensionTest extends \PHPUnit_Framework_TestCase
             ->getMock();
 
         $this->resetExtension = new ResetPasswordExtension();
+        $this->resetExtension->setParameters(new ParameterBag());
     }
 
     public function testIsApplicable()

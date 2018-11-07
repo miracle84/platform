@@ -3,9 +3,10 @@
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Query;
 
 use Oro\Bundle\SearchBundle\Query\Criteria\Comparison;
+use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Query;
 
-class QueryTest extends \PHPUnit_Framework_TestCase
+class QueryTest extends \PHPUnit\Framework\TestCase
 {
     private $config = array(
         'Oro\Bundle\DataBundle\Entity\Product' => array(
@@ -87,6 +88,17 @@ class QueryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(Comparison::LIKE, $whereExpression->getOperator());
     }
 
+    public function testWhereNotLike()
+    {
+        $query = new Query();
+        $query->setMappingConfig($this->config);
+        $query->from('Oro\Bundle\DataBundle\Entity\Product');
+        $query->andWhere('all_data', Query::OPERATOR_NOT_LIKE, 'test', 'string');
+
+        $whereExpression = $query->getCriteria()->getWhereExpression();
+        $this->assertEquals(Comparison::NOT_LIKE, $whereExpression->getOperator());
+    }
+
     public function testGetMaxResults()
     {
         $query = new Query();
@@ -132,7 +144,7 @@ class QueryTest extends \PHPUnit_Framework_TestCase
 
     public function testStringCleanup()
     {
-        $testString = 'Re: FW: Test Sample - One äöü ßü abc 3 – Testing again';
+        $testString = 'Re: FW: Test Sample - One äöü ßü abc 3 – Testing again RE FW Re';
 
         $clearedValue     = Query::clearString($testString);
         $textAllDataField = sprintf('%s %s', $testString, $clearedValue);
@@ -167,9 +179,9 @@ class QueryTest extends \PHPUnit_Framework_TestCase
     public function dataProviderForClearString()
     {
         return [
-            ['Re: FW: Test - One äöü ßü abc 3 – again', 'Re: FW: Test One äöü ßü abc 3 again'],
-            ['text with ___ \' special chars \/ "', 'text with ___ special chars'],
-            ['at @ * . test', 'at @ * . test'],
+            ['Re: FW: Test - One äöü ßü abc 3 – again', 'Re FW Test One äöü ßü abc 3 again'],
+            ['text with ___ \' special chars \/ "', 'text with special chars'],
+            ['at @ * . test', 'at test'],
         ];
     }
 
@@ -302,5 +314,30 @@ class QueryTest extends \PHPUnit_Framework_TestCase
         $fields = $query->getSelectDataFields();
 
         $this->assertSame(['text.notes' => 'notes', 'text.foo' => 'name', 'text.faa' => 'surname'], $fields);
+    }
+
+    public function testAggregateAccessors()
+    {
+        $query = new Query();
+
+        $this->assertEquals([], $query->getAggregations());
+
+        $query->addAggregate('test_name', 'test_field', 'test_function');
+
+        $this->assertEquals(
+            ['test_name' => ['field' => 'test_field', 'function' => 'test_function']],
+            $query->getAggregations()
+        );
+    }
+
+    public function testClone()
+    {
+        $criteria = new Criteria();
+        $query = new Query();
+        $query->setCriteria($criteria);
+
+        $cloneQuery = clone $query;
+
+        self::assertNotSame($criteria, $cloneQuery->getCriteria());
     }
 }

@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\LayoutBundle\DependencyInjection\Compiler\BlockViewSerializerNormalizersPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\LayoutBundle\DependencyInjection\Compiler\BlockViewSerializerNormalizersPass;
-
-class BlockViewSerializerNormalizersPassTest extends \PHPUnit_Framework_TestCase
+class BlockViewSerializerNormalizersPassTest extends \PHPUnit\Framework\TestCase
 {
     public function testProcess()
     {

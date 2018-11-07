@@ -2,8 +2,8 @@
 namespace Oro\Component\MessageQueue\Consumption;
 
 use Oro\Component\MessageQueue\Consumption\Exception\IllegalContextModificationException;
-use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\MessageConsumerInterface;
+use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
@@ -53,6 +53,11 @@ class Context
      * @var boolean
      */
     private $executionInterrupted;
+
+    /**
+     * @var boolean
+     */
+    private $interruptedReason;
 
     /**
      * @param SessionInterface $session
@@ -174,6 +179,22 @@ class Context
     public function isExecutionInterrupted()
     {
         return $this->executionInterrupted;
+    }
+
+    /**
+     * @return string
+     */
+    public function getInterruptedReason()
+    {
+        return $this->interruptedReason;
+    }
+
+    /**
+     * @param string $reason
+     */
+    public function setInterruptedReason($reason)
+    {
+        $this->interruptedReason = $reason;
     }
 
     /**

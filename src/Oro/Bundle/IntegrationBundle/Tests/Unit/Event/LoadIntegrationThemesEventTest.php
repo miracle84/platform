@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Event;
 
+use Oro\Bundle\IntegrationBundle\Event\LoadIntegrationThemesEvent;
 use Symfony\Component\Form\FormView;
 
-use Oro\Bundle\IntegrationBundle\Event\LoadIntegrationThemesEvent;
-
-class LoadIntegrationThemesEventTest extends \PHPUnit_Framework_TestCase
+class LoadIntegrationThemesEventTest extends \PHPUnit\Framework\TestCase
 {
     public function testConstructor()
     {

@@ -1,4 +1,4 @@
-// @theme: blank
+/* @theme: blank; */
 
 .custom-checkbox {
     position: relative;
@@ -14,14 +14,14 @@
         opacity: 0;
 
         &:hover {
-            ~ .custom-checkbox__icon{
-                border: $checkbox-icon-border-focus-state
+            ~ .custom-checkbox__icon {
+                border: $checkbox-icon-border-hover-state;
             }
         }
 
         &:focus {
             ~ .custom-checkbox__icon {
-                border: $checkbox-icon-border-hover-state;
+                border: $checkbox-icon-border-focus-state;
             }
         }
 
@@ -31,11 +31,17 @@
                 background-color: $checkbox-icon-bg-color-focus-state;
             }
         }
+
+        &:indeterminate {
+            ~ .custom-checkbox__icon {
+                border: $checkbox-icon-border-focus-state;
+                background-color: $checkbox-icon-bg-color-focus-state;
+            }
+        }
     }
 
     &__icon {
         display: inline-block;
-        box-sizing: border-box;
 
         height: $checkbox-icon-size;
         width: $checkbox-icon-size;
@@ -43,12 +49,14 @@
         border: $checkbox-icon-border;
         background-color: $checkbox-icon-bg-color;
 
+        border-radius: $checkbox-icon-border-radius;
+
         cursor: pointer;
 
         vertical-align: middle;
     }
 
     &__text {
-        vertical-align: baseline;
+        vertical-align: middle;
     }
 }

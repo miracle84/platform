@@ -3,10 +3,9 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Component\ConfigExpression\Condition;
 
-class NotTest extends \PHPUnit_Framework_TestCase
+class NotTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Condition\Not */
     protected $condition;

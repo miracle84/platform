@@ -2,16 +2,11 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Functional;
 
+use Doctrine\Bundle\DoctrineBundle\Registry;
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Oro\Bundle\UserBundle\Tests\Functional\DataFixtures\LoadUserData;
 use Symfony\Component\DomCrawler\Form;
 
-use Doctrine\Bundle\DoctrineBundle\Registry;
-
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class ControllersTest extends WebTestCase
 {
     /**
@@ -96,34 +91,29 @@ class ControllersTest extends WebTestCase
 
     public function testApiGen()
     {
-        $response = $this->client->requestGrid(
-            'users-grid',
-            array('users-grid[_filter][username][value]' => 'testUser1')
-        );
-
-        $result = $this->getJsonResponseContent($response, 200);
-        $result = reset($result['data']);
-
-        $this->client->request(
+        $user = $this->getReference(LoadUserData::SIMPLE_USER);
+        $crawler = $this->client->request(
             'GET',
-            $this->getUrl('oro_user_apigen', array('id' => $result['id'])),
-            array(),
-            array(),
-            array('HTTP_X-Requested-With' => 'XMLHttpRequest')
+            $this->getUrl('oro_user_apigen', ['id' => $user->getId()]),
+            [],
+            []
         );
-
-        /** @var User $user */
-        $user = $this->client
-            ->getContainer()
-            ->get('doctrine')
-            ->getRepository('OroUserBundle:User')
-            ->findOneBy(array('id' => $result['id']));
 
         $result = $this->client->getResponse();
-        $this->assertJsonResponseStatusCodeEquals($result, 200, false);
+        self::assertResponseStatusCodeEquals($result, 200, false);
 
-        //verify result
-        $this->assertEquals($user->getApiKeys()[0]->getApiKey(), trim($result->getContent(), '"'));
+        $form = $crawler->selectButton('Generate key')->form();
+        $this->client->submit($form);
+        $response = $this->client->getResponse();
+
+        self::assertJsonResponseStatusCodeEquals($response, 200);
+        $data = self::jsonToArray($response->getContent());
+
+        $userApi = self::getContainer()
+            ->get('oro_user.manager')
+            ->getApi($user, $user->getOrganization());
+
+        $this->assertEquals($userApi->getApiKey(), $data['data']['apiKey']);
     }
 
     public function testViewProfile()
@@ -131,7 +121,7 @@ class ControllersTest extends WebTestCase
         $this->client->request('GET', $this->getUrl('oro_user_profile_view'));
         $result = $this->client->getResponse();
         $this->assertHtmlResponseStatusCodeEquals($result, 200);
-        $this->assertContains('John Doe - Users - User Management - System', $result->getContent());
+        $this->assertContains('John Doe - View - Users - User Management - System', $result->getContent());
     }
 
     public function testUpdateProfile()

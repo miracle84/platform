@@ -4,10 +4,10 @@ namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Migration\Extension;
 
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
+use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigBag;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Extend\FieldTypeHelper;
 use Oro\Bundle\EntityExtendBundle\Migration\EntityMetadataHelper;
@@ -22,10 +22,12 @@ use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings(PHPMD.TooManyMethods)
  */
-class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
+class ExtendExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var EntityMetadataHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityMetadataHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityMetadataHelper;
 
     /** @var ExtendOptionsManager */
@@ -41,17 +43,6 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                 ->disableOriginalConstructor()
                 ->getMock();
 
-        $this->entityMetadataHelper->expects($this->any())
-            ->method('getEntityClassByTableName')
-            ->will(
-                $this->returnValueMap(
-                    [
-                        ['table1', 'Acme\AcmeBundle\Entity\Entity1'],
-                        ['table2', 'Acme\AcmeBundle\Entity\Entity2'],
-                        ['oro_enum_test_enum', ExtendHelper::ENTITY_NAMESPACE . 'EV_Test_Enum'],
-                    ]
-                )
-            );
         $this->entityMetadataHelper->expects($this->any())
             ->method('getEntityClassesByTableName')
             ->will(
@@ -89,13 +80,15 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @param array $config
      * @return ExtendExtension
      */
-    protected function getExtendExtension()
+    protected function getExtendExtension(array $config = [])
     {
         $result = new ExtendExtension(
             $this->extendOptionsManager,
-            $this->entityMetadataHelper
+            $this->entityMetadataHelper,
+            new PropertyConfigBag($config)
         );
         $result->setNameGenerator(new ExtendDbIdentifierNameGenerator());
 
@@ -587,6 +580,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'         => ExtendScope::OWNER_SYSTEM,
                                     'target_entity' => $enumClassName,
                                     'target_field'  => 'name',
+                                    'bidirectional' => false,
                                     'relation_key'  =>
                                         'manyToOne|Acme\AcmeBundle\Entity\Entity1|' . $enumClassName . '|enum1',
                                 ],
@@ -664,6 +658,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => false,
                                     'relation_key'    =>
                                         'manyToMany|Acme\AcmeBundle\Entity\Entity1|' . $enumClassName . '|enum1',
                                 ],
@@ -854,6 +849,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => true,
                                     'relation_key'    =>
                                         'oneToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -929,6 +925,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => true,
                                     'relation_key'    =>
                                         'oneToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -997,6 +994,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => true,
                                     'relation_key'    =>
                                         'oneToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity1|relation_column1',
@@ -1069,6 +1067,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => true,
                                     'relation_key'    =>
                                         'oneToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -1178,6 +1177,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'column_name'   => 'entity1_rooms_id',
                                     'target_entity' => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'  => $relationKey,
+                                    'bidirectional' => false,
                                     'target_field'  => 'name'
                                 ]
                             ],
@@ -1243,7 +1243,8 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'column_name'   => 'entity1_selfRel_id',
                                     'target_entity' => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'  => $targetRelationKey,
-                                    'target_field'  => 'name'
+                                    'target_field'  => 'name',
+                                    'bidirectional' => false,
                                 ]
                             ],
                             'type'    => 'manyToOne',
@@ -1492,6 +1493,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => false,
                                     'relation_key'    =>
                                         'manyToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -1571,6 +1573,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => false,
                                     'relation_key'    =>
                                         'manyToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -1649,6 +1652,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => false,
                                     'relation_key'    =>
                                         'manyToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -1721,6 +1725,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name'],
+                                    'bidirectional' => false,
                                     'relation_key'    =>
                                         'manyToMany|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity1|relation_column1',
@@ -1884,7 +1889,16 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                 'manyToMany'
                             )
                         ]
-                    ]
+                    ],
+                    'fields' => [
+                        'rooms' => [
+                            'configs' => [
+                                'extend' => [
+                                    'bidirectional' => true
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'Acme\AcmeBundle\Entity\Entity2' => [
                     'configs' => [
@@ -1905,6 +1919,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'           => ExtendScope::OWNER_CUSTOM,
                                     'target_entity'   => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'    => $relationKey,
+                                    'bidirectional' => false,
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name']
@@ -1963,7 +1978,14 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                             )
                         ]
                     ],
-                    'fields'  => [
+                    'fields' => [
+                        'selfRel' => [
+                            'configs' => [
+                                'extend' => [
+                                    'bidirectional' => true
+                                ],
+                            ],
+                        ],
                         'users' => [
                             'configs' => [
                                 'extend' => [
@@ -1971,6 +1993,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'           => ExtendScope::OWNER_CUSTOM,
                                     'target_entity'   => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'    => $targetRelationKey,
+                                    'bidirectional' => false,
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name']
@@ -2086,6 +2109,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'         => ExtendScope::OWNER_SYSTEM,
                                     'target_entity' => 'Acme\AcmeBundle\Entity\Entity2',
                                     'target_field'  => 'name',
+                                    'bidirectional' => false,
                                     'relation_key'  =>
                                         'manyToOne|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -2153,6 +2177,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'         => ExtendScope::OWNER_CUSTOM,
                                     'target_entity' => 'Acme\AcmeBundle\Entity\Entity2',
                                     'target_field'  => 'name',
+                                    'bidirectional' => false,
                                     'relation_key'  =>
                                         'manyToOne|Acme\AcmeBundle\Entity\Entity1|'
                                         . 'Acme\AcmeBundle\Entity\Entity2|relation_column1',
@@ -2297,7 +2322,12 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
             ['name'],
             ['name'],
             ['name'],
-            ['extend' => ['owner' => ExtendScope::OWNER_CUSTOM]]
+            [
+                'extend' => [
+                    'owner' => ExtendScope::OWNER_CUSTOM,
+                    'on_delete' => 'CASCADE'
+                ]
+            ]
         );
 
         $relationKey = 'manyToOne|Acme\AcmeBundle\Entity\Entity1|Acme\AcmeBundle\Entity\Entity2|room';
@@ -2312,9 +2342,20 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                 'Acme\AcmeBundle\Entity\Entity2',
                                 'users',
                                 'oneToMany'
-                            )
-                        ]
-                    ]
+                            ),
+                            'relation.' . $relationKey . '.on_delete' => 'CASCADE'
+                        ],
+
+                    ],
+                    'fields' => [
+                        'room' => [
+                            'configs' => [
+                                'extend' => [
+                                    'bidirectional' => true
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'Acme\AcmeBundle\Entity\Entity2' => [
                     'configs' => [
@@ -2335,9 +2376,11 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'           => ExtendScope::OWNER_CUSTOM,
                                     'target_entity'   => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'    => $relationKey,
+                                    'bidirectional' => false,
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
-                                    'target_grid'     => ['name']
+                                    'target_grid'     => ['name'],
+                                    'on_delete'       => 'CASCADE'
                                 ]
                             ],
                             'type'    => 'oneToMany',
@@ -2390,10 +2433,18 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                 'Acme\AcmeBundle\Entity\Entity1',
                                 'users',
                                 'oneToMany'
-                            )
+                            ),
+                            'relation.' . $selfRelationKey . '.on_delete' => 'SET NULL'
                         ]
                     ],
                     'fields'  => [
+                        'selfRel' => [
+                            'configs' => [
+                                'extend' => [
+                                    'bidirectional' => true
+                                ],
+                            ],
+                        ],
                         'users' => [
                             'configs' => [
                                 'extend' => [
@@ -2401,6 +2452,7 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                                     'owner'           => ExtendScope::OWNER_CUSTOM,
                                     'target_entity'   => 'Acme\AcmeBundle\Entity\Entity1',
                                     'relation_key'    => $targetRelationKey,
+                                    'bidirectional' => false,
                                     'target_title'    => ['name'],
                                     'target_detailed' => ['name'],
                                     'target_grid'     => ['name']
@@ -2413,6 +2465,257 @@ class ExtendExtensionTest extends \PHPUnit_Framework_TestCase
                 ],
             ]
         );
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Target field can't be hidden.
+     */
+    public function testAddManyToOneInverseRelationWhenFieldIsHidden()
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension();
+
+        $this->extendOptionsManager
+            ->setColumnOptions(
+                'oro_test',
+                'OroTestRelation',
+                [ExtendOptionsManager::MODE_OPTION => ConfigModel::MODE_HIDDEN]
+            );
+
+        $extension->addManyToOneInverseRelation(
+            $schema,
+            'oro_test',
+            'OroTestRelation',
+            'oro_test2',
+            'users',
+            ['name'],
+            ['name'],
+            ['name']
+        );
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Target field can't be hidden.
+     */
+    public function testAddOneToManyInverseRelationWhenFieldIsHidden()
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension();
+
+        $this->extendOptionsManager
+            ->setColumnOptions(
+                'oro_test',
+                'OroTestRelation',
+                [ExtendOptionsManager::MODE_OPTION => ConfigModel::MODE_HIDDEN]
+            );
+
+        $extension->addOneToManyInverseRelation(
+            $schema,
+            'oro_test',
+            'OroTestRelation',
+            'oro_test2',
+            'users',
+            ['name'],
+            ['name'],
+            ['name']
+        );
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Target field can't be hidden.
+     */
+    public function testAddManyToManyInverseRelationWhenFieldIsHidden()
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension();
+
+        $this->extendOptionsManager
+            ->setColumnOptions(
+                'oro_test',
+                'OroTestRelation',
+                [ExtendOptionsManager::MODE_OPTION => ConfigModel::MODE_HIDDEN]
+            );
+
+        $extension->addManyToManyInverseRelation(
+            $schema,
+            'oro_test',
+            'OroTestRelation',
+            'oro_test2',
+            'users',
+            ['name'],
+            ['name'],
+            ['name']
+        );
+    }
+
+    /**
+     * @dataProvider validateOptionsDataProvider
+     * @param array $config
+     * @param bool  $throwException
+     */
+    public function testValidateOptionAllowedTypesInManyToManyRelation(array $config, $throwException)
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension($config);
+
+        $table = $schema->createTable('table1');
+        $table->addColumn('id', 'integer');
+        $table->addColumn('name', 'string');
+        $table->setPrimaryKey(['id']);
+
+        if ($throwException) {
+            $this->expectException(\UnexpectedValueException::class);
+        }
+
+        $extension->addManyToManyRelation(
+            $schema,
+            $table,
+            'associationName',
+            'table1',
+            ['id'],
+            ['id'],
+            ['id'],
+            [
+                'scope' => [
+                    'not_allowed_option' => true
+                ],
+            ]
+        );
+    }
+
+    /**
+     * @dataProvider validateOptionsDataProvider
+     * @param array $config
+     * @param bool  $throwException
+     */
+    public function testValidateOptionAllowedTypesInOneToManyRelation(array $config, $throwException)
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension($config);
+
+        $table = $schema->createTable('table1');
+        $table->addColumn('id', 'integer');
+        $table->addColumn('name', 'string');
+        $table->setPrimaryKey(['id']);
+
+        if ($throwException) {
+            $this->expectException(\UnexpectedValueException::class);
+        }
+
+        $extension->addOneToManyRelation(
+            $schema,
+            $table,
+            'associationName',
+            'table1',
+            ['id'],
+            ['id'],
+            ['id'],
+            [
+                'scope' => [
+                    'not_allowed_option' => true
+                ],
+            ]
+        );
+    }
+
+    /**
+     * @dataProvider validateOptionsDataProvider
+     * @param array $config
+     * @param bool  $throwException
+     */
+    public function testValidateOptionAllowedTypesInManyToOneRelation(array $config, $throwException)
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension($config);
+
+        $table = $schema->createTable('table1');
+        $table->addColumn('id', 'integer');
+        $table->addColumn('name', 'string');
+        $table->setPrimaryKey(['id']);
+
+        if ($throwException) {
+            $this->expectException(\UnexpectedValueException::class);
+        }
+
+        $extension->addManyToOneRelation(
+            $schema,
+            $table,
+            'associationName',
+            'table1',
+            'id',
+            [
+                'scope' => [
+                    'not_allowed_option' => true
+                ],
+            ]
+        );
+    }
+
+    public function testValidationWillNotBreakOnInvalidOptionProvided()
+    {
+        $schema = $this->getExtendSchema();
+        $extension = $this->getExtendExtension([
+            'scope' => ['options' => []]
+        ]);
+
+        $table = $schema->createTable('table1');
+        $table->addColumn('id', 'integer');
+        $table->addColumn('name', 'string');
+        $table->setPrimaryKey(['id']);
+
+        $extension->addManyToOneRelation(
+            $schema,
+            $table,
+            'associationName',
+            'table1',
+            'id',
+            [
+                '_custom_option' => true,
+                'scope' => [
+                    'not_allowed_option' => true
+                ],
+            ]
+        );
+
+        $this->assertArrayHasKey('table1!associationName', $schema->getExtendOptions());
+    }
+
+    /**
+     * @return array
+     */
+    public function validateOptionsDataProvider()
+    {
+        return [
+            'config with not allowed option ' => [[
+                'scope' => [
+                    'field' => [
+                        'items' => [
+                            'not_allowed_option' => [
+                                'options' => [
+                                    'allowed_type' => ['allowed_one', 'allowed_two']
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ], true],
+            'config with allowed option' => [[
+                'scope' => [
+                    'field' => [
+                        'items' => [
+                            'not_allowed_option' => [
+                                'options' => [
+                                    'allowed_type' => ['oneToMany', 'manyToOne', 'manyToMany']
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ], false]
+        ];
     }
 
     protected function assertSchemaSql(Schema $schema, array $expectedSql)

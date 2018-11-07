@@ -1,15 +1,14 @@
-define([
-    'underscore',
-    'orotranslation/js/translator',
-    'oroui/js/tools',
-    './select-filter'
-], function(_, __, tools, SelectFilter) {
+define(function(require) {
     'use strict';
 
     // @const
     var FILTER_EMPTY_VALUE = '';
 
     var MultiSelectFilter;
+    var template = require('tpl!orofilter/templates/filter/multiselect-filter.html');
+    var _ = require('underscore');
+    var tools = require('oroui/js/tools');
+    var SelectFilter = require('./select-filter');
 
     /**
      * Multiple select filter: filter values as multiple select options
@@ -24,6 +23,7 @@ define([
          *
          * @property
          */
+        template: template,
         templateSelector: '#multiselect-filter-template',
 
         /**
@@ -42,6 +42,13 @@ define([
          * @private
          */
         minimumDropdownWidth: 120,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function MultiSelectFilter() {
+            MultiSelectFilter.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc
@@ -80,7 +87,6 @@ define([
                 minWidth: requiredWidth,
                 maxWidth: requiredWidth
             });
-            widget.find('input[type="search"]').width(requiredWidth - 30);
         },
 
         /**
@@ -160,6 +166,22 @@ define([
                 },
                 [],
                 this
+            );
+        },
+
+        /**
+         * @inheritDoc
+         */
+        _isDOMValueChanged: function() {
+            var thisDOMValue = this._readDOMValue();
+            return (
+                !_.isUndefined(thisDOMValue.value) &&
+                _.isArray(thisDOMValue.value) &&
+                !_.isEqual(this.value, thisDOMValue) &&
+                (
+                    (!thisDOMValue.value.length && _.isEqual(this.value, [FILTER_EMPTY_VALUE])) ||
+                    thisDOMValue.value.length
+                )
             );
         }
     });

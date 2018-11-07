@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Functional\Engine\Orm;
 
+use Doctrine\ORM\Configuration;
 use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
 use Oro\Bundle\SearchBundle\Engine\Orm\PdoPgsql;
 
-use Doctrine\ORM\Configuration;
-
 /**
- * @dbIsolation
- * @dbReindex
+ * @group search
  */
 class PdoPgsqlTest extends AbstractDriverTest
 {
@@ -59,8 +57,6 @@ class PdoPgsqlTest extends AbstractDriverTest
      */
     protected function assertTruncateQueries(array $queries)
     {
-        $this->assertCount(5, $queries);
-
         $expectedQueries = [
             'TRUNCATE oro_search_item CASCADE',
             'TRUNCATE oro_search_index_text CASCADE',
@@ -69,6 +65,8 @@ class PdoPgsqlTest extends AbstractDriverTest
             'TRUNCATE oro_search_index_datetime CASCADE'
         ];
 
-        $this->assertEquals($expectedQueries, $queries);
+        foreach ($expectedQueries as $expectedQuery) {
+            $this->assertContains($expectedQuery, $queries);
+        }
     }
 }

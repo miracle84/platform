@@ -4,16 +4,15 @@ namespace Oro\Bundle\DataGridBundle\Layout\Block\Type;
 
 use Oro\Bundle\DataGridBundle\Datagrid\ManagerInterface;
 use Oro\Bundle\DataGridBundle\Datagrid\NameStrategyInterface;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-
 use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
 use Oro\Component\Layout\Block\Type\AbstractContainerType;
-use Oro\Component\Layout\BlockBuilderInterface;
 use Oro\Component\Layout\Block\Type\Options;
+use Oro\Component\Layout\BlockBuilderInterface;
 use Oro\Component\Layout\BlockInterface;
 use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\ImportLayoutManipulator;
 use Oro\Component\Layout\Util\BlockUtils;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class DatagridType extends AbstractContainerType
 {
@@ -25,22 +24,22 @@ class DatagridType extends AbstractContainerType
     /** @var ManagerInterface */
     protected $manager;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /**
-     * @param NameStrategyInterface $nameStrategy
-     * @param ManagerInterface $manager
-     * @param SecurityFacade $securityFacade
+     * @param NameStrategyInterface         $nameStrategy
+     * @param ManagerInterface              $manager
+     * @param AuthorizationCheckerInterface $authorizationChecker
      */
     public function __construct(
         NameStrategyInterface $nameStrategy,
         ManagerInterface $manager,
-        SecurityFacade $securityFacade
+        AuthorizationCheckerInterface $authorizationChecker
     ) {
         $this->nameStrategy = $nameStrategy;
         $this->manager = $manager;
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
     }
 
     /**
@@ -165,7 +164,7 @@ class DatagridType extends AbstractContainerType
 
         if ($gridConfig) {
             $aclResource = $gridConfig->getAclResource();
-            if ($aclResource && !$this->securityFacade->isGranted($aclResource)) {
+            if ($aclResource && !$this->authorizationChecker->isGranted($aclResource)) {
                 return false;
             } else {
                 return true;

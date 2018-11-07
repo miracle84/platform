@@ -4,7 +4,6 @@ namespace Oro\Bundle\WorkflowBundle\EventListener\Extension;
 
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Util\ClassUtils;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerMessage;
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerProcessor;
@@ -14,8 +13,8 @@ use Oro\Bundle\WorkflowBundle\Entity\Repository\TransitionEventTriggerRepository
 use Oro\Bundle\WorkflowBundle\Entity\TransitionEventTrigger;
 use Oro\Bundle\WorkflowBundle\Handler\TransitionEventTriggerHandler;
 use Oro\Bundle\WorkflowBundle\Helper\TransitionEventTriggerHelper;
-
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 
 class TransitionEventTriggerExtension extends AbstractEventTriggerExtension
 {
@@ -61,8 +60,9 @@ class TransitionEventTriggerExtension extends AbstractEventTriggerExtension
 
         /** @var TransitionEventTrigger[] $triggers */
         $triggers = $this->getTriggers($entityClass, $event);
+        $previousEntity = $this->createEntityFromChangeSet($entity, $changeSet);
         foreach ($triggers as $trigger) {
-            $this->addSchedule($trigger, $entity, $entityClass);
+            $this->addSchedule($trigger, $entity, $entityClass, $previousEntity);
         }
 
         if ($event === EventTriggerInterface::EVENT_UPDATE) {
@@ -75,7 +75,7 @@ class TransitionEventTriggerExtension extends AbstractEventTriggerExtension
                     $newValue = $changeSet[$field]['new'];
 
                     if (!$this->isEqual($newValue, $oldValue)) {
-                        $this->addSchedule($trigger, $entity, $entityClass);
+                        $this->addSchedule($trigger, $entity, $entityClass, $previousEntity);
                     }
                 }
             }
@@ -86,10 +86,11 @@ class TransitionEventTriggerExtension extends AbstractEventTriggerExtension
      * @param TransitionEventTrigger $trigger
      * @param object $entity
      * @param string $entityClass
+     * @param object $prevEntity
      */
-    protected function addSchedule(TransitionEventTrigger $trigger, $entity, $entityClass)
+    protected function addSchedule(TransitionEventTrigger $trigger, $entity, $entityClass, $prevEntity)
     {
-        if (!$this->helper->isRequirePass($trigger, $entity)) {
+        if (!$this->helper->isRequirePass($trigger, $entity, $prevEntity)) {
             return;
         }
 
@@ -152,5 +153,27 @@ class TransitionEventTriggerExtension extends AbstractEventTriggerExtension
     protected function getRepository()
     {
         return $this->doctrineHelper->getEntityRepositoryForClass(TransitionEventTrigger::class);
+    }
+
+    /**
+     * @param object $entity
+     * @param array $changeSet
+     *
+     * @return object
+     */
+    private function createEntityFromChangeSet($entity, array $changeSet = null)
+    {
+        $accessor = PropertyAccess::createPropertyAccessor();
+        $newEntity = clone $entity;
+
+        if (null === $changeSet) {
+            return $newEntity;
+        }
+
+        foreach ($changeSet as $field => $value) {
+            $accessor->setValue($newEntity, $field, $value['old']);
+        }
+
+        return $newEntity;
     }
 }

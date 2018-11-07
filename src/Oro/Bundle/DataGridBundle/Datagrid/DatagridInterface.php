@@ -3,10 +3,10 @@
 namespace Oro\Bundle\DataGridBundle\Datagrid;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-use Oro\Bundle\DataGridBundle\Extension\Acceptor;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\ResultsObject;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
+use Oro\Bundle\DataGridBundle\Extension\Acceptor;
 
 interface DatagridInterface
 {
@@ -55,6 +55,13 @@ interface DatagridInterface
      * @return DatasourceInterface
      */
     public function getAcceptedDatasource();
+
+    /**
+     * Apply accepted extensions to datasource object
+     *
+     * @return $this
+     */
+    public function acceptDatasource();
 
     /**
      * Getter for acceptor object

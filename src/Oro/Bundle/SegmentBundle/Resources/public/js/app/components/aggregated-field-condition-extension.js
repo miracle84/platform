@@ -1,28 +1,22 @@
-define([
-    'jquery',
-    'underscore'
-], function($, _) {
+define(function(require) {
     'use strict';
 
+    var $ = require('jquery');
+    var _ = require('underscore');
+
     return {
-        load: function(segment) {
-            segment.configureFilters = _.wrap(segment.configureFilters, function(original) {
-                var $criteria = $(this.options.filters.criteriaList);
-
-                var aggregatedFieldCondition = $criteria.find('[data-criteria=aggregated-condition-item]');
-                if (!_.isEmpty(aggregatedFieldCondition)) {
-                    var $itemContainer = $(this.options.column.itemContainer);
-                    var columnsCollection = $itemContainer.data('oroui-itemsManagerTable').options.collection;
-
-                    $.extend(true, aggregatedFieldCondition.data('options'), {
-                        fieldChoice: this.options.fieldChoiceOptions,
-                        filters: this.options.metadata.filters,
-                        hierarchy: this.options.metadata.hierarchy,
-                        columnsCollection: columnsCollection
-                    });
+        load: function(segmentComponent) {
+            segmentComponent.configureFilters = _.compose(segmentComponent.configureFilters, function() {
+                if (!this.conditionBuilderComponent) {
+                    return;
                 }
+                var $condition = this.conditionBuilderComponent.view.getCriteriaOrigin('aggregated-condition-item');
+                if ($condition.length) {
+                    var $columnsTable = $(this.options.column.itemContainer);
 
-                original.apply(this, _.rest(arguments));
+                    $condition.data('options').columnsCollection =
+                        $columnsTable.data('oroui-itemsManagerTable').options.collection;
+                }
             });
         }
     };

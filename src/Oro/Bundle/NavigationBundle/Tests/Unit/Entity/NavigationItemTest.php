@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Entity;
 
+use Oro\Bundle\NavigationBundle\Entity\NavigationItem;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\NavigationBundle\Entity\NavigationItem;
 
-class NavigationItemTest extends \PHPUnit_Framework_TestCase
+class NavigationItemTest extends \PHPUnit\Framework\TestCase
 {
     public function testNavigationItemEntity()
     {

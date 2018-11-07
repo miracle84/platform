@@ -5,11 +5,11 @@ namespace Oro\Bundle\EntityConfigBundle\Form\Type;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Form\DataTransformer\AttributeRelationsTransformer;
 use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
-
+use Oro\Bundle\FormBundle\Form\Type\Select2ChoiceType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\Options;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class AttributeMultiSelectType extends AbstractType
 {
@@ -43,7 +43,7 @@ class AttributeMultiSelectType extends AbstractType
 
             /** @var FieldConfigModel $field */
             foreach ($fields as $field) {
-                $this->choices[$field->getId()] = $this->attributeManager->getAttributeLabel($field);
+                $this->choices[$this->attributeManager->getAttributeLabel($field)] = $field->getId();
                 $this->configFields[$field->getId()] = $field;
             }
         }
@@ -73,18 +73,16 @@ class AttributeMultiSelectType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
                 'attributeEntityClass' => '',
                 'attributeGroup' => null,
                 'choices' => function (Options $options) {
-
                     return $this->getChoices($options['attributeEntityClass']);
                 },
                 'choice_attr' => function ($choice) {
-
                     return [
                         'locked' => ($this->isSystem($choice)) ? 'locked' : ''
                     ];
@@ -105,7 +103,7 @@ class AttributeMultiSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_choice';
+        return Select2ChoiceType::class;
     }
 
     /**

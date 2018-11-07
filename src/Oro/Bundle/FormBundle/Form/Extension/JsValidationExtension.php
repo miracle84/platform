@@ -2,25 +2,27 @@
 
 namespace Oro\Bundle\FormBundle\Form\Extension;
 
+use Oro\Bundle\FormBundle\Form\Extension\JsValidation\ConstraintsProviderInterface;
+use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
 use Symfony\Component\Form\AbstractTypeExtension;
-use Symfony\Component\Form\FormView;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 use Symfony\Component\Validator\Constraint;
 
-use Oro\Bundle\FormBundle\Form\Extension\JsValidation\ConstraintsProvider;
-use Oro\Bundle\FormBundle\Form\Extension\Traits\FormExtendedTypeTrait;
-
+/**
+ * This extensions provides validation constraints data for js validation via html attributes.
+ */
 class JsValidationExtension extends AbstractTypeExtension
 {
     use FormExtendedTypeTrait;
 
-    /** @var ConstraintsProvider */
+    /** @var ConstraintsProviderInterface */
     protected $constraintsProvider;
 
     /**
-     * @param ConstraintsProvider $constraintsProvider
+     * @param ConstraintsProviderInterface $constraintsProvider
      */
-    public function __construct(ConstraintsProvider $constraintsProvider)
+    public function __construct(ConstraintsProviderInterface $constraintsProvider)
     {
         $this->constraintsProvider = $constraintsProvider;
     }
@@ -96,6 +98,12 @@ class JsValidationExtension extends AbstractTypeExtension
     {
         $data = $this->getConstraintsDataAsArray($form);
 
+        if (isset($data['Callback'])) {
+            // Since there is no way to transform backend callback function to frontend one don't add it into
+            // validation attribute
+            unset($data['Callback']);
+        }
+
         if ($data) {
             if (!empty($data['NotBlank'])) {
                 $view->vars['attr']['data-required'] = true;
@@ -117,8 +125,7 @@ class JsValidationExtension extends AbstractTypeExtension
 
         if (isset($view->vars['attr']['data-validation']) && is_array($view->vars['attr']['data-validation'])) {
             $view->vars['attr']['data-validation'] = json_encode(
-                $view->vars['attr']['data-validation'],
-                JSON_FORCE_OBJECT
+                $view->vars['attr']['data-validation']
             );
         }
     }
@@ -133,10 +140,18 @@ class JsValidationExtension extends AbstractTypeExtension
     {
         $constraints = $this->constraintsProvider->getFormConstraints($form);
 
-        $value = array();
+        $value = [];
         foreach ($constraints as $constraint) {
             $name = $this->getConstraintName($constraint);
-            $value[$name] = $this->getConstraintProperties($constraint);
+            $constraintProperties = $this->getConstraintProperties($constraint);
+
+            if (isset($value[$name][0])) {
+                $value[$name][] = $constraintProperties;
+            } elseif (isset($value[$name])) {
+                $value[$name] = [$value[$name], $constraintProperties];
+            } else {
+                $value[$name] = $constraintProperties;
+            }
         }
 
         return $value;

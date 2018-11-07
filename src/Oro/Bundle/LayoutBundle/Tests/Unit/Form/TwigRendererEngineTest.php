@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Form;
 
-use Symfony\Component\Form\FormView;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\LayoutBundle\Form\BaseTwigRendererEngine;
 use Oro\Bundle\LayoutBundle\Form\TwigRendererEngine;
-use Oro\Bundle\LayoutBundle\Request\LayoutHelper;
+use Symfony\Component\Form\FormView;
+use Twig\Environment;
 
 class TwigRendererEngineTest extends RendererEngineTest
 {
@@ -15,21 +15,30 @@ class TwigRendererEngineTest extends RendererEngineTest
      */
     protected $twigRendererEngine;
 
+    /**
+     * @var Environment|\PHPUnit\Framework\MockObject\MockObject
+     */
+    protected $environment;
+
     protected function setUp()
     {
-        $this->twigRendererEngine = new TwigRendererEngine();
+        $this->environment = $this->createMock(Environment::class);
+        $this->twigRendererEngine = $this->createRendererEngine();
     }
 
     public function testRenderBlock()
     {
-        $layoutHelper = $this->getMockLayoutHelper();
-        $layoutHelper->expects($this->once())
-            ->method('isProfilerEnabled')
-            ->will($this->returnValue(true));
+        $configManager = $this->getMockBuilder(ConfigManager::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $configManager->expects(self::once())
+            ->method('get')
+            ->with('oro_layout.debug_block_info')
+            ->willReturn(true);
 
-        $this->twigRendererEngine->setLayoutHelper($layoutHelper);
+        $this->twigRendererEngine->setConfigManager($configManager);
 
-        /** @var FormView|\PHPUnit_Framework_MockObject_MockObject $view */
+        /** @var FormView|\PHPUnit\Framework\MockObject\MockObject $view */
         $view = $this->createMock('Symfony\Component\Form\FormView');
         $view->vars['cache_key'] = 'cache_key';
         $template = $this->createMock('\Twig_Template');
@@ -57,27 +66,19 @@ class TwigRendererEngineTest extends RendererEngineTest
             ]
         );
 
-        /** @var \Twig_Environment|\PHPUnit_Framework_MockObject_MockObject $environment */
-        $environment = $this->createMock('\Twig_Environment');
-        $environment->expects($this->once())
+        $this->environment->expects($this->once())
             ->method('mergeGlobals')
             ->with($result)
             ->will($this->returnValue([$template, 'root']));
-        $this->twigRendererEngine->setEnvironment($environment);
 
         $this->twigRendererEngine->renderBlock($view, [$template, 'root'], 'root', $variables);
     }
 
     /**
-     * @return LayoutHelper|\PHPUnit_Framework_MockObject_MockObject
+     * @return TwigRendererEngine
      */
-    protected function getMockLayoutHelper()
-    {
-        return $this->createMock('Oro\Bundle\LayoutBundle\Request\LayoutHelper');
-    }
-
     public function createRendererEngine()
     {
-        return new TwigRendererEngine();
+        return new TwigRendererEngine([], $this->environment);
     }
 }

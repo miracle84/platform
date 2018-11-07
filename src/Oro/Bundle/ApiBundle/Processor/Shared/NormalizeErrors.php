@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
+use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Processor\Context;
+use Symfony\Component\Translation\TranslatorInterface;
 
 /**
- * Checks if there are any errors in the Context,
+ * Checks if there are any errors in the context,
  * and if so, localizes all properties that are represented by the Label object.
  */
 class NormalizeErrors implements ProcessorInterface

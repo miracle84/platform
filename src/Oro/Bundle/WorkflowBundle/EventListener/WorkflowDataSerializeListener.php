@@ -5,10 +5,12 @@ namespace Oro\Bundle\WorkflowBundle\EventListener;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
 use Oro\Bundle\WorkflowBundle\Serializer\WorkflowAwareSerializer;
+use Oro\Component\DependencyInjection\ServiceLink;
 
 /**
  * Performs serialization and deserialization of WorkflowItem data
@@ -30,20 +32,16 @@ class WorkflowDataSerializeListener
      */
     protected $scheduledEntities = [];
 
-    /**
-     * @var WorkflowAwareSerializer
-     */
-    protected $serializer;
+    /** @var ServiceLink */
+    private $serializerLink;
 
     /**
-     * Constructor
-     *
-     * @param WorkflowAwareSerializer $serializer
+     * @param ServiceLink $serializerLink
      * @param DoctrineHelper $doctrineHelper
      */
-    public function __construct(WorkflowAwareSerializer $serializer, DoctrineHelper $doctrineHelper)
+    public function __construct(ServiceLink $serializerLink, DoctrineHelper $doctrineHelper)
     {
-        $this->serializer = $serializer;
+        $this->serializerLink = $serializerLink;
         $this->doctrineHelper = $doctrineHelper;
     }
 
@@ -86,15 +84,12 @@ class WorkflowDataSerializeListener
     /**
      * After WorkflowItem loaded, deserialize WorkflowItem
      *
+     * @param WorkflowItem       $entity
      * @param LifecycleEventArgs $args
      */
-    public function postLoad(LifecycleEventArgs $args)
+    public function postLoad(WorkflowItem $entity, LifecycleEventArgs $args)
     {
-        /** @var WorkflowItem $entity */
-        $entity = $args->getEntity();
-        if ($this->isSupported($entity)) {
-            $this->deserialize($entity);
-        }
+        $this->deserialize($entity);
     }
 
     /**
@@ -104,14 +99,13 @@ class WorkflowDataSerializeListener
      */
     protected function serialize(WorkflowItem $workflowItem)
     {
-        $this->serializer->setWorkflowName($workflowItem->getWorkflowName());
+        $serializer = $this->getSerializer();
+        $serializer->setWorkflowName($workflowItem->getWorkflowName());
 
-        // Cloning workflow data instance to prevent changing of original data.
-        $workflowData = clone $workflowItem->getData();
-        // entity attribute must not be serialized
-        $workflowData->remove($workflowItem->getDefinition()->getEntityAttributeName());
-
-        $serializedData = $this->serializer->serialize($workflowData, $this->format);
+        $serializedData = $serializer->serialize(
+            $this->getWorkflowData($workflowItem),
+            $this->format
+        );
         $workflowItem->setSerializedData($serializedData);
         $workflowItem->getData()->setModified(false);
     }
@@ -124,7 +118,7 @@ class WorkflowDataSerializeListener
     protected function deserialize(WorkflowItem $workflowItem)
     {
         // Pass serializer into $workflowItem to make lazy loading of workflow item data.
-        $workflowItem->setSerializer($this->serializer, $this->format);
+        $workflowItem->setSerializer($this->getSerializer(), $this->format);
 
         // Set related entity
         $relatedEntity = $this->doctrineHelper->getEntityReference(
@@ -135,11 +129,63 @@ class WorkflowDataSerializeListener
     }
 
     /**
+     * @param WorkflowItem $workflowItem
+     * @return WorkflowData
+     */
+    protected function getWorkflowData(WorkflowItem $workflowItem)
+    {
+        // Cloning workflow data instance to prevent changing of original data.
+        $workflowData = clone $workflowItem->getData();
+
+        // entity attribute must not be serialized
+        $workflowData->remove($workflowItem->getDefinition()->getEntityAttributeName());
+
+        $virtualAttributes = array_keys($workflowItem->getDefinition()->getVirtualAttributes());
+        foreach ($virtualAttributes as $attributeName) {
+            $workflowData->remove($attributeName);
+        }
+
+        // workflow attributes must not be serialized
+        $workflowConfig = $workflowItem->getDefinition()->getConfiguration();
+        $variableNames = $this->getVariablesNamesFromConfiguration($workflowConfig);
+        foreach ($variableNames as $variableName) {
+            $workflowData->remove($variableName);
+        }
+
+        return $workflowData;
+    }
+
+    /**
      * @param $entity
      * @return bool
      */
     protected function isSupported($entity)
     {
         return $entity instanceof WorkflowItem;
+    }
+
+    /**
+     * @param array $configuration
+     *
+     * @return array
+     */
+    protected function getVariablesNamesFromConfiguration($configuration)
+    {
+        $definitionsNode = WorkflowConfiguration::NODE_VARIABLE_DEFINITIONS;
+        $variablesNode = WorkflowConfiguration::NODE_VARIABLES;
+
+        if (!is_array($configuration) || !isset($configuration[$definitionsNode][$variablesNode])) {
+            return [];
+        }
+
+        return array_keys($configuration[$definitionsNode][$variablesNode]);
+    }
+
+    /**
+     * @return WorkflowAwareSerializer
+     */
+    private function getSerializer()
+    {
+        return $this->serializerLink->getService();
     }
 }

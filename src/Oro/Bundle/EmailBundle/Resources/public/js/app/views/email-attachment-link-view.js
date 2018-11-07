@@ -17,7 +17,14 @@ define([
     EmailAttachmentLink = BaseView.extend({
         options: {},
         events: {
-            'click': 'linkAttachment'
+            click: 'linkAttachment'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailAttachmentLink() {
+            EmailAttachmentLink.__super__.constructor.apply(this, arguments);
         },
 
         /**

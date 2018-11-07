@@ -2,32 +2,34 @@
 
 namespace Oro\Bundle\FormBundle\Form\Type;
 
-use Symfony\Component\Form\FormView;
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Bundle\FormBundle\Form\EventListener\MultipleEntitySubscriber;
+use Oro\Bundle\FormBundle\Form\Type\EntityIdentifierType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class MultipleEntityType extends AbstractType
 {
     /** @var DoctrineHelper */
     protected $doctrineHelper;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /**
-     * @param DoctrineHelper $doctrineHelper
-     * @param SecurityFacade $securityFacade
+     * @param DoctrineHelper                $doctrineHelper
+     * @param AuthorizationCheckerInterface $authorizationChecker
      */
-    public function __construct(DoctrineHelper $doctrineHelper, SecurityFacade $securityFacade)
-    {
+    public function __construct(
+        DoctrineHelper $doctrineHelper,
+        AuthorizationCheckerInterface $authorizationChecker
+    ) {
         $this->doctrineHelper = $doctrineHelper;
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
     }
 
     /**
@@ -37,7 +39,7 @@ class MultipleEntityType extends AbstractType
     {
         $builder->add(
             'added',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             [
                 'class'    => $options['class'],
                 'multiple' => true,
@@ -46,7 +48,7 @@ class MultipleEntityType extends AbstractType
         );
         $builder->add(
             'removed',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             [
                 'class'    => $options['class'],
                 'multiple' => true,
@@ -60,7 +62,7 @@ class MultipleEntityType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setRequired(['class']);
         $resolver->setDefaults(
@@ -96,7 +98,7 @@ class MultipleEntityType extends AbstractType
         if (empty($options['add_acl_resource'])) {
             $options['allow_action'] = true;
         } else {
-            $options['allow_action'] = $this->securityFacade->isGranted($options['add_acl_resource']);
+            $options['allow_action'] = $this->authorizationChecker->isGranted($options['add_acl_resource']);
         }
 
         $this->setOptionToView($view, $options, 'allow_action');

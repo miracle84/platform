@@ -2,63 +2,49 @@
 
 namespace Oro\Bundle\OrganizationBundle\Event;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Common\Util\ClassUtils;
+use Doctrine\ORM\EntityRepository;
+use Oro\Bundle\ImportExportBundle\Event\StrategyEvent;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Oro\Component\DependencyInjection\ServiceLink;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
-use Doctrine\Common\Util\ClassUtils;
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityRepository;
-
-use Oro\Bundle\ImportExportBundle\Event\StrategyEvent;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-
 class ImportStrategyListener
 {
-    /**
-     * @var ManagerRegistry
-     */
+    /** @var ManagerRegistry */
     protected $registry;
 
-    /**
-     * @var ServiceLink
-     */
-    protected $securityFacadeLink;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
-    /**
-     * @var ServiceLink
-     */
+    /** @var ServiceLink */
     protected $metadataProviderLink;
 
-    /**
-     * @var Organization
-     */
+    /** @var Organization */
     protected $defaultOrganization;
 
-    /**
-     * @var PropertyAccessor
-     */
+    /** @var PropertyAccessor */
     protected $propertyAccessor;
 
-    /**
-     * @var array
-     */
+    /** @var array */
     protected $organizationFieldByEntity = [];
 
     /**
-     * @param ManagerRegistry $registry
-     * @param ServiceLink $securityFacadeLink
-     * @param ServiceLink $metadataProviderLink
+     * @param ManagerRegistry        $registry
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param ServiceLink            $metadataProviderLink
      */
     public function __construct(
         ManagerRegistry $registry,
-        ServiceLink $securityFacadeLink,
+        TokenAccessorInterface $tokenAccessor,
         ServiceLink $metadataProviderLink
     ) {
         $this->registry = $registry;
-        $this->securityFacadeLink = $securityFacadeLink;
+        $this->tokenAccessor = $tokenAccessor;
         $this->metadataProviderLink = $metadataProviderLink;
     }
 
@@ -74,32 +60,44 @@ class ImportStrategyListener
             return;
         }
 
-        /** @var SecurityFacade $securityFacade */
-        $securityFacade = $this->securityFacadeLink->getService();
+        $entityOrganization = $this->getPropertyAccessor()->getValue($entity, $organizationField);
+        $tokenOrganization = $this->tokenAccessor->getOrganization();
 
-        /**
-         * We should allow to set organization for entity only in case of console import.
-         * If import process was executed from UI (grid's import), current organization for entities should be set.
-         */
-        $organization = $this->getPropertyAccessor()->getValue($entity, $organizationField);
-        if ($organization
-            && $securityFacade->getOrganization()
-            && $organization->getId() == $securityFacade->getOrganizationId()
-        ) {
+        if ($entityOrganization) {
+            /**
+             * Do nothing in case if entity already have organization field value but this value was absent in item data
+             * (the value of organization field was set to the entity before the import).
+             */
+            $data = $event->getContext()->getValue('itemData');
+            if ($data && !array_key_exists($organizationField, $data)) {
+                return;
+            }
+
+            /**
+             * We should allow to set organization for entity only in anonymous mode then the token has no organization
+             * (for example, console import).
+             * If import process was executed not in anonymous mode (for example, grid's import),
+             * current organization for entities should be set.
+             */
+            if (!$tokenOrganization
+                || ($tokenOrganization && $entityOrganization->getId() == $this->tokenAccessor->getOrganizationId())
+            ) {
+                return;
+            }
+        }
+
+        // By default, the token organization should be set as entity organization.
+        $entityOrganization = $tokenOrganization;
+
+        if (!$entityOrganization) {
+            $entityOrganization = $this->getDefaultOrganization();
+        }
+
+        if (!$entityOrganization) {
             return;
         }
 
-        $organization = $securityFacade->getOrganization();
-
-        if (!$organization) {
-            $organization = $this->getDefaultOrganization();
-        }
-
-        if (!$organization) {
-            return;
-        }
-
-        $this->getPropertyAccessor()->setValue($entity, $organizationField, $organization);
+        $this->getPropertyAccessor()->setValue($entity, $organizationField, $entityOrganization);
     }
 
     /**
@@ -153,10 +151,10 @@ class ImportStrategyListener
     {
         $entityName = ClassUtils::getClass($entity);
         if (!array_key_exists($entityName, $this->organizationFieldByEntity)) {
-            /** @var OwnershipMetadataProvider $metadataProvider */
+            /** @var OwnershipMetadataProviderInterface $metadataProvider */
             $metadataProvider = $this->metadataProviderLink->getService();
             $this->organizationFieldByEntity[$entityName] = $metadataProvider->getMetadata($entityName)
-                ->getGlobalOwnerFieldName();
+                ->getOrganizationFieldName();
         }
 
         return $this->organizationFieldByEntity[$entityName];

@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\TranslationBundle\DependencyInjection\Compiler\TranslationContextResolverPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-use Oro\Bundle\TranslationBundle\DependencyInjection\Compiler\TranslationContextResolverPass;
-
-class TranslationContextResolverPassTest extends \PHPUnit_Framework_TestCase
+class TranslationContextResolverPassTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject */
     protected $builder;
 
     /**
@@ -21,7 +20,7 @@ class TranslationContextResolverPassTest extends \PHPUnit_Framework_TestCase
 
     public function testProcess()
     {
-        /* @var $compilerPass TranslationContextResolverPass|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $compilerPass TranslationContextResolverPass|\PHPUnit\Framework\MockObject\MockObject */
         $compilerPass = $this->getMockBuilder(TranslationContextResolverPass::class)
             ->setMethods(['registerTaggedServices'])
             ->getMock();

@@ -2,23 +2,21 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Tests\Performance\Indexer\Fixtures;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Doctrine\Common\DataFixtures\AbstractFixture;
 use Doctrine\Common\DataFixtures\OrderedFixtureInterface;
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Oro\Bundle\TestFrameworkBundle\Entity\Product;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
 * Load products
 *
-* Execute with "php app/console doctrine:fixtures:load"
+* Execute with "php bin/console doctrine:fixtures:load"
 *
 */
 class LoadProductData extends AbstractFixture implements OrderedFixtureInterface, ContainerAwareInterface
 {
-
     const DEFAULT_COUNTER_VALUE = 90;
     /**
      * @var ContainerInterface

@@ -2,13 +2,9 @@
 
 namespace Oro\Bundle\OrganizationBundle\Tests\Functional\API;
 
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Symfony\Component\BrowserKit\Response;
 
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class RestApiTest extends WebTestCase
 {
     /**

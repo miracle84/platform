@@ -2,24 +2,25 @@
 
 namespace Oro\Bundle\SoapBundle\Form\Handler;
 
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
 use Doctrine\Common\Persistence\ObjectManager;
-
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Oro\Bundle\SoapBundle\Controller\Api\FormAwareInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class ApiFormHandler implements FormAwareInterface
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var ObjectManager
@@ -29,13 +30,13 @@ class ApiFormHandler implements FormAwareInterface
     /**
      *
      * @param FormInterface $form
-     * @param Request       $request
+     * @param RequestStack  $requestStack
      * @param ObjectManager $entityManager
      */
-    public function __construct(FormInterface $form, Request $request, ObjectManager $entityManager)
+    public function __construct(FormInterface $form, RequestStack $requestStack, ObjectManager $entityManager)
     {
         $this->form          = $form;
-        $this->request       = $request;
+        $this->requestStack  = $requestStack;
         $this->entityManager = $entityManager;
     }
 
@@ -58,8 +59,10 @@ class ApiFormHandler implements FormAwareInterface
     {
         $entity = $this->prepareFormData($entity);
 
-        if (in_array($this->request->getMethod(), ['POST', 'PUT'], true)) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
+
             if ($this->form->isValid()) {
                 return $this->onSuccess($entity) ?: $entity;
             }

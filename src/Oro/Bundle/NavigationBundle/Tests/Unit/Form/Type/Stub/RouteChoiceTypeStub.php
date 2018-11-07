@@ -38,6 +38,7 @@ class RouteChoiceTypeStub extends AbstractType
         );
 
         $resolver->setDefault('choices', $this->choices);
+        $resolver->setDefault('menu_name', 'menu');
     }
 
     /**
@@ -51,7 +52,7 @@ class RouteChoiceTypeStub extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function getName()
+    public function getBlockPrefix()
     {
         return 'oro_route_choice';
     }

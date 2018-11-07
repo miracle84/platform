@@ -2,21 +2,20 @@
 
 namespace Oro\Bundle\SecurityBundle\Cache;
 
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
 use Symfony\Component\HttpKernel\CacheClearer\CacheClearerInterface;
-
-use Oro\Bundle\SecurityBundle\Owner\Metadata\MetadataProviderInterface;
 
 class OwnershipMetadataCacheClearer implements CacheClearerInterface
 {
     /**
-     * @var MetadataProviderInterface
+     * @var OwnershipMetadataProviderInterface
      */
     private $provider;
 
     /**
-     * @param MetadataProviderInterface $provider
+     * @param OwnershipMetadataProviderInterface $provider
      */
-    public function __construct(MetadataProviderInterface $provider)
+    public function __construct(OwnershipMetadataProviderInterface $provider)
     {
         $this->provider = $provider;
     }

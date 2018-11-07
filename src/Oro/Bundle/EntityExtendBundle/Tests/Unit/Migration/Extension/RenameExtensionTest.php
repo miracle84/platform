@@ -5,20 +5,19 @@ namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Migration\Extension;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
-
 use Oro\Bundle\EntityExtendBundle\Migration\ExtendOptionsManager;
 use Oro\Bundle\EntityExtendBundle\Migration\Extension\RenameExtension;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 
-class RenameExtensionTest extends \PHPUnit_Framework_TestCase
+class RenameExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ExtendOptionsManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ExtendOptionsManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $optionsManager;
 
     /**
-     * @var AbstractPlatform|\PHPUnit_Framework_MockObject_MockObject
+     * @var AbstractPlatform|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $databasePlatform;
 

@@ -2,10 +2,14 @@
 namespace Oro\Bundle\OrganizationBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
-
+use Doctrine\ORM\NoResultException;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
+/**
+ * Provides reusable methods that provide the database access for the Organization entity.
+ */
 class OrganizationRepository extends EntityRepository
 {
     /**
@@ -24,26 +28,13 @@ class OrganizationRepository extends EntityRepository
     }
 
     /**
-     * Get organization by id
-     *
-     * @param $id
-     * @return Organization
-     */
-    public function getOrganizationById($id)
-    {
-        return $this->createQueryBuilder('org')
-            ->select('org')
-            ->where('org.id = :id')
-            ->setParameter('id', $id)
-            ->getQuery()
-            ->getSingleResult();
-    }
-
-    /**
-     * Get organization by name
+     * Gets organization by its name.
      *
      * @param string $name
+     *
      * @return Organization
+     *
+     * @throws NoResultException if the organization was not found
      */
     public function getOrganizationByName($name)
     {
@@ -66,11 +57,15 @@ class OrganizationRepository extends EntityRepository
      */
     public function getOrganizationsPartialData(array $fields, array $sortOrder = [], array $ids = [])
     {
+        array_walk($fields, [QueryBuilderUtil::class, 'checkIdentifier']);
         $organizationsQueryQB = $this->createQueryBuilder('org')
             ->select(sprintf('partial org.{%s}', implode(', ', $fields)));
         if (count($sortOrder) !== 0) {
             foreach ($sortOrder as $fieldName => $direction) {
-                $organizationsQueryQB->addOrderBy('org.' . $fieldName, $direction);
+                $organizationsQueryQB->addOrderBy(
+                    QueryBuilderUtil::getField('org', $fieldName),
+                    QueryBuilderUtil::getSortOrder($direction)
+                );
             }
         }
 
@@ -96,7 +91,10 @@ class OrganizationRepository extends EntityRepository
             ->where('org.enabled = true');
         if (!empty($sortOrder)) {
             foreach ($sortOrder as $fieldName => $direction) {
-                $organizationsQueryQB->addOrderBy('org.' . $fieldName, $direction);
+                $organizationsQueryQB->addOrderBy(
+                    QueryBuilderUtil::getField('org', $fieldName),
+                    QueryBuilderUtil::getSortOrder($direction)
+                );
             }
         }
         $organizationsQuery = $organizationsQueryQB->getQuery();
@@ -120,6 +118,8 @@ class OrganizationRepository extends EntityRepository
      */
     public function updateWithOrganization($tableName, $id, $relationName = 'organization', $onlyEmpty = false)
     {
+        QueryBuilderUtil::checkIdentifier($relationName);
+
         $qb = $this->getEntityManager()
             ->createQueryBuilder()
             ->update($tableName, 't')

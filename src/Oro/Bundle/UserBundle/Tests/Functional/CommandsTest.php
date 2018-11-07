@@ -2,18 +2,13 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Functional;
 
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Oro\Bundle\UserBundle\Command\GenerateWSSEHeaderCommand;
+use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpKernel\Kernel;
 
-use Symfony\Component\Console\Application;
-
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\UserBundle\Command\GenerateWSSEHeaderCommand;
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class CommandsTest extends WebTestCase
 {
     protected function setUp()
@@ -89,7 +84,7 @@ class CommandsTest extends WebTestCase
     protected function prepareData()
     {
         return array(
-            "user" => array (
+            "user" => array(
                 "username" => 'user_' . mt_rand(),
                 "email" => 'test_'  . mt_rand() . '@test.com',
                 "enabled" => '1',

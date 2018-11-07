@@ -3,13 +3,11 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class TypeTest extends \PHPUnit_Framework_TestCase
+class TypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Condition\Type */
     protected $condition;
@@ -21,11 +19,6 @@ class TypeTest extends \PHPUnit_Framework_TestCase
     {
         $this->condition = new Condition\Type();
         $this->condition->setContextAccessor(new ContextAccessor());
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals(Condition\Type::NAME, $this->condition->getName());
     }
 
     /**

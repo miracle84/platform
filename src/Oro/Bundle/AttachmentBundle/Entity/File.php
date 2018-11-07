@@ -3,17 +3,13 @@
 namespace Oro\Bundle\AttachmentBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
+use Oro\Bundle\AttachmentBundle\Model\ExtendFile;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Symfony\Component\HttpFoundation\File\File as ComponentFile;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
-use Oro\Bundle\AttachmentBundle\Model\ExtendFile;
-
 /**
- * File
- *
  * @ORM\Table(name="oro_attachment_file", indexes = {
  *      @ORM\Index("att_file_orig_filename_idx", columns = {"original_filename"})
  * })
@@ -39,7 +35,7 @@ use Oro\Bundle\AttachmentBundle\Model\ExtendFile;
  *      }
  * )
  */
-class File extends ExtendFile implements FileExtensionInterface
+class File extends ExtendFile implements FileExtensionInterface, \Serializable
 {
     /**
      * @var integer
@@ -346,11 +342,17 @@ class File extends ExtendFile implements FileExtensionInterface
         $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function __toString()
     {
-        return (string)$this->getFilename()
-            ? $this->getFilename() . ' (' . $this->getOriginalFilename() . ')'
-            : '';
+        $fileName = (string)$this->getFilename();
+        if (!$fileName) {
+            return '';
+        }
+
+        return $fileName . ' (' . $this->getOriginalFilename() . ')';
     }
 
     /**
@@ -361,6 +363,8 @@ class File extends ExtendFile implements FileExtensionInterface
     public function setOwner($owningUser)
     {
         $this->owner = $owningUser;
+
+        return $this;
     }
 
     /**
@@ -369,5 +373,34 @@ class File extends ExtendFile implements FileExtensionInterface
     public function getOwner()
     {
         return $this->owner;
+    }
+
+    public function __clone()
+    {
+        if ($this->id) {
+            $this->id = null;
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function serialize()
+    {
+        return serialize([
+            $this->id,
+            $this->filename,
+        ]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function unserialize($serialized)
+    {
+        list(
+            $this->id,
+            $this->filename,
+            ) = unserialize($serialized);
     }
 }

@@ -11,64 +11,73 @@ use Symfony\Component\Security\Acl\Exception\InvalidDomainObjectException;
 interface AccessLevelOwnershipDecisionMakerInterface
 {
     /**
-     * Determines whether the given domain object is global level entity
+     * Determines whether the given domain object is an organization
      *
-     * @param  object $domainObject
+     * @param object $domainObject
+     *
      * @return bool
      */
-    public function isGlobalLevelEntity($domainObject);
+    public function isOrganization($domainObject);
 
     /**
-     * Determines whether the given domain object is local level entity or deep level entity
+     * Determines whether the given domain object is a business unit
      *
-     * @param  object $domainObject
+     * @param object $domainObject
+     *
      * @return bool
      */
-    public function isLocalLevelEntity($domainObject);
+    public function isBusinessUnit($domainObject);
 
     /**
-     * Determines whether the given domain object is basic level entity
+     * Determines whether the given domain object is an user
      *
-     * @param  object $domainObject
+     * @param object $domainObject
+     *
      * @return bool
      */
-    public function isBasicLevelEntity($domainObject);
-
-    /**
-     * Determines whether the given domain object is associated with
-     * an any global level entity (e.g. organization) of the given user
-     *
-     * @param  object|null                  $user
-     * @param  object                       $domainObject
-     * @param  object                       $organization
-     * @return bool
-     * @throws InvalidDomainObjectException
-     */
-    public function isAssociatedWithGlobalLevelEntity($user, $domainObject, $organization = null);
+    public function isUser($domainObject);
 
     /**
      * Determines whether the given domain object is associated with
-     * an any (e.g. business unit) of the given user
+     * an organization of the given user
      *
-     * @param  object|null  $user
-     * @param  object       $domainObject
-     * @param  boolean      $deep Specify whether subordinate business units should be checked. Defaults to false.
-     * @param  object       $organization
+     * @param object      $user
+     * @param object      $domainObject
+     * @param object|null $organization
+     *
      * @return bool
+     *
      * @throws InvalidDomainObjectException
      */
-    public function isAssociatedWithLocalLevelEntity($user, $domainObject, $deep = false, $organization = null);
+    public function isAssociatedWithOrganization($user, $domainObject, $organization = null);
 
     /**
-     * Determines whether the given domain object is associated with the basic level entity
+     * Determines whether the given domain object is associated with
+     * a business unit of the given user
      *
-     * @param  object|null                  $user
-     * @param  object                       $domainObject
-     * @param  object                       $organization
+     * @param object      $user
+     * @param object      $domainObject
+     * @param boolean     $deep Specify whether subordinate business units should be checked. Defaults to false.
+     * @param object|null $organization
+     *
      * @return bool
+     *
      * @throws InvalidDomainObjectException
      */
-    public function isAssociatedWithBasicLevelEntity($user, $domainObject, $organization = null);
+    public function isAssociatedWithBusinessUnit($user, $domainObject, $deep = false, $organization = null);
+
+    /**
+     * Determines whether the given domain object is associated with an user
+     *
+     * @param object      $user
+     * @param object      $domainObject
+     * @param object|null $organization
+     *
+     * @return bool
+     *
+     * @throws InvalidDomainObjectException
+     */
+    public function isAssociatedWithUser($user, $domainObject, $organization = null);
 
     /**
      * @return bool

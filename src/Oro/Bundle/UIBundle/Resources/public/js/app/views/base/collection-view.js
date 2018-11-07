@@ -2,7 +2,7 @@ define([
     'underscore',
     'chaplin',
     './view',
-    'oroui/js/app/views/loading-mask-view',
+    'oroui/js/app/views/loading-mask-view'
 ], function(_, Chaplin, View, LoadingMaskView) {
     'use strict';
 
@@ -25,6 +25,16 @@ define([
          */
         showLoadingForce: true,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseCollectionView() {
+            BaseCollectionView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, _.pick(options, ['fallbackSelector', 'loadingSelector', 'loadingContainerSelector',
                 'itemSelector', 'listSelector', 'animationDuration']));

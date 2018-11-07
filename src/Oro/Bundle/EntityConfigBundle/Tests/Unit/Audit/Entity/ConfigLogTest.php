@@ -3,11 +3,10 @@
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Audit\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\EntityConfigBundle\Audit\Entity\ConfigLog;
 use Oro\Bundle\EntityConfigBundle\Audit\Entity\ConfigLogDiff;
 
-class ConfigLogTest extends \PHPUnit_Framework_TestCase
+class ConfigLogTest extends \PHPUnit\Framework\TestCase
 {
     /** @var  ConfigLog */
     private $configLog;

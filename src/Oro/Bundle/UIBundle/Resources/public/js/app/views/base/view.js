@@ -10,18 +10,29 @@ define([
 
     /**
      * @export  oroui/js/app/views/base/view
-     * @class   oroui.app.views.BaseView
+     * @class   BaseView
      * @extends Chaplin.View
      */
-    BaseView = Chaplin.View.extend({
-        getTemplateFunction: function() {
-            var template = this.template;
+    BaseView = Chaplin.View.extend(/** @lends BaseView.prototype */{
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseView() {
+            BaseView.__super__.constructor.apply(this, arguments);
+        },
+
+        getTemplateFunction: function(templateKey) {
+            templateKey = templateKey || 'template';
+            var template = this[templateKey];
             var templateFunc = null;
 
-            if (typeof template === 'string') {
+            // If templateSelector is set in a extended view
+            if (this[templateKey + 'Selector']) {
+                templateFunc = _.template($(this[templateKey + 'Selector']).html());
+            } else if (typeof template === 'string') {
                 templateFunc = _.template(template);
                 // share a compiled template with all instances built with same constructor
-                this.constructor.prototype.template = templateFunc;
+                this.constructor.prototype[templateKey] = templateFunc;
             } else {
                 templateFunc = template;
             }
@@ -76,6 +87,28 @@ define([
                 } else {
                     $el = instance.$(region.selector);
                 }
+            }
+            return $el;
+        },
+
+        render: function() {
+            BaseView.__super__.render.call(this);
+            this.initControls();
+            return this;
+        }
+    }, {
+        /**
+         * Resolves element declared in view's options
+         *
+         * @param {string|jQuery} el value of view's element declaration in options
+         * @return {jQuery}
+         */
+        resolveElOption: function(el) {
+            var $el;
+            if (typeof el === 'string' && el.substr(0, 7) === 'region:') {
+                $el = BaseView.prototype._findRegionElem(el.substr(7));
+            } else {
+                $el = $(el);
             }
             return $el;
         }

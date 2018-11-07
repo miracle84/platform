@@ -2,11 +2,10 @@
 
 namespace Oro\Component\Layout\Tests\Unit\Extension\Theme\Model;
 
+use Oro\Component\Layout\Extension\Theme\Model\DependencyInitializer;
 use Symfony\Component\DependencyInjection\Container;
 
-use Oro\Component\Layout\Extension\Theme\Model\DependencyInitializer;
-
-class DependencyInitializerTest extends \PHPUnit_Framework_TestCase
+class DependencyInitializerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Container */
     protected $container;

@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Persistence;
 
+use Oro\Bundle\SecurityBundle\Acl\Persistence\BaseAclManager;
 use Symfony\Component\Security\Acl\Domain\RoleSecurityIdentity;
 use Symfony\Component\Security\Acl\Domain\UserSecurityIdentity;
 
-use Oro\Bundle\SecurityBundle\Acl\Persistence\BaseAclManager;
-
-class BaseAclManagerTest extends \PHPUnit_Framework_TestCase
+class BaseAclManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AbstractAclManager */
     private $manager;

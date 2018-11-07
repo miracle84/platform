@@ -1,16 +1,20 @@
 <?php
+
 namespace Oro\Bundle\SearchBundle\Engine\Orm;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\SearchBundle\Engine\Indexer;
 use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Query;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
+/**
+ * Mysql DB driver used to run search queries for ORM search engine
+ */
 class PdoMysql extends BaseDriver
 {
     const ENGINE_MYISAM = 'MyISAM';
@@ -57,7 +61,7 @@ class PdoMysql extends BaseDriver
      * Add text search to qb
      *
      * @param  QueryBuilder $qb
-     * @param  integer      $index
+     * @param  string       $index
      * @param  array        $searchCondition
      * @param  boolean      $setOrderBy
      *
@@ -67,13 +71,21 @@ class PdoMysql extends BaseDriver
     {
         $fieldValue = $searchCondition['fieldValue'];
         $condition = $searchCondition['condition'];
-        $words = $this->getWords($this->filterTextFieldValue($searchCondition['fieldName'], $fieldValue), $condition);
+
+        $words = array_filter(
+            explode(' ', $this->filterTextFieldValue($searchCondition['fieldName'], $fieldValue)),
+            'strlen'
+        );
 
         switch ($condition) {
             case Query::OPERATOR_LIKE:
                 $whereExpr = $this->createLikeExpr($qb, $searchCondition['fieldValue'], $index);
                 break;
-            
+
+            case Query::OPERATOR_NOT_LIKE:
+                $whereExpr = $this->createNotLikeExpr($qb, $searchCondition['fieldValue'], $index);
+                break;
+
             case Query::OPERATOR_CONTAINS:
                 $whereExpr  = $this->createMatchAgainstWordsExpr($qb, $words, $index, $searchCondition, $setOrderBy);
                 $shortWords = $this->getWordsLessThanFullTextMinWordLength($words);
@@ -110,43 +122,42 @@ class PdoMysql extends BaseDriver
      *
      * @param QueryBuilder $qb
      * @param string $fieldValue
-     * @param $index
+     * @param string $index
      *
      * @return string
      */
     protected function createLikeExpr(QueryBuilder $qb, $fieldValue, $index)
     {
-        $parameterName = 'value' . $index;
-        $parameterValue = '%' . $fieldValue . '%';
-        
-        $qb->setParameter($parameterName, $parameterValue);
-        
+        $this->setLikeExpParameters($qb, $fieldValue, $index);
         return parent::createContainsStringQuery($index, false);
     }
 
     /**
-     * Get array of words retrieved from $value string
+     * Uses whole string for not like expression. Does not operate on words.
      *
-     * @param  string $value
-     * @param  string $searchCondition
+     * @param QueryBuilder $qb
+     * @param string $fieldValue
+     * @param string $index
      *
-     * @return array
+     * @return string
      */
-    protected function getWords($value, $searchCondition)
+    protected function createNotLikeExpr(QueryBuilder $qb, $fieldValue, $index)
     {
-        $results = array_filter(explode(' ', $value));
-        $results = array_map(
-            function ($word) use ($searchCondition) {
-                if ($searchCondition === Query::OPERATOR_CONTAINS && filter_var($word, FILTER_VALIDATE_EMAIL)) {
-                    $word = sprintf('"%s"', $word);
-                }
+        $this->setLikeExpParameters($qb, $fieldValue, $index);
+        return parent::createNotContainsStringQuery($index, false);
+    }
 
-                return $word;
-            },
-            $results
-        );
+    /**
+     * @param QueryBuilder $qb
+     * @param string $fieldValue
+     * @param string $index
+     */
+    protected function setLikeExpParameters(QueryBuilder $qb, $fieldValue, $index)
+    {
+        $parameterName = 'value' . $index;
+        $parameterValue = '%' . $fieldValue . '%';
 
-        return $results;
+        $qb->setParameter($parameterName, $parameterValue);
     }
 
     /**
@@ -209,13 +220,19 @@ class PdoMysql extends BaseDriver
         array $searchCondition,
         $setOrderBy = true
     ) {
+        QueryBuilderUtil::checkIdentifier($index);
         $joinAlias      = $this->getJoinAlias($searchCondition['fieldType'], $index);
         $fieldName      = $searchCondition['fieldName'];
         $fieldParameter = 'field' . $index;
         $valueParameter = 'value' . $index;
+        QueryBuilderUtil::checkIdentifier($joinAlias);
 
         $result = "MATCH_AGAINST($joinAlias.value, :$valueParameter 'IN BOOLEAN MODE') > 0";
-        $qb->setParameter($valueParameter, implode('* ', $words) . '*');
+        if ($words) {
+            $qb->setParameter($valueParameter, implode('* ', $words) . '*');
+        } else {
+            $qb->setParameter($valueParameter, '');
+        }
 
         if ($this->isConcreteField($fieldName)) {
             $result = $qb->expr()->andX(
@@ -226,7 +243,9 @@ class PdoMysql extends BaseDriver
         }
 
         if ($setOrderBy) {
-            $qb->addSelect(sprintf('MATCH_AGAINST(%s.value, :value%s) as rankField%s', $joinAlias, $index, $index))
+            $qb->addSelect(
+                sprintf('MATCH_AGAINST(%s.value, :value%s) * search.weight as rankField%s', $joinAlias, $index, $index)
+            )
                 ->addOrderBy(sprintf('rankField%s', $index), Criteria::DESC);
         }
 
@@ -239,8 +258,8 @@ class PdoMysql extends BaseDriver
      *
      * @param QueryBuilder $qb
      * @param array        $words
-     * @param              $index
-     * @param  array       $searchCondition
+     * @param string $index
+     * @param array       $searchCondition
      *
      * @return string
      */
@@ -250,14 +269,17 @@ class PdoMysql extends BaseDriver
         $index,
         array $searchCondition
     ) {
+        QueryBuilderUtil::checkIdentifier($index);
         $joinAlias  = $this->getJoinAlias($searchCondition['fieldType'], $index);
         $fieldName  = $searchCondition['fieldName'];
+        QueryBuilderUtil::checkIdentifier($joinAlias);
 
         $result = $qb->expr()->orX();
         foreach (array_values($words) as $key => $value) {
             $valueParameter = 'value' . $index . '_w' . $key;
-            $result->add("$joinAlias.value LIKE :$valueParameter");
-            $qb->setParameter($valueParameter, $value . '%');
+            QueryBuilderUtil::checkIdentifier($valueParameter);
+            $result->add($qb->expr()->like($joinAlias. '.value', ':' . $valueParameter));
+            $qb->setParameter($valueParameter, "%$value%");
         }
         if ($this->isConcreteField($fieldName) && !$this->isAllDataField($fieldName)) {
             $fieldParameter = 'field' . $index;
@@ -270,7 +292,7 @@ class PdoMysql extends BaseDriver
 
     /**
      * @param  QueryBuilder $qb
-     * @param  int          $index
+     * @param  string       $index
      * @param  array        $words
      * @param  array        $searchCondition
      *
@@ -287,7 +309,7 @@ class PdoMysql extends BaseDriver
         $fieldParameter = 'field' . $index;
         $valueParameter = 'value' . $index;
 
-        // TODO Need to clarify requirements for "not contains" in scope of CRM-215
+        // Need to clarify requirements for "not contains" in scope of CRM-215
         $qb->setParameter($valueParameter, '%' . implode('%', $words) . '%');
 
         $whereExpr = "$joinAlias.value NOT LIKE :$valueParameter";
@@ -301,7 +323,7 @@ class PdoMysql extends BaseDriver
 
     /**
      * @param  QueryBuilder $qb
-     * @param  int          $index
+     * @param  string       $index
      * @param  string       $value
      * @param  array        $searchCondition
      * @param  string       $operator
@@ -334,7 +356,7 @@ class PdoMysql extends BaseDriver
     /**
      * @param QueryBuilder $qb
      * @param string $fieldValue
-     * @param int $index
+     * @param string $index
      * @param array $searchCondition
      * @return string
      */
@@ -382,5 +404,17 @@ class PdoMysql extends BaseDriver
         parent::truncateEntities($dbPlatform, $connection);
 
         $connection->query('SET FOREIGN_KEY_CHECKS=1');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getTruncateQuery(AbstractPlatform $dbPlatform, $tableName)
+    {
+        if ($this->em->getConnection()->isTransactionActive()) {
+            return sprintf('DELETE FROM %s', $tableName);
+        }
+
+        return parent::getTruncateQuery($dbPlatform, $tableName);
     }
 }

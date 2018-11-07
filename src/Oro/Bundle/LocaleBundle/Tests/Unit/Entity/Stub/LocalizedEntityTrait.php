@@ -3,7 +3,6 @@
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Entity\Stub;
 
 use Doctrine\Common\Inflector\Inflector;
-
 use Oro\Bundle\LocaleBundle\Entity\FallbackTrait;
 
 trait LocalizedEntityTrait
@@ -86,6 +85,8 @@ trait LocalizedEntityTrait
                     break;
             }
         }
+
+        trigger_error('Call to undefined method '.__CLASS__.'::'.$name.'()', E_USER_ERROR);
 
         return null;
     }

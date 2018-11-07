@@ -4,7 +4,7 @@ namespace Oro\Component\Layout\Tests\Unit;
 
 use Oro\Component\Layout\DataProviderDecorator;
 
-class DataProviderDecoratorTest extends \PHPUnit_Framework_TestCase
+class DataProviderDecoratorTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var \ArrayObject
@@ -43,7 +43,7 @@ class DataProviderDecoratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @expectedException \BadMethodCallException
-     * @expectedExceptionMessage In the data provider "ArrayObject" does not exist method "offsetFlags".
+     * @expectedExceptionMessage Method "offsetFlags" not found in "ArrayObject".
      */
     public function testCallNotExistMethodCallException()
     {

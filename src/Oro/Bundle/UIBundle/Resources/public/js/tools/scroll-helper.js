@@ -23,6 +23,102 @@ define(function(require) {
         _scrollbarWidth: -1,
 
         /**
+         * Select global scrollable container
+         */
+        _scrollableContainerSelector: '#container',
+
+        /**
+         * Store scroll position
+         */
+        _scrollState: null,
+
+        /**
+         * Disable/Enable scroll state
+         */
+        _isBodyTouchScrollDisabled: false,
+
+        /**
+         * Disable body scroll on touch devices
+         * @returns {boolean}
+         */
+        disableBodyTouchScroll: function() {
+            if (this._isBodyTouchScrollDisabled) {
+                return false;
+            }
+
+            this._scrollState = window.scrollY;
+
+            $(this._scrollableContainerSelector)
+                .addClass('disable-touch-scrolling')
+                .css('height', window.innerHeight);
+
+            $(document)
+                .off('touchmove.disableScroll')
+                .on('touchmove.disableScroll', _.bind(this._preventMobileScrolling, this));
+
+            this._isBodyTouchScrollDisabled = true;
+        },
+
+        /**
+         * Enable body scroll on touch devices
+         * @returns {boolean}
+         */
+        enableBodyTouchScroll: function() {
+            if (!this._isBodyTouchScrollDisabled) {
+                return false;
+            }
+
+            $(this._scrollableContainerSelector)
+                .removeClass('disable-touch-scrolling')
+                .css('height', '');
+
+            $(document).off('touchmove.disableScroll');
+
+            window.scrollTo(0, this._scrollState);
+
+            this._isBodyTouchScrollDisabled = false;
+            this._scrollState = null;
+        },
+
+        /**
+         * Block touch move event propagation on body
+         * @param {jQueryEvent} event
+         * @private
+         */
+        _preventMobileScrolling: function(event) {
+            var isTouchMoveAllowed = true;
+            var target = event.target;
+
+            while (target !== null) {
+                if (target.classList && target.classList.contains('disable-scrolling')) {
+                    isTouchMoveAllowed = false;
+                    break;
+                }
+                target = target.parentNode;
+            }
+
+            if (!isTouchMoveAllowed) {
+                event.preventDefault();
+            }
+        },
+
+        /**
+         * Remove bounce effect, when scroll overflow viewport
+         * @param {jQueryEvent} event
+         */
+        removeIOSRubberEffect: function(event) {
+            var element = event.currentTarget;
+            var top = element.scrollTop;
+            var totalScroll = element.scrollHeight;
+            var currentScroll = top + element.offsetHeight;
+
+            if (top === 0) {
+                element.scrollTop = 1;
+            } else if (currentScroll === totalScroll) {
+                element.scrollTop = top - 1;
+            }
+        },
+        /**
          * Try to calculate the scrollbar width for your browser/os
          * @return {Number}
          */
@@ -97,8 +193,8 @@ define(function(require) {
             };
             if (
                 (resultRect.top === 0 && resultRect.bottom === 0) || // no-data block is shown
-                    (resultRect.top > this.documentHeight() && forceInvisible)
-                ) {
+                (resultRect.top > this.documentHeight() && forceInvisible)
+            ) {
                 // no need to calculate anything
                 return resultRect;
             }
@@ -108,7 +204,7 @@ define(function(require) {
                  * Equals header height. Cannot calculate dynamically due to issues on ipad
                  */
                 if (resultRect.top < this.MOBILE_HEADER_HEIGHT && tools.isMobile()) {
-                    if (current.id === 'top-page' && !$(document.body).hasClass('input-focused')) {
+                    if (current.id === 'central-panel' && !$(document.body).hasClass('input-focused')) {
                         resultRect.top = this.MOBILE_HEADER_HEIGHT;
                     } else if (current.className.split(/\s+/).indexOf('widget-content') !== -1) {
                         resultRect.top = this.MOBILE_POPUP_HEADER_HEIGHT;
@@ -119,7 +215,7 @@ define(function(require) {
                 borders = $.fn.getBorders(current);
 
                 var style = window.getComputedStyle(current);
-                if (style.overflowX !== 'visible' || style.overflowY  !== 'visible') {
+                if (style.overflowX !== 'visible' || style.overflowY !== 'visible') {
                     if (resultRect.top < midRect.top + borders.top) {
                         resultRect.top = midRect.top + borders.top;
                     }
@@ -201,10 +297,10 @@ define(function(require) {
             }
             var visibleRect = this.getVisibleRect(el, null, false, onAfterGetClientRect);
             var scrolls = {
-                vertical: rect.top !== visibleRect.top ? visibleRect.top - rect.top :
-                    (rect.bottom !== visibleRect.bottom ? visibleRect.bottom - rect.bottom : 0),
-                horizontal: rect.left !== visibleRect.left ? visibleRect.left - rect.left :
-                    (rect.right !== visibleRect.right ? visibleRect.right - rect.right : 0)
+                vertical: rect.top !== visibleRect.top ? visibleRect.top - rect.top
+                    : (rect.bottom !== visibleRect.bottom ? visibleRect.bottom - rect.bottom : 0),
+                horizontal: rect.left !== visibleRect.left ? visibleRect.left - rect.left
+                    : (rect.right !== visibleRect.right ? visibleRect.right - rect.right : 0)
             };
 
             if (verticalGap && scrolls.vertical) {

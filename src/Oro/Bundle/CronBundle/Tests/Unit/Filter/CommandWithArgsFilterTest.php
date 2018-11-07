@@ -4,9 +4,8 @@ namespace Oro\Bundle\CronBundle\Tests\Unit\Filter;
 
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQL92Platform;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Query;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\CronBundle\Filter\CommandWithArgsFilter;
 use Oro\Bundle\CronBundle\ORM\CommandArgsNormalizer;
 use Oro\Bundle\CronBundle\ORM\CommandArgsTokenizer;
@@ -14,7 +13,7 @@ use Oro\Bundle\CronBundle\ORM\Pgsql92CommandArgsNormalizer;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\TextFilterType;
 
-class CommandWithArgsFilterTest extends \PHPUnit_Framework_TestCase
+class CommandWithArgsFilterTest extends \PHPUnit\Framework\TestCase
 {
     /** @var CommandWithArgsFilter */
     protected $filter;

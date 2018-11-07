@@ -4,37 +4,35 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Command;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\Console\Input\Input;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Oro\Bundle\WorkflowBundle\Model\ProcessData;
 use Oro\Bundle\WorkflowBundle\Command\HandleProcessTriggerCommand;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
-use Oro\Bundle\WorkflowBundle\Tests\Unit\Command\Stub\TestOutput;
+use Oro\Bundle\WorkflowBundle\Model\ProcessData;
+use Oro\Component\Testing\Unit\Command\Stub\OutputStub;
+use Symfony\Component\Console\Input\Input;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class HandleProcessTriggerCommandTest extends \PHPUnit_Framework_TestCase
+class HandleProcessTriggerCommandTest extends \PHPUnit\Framework\TestCase
 {
     /** @var HandleProcessTriggerCommand */
     private $command;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContainerInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ContainerInterface */
     private $container;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry */
     private $managerRegistry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $processHandler;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|Input */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|Input */
     private $input;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EntityRepository */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityRepository */
     private $repo;
 
-    /** @var TestOutput */
+    /** @var OutputStub */
     private $output;
 
     protected function setUp()
@@ -70,7 +68,7 @@ class HandleProcessTriggerCommandTest extends \PHPUnit_Framework_TestCase
         $this->command->setContainer($this->container);
 
         $this->input = $this->getMockForAbstractClass('Symfony\Component\Console\Input\InputInterface');
-        $this->output = new TestOutput();
+        $this->output = new OutputStub();
     }
 
     protected function tearDown()

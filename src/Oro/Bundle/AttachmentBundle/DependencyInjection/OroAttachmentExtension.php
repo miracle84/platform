@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\AttachmentBundle\DependencyInjection;
 
-use Symfony\Component\Yaml\Parser;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\Yaml\Parser;
 
 class OroAttachmentExtension extends Extension
 {
@@ -22,6 +22,8 @@ class OroAttachmentExtension extends Extension
         $loader->load('services.yml');
         $loader->load('services_api.yml');
         $loader->load('form.yml');
+
+        $container->setParameter('oro_attachment.debug_images', $config['debug_images']);
 
         $yaml  = new Parser();
         $value = $yaml->parse(file_get_contents(__DIR__ . '/../Resources/config/files.yml'));

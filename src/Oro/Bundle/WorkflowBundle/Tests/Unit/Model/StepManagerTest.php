@@ -3,13 +3,11 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Model;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\WorkflowBundle\Model\Step;
 use Oro\Bundle\WorkflowBundle\Model\StepManager;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
-class StepManagerTest extends \PHPUnit_Framework_TestCase
+class StepManagerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 

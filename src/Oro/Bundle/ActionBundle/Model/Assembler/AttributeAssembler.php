@@ -4,7 +4,6 @@ namespace Oro\Bundle\ActionBundle\Model\Assembler;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Util\ClassUtils;
-
 use Oro\Bundle\ActionBundle\Exception\AssemblerException;
 use Oro\Bundle\ActionBundle\Exception\MissedRequiredOptionException;
 use Oro\Bundle\ActionBundle\Model\ActionData;
@@ -109,7 +108,7 @@ class AttributeAssembler extends AbstractAssembler
             return $options;
         }
 
-        $attributeParameters = $this->attributeGuesser->guessAttributeParameters($rootClass, $propertyPath);
+        $attributeParameters = $this->attributeGuesser->guessParameters($rootClass, $propertyPath);
         if ($attributeParameters) {
             foreach ($guessedOptions as $option) {
                 if (empty($options[$option]) && !empty($attributeParameters[$option])) {

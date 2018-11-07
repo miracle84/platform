@@ -3,16 +3,22 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Validator;
 
 use Oro\Bundle\EntityConfigBundle\Config\Config;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\ConfigProviderMock;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\EntityExtendBundle\Event\ValidateBeforeRemoveFieldEvent;
 use Oro\Bundle\EntityExtendBundle\Validator\FieldNameValidationHelper;
+use Oro\Bundle\ImportExportBundle\Strategy\Import\NewEntitiesHelper;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
-class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
+class FieldNameValidationHelperTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_CLASS = 'Test\Entity';
+
+    const REMOVE_ERROR_MESSAGE = 'error message';
 
     /** @var ConfigProviderMock */
     protected $extendConfigProvider;
@@ -20,18 +26,25 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
     /** @var FieldNameValidationHelper */
     protected $validationHelper;
 
+    /** @var EventDispatcherInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $eventDispatcher;
+
     protected function setUp()
     {
-        $configManager = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        /** @var ConfigManager $configManager */
+        $configManager = $this->createMock(ConfigManager::class);
 
         $this->extendConfigProvider = new ConfigProviderMock(
             $configManager,
             'extend'
         );
+        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
 
-        $this->validationHelper = new FieldNameValidationHelper($this->extendConfigProvider);
+        $this->validationHelper = new FieldNameValidationHelper(
+            $this->extendConfigProvider,
+            $this->eventDispatcher,
+            new NewEntitiesHelper()
+        );
     }
 
     /**
@@ -58,6 +71,9 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @return array
+     */
     public function canFieldBeRestoredProvider()
     {
         return [
@@ -66,6 +82,38 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
             ['deletedField', true],
             ['toBeDeletedField', true],
         ];
+    }
+
+    public function testGetRemoveFieldValidationErrorsWithoutError()
+    {
+        $fieldConfigModel = new FieldConfigModel();
+        $event = new ValidateBeforeRemoveFieldEvent($fieldConfigModel);
+        $this->eventDispatcher->expects($this->once())
+            ->method('dispatch')
+            ->with(ValidateBeforeRemoveFieldEvent::NAME, $event);
+
+        $result = $this->validationHelper->getRemoveFieldValidationErrors($fieldConfigModel);
+
+        $this->assertEquals([], $result);
+    }
+
+    public function testGetRemoveFieldValidationErrorsWithError()
+    {
+        $fieldConfigModel = new FieldConfigModel();
+        $validationEvent = new ValidateBeforeRemoveFieldEvent($fieldConfigModel);
+
+        $this->eventDispatcher->expects($this->once())
+            ->method('dispatch')
+            ->with(ValidateBeforeRemoveFieldEvent::NAME, $validationEvent)
+            ->willReturnCallback(
+                function ($eventName, ValidateBeforeRemoveFieldEvent $event) {
+                    $event->addValidationMessage(self::REMOVE_ERROR_MESSAGE);
+                }
+            );
+
+        $result = $this->validationHelper->getRemoveFieldValidationErrors($fieldConfigModel);
+
+        $this->assertEquals([self::REMOVE_ERROR_MESSAGE], $result);
     }
 
     /**
@@ -91,6 +139,9 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+    /**
+     * @return array
+     */
     public function findExtendFieldConfigProvider()
     {
         return [
@@ -110,32 +161,62 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
      * @dataProvider hasFieldNameConflictProvider
      *
      * @param string $newFieldName
-     * @param Config $existingFieldConfig
-     * @param bool   $expectedResult
+     * @param string $existingFieldName
+     * @param array $values
+     * @param bool $expectedResult
      */
-    public function testHasFieldNameConflict($newFieldName, $existingFieldConfig, $expectedResult)
+    public function testGetSimilarExistingFieldData($newFieldName, $existingFieldName, array $values, $expectedResult)
     {
-        $this->assertEquals(
+        $this->addFieldConfig($existingFieldName, 'string', $values);
+
+        $this->assertSame(
             $expectedResult,
-            $this->validationHelper->hasFieldNameConflict($newFieldName, $existingFieldConfig)
+            $this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, $newFieldName)
         );
     }
 
+    /**
+     * @return array
+     */
     public function hasFieldNameConflictProvider()
     {
         return [
-            ['testField', $this->getFieldConfig('testField'), true],
-            ['test_field', $this->getFieldConfig('testField'), true],
-            ['testField', $this->getFieldConfig('test_field'), true],
-            ['TestField', $this->getFieldConfig('testField'), true],
-            ['testField', $this->getFieldConfig('anotherField'), false],
-            ['testField', $this->getFieldConfig('testField', ['is_deleted' => true]), true],
-            ['test_field', $this->getFieldConfig('testField', ['is_deleted' => true]), false],
-            ['testField', $this->getFieldConfig('test_field', ['is_deleted' => true]), false],
-            ['testField', $this->getFieldConfig('testField', ['state' => ExtendScope::STATE_DELETE]), true],
-            ['test_field', $this->getFieldConfig('testField', ['state' => ExtendScope::STATE_DELETE]), false],
-            ['testField', $this->getFieldConfig('test_field', ['state' => ExtendScope::STATE_DELETE]), false],
+            ['testField', 'testField', [], ['testField', 'string']],
+            ['test_field', 'testField', [], ['testField', 'string']],
+            ['testField', 'test_field', [], ['test_field', 'string']],
+            ['TestField', 'testField', [], ['testField', 'string']],
+            ['testField', 'anotherField', [], []],
+            ['testField', 'testField', ['is_deleted' => true], ['testField', 'string']],
+            ['test_field', 'testField', ['is_deleted' => true], []],
+            ['testField', 'test_field', ['is_deleted' => true], []],
+            ['testField', 'testField', ['state' => ExtendScope::STATE_DELETE], ['testField', 'string']],
+            ['test_field', 'testField', ['state' => ExtendScope::STATE_DELETE], []],
+            ['testField', 'test_field', ['state' => ExtendScope::STATE_DELETE], []],
         ];
+    }
+
+    public function testRegisterFieldField()
+    {
+        $field1 = new FieldConfigModel('testField1', 'string');
+        $field2 = new FieldConfigModel('testField2', 'string');
+
+        $entity = new EntityConfigModel(self::ENTITY_CLASS);
+        $entity->addField($field1);
+        $entity->addField($field2);
+
+        $this->validationHelper->registerField($field1);
+        $this->validationHelper->registerField($field2);
+
+        self::assertNotEmpty($this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, 'testField1'));
+        self::assertNotEmpty($this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, 'test_field_1'));
+        self::assertNotEmpty($this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, 'TEST_FIELD_1'));
+        self::assertNotEmpty($this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, 'testField2'));
+        self::assertNotEmpty($this->validationHelper
+            ->getSimilarExistingFieldData(self::ENTITY_CLASS, 'testField1'));
+        self::assertNotEmpty($this->validationHelper
+            ->getSimilarExistingFieldData(self::ENTITY_CLASS, 'testField2'));
+
+        self::assertEmpty($this->validationHelper->getSimilarExistingFieldData(self::ENTITY_CLASS, 'testField3'));
     }
 
     /**
@@ -144,7 +225,7 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
      * @param array  $values
      * @param bool   $hidden
      */
-    protected function addFieldConfig($fieldName, $fieldType = null, $values = [], $hidden = false)
+    protected function addFieldConfig($fieldName, $fieldType = null, array $values = [], $hidden = false)
     {
         $this->extendConfigProvider->addFieldConfig(
             self::ENTITY_CLASS,
@@ -161,7 +242,7 @@ class FieldNameValidationHelperTest extends \PHPUnit_Framework_TestCase
      *
      * @return Config
      */
-    protected function getFieldConfig($fieldName, $values = [])
+    protected function getFieldConfig($fieldName, array $values = [])
     {
         $fieldConfigId = new FieldConfigId(
             'extend',

@@ -5,9 +5,8 @@ namespace Oro\Bundle\WorkflowBundle\EventListener;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-
 use Oro\Bundle\WorkflowBundle\Entity\ProcessJob;
-
+use Oro\Component\DependencyInjection\ServiceLink;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class ProcessDataSerializeListener
@@ -22,19 +21,15 @@ class ProcessDataSerializeListener
      */
     protected $scheduledEntities = array();
 
-    /**
-     * @var SerializerInterface
-     */
-    protected $serializer;
+    /** @var ServiceLink */
+    private $serializerLink;
 
     /**
-     * Constructor
-     *
-     * @param SerializerInterface $serializer
+     * @param ServiceLink $serializerLink
      */
-    public function __construct(SerializerInterface $serializer)
+    public function __construct(ServiceLink $serializerLink)
     {
-        $this->serializer = $serializer;
+        $this->serializerLink = $serializerLink;
     }
 
     /**
@@ -45,7 +40,7 @@ class ProcessDataSerializeListener
     protected function deserialize(ProcessJob $processJob)
     {
         // Pass serializer into ProcessJob to make lazy loading of entity item data.
-        $processJob->setSerializer($this->serializer, $this->format);
+        $processJob->setSerializer($this->getSerializer(), $this->format);
     }
 
     /**
@@ -96,15 +91,12 @@ class ProcessDataSerializeListener
     /**
      * After ProcessJob loaded deserialize $serializedData
      *
+     * @param ProcessJob         $entity
      * @param LifecycleEventArgs $args
      */
-    public function postLoad(LifecycleEventArgs $args)
+    public function postLoad(ProcessJob $entity, LifecycleEventArgs $args)
     {
-        /** @var ProcessJob $entity */
-        $entity = $args->getEntity();
-        if ($this->isSupported($entity)) {
-            $this->deserialize($entity);
-        }
+        $this->deserialize($entity);
     }
 
     /**
@@ -115,8 +107,17 @@ class ProcessDataSerializeListener
     protected function serialize(ProcessJob $processJob)
     {
         $processData = $processJob->getData();
-        $serializedData = $this->serializer->serialize($processData, $this->format, array('processJob' => $processJob));
+        $serializedData = $this->getSerializer()
+            ->serialize($processData, $this->format, array('processJob' => $processJob));
         $processJob->setSerializedData($serializedData);
         $processData->setModified(false);
+    }
+
+    /**
+     * @return SerializerInterface
+     */
+    private function getSerializer()
+    {
+        return $this->serializerLink->getService();
     }
 }

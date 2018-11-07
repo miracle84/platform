@@ -3,16 +3,15 @@
 namespace Oro\Bundle\SyncBundle\Tests\Unit\Content;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\PersistentCollection;
-use Doctrine\ORM\UnitOfWork;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
+use Doctrine\ORM\PersistentCollection;
+use Doctrine\ORM\UnitOfWork;
 use Oro\Bundle\SyncBundle\Content\DoctrineTagGenerator;
 use Oro\Bundle\SyncBundle\Tests\Unit\Content\Stub\EntityStub;
 use Oro\Bundle\SyncBundle\Tests\Unit\Content\Stub\NewEntityStub;
 
-class DoctrineTagGeneratorTest extends \PHPUnit_Framework_TestCase
+class DoctrineTagGeneratorTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_ENTITY_NAME = 'Oro\Bundle\SyncBundle\Tests\Unit\Content\Stub\EntityStub';
     const TEST_NEW_ENTITY_NAME = 'Oro\Bundle\SyncBundle\Tests\Unit\Content\Stub\NewEntityStub';
@@ -21,10 +20,10 @@ class DoctrineTagGeneratorTest extends \PHPUnit_Framework_TestCase
     /** @var  DoctrineTagGenerator */
     protected $generator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EntityManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityManager */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|UnitOfWork */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|UnitOfWork */
     protected $uow;
 
     protected function setUp()
@@ -109,12 +108,6 @@ class DoctrineTagGeneratorTest extends \PHPUnit_Framework_TestCase
 
         $result = $this->generator->generate($data, $includeCollectionTag);
         $this->assertCount($expectedCount, $result);
-
-        $this->assertCount(
-            $expectedCount,
-            $this->generator->generate($data, $includeCollectionTag),
-            'Should not provoke expectation error, cause tags info should be cached'
-        );
     }
 
     /**
@@ -293,7 +286,7 @@ class DoctrineTagGeneratorTest extends \PHPUnit_Framework_TestCase
     /**
      * @param mixed $data
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getFormMock($data)
     {

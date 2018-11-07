@@ -2,56 +2,45 @@
 
 namespace Oro\Bundle\ImportExportBundle\Tests\Unit\File;
 
+use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\ImportExportBundle\Field\DatabaseHelper;
 use Oro\Bundle\ImportExportBundle\Tests\Unit\Fixtures\TestEntity;
 use Oro\Bundle\ImportExportBundle\Tests\Unit\Fixtures\TestOrganization;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadata;
+use Oro\Component\DependencyInjection\ServiceLink;
 
-class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
+/**
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
+class DatabaseHelperTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_CLASS = 'stdClass';
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $entityManager;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $repository;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $metadata;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $ownershipMetadataProvider;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $fieldHelperService;
 
-
-    /**
-     * @var DatabaseHelper
-     */
+    /** @var DatabaseHelper */
     protected $helper;
 
     protected function setUp()
@@ -89,9 +78,7 @@ class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
             ->with(self::TEST_CLASS)
             ->will($this->returnValue($this->repository));
 
-        $fieldHelper = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $fieldHelper = $this->createMock(ServiceLink::class);
         $this->fieldHelperService = $this->getMockBuilder('Oro\Bundle\EntityBundle\Helper\FieldHelper')
             ->disableOriginalConstructor()
             ->getMock('getService');
@@ -99,27 +86,13 @@ class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
             ->method('getService')
             ->willReturn($this->fieldHelperService);
 
-        $securityFacadeLink = $this->getMockBuilder(
-            'Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink'
-        )
-            ->disableOriginalConstructor()
-            ->getMock();
-        $ownershipMetadataProviderLink = $this
-            ->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $ownershipMetadataProviderLink = $this->createMock(ServiceLink::class);
         $this->ownershipMetadataProvider = $this
-            ->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider')
+            ->getMockBuilder('Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface')
             ->disableOriginalConstructor()
             ->getMock();
-
-        $securityFacadeLink->expects($this->any())
-            ->method('getService')
-            ->willReturn($this->securityFacade);
         $ownershipMetadataProviderLink->expects($this->any())
             ->method('getService')
             ->willReturn($this->ownershipMetadataProvider);
@@ -128,7 +101,7 @@ class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
             $registry,
             $this->doctrineHelper,
             $fieldHelper,
-            $securityFacadeLink,
+            $this->tokenAccessor,
             $ownershipMetadataProviderLink
         );
     }
@@ -160,10 +133,10 @@ class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
 
         $currentOrganization = new TestOrganization();
         $currentOrganization->setId(1);
-        $this->securityFacade->expects($this->any())
+        $this->tokenAccessor->expects($this->any())
             ->method('getOrganization')
             ->willReturn($currentOrganization);
-        $this->securityFacade->expects($this->any())
+        $this->tokenAccessor->expects($this->any())
             ->method('getOrganizationId')
             ->willReturn($currentOrganization->getId());
 
@@ -357,5 +330,36 @@ class DatabaseHelperTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($reference));
 
         $this->assertEquals($reference, $this->helper->getEntityReference($entity));
+    }
+
+    public function testFindOneByCacheWithoutEntity()
+    {
+        $query = $this->createMock(AbstractQuery::class);
+        $query->expects($this->once())
+            ->method('getOneOrNullResult')
+            ->willReturn(null);
+
+        $queryBuilder = $this->createMock(QueryBuilder::class);
+        $queryBuilder->expects($this->any())
+            ->method('andWhere')
+            ->willReturnSelf();
+        $queryBuilder->expects($this->any())
+            ->method('setParameters')
+            ->willReturnSelf();
+        $queryBuilder->expects($this->any())
+            ->method('setMaxResults')
+            ->willReturnSelf();
+        $queryBuilder->expects($this->once())
+            ->method('getQuery')
+            ->willReturn($query);
+
+        $this->repository->expects($this->once())
+            ->method('createQueryBuilder')
+            ->willReturn($queryBuilder);
+
+        $this->assertNull($this->helper->findOneBy(self::TEST_CLASS, ['field1' => 'value1', 'field2' => 'value2']));
+
+        //check cache
+        $this->assertNull($this->helper->findOneBy(self::TEST_CLASS, ['field2' => 'value2', 'field1' => 'value1']));
     }
 }

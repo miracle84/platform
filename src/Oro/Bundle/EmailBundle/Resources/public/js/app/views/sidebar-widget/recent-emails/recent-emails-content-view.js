@@ -9,7 +9,14 @@ define(function(require) {
         component: null,
 
         listen: {
-            'refresh': 'onRefresh'
+            refresh: 'onRefresh'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function RecentEmailsContentView() {
+            RecentEmailsContentView.__super__.constructor.apply(this, arguments);
         },
 
         render: function() {

@@ -2,15 +2,14 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\SecurityBundle\DependencyInjection\Compiler\OwnershipTreeProvidersPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\SecurityBundle\DependencyInjection\Compiler\OwnershipTreeProvidersPass;
-
-class OwnershipTreeProvidersPassTest extends \PHPUnit_Framework_TestCase
+class OwnershipTreeProvidersPassTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ContainerBuilder
+     * @var \PHPUnit\Framework\MockObject\MockObject|ContainerBuilder
      */
     protected $containerBuilder;
 
@@ -68,8 +67,8 @@ class OwnershipTreeProvidersPassTest extends \PHPUnit_Framework_TestCase
             ->with(OwnershipTreeProvidersPass::TAG_NAME)
             ->willReturn(
                 [
-                    'treeProvider1' => [['class' => 'Test\Class1']],
-                    'treeProvider2' => [['class' => 'Test\Class2']],
+                    'treeprovider1' => [['class' => 'Test\Class1']],
+                    'treeprovider2' => [['class' => 'Test\Class2']],
                 ]
             );
 

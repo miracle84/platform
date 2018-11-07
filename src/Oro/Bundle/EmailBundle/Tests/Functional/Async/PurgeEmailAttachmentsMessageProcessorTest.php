@@ -10,9 +10,6 @@ use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 
-/**
- * @dbIsolation
- */
 class PurgeEmailAttachmentsMessageProcessorTest extends WebTestCase
 {
     use MessageQueueExtension;
@@ -86,7 +83,7 @@ class PurgeEmailAttachmentsMessageProcessorTest extends WebTestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {

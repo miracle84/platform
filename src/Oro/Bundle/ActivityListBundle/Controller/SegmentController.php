@@ -2,15 +2,13 @@
 
 namespace Oro\Bundle\ActivityListBundle\Controller;
 
+use Oro\Bundle\ActivityListBundle\Event\ActivityConditionOptionsLoadEvent;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\ActivityListBundle\Event\ActivityConditionOptionsLoadEvent;
 
 /**
  * @Route("/activity-list/segment")
@@ -26,16 +24,11 @@ class SegmentController extends Controller
         $params = $request->attributes->get('params', []);
         $conditionOptions = [
             'activityConditionOptions' => [
-                'listOption'     => $this->forward(
+                'listOptions'     => json_decode($this->forward(
                     'OroActivityListBundle:Api/Rest/ActivityList:getActivityListOption',
                     [],
                     ['_format' => 'json']
-                )->getContent(),
-                'entitySelector' => sprintf('[data-ftid=%s]', $params['entity_choice_id']),
-                'fieldsLoaderSelector' =>  sprintf(
-                    '[data-ftid=%soro_api_querydesigner_fields_entity]',
-                    $params['entity_choice_id']
-                ),
+                )->getContent()),
                 'fieldChoice' => [
                     'select2' => [
                         'placeholder' => $this->getTranslator()->trans(
@@ -43,8 +36,8 @@ class SegmentController extends Controller
                         ),
                     ],
                 ],
-                'extensions' => [],
-            ]
+            ],
+            'params' => $params,
         ];
 
         $dispatcher = $this->getEventDispatcher();
@@ -57,6 +50,7 @@ class SegmentController extends Controller
 
         return [
             'activityConditionOptions' => $event->getOptions(),
+            'params' => $params,
         ];
     }
 

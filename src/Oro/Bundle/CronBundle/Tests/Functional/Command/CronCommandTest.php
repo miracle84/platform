@@ -5,13 +5,10 @@ namespace Oro\Bundle\CronBundle\Tests\Functional\Command;
 use Cron\CronExpression;
 use Oro\Bundle\CronBundle\Async\Topics;
 use Oro\Bundle\CronBundle\Helper\CronHelper;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\MessageQueueBundle\Test\Functional\MessageQueueExtension;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 
-/**
- * @dbIsolation
- */
 class CronCommandTest extends WebTestCase
 {
     use MessageQueueExtension;
@@ -80,7 +77,7 @@ class CronCommandTest extends WebTestCase
         $result = $this->runCommand('oro:cron', ['-vvv' => true]);
         $this->assertNotEmpty($result);
 
-        $this->assertContains("All commands scheduled\n", $result);
+        $this->assertContains("All commands scheduled", $result);
     }
 
     /**

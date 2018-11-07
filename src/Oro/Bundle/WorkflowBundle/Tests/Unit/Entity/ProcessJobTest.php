@@ -3,11 +3,11 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Entity;
 
 use Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition;
-use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessJob;
+use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
 use Oro\Bundle\WorkflowBundle\Model\ProcessData;
 
-class ProcessJobTest extends \PHPUnit_Framework_TestCase
+class ProcessJobTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ProcessJob

@@ -2,17 +2,25 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\SecurityContextInterface;
-
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\AttachmentBundle\Form\Type\ImageType;
+use Oro\Bundle\FormBundle\Form\Type\OroBirthdayType;
+use Oro\Bundle\OrganizationBundle\Form\Type\OrganizationsSelectType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\UserBundle\Form\EventListener\UserSubscriber;
 use Oro\Bundle\UserBundle\Form\Provider\PasswordFieldOptionsProvider;
+use Oro\Bundle\UserBundle\Form\Type\ChangePasswordType;
 use Oro\Bundle\UserBundle\Form\Type\UserType;
-use Oro\Bundle\FormBundle\Form\Type\OroBirthdayType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class UserTypeTest extends \PHPUnit_Framework_TestCase
+class UserTypeTest extends \PHPUnit\Framework\TestCase
 {
     const MY_PROFILE_ROUTE    = 'oro_user_profile_update';
     const OTHER_PROFILE_ROUTE = 'oro_user_update';
@@ -21,26 +29,20 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
     const RULE_GROUP          = 'oro_user_group_view';
     const RULE_ROLE           = 'oro_user_role_view';
 
-    /** @var SecurityContextInterface|\PHPUnit_Framework_MockObject_MockObject */
-    private $securityInterface;
+    /** @var AuthorizationCheckerInterface|\PHPUnit\Framework\MockObject\MockObject */
+    private $authorizationChecker;
 
-    /** @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject */
-    private $securityFacade;
+    /** @var TokenAccessorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    private $tokenAccessor;
 
-    /** @var PasswordFieldOptionsProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var PasswordFieldOptionsProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $optionsProvider;
 
     protected function setUp()
     {
-        $this->securityInterface = $this->getMockBuilder(SecurityContextInterface::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->securityFacade = $this->getMockBuilder(SecurityFacade::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->optionsProvider = $this->getMockBuilder(PasswordFieldOptionsProvider::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->optionsProvider = $this->createMock(PasswordFieldOptionsProvider::class);
     }
 
     /**
@@ -55,7 +57,7 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
         $order = 0;
 
         foreach ($permissions as $rule => $isGranted) {
-            $this->securityFacade->expects($this->at($order))
+            $this->authorizationChecker->expects($this->at($order))
                 ->method('isGranted')
                 ->with($rule)
                 ->will($this->returnValue($isGranted));
@@ -69,7 +71,7 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $userSubscriber = new UserSubscriber($formFactory, $this->securityInterface);
+        $userSubscriber = new UserSubscriber($formFactory, $this->tokenAccessor);
 
         $order   = 0;
         $builder = $this->getMockBuilder('Symfony\Component\Form\FormBuilder')
@@ -89,54 +91,58 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
         if ($permissions[self::RULE_ROLE]) {
             $builder->expects($this->at(++$order))
                 ->method('add')
-                ->with('roles', 'entity')
+                ->with('roles', EntityType::class)
                 ->will($this->returnValue($builder));
         }
+        $attr = [];
+
+        if ($isMyProfile) {
+            $attr['readonly'] = true;
+        }
+
         if ($permissions[self::RULE_GROUP]) {
             $arr = array(
                 'label'     => 'oro.user.groups.label',
                 'class'     => 'OroUserBundle:Group',
-                'property'  => 'name',
+                'choice_label' => 'name',
                 'multiple'  => true,
                 'expanded'  => true,
                 'required'  => false,
-                'read_only' => $isMyProfile,
+                'attr'      => $attr,
                 'disabled'  => $isMyProfile,
                 'translatable_options' => false
             );
             $builder->expects($this->at(++$order))
                 ->method('add')
-                ->with('groups', 'entity', $arr)
+                ->with('groups', EntityType::class, $arr)
                 ->will($this->returnValue($builder));
         }
         if ($permissions[self::RULE_BUSINESS_UNIT] && $permissions[self::RULE_ORGANIZATION]) {
             $builder->expects($this->at(++$order))
                 ->method('add')
-                ->with('organizations', 'oro_organizations_select')
+                ->with('organizations', OrganizationsSelectType::class)
                 ->will($this->returnValue($builder));
         }
         $builder->expects($this->at(++$order))
             ->method('add')
-            ->with('plainPassword', 'repeated')
+            ->with('emails', CollectionType::class)
             ->will($this->returnValue($builder));
         $builder->expects($this->at(++$order))
             ->method('add')
-            ->with('emails', 'collection')
+            ->with('change_password', ChangePasswordType::class)
             ->will($this->returnValue($builder));
         $builder->expects($this->at(++$order))
             ->method('add')
-            ->with('change_password', 'oro_change_password')
+            ->with('avatar', ImageType::class)
             ->will($this->returnValue($builder));
         $builder->expects($this->at(++$order))
             ->method('add')
-            ->with('avatar', 'oro_image')
-            ->will($this->returnValue($builder));
-        $builder->expects($this->at(++$order))
-            ->method('add')
-            ->with('inviteUser', 'checkbox')
+            ->with('inviteUser', CheckboxType::class)
             ->will($this->returnValue($builder));
 
-        $type = new UserType($this->securityInterface, $this->securityFacade, $request, $this->optionsProvider);
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+        $type = new UserType($this->authorizationChecker, $this->tokenAccessor, $requestStack, $this->optionsProvider);
         $type->buildForm($builder, []);
     }
 
@@ -204,20 +210,20 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param $builder \PHPUnit_Framework_MockObject_MockObject
+     * @param $builder \PHPUnit\Framework\MockObject\MockObject
      * @param $order
      */
     protected function mockSetDefaultUserFields($builder, &$order = -1)
     {
         $parameters = array(
-            array('username', 'text'),
-            array('email', 'email'),
-            array('phone', 'text'),
-            array('namePrefix', 'text'),
-            array('firstName', 'text'),
-            array('middleName', 'text'),
-            array('lastName', 'text'),
-            array('nameSuffix', 'text'),
+            array('username', TextType::class),
+            array('email', EmailType::class),
+            array('phone', TextType::class),
+            array('namePrefix', TextType::class),
+            array('firstName', TextType::class),
+            array('middleName', TextType::class),
+            array('lastName', TextType::class),
+            array('nameSuffix', TextType::class),
             array('birthday', OroBirthdayType::class)
         );
 
@@ -229,17 +235,19 @@ class UserTypeTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
         $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->disableOriginalConstructor()
             ->getMock();
         $resolver->expects($this->once())
             ->method('setDefaults');
+        $requestStack = new RequestStack();
+        $requestStack->push(new Request());
         $type = new UserType(
-            $this->securityInterface,
-            $this->securityFacade,
-            new Request(),
+            $this->authorizationChecker,
+            $this->tokenAccessor,
+            $requestStack,
             $this->optionsProvider
         );
         $type->configureOptions($resolver);

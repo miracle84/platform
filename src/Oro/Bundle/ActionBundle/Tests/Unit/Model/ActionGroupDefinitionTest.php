@@ -3,10 +3,9 @@
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Model;
 
 use Oro\Bundle\ActionBundle\Model\ActionGroupDefinition;
-
 use Oro\Component\Testing\Unit\EntityTestCaseTrait;
 
-class ActionGroupDefinitionTest extends \PHPUnit_Framework_TestCase
+class ActionGroupDefinitionTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTestCaseTrait;
 

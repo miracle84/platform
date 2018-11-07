@@ -3,17 +3,13 @@
 namespace Oro\Bundle\TranslationBundle\Tests\Functional\Entity\Repository;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\TranslationBundle\Entity\Language;
-use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationRepository;
+use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadLanguages;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadTranslations;
 
-/**
- * @dbIsolation
- */
 class TranslationRepositoryTest extends WebTestCase
 {
     /** @var EntityManager */
@@ -202,8 +198,9 @@ class TranslationRepositoryTest extends WebTestCase
         foreach ($expectedTranslations as $translationRef) {
             /** @var Translation $translation */
             $translation = $this->getReference($translationRef);
-            $result[$translation->getTranslationKey()->getId()] = [
-                'translation_key_id' => $translation->getTranslationKey()->getId(),
+            $id = $translation->getTranslationKey()->getId();
+            $result[$id] = [
+                'translation_key_id' => $id,
                 'scope' => $translation->getScope(),
                 'value' => $translation->getValue(),
             ];

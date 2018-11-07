@@ -12,15 +12,29 @@ define(function(require) {
 
     ActionPermissionsReadonlyRowView = BaseView.extend({
         tagName: 'tr',
-        className: 'collapsed',
+
+        className: 'grid-row collapsed',
+
         autoRender: false,
+
         animationDuration: 0,
+
         template: require('tpl!orouser/templates/datagrid/action-permissions-row-view.html'),
+
         permissionItemView: PermissionReadOnlyView,
+
         fieldItemView: ReadonlyFieldView,
-        events: {
-            'click .collapse-action': 'onFieldsSectionToggle'
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActionPermissionsReadonlyRowView() {
+            ActionPermissionsReadonlyRowView.__super__.constructor.apply(this, arguments);
         },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             ActionPermissionsReadonlyRowView.__super__.initialize.call(this, options);
             var fields = this.model.get('fields');
@@ -60,19 +74,6 @@ define(function(require) {
                 }));
             }
             return this;
-        },
-
-        changeTitle: function(targetElement) {
-            var target = this.$(targetElement);
-            var titleHolder = this.$el.hasClass('collapsed') ? 'data-collapsed-title' : 'data-expanded-title';
-            target.attr('title', target.attr(titleHolder));
-        },
-
-        onFieldsSectionToggle: function(e) {
-            e.preventDefault();
-            this.$el.toggleClass('collapsed');
-            this.changeTitle(e.target);
-            this.$('[data-name=fields-list]').slideToggle(!this.$el.hasClass('collapsed'));
         }
     });
 

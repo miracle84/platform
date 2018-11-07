@@ -1,11 +1,18 @@
 define(['underscore', 'oroui/js/app/views/base/view', 'jquery.simplecolorpicker'
-    ], function(_, BaseView) {
+], function(_, BaseView) {
     'use strict';
 
     var SimpleColorChoiceView = BaseView.extend({
         events: {
-            'enable': 'enable',
-            'disable': 'disable'
+            enable: 'enable',
+            disable: 'disable'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function SimpleColorChoiceView() {
+            SimpleColorChoiceView.__super__.constructor.apply(this, arguments);
         },
 
         /**

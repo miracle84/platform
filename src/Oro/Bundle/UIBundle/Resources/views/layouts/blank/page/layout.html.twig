@@ -2,6 +2,10 @@
     {{ block_widget(block) }}
 {% endblock %}
 
+{% block _require_modules_widget %}
+    {{ block_widget(block) }}
+{% endblock %}
+
 {% block _requirejs_scripts_widget %}
     {% set requirejs_config_extend %}
         {%- placeholder requirejs_config_extend -%}
@@ -15,12 +19,28 @@
 {% endblock %}
 
 {% block body_widget %}
+    {% import 'OroUIBundle::macros.html.twig' as UI %}
     {% set attr = layout_attr_defaults(attr, {
-        '~class': 'body ' ~ (isMobileVersion() ? 'mobile' : 'desktop') ~ '-version'
+        '~class': ' body ' ~ (isMobileVersion() ? 'mobile' : 'desktop') ~ '-version'
     }) %}
 
     <body {{ block('block_attributes') }}>
-        {{ block_widget(block) }}
+        <div {{ UI.renderPageComponentAttributes({
+            module: 'oroui/js/app/components/app-loading-mask-component'
+        }) }}></div>
+        <div {{ UI.renderPageComponentAttributes({
+            module: 'oroui/js/app/components/app-loading-bar-component'
+        }) }}></div>
+        {% if isMobileVersion() %}
+            <div {{ UI.renderPageComponentAttributes({
+                view: 'oroui/js/app/views/swipeable-view',
+                options: {_sourceElement: 'body'}
+            }) }}></div>
+        {% endif %}
+        <div id="container" data-layout="separate"
+             {{ UI.renderPageComponentAttributes({view: 'oroui/js/app/views/page/content-view'}) }}>
+            {{ block_widget(block) }}
+        </div>
     </body>
 {% endblock %}
 
@@ -48,14 +68,29 @@
     {% set attr = layout_attr_defaults(attr, {
         '~class': ' page-main'
     }) %}
-
-    {% set contentClass = 'page-main__content'%}
-
     <main{{ block('block_attributes') }}>
-        <div class="{{ contentClass }}">
+        {{ block_widget(block) }}
+    </main>
+{% endblock %}
+
+{% block _page_main_content_widget %}
+    {% set attr = layout_attr_defaults(attr, {
+        '~class': ' page-main__content'
+    }) %}
+    <div{{ block('block_attributes') }}>
+        {{ block_widget(block) }}
+    </div>
+{% endblock %}
+
+{% block _page_main_header_widget %}
+    {% if block.count > 0 %}
+        {% set attr = layout_attr_defaults(attr, {
+            '~class': ' page-main__header'
+        }) %}
+        <div{{ block('block_attributes') }}>
             {{ block_widget(block) }}
         </div>
-    </main>
+    {% endif %}
 {% endblock %}
 
 

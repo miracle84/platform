@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\DataAuditBundle\Datagrid;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class AuthorProvider
 {
@@ -30,6 +29,9 @@ class AuthorProvider
     {
         return function (ResultRecord $record) {
             $user = $record->getValue('user');
+            if (!$user) {
+                return $record->getValue('owner_description');
+            }
             $author = sprintf(
                 '%s %s - %s',
                 $user->getFirstName(),

@@ -9,12 +9,9 @@ use Oro\Bundle\ActionBundle\Tests\Functional\Stub\ButtonStub;
 use Oro\Bundle\CacheBundle\Provider\FilesystemCache;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\TestFrameworkBundle\Tests\Functional\DataFixtures\LoadItems;
-
 use Oro\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 
-/**
- * @dbIsolation
- */
 class WidgetControllerTest extends WebTestCase
 {
     const ROOT_NODE_NAME = 'operations';
@@ -202,7 +199,22 @@ class WidgetControllerTest extends WebTestCase
                     'message' => 'new message',
                     'description' => 'Test Description'
                 ],
-                'expectedMessage' => 'widget.trigger(\'formSave\', {"success":true});'
+                'expectedMessage' => json_encode([
+                    'widget' => [
+                        'trigger' => [
+                            [
+                                'eventBroker' => 'widget',
+                                'name' => 'formSave',
+                                'args' => [
+                                    [
+                                        'success' => true,
+                                        'pageReload' => true
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ])
             ],
             'operation not allowed' => [
                 'entity' => LoadTestEntityData::TEST_ENTITY_2,
@@ -537,16 +549,16 @@ class WidgetControllerTest extends WebTestCase
                 'frontend_options' => ['show_dialog' => true],
                 'attributes' => [
                     'message_attr' => ['label' => 'Message', 'type' => 'string'],
-                    'descr_attr' => ['property_path' => 'data.description']
+                    'descr_attr' => ['label' => 'Description', 'type' => 'string']
                 ],
                 'form_options' => [
                     'attribute_fields' => [
                         'message_attr' => [
-                            'form_type' => 'text',
+                            'form_type' => TextType::class,
                             'options' => ['required' => true, 'constraints' => [['NotBlank' => []]]]
                         ],
                         'descr_attr' => [
-                            'form_type' => 'text'
+                            'form_type' => TextType::class
                         ]
                     ],
                     'attribute_default_values' => ['message_attr' => '$message']

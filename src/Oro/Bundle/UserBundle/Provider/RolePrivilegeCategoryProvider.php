@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\UserBundle\Provider;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\UserBundle\Model\PrivilegeCategory;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class RolePrivilegeCategoryProvider
 {
@@ -136,9 +135,8 @@ class RolePrivilegeCategoryProvider
             }
         }
         ksort($orderedCategoryList);
-        $categoryList = call_user_func_array('array_merge', $orderedCategoryList);
-        
-        return $categoryList;
+
+        return $orderedCategoryList ? call_user_func_array('array_merge', $orderedCategoryList) : [];
     }
 
     /**

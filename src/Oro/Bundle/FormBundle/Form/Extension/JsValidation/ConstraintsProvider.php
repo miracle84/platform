@@ -3,12 +3,14 @@
 namespace Oro\Bundle\FormBundle\Form\Extension\JsValidation;
 
 use Symfony\Component\Form\FormInterface;
-
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Mapping\ClassMetadata;
-use Symfony\Component\Validator\MetadataFactoryInterface;
+use Symfony\Component\Validator\Mapping\Factory\MetadataFactoryInterface;
 
-class ConstraintsProvider
+/**
+ * Provides constraints for a given form.
+ */
+class ConstraintsProvider implements ConstraintsProviderInterface
 {
     /**
      * @var MetadataFactoryInterface
@@ -29,10 +31,7 @@ class ConstraintsProvider
     }
 
     /**
-     * Gets constraints that should be checked on form view
-     *
-     * @param FormInterface $form
-     * @return Constraint[]
+     * {@inheritdoc}
      */
     public function getFormConstraints(FormInterface $form)
     {
@@ -47,7 +46,8 @@ class ConstraintsProvider
 
         $result = array();
         foreach ($constraints as $constraint) {
-            if (array_intersect($validationGroups, $constraint->groups)) {
+            $groups = $constraint->groups ?? [Constraint::DEFAULT_GROUP];
+            if (array_intersect($validationGroups, $groups)) {
                 $result[] = $constraint;
             }
         }

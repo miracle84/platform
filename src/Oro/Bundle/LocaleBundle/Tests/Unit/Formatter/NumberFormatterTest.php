@@ -2,16 +2,18 @@
 
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Formatter;
 
-use Oro\Bundle\LocaleBundle\Formatter\NumberFormatter;
 use NumberFormatter as IntlNumberFormatter;
+use Oro\Bundle\LocaleBundle\Formatter\NumberFormatter;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Intl\Util\IntlTestHelper;
 
 /**
  * @SuppressWarnings(PHPMD.TooManyMethods)
  */
-class NumberFormatterTest extends \PHPUnit_Framework_TestCase
+class NumberFormatterTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $localeSettings;
 
@@ -22,6 +24,8 @@ class NumberFormatterTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
+        IntlTestHelper::requireIntl($this);
+
         $this->localeSettings = $this->getMockBuilder('Oro\Bundle\LocaleBundle\Model\LocaleSettings')
             ->disableOriginalConstructor()
             ->getMock();
@@ -363,46 +367,58 @@ class NumberFormatterTest extends \PHPUnit_Framework_TestCase
     /**
      * @dataProvider getAttributeDataProvider
      */
-    public function testGetAttribute($attribute, $style, $locale, $expected)
+    public function testGetAttribute($attribute, $style, $locale, $expected, $attributes)
     {
         $this->assertSame(
             $expected,
             $this->formatter->getAttribute(
                 $attribute,
                 $style,
-                $locale
+                $locale,
+                $attributes
             )
         );
     }
 
+    /**
+     * @return array
+     */
     public function getAttributeDataProvider()
     {
         $intlFormatter = new IntlNumberFormatter('en_US', \NumberFormatter::DECIMAL);
         $maxIntegerDigits = $intlFormatter->getAttribute(\NumberFormatter::MAX_INTEGER_DIGITS);
 
         return array(
-            array('parse_int_only', 'DECIMAL', 'en_US', 0),
-            array('parse_int_only', null, 'en_US', 0),
-            array('GROUPING_USED', 'decimal', 'en_US', 1),
-            array(\NumberFormatter::DECIMAL_ALWAYS_SHOWN, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::MAX_INTEGER_DIGITS, \NumberFormatter::DECIMAL, 'en_US', $maxIntegerDigits),
-            array(\NumberFormatter::MIN_INTEGER_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 1),
-            array(\NumberFormatter::INTEGER_DIGITS,\NumberFormatter::DECIMAL, 'en_US', 1),
-            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 3),
-            array(\NumberFormatter::MIN_FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::CURRENCY, 'en_US', 2),
-            array(\NumberFormatter::MIN_FRACTION_DIGITS, \NumberFormatter::CURRENCY, 'en_US', 2),
-            array(\NumberFormatter::FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::MULTIPLIER, \NumberFormatter::DECIMAL, 'en_US', 1),
-            array(\NumberFormatter::GROUPING_SIZE, \NumberFormatter::DECIMAL, 'en_US', 3),
-            array(\NumberFormatter::ROUNDING_MODE, \NumberFormatter::DECIMAL, 'en_US', 4),
-            array(\NumberFormatter::ROUNDING_INCREMENT, \NumberFormatter::DECIMAL, 'en_US', 0.0),
-            array(\NumberFormatter::FORMAT_WIDTH, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::PADDING_POSITION, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::SECONDARY_GROUPING_SIZE, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::SIGNIFICANT_DIGITS_USED, \NumberFormatter::DECIMAL, 'en_US', 0),
-            array(\NumberFormatter::MIN_SIGNIFICANT_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 1),
-            array(\NumberFormatter::MAX_SIGNIFICANT_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 6),
+            array('parse_int_only', 'DECIMAL', 'en_US', 0, []),
+            array('parse_int_only', null, 'en_US', 0, []),
+            array('GROUPING_USED', 'decimal', 'en_US', 1, []),
+            array(\NumberFormatter::DECIMAL_ALWAYS_SHOWN, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::MAX_INTEGER_DIGITS, \NumberFormatter::DECIMAL, 'en_US', $maxIntegerDigits, []),
+            array(\NumberFormatter::MIN_INTEGER_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 1, []),
+            array(\NumberFormatter::INTEGER_DIGITS,\NumberFormatter::DECIMAL, 'en_US', 1, []),
+            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 3, []),
+            array(\NumberFormatter::MIN_FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::CURRENCY, 'en_US', 2, []),
+            array(\NumberFormatter::MIN_FRACTION_DIGITS, \NumberFormatter::CURRENCY, 'en_US', 2, []),
+            array(\NumberFormatter::FRACTION_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::MULTIPLIER, \NumberFormatter::DECIMAL, 'en_US', 1, []),
+            array(\NumberFormatter::GROUPING_SIZE, \NumberFormatter::DECIMAL, 'en_US', 3, []),
+            array(\NumberFormatter::ROUNDING_MODE, \NumberFormatter::DECIMAL, 'en_US', 4, []),
+            array(\NumberFormatter::ROUNDING_INCREMENT, \NumberFormatter::DECIMAL, 'en_US', 0.0, []),
+            array(\NumberFormatter::FORMAT_WIDTH, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::PADDING_POSITION, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::SECONDARY_GROUPING_SIZE, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::SIGNIFICANT_DIGITS_USED, \NumberFormatter::DECIMAL, 'en_US', 0, []),
+            array(\NumberFormatter::MIN_SIGNIFICANT_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 1, []),
+            array(\NumberFormatter::MAX_SIGNIFICANT_DIGITS, \NumberFormatter::DECIMAL, 'en_US', 6, []),
+            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::PERCENT, 'en_US', 0, [
+                \NumberFormatter::MAX_FRACTION_DIGITS => 4,
+            ]),
+            array(\NumberFormatter::MAX_FRACTION_DIGITS, \NumberFormatter::PERCENT, 'en_US', 4, [
+                \NumberFormatter::FRACTION_DIGITS => 4,
+                \NumberFormatter::MIN_FRACTION_DIGITS => 0,
+                \NumberFormatter::MAX_FRACTION_DIGITS => 4,
+            ]),
         );
     }
 
@@ -427,7 +443,6 @@ class NumberFormatterTest extends \PHPUnit_Framework_TestCase
             array('POSITIVE_PREFIX', 'DECIMAL', 'en_US', ''),
             array('negative_prefix', 'decimal', 'en_US', '-'),
             array(\NumberFormatter::NEGATIVE_SUFFIX, \NumberFormatter::DECIMAL, 'en_US', ''),
-            array(\NumberFormatter::PADDING_CHARACTER, \NumberFormatter::DECIMAL, 'en_US', '*'),
             array(\NumberFormatter::CURRENCY_CODE, \NumberFormatter::CURRENCY, 'en_US', 'USD'),
             array(\NumberFormatter::DEFAULT_RULESET, \NumberFormatter::DECIMAL, 'en_US', false),
             array(\NumberFormatter::PUBLIC_RULESETS, \NumberFormatter::DECIMAL, 'en_US', false)

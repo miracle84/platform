@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Sync;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 use Oro\Bundle\EmailBundle\Entity\InternalEmailOrigin;
 use Oro\Bundle\EmailBundle\Sync\EmailSynchronizationManager;
 use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class EmailSynchronizationManagerTest extends \PHPUnit_Framework_TestCase
+class EmailSynchronizationManagerTest extends \PHPUnit\Framework\TestCase
 {
     public function testSyncOrigins()
     {

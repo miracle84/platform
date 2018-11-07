@@ -1,20 +1,19 @@
 <?php
 
-namespace Oro\Bundle\UserBundle\Tests\Unit\Provider;
-
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+namespace Oro\Bundle\OrganizationBundle\Tests\Unit\Provider;
 
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\OrganizationBundle\Provider\ScopeOrganizationCriteriaProvider;
-use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Bundle\SecurityBundle\Authentication\Token\OrganizationContextTokenInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
-class ScopeOrganizationCriteriaProviderTest extends \PHPUnit_Framework_TestCase
+class ScopeOrganizationCriteriaProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ScopeOrganizationCriteriaProvider */
     private $provider;
 
-    /** @var TokenStorageInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TokenStorageInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $tokenStorage;
 
     protected function setUp()
@@ -27,19 +26,17 @@ class ScopeOrganizationCriteriaProviderTest extends \PHPUnit_Framework_TestCase
     {
         $organization = new Organization();
 
-        $user = new User();
-        $user->setOrganization($organization);
-
-        /** @var TokenInterface|\PHPUnit_Framework_MockObject_MockObject $token */
-        $token = $this->createMock(TokenInterface::class);
-        $token->expects($this->once())
-            ->method('getUser')
-            ->willReturn($user);
+        /** @var TokenInterface|\PHPUnit\Framework\MockObject\MockObject $token */
+        $token = $this->createMock(OrganizationContextTokenInterface::class);
 
         $this->tokenStorage
             ->expects($this->once())
             ->method('getToken')
             ->willReturn($token);
+
+        $token->expects($this->once())
+            ->method('getOrganizationContext')
+            ->willReturn($organization);
 
         $actual = $this->provider->getCriteriaForCurrentScope();
         $this->assertEquals([ScopeOrganizationCriteriaProvider::SCOPE_KEY => $organization], $actual);
@@ -56,15 +53,10 @@ class ScopeOrganizationCriteriaProviderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals([], $actual);
     }
 
-    public function testGetCriteriaForCurrentScopeWithoutUser()
+    public function testGetCriteriaForCurrentScopeWithoutOrganizationAwareToken()
     {
-        $user = new \stdClass();
-
-        /** @var TokenInterface|\PHPUnit_Framework_MockObject_MockObject $token */
+        /** @var TokenInterface|\PHPUnit\Framework\MockObject\MockObject $token */
         $token = $this->createMock(TokenInterface::class);
-        $token->expects($this->once())
-            ->method('getUser')
-            ->willReturn($user);
 
         $this->tokenStorage
             ->expects($this->once())
@@ -100,10 +92,6 @@ class ScopeOrganizationCriteriaProviderTest extends \PHPUnit_Framework_TestCase
             'array_context_with_organization_key' => [
                 'context' => ['organization' => $organization],
                 'criteria' => ['organization' => $organization],
-            ],
-            'array_context_with_organization_key_invalid_value' => [
-                'context' => ['organization' => 123],
-                'criteria' => [],
             ],
             'array_context_without_organization_key' => [
                 'context' => [],

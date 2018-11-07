@@ -3,21 +3,23 @@
 namespace Oro\Bundle\EmailBundle\Controller;
 
 use Doctrine\ORM\EntityManager;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\Form\FormInterface;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Oro\Bundle\SecurityBundle\Annotation\Acl;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * @Route("/emailtemplate")
  */
 class EmailTemplateController extends Controller
 {
+    use RequestHandlerTrait;
+
     /**
      * @Route(
      *      "/{_format}",
@@ -88,10 +90,11 @@ class EmailTemplateController extends Controller
      *      permission="VIEW"
      * )
      * @Template("OroEmailBundle:EmailTemplate:preview.html.twig")
+     * @param Request $request
      * @param bool|int $id
      * @return array
      */
-    public function previewAction($id = false)
+    public function previewAction(Request $request, $id = false)
     {
         if (!$id) {
             $emailTemplate = new EmailTemplate();
@@ -104,10 +107,9 @@ class EmailTemplateController extends Controller
         /** @var FormInterface $form */
         $form = $this->get('oro_email.form.emailtemplate');
         $form->setData($emailTemplate);
-        $request = $this->get('request');
 
         if (in_array($request->getMethod(), array('POST', 'PUT'))) {
-            $form->submit($request);
+            $this->submitPostPutRequest($form, $request);
         }
 
         $templateRendered = $this->get('oro_email.email_renderer')

@@ -2,16 +2,14 @@
 
 namespace Oro\Bundle\RequireJSBundle\Command;
 
+use Oro\Bundle\RequireJSBundle\DependencyInjection\Compiler\ConfigProviderCompilerPass;
+use Oro\Bundle\RequireJSBundle\Manager\ConfigProviderManager;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-
-use Symfony\Component\Process\Process;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
-
-use Oro\Bundle\RequireJSBundle\DependencyInjection\Compiler\ConfigProviderCompilerPass;
-use Oro\Bundle\RequireJSBundle\Manager\ConfigProviderManager;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 
 class OroBuildCommand extends ContainerAwareCommand
 {
@@ -108,7 +106,7 @@ class OroBuildCommand extends ContainerAwareCommand
         if (isset($this->config['building_timeout'])) {
             $process->setTimeout($this->config['building_timeout']);
         }
-        
+
         // some workaround when this command is launched from web
         if (isset($_SERVER['PATH'])) {
             $env = $_SERVER;

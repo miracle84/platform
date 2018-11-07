@@ -2,43 +2,51 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-
+use Oro\Bundle\MessageQueueBundle\DependencyInjection\Compiler\AddTopicMetaPass;
+use Oro\Bundle\WorkflowBundle\Async\Topics;
+use Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler;
 use Oro\Bundle\WorkflowBundle\OroWorkflowBundle;
+use Oro\Component\ChainProcessor\DependencyInjection\LoadAndBuildProcessorsCompilerPass;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 
-class OroWorkflowBundleTest extends \PHPUnit_Framework_TestCase
+class OroWorkflowBundleTest extends \PHPUnit\Framework\TestCase
 {
     public function testBuild()
     {
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $containerBuilder */
-        $containerBuilder = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerBuilder')
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $containerBuilder */
+        $containerBuilder = $this->getMockBuilder(ContainerBuilder::class)
             ->disableOriginalConstructor()
             ->setMethods(['addCompilerPass'])
             ->getMock();
 
-        $containerBuilder->expects($this->at(0))
-            ->method('addCompilerPass')
-            ->with(
-                $this->isInstanceOf(
-                    'Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler\AddAttributeNormalizerCompilerPass'
-                )
-            );
+        $addTopicMetaPass = AddTopicMetaPass::create();
+        $addTopicMetaPass->add(Topics::EXECUTE_PROCESS_JOB);
 
-        $containerBuilder->expects($this->at(1))
-            ->method('addCompilerPass')
-            ->with(
-                $this->isInstanceOf(
-                    'Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler\AddWorkflowValidationLoaderCompilerPass'
-                )
-            );
+        $expectations = [
+            $this->isInstanceOf(Compiler\AddAttributeNormalizerCompilerPass::class),
+            $this->isInstanceOf(Compiler\AddWorkflowValidationLoaderCompilerPass::class),
+            new RegisterListenersPass(
+                'oro_workflow.changes.event.dispatcher',
+                'oro_workflow.changes.listener',
+                'oro_workflow.changes.subscriber'
+            ),
+            $this->isInstanceOf(Compiler\EventTriggerExtensionCompilerPass::class),
+            $this->isInstanceOf(Compiler\WorkflowConfigurationHandlerCompilerPass::class),
+            $this->isInstanceOf(Compiler\WorkflowDefinitionBuilderExtensionCompilerPass::class),
+            new LoadAndBuildProcessorsCompilerPass(
+                'oro_workflow.processor_bag_config_provider',
+                'oro_workflow.processor'
+            ),
+            $this->isInstanceOf(Compiler\EventsCompilerPass::class),
+            $addTopicMetaPass,
+        ];
 
-        $containerBuilder->expects($this->at(2))
-            ->method('addCompilerPass')
-            ->with(
-                $this->isInstanceOf(
-                    'Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler\WorkflowChangesEventsCompilerPass'
-                )
-            );
+        foreach ($expectations as $key => $expectation) {
+            $containerBuilder->expects($this->at($key))
+                ->method('addCompilerPass')
+                ->with($expectation);
+        }
 
         $bundle = new OroWorkflowBundle();
         $bundle->build($containerBuilder);

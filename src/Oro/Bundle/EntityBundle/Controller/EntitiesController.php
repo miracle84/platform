@@ -2,23 +2,20 @@
 
 namespace Oro\Bundle\EntityBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
 use FOS\RestBundle\Util\Codes;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Oro\Bundle\EntityBundle\Form\Type\CustomEntityType;
 use Oro\Bundle\EntityBundle\ORM\OroEntityManager;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityConfigBundle\Tools\FieldAccessor;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * Entities controller.
@@ -264,7 +261,7 @@ class EntitiesController extends Controller
         $record = !$id ? new $entityClass : $entityRepository->find($id);
 
         $form = $this->createForm(
-            'custom_entity_type',
+            CustomEntityType::class,
             $record,
             array(
                 'data_class'   => $entityClass,
@@ -277,9 +274,9 @@ class EntitiesController extends Controller
         );
 
         if ($request->getMethod() == 'POST') {
-            $form->submit($request);
+            $form->handleRequest($request);
 
-            if ($form->isValid()) {
+            if ($form->isSubmitted() && $form->isValid()) {
                 $em->persist($record);
                 $em->flush();
 
@@ -350,10 +347,7 @@ class EntitiesController extends Controller
      */
     private function checkAccess($permission, $entityName)
     {
-        /** @var SecurityFacade $securityFacade */
-        $securityFacade = $this->get('oro_security.security_facade');
-        $isGranted      = $securityFacade->isGranted($permission, 'entity:' . $entityName);
-        if (!$isGranted) {
+        if (!$this->isGranted($permission, 'entity:' . $entityName)) {
             throw new AccessDeniedException('Access denied.');
         }
     }

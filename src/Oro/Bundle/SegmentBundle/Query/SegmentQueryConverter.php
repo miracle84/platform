@@ -3,16 +3,13 @@
 namespace Oro\Bundle\SegmentBundle\Query;
 
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Bridge\Doctrine\ManagerRegistry;
-
 use Oro\Bundle\EntityBundle\Provider\VirtualFieldProviderInterface;
-
+use Oro\Bundle\QueryDesignerBundle\Grid\Extension\GroupingOrmFilterDatasourceAdapter;
 use Oro\Bundle\QueryDesignerBundle\Model\AbstractQueryDesigner;
-use Oro\Bundle\QueryDesignerBundle\QueryDesigner\RestrictionBuilderInterface;
 use Oro\Bundle\QueryDesignerBundle\QueryDesigner\FunctionProviderInterface;
 use Oro\Bundle\QueryDesignerBundle\QueryDesigner\GroupingOrmQueryConverter;
-use Oro\Bundle\QueryDesignerBundle\Grid\Extension\GroupingOrmFilterDatasourceAdapter;
+use Oro\Bundle\QueryDesignerBundle\QueryDesigner\RestrictionBuilderInterface;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
 
 class SegmentQueryConverter extends GroupingOrmQueryConverter
 {
@@ -99,10 +96,6 @@ class SegmentQueryConverter extends GroupingOrmQueryConverter
         $functionReturnType,
         $isDistinct = false
     ) {
-        if ($isDistinct) {
-            $columnExpr = 'DISTINCT ' . (string)$columnExpr;
-        }
-
         if ($functionExpr !== null) {
             $functionExpr = $this->prepareFunctionExpression(
                 $functionExpr,
@@ -166,6 +159,27 @@ class SegmentQueryConverter extends GroupingOrmQueryConverter
      */
     protected function addOrderByColumn($columnAlias, $columnSorting)
     {
-        // do nothing, order could not change results
+        if ($this->columnAliases && $columnAlias) {
+            $columnNames = array_flip($this->columnAliases);
+            $columnName = $columnNames[$columnAlias];
+            $prefixedColumnName = $this->getPrefixedColumnName($columnName);
+            $this->qb->addOrderBy($prefixedColumnName, $columnSorting);
+        }
+    }
+
+    /**
+     * @param string $columnName
+     * @return string
+     */
+    protected function getPrefixedColumnName($columnName)
+    {
+        $joinId =  $this->joinIdHelper->buildColumnJoinIdentifier($columnName);
+        if (array_key_exists($joinId, $this->virtualColumnOptions)
+            && array_key_exists($columnName, $this->virtualColumnExpressions)
+        ) {
+            return $this->virtualColumnExpressions[$columnName];
+        }
+
+        return $this->getTableAliasForColumn($columnName) . '.' . $columnName;
     }
 }

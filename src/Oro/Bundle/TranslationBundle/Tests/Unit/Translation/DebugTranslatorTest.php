@@ -2,16 +2,17 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Translation;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Translation\Loader\LoaderInterface;
-use Symfony\Component\Translation\MessageSelector;
-use Symfony\Component\Translation\MessageCatalogue;
-
+use Oro\Bundle\TranslationBundle\Provider\TranslationDomainProvider;
 use Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyInterface;
 use Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyProvider;
 use Oro\Bundle\TranslationBundle\Translation\DebugTranslator;
+use Oro\Component\TestUtils\Mocks\ServiceLink;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Translation\Formatter\MessageFormatter;
+use Symfony\Component\Translation\Loader\LoaderInterface;
+use Symfony\Component\Translation\MessageCatalogue;
 
-class DebugTranslatorTest extends \PHPUnit_Framework_TestCase
+class DebugTranslatorTest extends \PHPUnit\Framework\TestCase
 {
     protected $messages = array(
         'fr' => array(
@@ -148,46 +149,42 @@ class DebugTranslatorTest extends \PHPUnit_Framework_TestCase
     /**
      * Creates a mock of Loader
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getLoader()
     {
         $messages = $this->messages;
-        $obj = $this;
-        $loader = $this->createMock('Symfony\Component\Translation\Loader\LoaderInterface');
-        $loader
-            ->expects($this->any())
+        $loader = $this->createMock(LoaderInterface::class);
+        $loader->expects($this->any())
             ->method('load')
-            ->will(
-                $this->returnCallback(
-                    function () use ($obj, $messages) {
-                        $locale = func_get_arg(1);
-                        return $obj->getCatalogue($locale, $messages[$locale]);
-                    }
-                )
-            );
+            ->willReturnCallback(function ($resource, $locale, $domain) use ($messages) {
+                return $this->getCatalogue($locale, $messages[$locale]);
+            });
+
         return $loader;
     }
 
     /**
      * @param array $fallbackLocales
-     * @return TranslationStrategyProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @return TranslationStrategyProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getStrategyProvider(array $fallbackLocales = [])
     {
-        /** @var TranslationStrategyInterface|\PHPUnit_Framework_MockObject_MockObject $strategy */
-        $strategy = $this->createMock('Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyInterface');
+        $strategy = $this->createMock(TranslationStrategyInterface::class);
+        $strategyProvider = $this->createMock(TranslationStrategyProvider::class);
 
-        /** @var TranslationStrategyProvider|\PHPUnit_Framework_MockObject_MockObject $strategyProvider */
-        $strategyProvider = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyProvider')
-            ->disableOriginalConstructor()
-            ->getMock();
         $strategyProvider->expects($this->any())
             ->method('getStrategy')
             ->willReturn($strategy);
         $strategyProvider->expects($this->any())
             ->method('getFallbackLocales')
-            ->willReturn($fallbackLocales);
+            ->willReturnCallback(function ($strategy, $locale) use ($fallbackLocales) {
+                if ('en' !== $locale) {
+                    return $fallbackLocales;
+                }
+
+                return [];
+            });
 
         return $strategyProvider;
     }
@@ -197,7 +194,7 @@ class DebugTranslatorTest extends \PHPUnit_Framework_TestCase
      *
      * @param LoaderInterface $loader
      * @param TranslationStrategyProvider $strategyProvider
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return ContainerInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getContainer($loader, $strategyProvider)
     {
@@ -207,9 +204,8 @@ class DebugTranslatorTest extends \PHPUnit_Framework_TestCase
             ['oro_translation.strategy.provider', $exceptionFlag, $strategyProvider]
         ];
 
-        $container = $this->createMock('Symfony\Component\DependencyInjection\ContainerInterface');
-        $container
-            ->expects($this->any())
+        $container = $this->createMock(ContainerInterface::class);
+        $container->expects($this->any())
             ->method('get')
             ->willReturnMap($valueMap);
 
@@ -227,10 +223,26 @@ class DebugTranslatorTest extends \PHPUnit_Framework_TestCase
     {
         $translator = new DebugTranslator(
             $this->getContainer($loader, $strategyProvider),
-            new MessageSelector(),
+            new MessageFormatter(),
             array('loader' => array('loader')),
             array_merge(['resource_files' => []], $options)
         );
+
+        $strategy = $this->createMock(TranslationStrategyInterface::class);
+        $strategyProvider = $this->createMock(TranslationStrategyProvider::class);
+        $strategyProviderLink = new ServiceLink($strategyProvider);
+        $strategyProvider->expects($this->any())
+            ->method('getStrategy')
+            ->willReturn($strategy);
+        $strategyProvider->expects($this->any())
+            ->method('getFallbackLocales')
+            ->willReturn([]);
+
+        $translator->setStrategyProviderLink($strategyProviderLink);
+
+        /** @var TranslationDomainProvider|\PHPUnit\Framework\MockObject\MockObject $translationDomainProvider */
+        $translationDomainProvider = $this->createMock(TranslationDomainProvider::class);
+        $translator->setTranslationDomainProvider($translationDomainProvider);
 
         $translator->addResource('loader', 'foo', 'fr');
         $translator->addResource('loader', 'foo', 'en');

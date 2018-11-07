@@ -3,9 +3,8 @@ define([
     'underscore',
     'orotranslation/js/translator',
     'oroui/js/modal',
-    'oroui/js/mediator',
-    'oroui/js/messenger'
-], function($, _, __, Modal, mediator, Messenger) {
+    'oroui/js/mediator'
+], function($, _, __, Modal, mediator) {
     'use strict';
 
     /**
@@ -26,20 +25,20 @@ define([
         }
 
         var confirmReset = new Modal({
-            title:   __('oro.workflow.workflowdefinition.reset'),
+            title: __('oro.workflow.workflowdefinition.reset'),
             content: __('oro.workflow.workflowdefinition.reset_message'),
-            okText:  __('oro.workflow.workflowdefinition.reset_button_text')
+            okText: __('oro.workflow.workflowdefinition.reset_button_text')
         });
 
         confirmReset.on('ok', function() {
             $.ajax({
-                url:  element.data('url'),
+                url: element.data('url'),
                 type: 'DELETE',
                 success: function() {
                     mediator.execute('refreshPage');
                 },
+                errorHandlerMessage: __('Cannot reset workflow item data.'),
                 error: function() {
-                    Messenger.notificationFlashMessage('error', __('Cannot reset workflow item data.'));
                     resetInProgress();
                 }
             });

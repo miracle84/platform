@@ -1,18 +1,18 @@
 <?php
 namespace Oro\Bundle\NavigationBundle\Event;
 
-use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
-use Symfony\Component\Security\Core\SecurityContextInterface;
 use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class ResponseHashnavListener
 {
     const HASH_NAVIGATION_HEADER = 'x-oro-hash-navigation';
 
     /**
-     * @var SecurityContextInterface
+     * @var TokenStorageInterface
      */
-    protected $security;
+    protected $tokenStorage;
 
     /**
      * @var EngineInterface
@@ -25,18 +25,18 @@ class ResponseHashnavListener
     protected $isDebug;
 
     /**
-     * @param SecurityContextInterface $security
-     * @param EngineInterface          $templating
-     * @param bool                     $isDebug
+     * @param TokenStorageInterface $tokenStorage
+     * @param EngineInterface       $templating
+     * @param bool                  $isDebug
      */
     public function __construct(
-        SecurityContextInterface $security,
+        TokenStorageInterface $tokenStorage,
         EngineInterface $templating,
         $isDebug = false
     ) {
-        $this->security   = $security;
+        $this->tokenStorage = $tokenStorage;
         $this->templating = $templating;
-        $this->isDebug    = $isDebug;
+        $this->isDebug = $isDebug;
     }
 
     /**
@@ -53,7 +53,7 @@ class ResponseHashnavListener
             $isFullRedirect = false;
             if ($response->isRedirect()) {
                 $location = $response->headers->get('location');
-                if ($request->attributes->get('_fullRedirect') || !is_object($this->security->getToken())) {
+                if ($request->attributes->get('_fullRedirect') || !is_object($this->tokenStorage->getToken())) {
                     $isFullRedirect = true;
                 }
             }
@@ -62,12 +62,15 @@ class ResponseHashnavListener
                 $isFullRedirect = true;
             }
             if ($location) {
+                $response->headers->remove('location');
+                $response->setStatusCode(200);
                 $response = $this->templating->renderResponse(
                     'OroNavigationBundle:HashNav:redirect.html.twig',
                     array(
                         'full_redirect' => $isFullRedirect,
                         'location'      => $location,
-                    )
+                    ),
+                    $response
                 );
             }
 

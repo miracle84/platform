@@ -2,40 +2,32 @@
 
 namespace Oro\Bundle\CommentBundle\EventListener;
 
-use Symfony\Component\Security\Core\User\UserInterface;
-
-use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\UnitOfWork;
-
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
 use Oro\Bundle\CommentBundle\Entity\Comment;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 class CommentLifecycleListener
 {
-    /** @var ServiceLink */
-    protected $securityFacadeLink;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * @param ServiceLink $securityFacadeLink
+     * @param TokenAccessorInterface $tokenAccessor
      */
-    public function __construct(ServiceLink $securityFacadeLink)
+    public function __construct(TokenAccessorInterface $tokenAccessor)
     {
-        $this->securityFacadeLink = $securityFacadeLink;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
+     * @param Comment            $entity
      * @param LifecycleEventArgs $args
      */
-    public function preUpdate(LifecycleEventArgs $args)
+    public function preUpdate(Comment $entity, LifecycleEventArgs $args)
     {
-        $entity = $args->getEntity();
-
-        if (!$this->isCommentEntity($entity)) {
-            return;
-        }
-
-        /** @var Comment $entity */
         $this->setUpdatedProperties($entity, $args->getEntityManager(), true);
     }
 
@@ -57,25 +49,17 @@ class CommentLifecycleListener
     }
 
     /**
-     * @param mixed $entity
-     *
-     * @return bool
-     */
-    protected function isCommentEntity($entity)
-    {
-        return $entity instanceof Comment;
-    }
-
-    /**
      * @param EntityManager $entityManager
      *
      * @return UserInterface|null
      */
     protected function getUser(EntityManager $entityManager)
     {
-        $user = $this->securityFacadeLink->getService()->getLoggedUser();
+        $user = $this->tokenAccessor->getUser();
 
-        if ($user && $entityManager->getUnitOfWork()->getEntityState($user) == UnitOfWork::STATE_DETACHED) {
+        if (null !== $user
+            && $entityManager->getUnitOfWork()->getEntityState($user) === UnitOfWork::STATE_DETACHED
+        ) {
             $user = $entityManager->find('OroUserBundle:User', $user->getId());
         }
 

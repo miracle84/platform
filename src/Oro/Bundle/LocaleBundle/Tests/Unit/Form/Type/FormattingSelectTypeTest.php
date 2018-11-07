@@ -2,17 +2,19 @@
 
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\ChoiceList\View\ChoiceView;
-
+use Oro\Bundle\FormBundle\Form\Type\OroChoiceType;
 use Oro\Bundle\LocaleBundle\Form\Type\FormattingSelectType;
 use Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider;
 use Oro\Component\Testing\Unit\FormIntegrationTestCase;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\ChoiceList\View\ChoiceView;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 
 class FormattingSelectTypeTest extends FormIntegrationTestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|LocalizationChoicesProvider
+     * @var \PHPUnit\Framework\MockObject\MockObject|LocalizationChoicesProvider
      */
     protected $provider;
 
@@ -23,25 +25,14 @@ class FormattingSelectTypeTest extends FormIntegrationTestCase
 
     public function setUp()
     {
-        parent::setUp();
-
-        $this->provider = $this->getMockBuilder('Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider')
-            ->disableOriginalConstructor()
-            ->getMock();
-
+        $this->provider = $this->createMock(LocalizationChoicesProvider::class);
         $this->formType = new FormattingSelectType($this->provider);
-    }
-
-    public function tearDown()
-    {
-        unset($this->provider, $this->formType);
-
-        parent::tearDown();
+        parent::setUp();
     }
 
     public function testGetParent()
     {
-        $this->assertEquals('choice', $this->formType->getParent());
+        $this->assertEquals(OroChoiceType::class, $this->formType->getParent());
     }
 
     public function testGetName()
@@ -52,13 +43,13 @@ class FormattingSelectTypeTest extends FormIntegrationTestCase
     public function testBuildForm()
     {
         $data =  [
-            'en' => 'English',
-            'es' => 'Spain'
+            'English' => 'en',
+            'Spain' => 'es',
         ];
 
         $this->provider->expects($this->once())->method('getFormattingChoices')->willReturn($data);
 
-        $form = $this->factory->create($this->formType);
+        $form = $this->factory->create(FormattingSelectType::class);
 
         $choices = $form->createView()->vars['choices'];
 
@@ -69,5 +60,27 @@ class FormattingSelectTypeTest extends FormIntegrationTestCase
             ],
             $choices
         );
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getExtensions()
+    {
+        $choiceType = $this->getMockBuilder(OroChoiceType::class)
+            ->setMethods(['configureOptions', 'getParent'])
+            ->disableOriginalConstructor()
+            ->getMock();
+        $choiceType->expects($this->any())->method('getParent')->willReturn(ChoiceType::class);
+
+        return [
+            new PreloadedExtension(
+                [
+                    FormattingSelectType::class => $this->formType,
+                    OroChoiceType::class => $choiceType
+                ],
+                []
+            )
+        ];
     }
 }

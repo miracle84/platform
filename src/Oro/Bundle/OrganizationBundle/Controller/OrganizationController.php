@@ -2,15 +2,13 @@
 
 namespace Oro\Bundle\OrganizationBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\SecurityBundle\Annotation\Acl;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
 use Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 class OrganizationController extends Controller
 {
@@ -29,7 +27,7 @@ class OrganizationController extends Controller
     public function updateCurrentAction()
     {
         /** @var UsernamePasswordOrganizationToken $token */
-        $token = $this->get('security.context')->getToken();
+        $token = $this->get('security.token_storage')->getToken();
         $organization = $token->getOrganizationContext();
 
         return $this->update($organization);

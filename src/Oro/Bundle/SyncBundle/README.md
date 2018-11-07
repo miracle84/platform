@@ -1,43 +1,45 @@
-OroSyncBundle
-=============
+# OroSyncBundle
 
-Bundle adds support of websocket communications. Based on [JDareClankBundle](https://github.com/JDare/ClankBundle).
+OroSyncBundle uses [GosWebSocketBundle](https://github.com/GeniusesOfSymfony/WebSocketBundle) to enable real-time websocket notifications between an Oro application server and users' browsers.
 
-## Configuration ##
-Set port and host (optional) for websocket server in parameters.yml
-``` yaml
-    websocket_bind_address:  0.0.0.0
-    websocket_bind_port:     8080
-    websocket_frontend_host: "*"
-    websocket_frontend_port: 8080
-    websocket_backend_host:  "*"
-    websocket_backend_port:  8080
-```
+Out-of-the-box, OroSyncBundle triggers flash notifications about the outdated content if several users try to edit the same entity record simultaneously. It also sends flash notifications to all application site visitors once a developer turns on the system maintenance mode by a console's CLI tool.
 
-Since Clank server is running as a service, there are three host:port pairs for configuration:
-- `websocket_bind_port` and `websocket_bind_address` specify port and address to which the Clank server binds on startup and waits for incoming requests. By default (0.0.0.0), it listens to all addresses on the machine
-- `websocket_backend_port` and `websocket_backend_host` specify port and address to which the application should connect (PHP). By default ("*"), it connects to 127.0.0.1 address.
-- `websocket_frontend_port` and `websocket_frontend_host` specify port and address to which the browser should connect (JS). By default ("*"), it connects to host specified in the browser.
+## Table of Contents
 
-Instead of specifying all 3 sets of host:port parameters, it is possible to use fallback parameters `websocket_host` and `websocket_port`, which will be used for any host or port that is not set explicitly.
+* [Usage](#usage)
+* [Logging Levels](#logging-levels)
+* [Configuration](./Resources/doc/configuration.md)
+* [Client](./Resources/doc/client.md)
+* [Topics and Handlers](./Resources/doc/topics-handlers.md)
+* [Authentication](./Resources/doc/authentication.md)
+* [Content Outdating Notifications](./Resources/doc/content-outdating.md)
+* [Origin Checking](./Resources/doc/origin-checking.md)
+* [Mediator Handlers](./Resources/doc/mediator-handlers.md)
 
-## Usage ##
+## Usage
 You should be able to run this from the root of your symfony installation:
 
 ``` bash
-php app/console clank:server
+php bin/console gos:websocket:server
 ```
 
-If everything is successful, you will see something similar to the following:
+If everything is successful, you will see no output in prod mode, and something similar to the following in dev mode:
 
 ``` bash
-Starting Clank
-Launching Ratchet WS Server on: 0.0.0.0:8080
+INFO      [websocket] Starting web socket
+INFO      [websocket] Launching Ratchet on 127.0.0.1:8080 PID: 4675
 ```
 
 This means the websocket server is now up and running!
 
-## Content Outdating ##
+## Logging Levels
+Logging levels are different in dev and prod modes by default.
+Prod mode:
+* Normal: WARNING and higher
+* Verbose (-v): NOTICE and higher
+* Very verbose (-vv): INFO and higher
+* Debug (-vvv): DEBUG and higher
 
-* [Content Outdating Notifications](./Resources/doc/content_outdating.md)
-* [Mediator Handlers](./Resources/doc/mediator-handlers.md)
+Dev mode:
+* Normal: INFO and higher
+* Verbose (-v): DEBUG and higher

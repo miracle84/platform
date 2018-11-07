@@ -1,6 +1,9 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Job;
 
+use Oro\Component\MessageQueue\Client\Message;
+use Oro\Component\MessageQueue\Client\MessagePriority;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
@@ -9,42 +12,37 @@ use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Oro\Component\MessageQueue\Util\JSON;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Calculate root job status asynchronously
+ */
 class CalculateRootJobStatusProcessor implements MessageProcessorInterface, TopicSubscriberInterface
 {
-    /**
-     * @var JobStorage
-     */
+    /** @var JobStorage */
     private $jobStorage;
 
-    /**
-     * @var CalculateRootJobStatusService
-     */
-    private $calculateRootJobStatusService;
+    /** @var RootJobStatusCalculator */
+    private $rootJobStatusCalculator;
 
-    /**
-     * @var MessageProducerInterface
-     */
+    /** @var MessageProducerInterface */
     private $producer;
 
-    /**
-     * @var LoggerInterface
-     */
+    /** @var LoggerInterface */
     private $logger;
 
     /**
-     * @param JobStorage $jobStorage
-     * @param CalculateRootJobStatusService $calculateRootJobStatusCase
+     * @param JobStorage               $jobStorage
+     * @param RootJobStatusCalculator  $calculateRootJobStatusCase
      * @param MessageProducerInterface $producer
-     * @param LoggerInterface $logger
+     * @param LoggerInterface          $logger
      */
     public function __construct(
         JobStorage $jobStorage,
-        CalculateRootJobStatusService $calculateRootJobStatusCase,
+        RootJobStatusCalculator $calculateRootJobStatusCase,
         MessageProducerInterface $producer,
         LoggerInterface $logger
     ) {
         $this->jobStorage = $jobStorage;
-        $this->calculateRootJobStatusService = $calculateRootJobStatusCase;
+        $this->rootJobStatusCalculator = $calculateRootJobStatusCase;
         $this->producer = $producer;
         $this->logger = $logger;
     }
@@ -57,7 +55,7 @@ class CalculateRootJobStatusProcessor implements MessageProcessorInterface, Topi
         $data = JSON::decode($message->getBody());
 
         if (! isset($data['jobId'])) {
-            $this->logger->critical(sprintf('Got invalid message. body: "%s"', $message->getBody()));
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }
@@ -69,12 +67,17 @@ class CalculateRootJobStatusProcessor implements MessageProcessorInterface, Topi
             return self::REJECT;
         }
 
-        $isRootJobStopped = $this->calculateRootJobStatusService->calculate($job);
+        $isRootJobStopped = $this->rootJobStatusCalculator->calculate(
+            $job,
+            $data['calculateProgress'] ?? false
+        );
 
         if ($isRootJobStopped) {
-            $this->producer->send(Topics::ROOT_JOB_STOPPED, [
-                'jobId' => $job->getRootJob()->getId(),
-            ]);
+            $rootJob = $job->isRoot() ? $job : $job->getRootJob();
+            $this->producer->send(
+                Topics::ROOT_JOB_STOPPED,
+                new Message(['jobId' => $rootJob->getId()], MessagePriority::HIGH)
+            );
         }
 
         return self::ACK;

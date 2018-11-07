@@ -2,7 +2,7 @@
 
 namespace Oro\Bundle\DataGridBundle\Datasource\Orm;
 
-use Doctrine\ORM\Query;
+use Oro\Bundle\BatchBundle\ORM\Query\ResultIterator\IdentifierWithoutOrderByIterationStrategy;
 
 /**
  * The aim of this class is provide an iterator which can be used for delete records.
@@ -14,9 +14,12 @@ class DeletionIterableResult extends IterableResult
     /**
      * {@inheritdoc}
      */
-    protected function prepareQueryToExecute(Query $query)
+    protected function getIterationStrategy()
     {
-        // always iterate from the first record
-        $query->setFirstResult(0);
+        if (null === $this->iterationStrategy) {
+            $this->iterationStrategy = new IdentifierWithoutOrderByIterationStrategy();
+        }
+
+        return $this->iterationStrategy;
     }
 }

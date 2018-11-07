@@ -3,14 +3,10 @@
 namespace Oro\Bundle\DataGridBundle\Tests\Functional\Controller\Api\Rest;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\DataGridBundle\Entity\GridView;
 use Oro\Bundle\DataGridBundle\Entity\Repository\GridViewRepository;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class GridViewControllerTest extends WebTestCase
 {
     public function setUp()

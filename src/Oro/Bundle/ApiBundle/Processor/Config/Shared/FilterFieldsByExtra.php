@@ -3,20 +3,22 @@
 namespace Oro\Bundle\ApiBundle\Processor\Config\Shared;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Config\FilterFieldsConfigExtra;
+use Oro\Bundle\ApiBundle\Exception\NotSupportedConfigOperationException;
+use Oro\Bundle\ApiBundle\Model\EntityIdentifier;
 use Oro\Bundle\ApiBundle\Processor\Config\ConfigContext;
 use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Bundle\ApiBundle\Request\ValueNormalizer;
+use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Excludes fields according to requested fieldset.
- * For example, in JSON.API the "fields[TYPE]" parameter can be used to request only specific fields.
+ * For example, in JSON.API the "fields[TYPE]" filter can be used to request only specific fields.
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class FilterFieldsByExtra implements ProcessorInterface
 {
@@ -51,12 +53,27 @@ class FilterFieldsByExtra implements ProcessorInterface
             return;
         }
 
-        $normalizedFieldFilters = $this->normalizeFieldFilters(
-            $context->get(FilterFieldsConfigExtra::NAME),
-            $context->getRequestType()
-        );
+        $normalizedFieldFilters = $context->get(FilterFieldsConfigExtra::NAME);
+        if (null === $normalizedFieldFilters) {
+            $normalizedFieldFilters = [];
+        } else {
+            $normalizedFieldFilters = $this->normalizeFieldFilters(
+                $normalizedFieldFilters,
+                $context->getRequestType()
+            );
+        }
 
         $entityClass = $context->getClassName();
+        if (!$definition->isFieldsetEnabled()) {
+            if (is_a($entityClass, EntityIdentifier::class, true)) {
+                return;
+            }
+
+            if (!$this->isSupported($context, $normalizedFieldFilters)) {
+                throw new NotSupportedConfigOperationException($entityClass, FilterFieldsConfigExtra::NAME);
+            }
+        }
+
         if ($this->doctrineHelper->isManageableEntityClass($entityClass)) {
             $this->filterEntityFields($definition, $entityClass, $normalizedFieldFilters);
         } else {
@@ -64,6 +81,28 @@ class FilterFieldsByExtra implements ProcessorInterface
         }
     }
 
+    /**
+     * @param ConfigContext $context
+     * @param array         $normalizedFieldFilters
+     *
+     * @return bool
+     */
+    protected function isSupported(ConfigContext $context, array $normalizedFieldFilters): bool
+    {
+        $result = false;
+        if (!empty($normalizedFieldFilters) && $context->getParentClassName() && $context->getAssociationName()) {
+            $parentClass = $context->getParentClassName();
+            if (isset($normalizedFieldFilters[$parentClass])
+                && \count($normalizedFieldFilters) === 1
+                && \count($normalizedFieldFilters[$parentClass]) === 1
+                && $normalizedFieldFilters[$parentClass][0] === $context->getAssociationName()
+            ) {
+                $result = true;
+            }
+        }
+
+        return $result;
+    }
     /**
      * @param array       $fieldFilters
      * @param RequestType $requestType
@@ -105,7 +144,7 @@ class FilterFieldsByExtra implements ProcessorInterface
 
         $allowedFields = $this->getAllowedFields($metadata, $fieldFilters);
         if (null !== $allowedFields) {
-            $idFieldNames = $metadata->getIdentifierFieldNames();
+            $idFieldNames = $this->getEntityIdentifierFieldNames($metadata, $definition);
             $fields = $definition->getFields();
             foreach ($fields as $fieldName => $field) {
                 if (!$field->isExcluded()
@@ -131,6 +170,26 @@ class FilterFieldsByExtra implements ProcessorInterface
                 }
             }
         }
+    }
+
+    /**
+     * @param ClassMetadata          $metadata
+     * @param EntityDefinitionConfig $definition
+     *
+     * @return array
+     */
+    protected function getEntityIdentifierFieldNames(ClassMetadata $metadata, EntityDefinitionConfig $definition)
+    {
+        $idFieldNames = $definition->getIdentifierFieldNames();
+        if (empty($idFieldNames)) {
+            $idFieldNames = [];
+            $metadataIdFieldNames = $metadata->getIdentifierFieldNames();
+            foreach ($metadataIdFieldNames as $propertyPath) {
+                $idFieldNames[] = $definition->findFieldNameByPropertyPath($propertyPath) ?: $propertyPath;
+            }
+        }
+
+        return $idFieldNames;
     }
 
     /**

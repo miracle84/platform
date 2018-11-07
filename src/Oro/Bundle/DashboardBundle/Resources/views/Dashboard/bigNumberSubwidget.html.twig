@@ -1,4 +1,5 @@
-<span class="title">{{ item.label|trans }}</span>
+{% set itemTitle = item.label|trans %}
+<span class="title" title="{{ itemTitle }}">{{ itemTitle }}</span>
 <h3 class="value">{{ item.value.value|raw }}</h3>
 {% if item.value.deviation is defined and item.value.previousRange is defined %}
 <div class="deviation">
@@ -14,6 +15,7 @@
     <span class="deviation">
         {{ 'oro.dashboard.widget.big_number.compare_to.label'|trans }}:
     </span>
-    <span class="date-range">{{ oro_filter_date_range_view(item.value.previousRange) }}</span>
+    {% set range = oro_filter_date_range_view(item.value.previousRange) %}
+    <span class="date-range" title="{{ range }}">{{ range }}</span>
 </div>
 {% endif %}

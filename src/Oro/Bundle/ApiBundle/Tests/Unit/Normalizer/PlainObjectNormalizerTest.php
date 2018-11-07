@@ -2,27 +2,28 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Normalizer;
 
-use Oro\Component\EntitySerializer\EntityDataTransformer;
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Oro\Bundle\ApiBundle\Normalizer\ConfigNormalizer;
-use Oro\Bundle\ApiBundle\Normalizer\DataNormalizer;
 use Oro\Bundle\ApiBundle\Normalizer\DateTimeNormalizer;
 use Oro\Bundle\ApiBundle\Normalizer\ObjectNormalizer;
 use Oro\Bundle\ApiBundle\Normalizer\ObjectNormalizerRegistry;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 use Oro\Bundle\ApiBundle\Util\EntityDataAccessor;
+use Oro\Component\EntitySerializer\DataNormalizer;
+use Oro\Component\EntitySerializer\EntityDataTransformer;
+use Oro\Component\EntitySerializer\SerializationHelper;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
+class PlainObjectNormalizerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ObjectNormalizer */
-    protected $objectNormalizer;
+    private $objectNormalizer;
 
     protected function setUp()
     {
-        $doctrine = $this->getMockBuilder('Doctrine\Common\Persistence\ManagerRegistry')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $doctrine->expects($this->any())
+        $doctrine = $this->createMock(ManagerRegistry::class);
+        $doctrine->expects(self::any())
             ->method('getManagerForClass')
             ->willReturn(null);
 
@@ -30,8 +31,10 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
         $this->objectNormalizer = new ObjectNormalizer(
             $normalizers,
             new DoctrineHelper($doctrine),
+            new SerializationHelper(
+                new EntityDataTransformer($this->createMock(ContainerInterface::class))
+            ),
             new EntityDataAccessor(),
-            new EntityDataTransformer($this->createMock('Symfony\Component\DependencyInjection\ContainerInterface')),
             new ConfigNormalizer(),
             new DataNormalizer()
         );
@@ -49,7 +52,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
 
         $result = $this->objectNormalizer->normalizeObject($object);
 
-        $this->assertEquals(
+        self::assertEquals(
             [
                 'id'   => 123,
                 'name' => 'test_name'
@@ -66,7 +69,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
 
         $result = $this->objectNormalizer->normalizeObject($product);
 
-        $this->assertEquals(
+        self::assertEquals(
             [
                 'id'            => 123,
                 'name'          => 'product_name',
@@ -75,7 +78,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
                 'owner'         => null,
                 'price'         => null,
                 'priceValue'    => null,
-                'priceCurrency' => null,
+                'priceCurrency' => null
             ],
             $result
         );
@@ -87,7 +90,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
             $this->createProductObject()
         );
 
-        $this->assertEquals(
+        self::assertEquals(
             [
                 'id'            => 123,
                 'name'          => 'product_name',
@@ -96,7 +99,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
                 'owner'         => 'user_name',
                 'price'         => null,
                 'priceValue'    => null,
-                'priceCurrency' => null,
+                'priceCurrency' => null
             ],
             $result
         );
@@ -110,7 +113,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
 
         $result = $this->objectNormalizer->normalizeObject($user);
 
-        $this->assertEquals(
+        self::assertEquals(
             [
                 'id'       => 123,
                 'name'     => 'user_name',
@@ -129,7 +132,7 @@ class PlainObjectNormalizerTest extends \PHPUnit_Framework_TestCase
             $this->createProductObject()->getOwner()
         );
 
-        $this->assertEquals(
+        self::assertEquals(
             [
                 'id'       => 456,
                 'name'     => 'user_name',

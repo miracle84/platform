@@ -7,14 +7,16 @@ use Oro\Bundle\ApiBundle\Tests\Unit\Processor\GetList\GetListProcessorTestCase;
 use Oro\Bundle\ConfigBundle\Api\Model\ConfigurationSection;
 use Oro\Bundle\ConfigBundle\Api\Processor\GetList\LoadConfigurationSections;
 use Oro\Bundle\ConfigBundle\Api\Processor\GetScope;
+use Oro\Bundle\ConfigBundle\Api\Repository\ConfigurationRepository;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class LoadConfigurationSectionsTest extends GetListProcessorTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configRepository;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
     /** @var LoadConfigurationSections */
     protected $processor;
@@ -23,16 +25,10 @@ class LoadConfigurationSectionsTest extends GetListProcessorTestCase
     {
         parent::setUp();
 
-        $this->configRepository = $this
-            ->getMockBuilder('Oro\Bundle\ConfigBundle\Api\Repository\ConfigurationRepository')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->configRepository = $this->createMock(ConfigurationRepository::class);
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
 
-
-        $this->processor = new LoadConfigurationSections($this->configRepository, $this->securityFacade);
+        $this->processor = new LoadConfigurationSections($this->configRepository, $this->authorizationChecker);
     }
 
     public function testProcessWhenSectionsAreAlreadyLoaded()
@@ -54,7 +50,7 @@ class LoadConfigurationSectionsTest extends GetListProcessorTestCase
         $section = new ConfigurationSection('test');
         $config = new EntityDefinitionConfig();
 
-        $this->securityFacade->expects($this->never())
+        $this->authorizationChecker->expects($this->never())
             ->method('isGranted');
 
         $this->configRepository->expects($this->once())
@@ -79,7 +75,7 @@ class LoadConfigurationSectionsTest extends GetListProcessorTestCase
         $config = new EntityDefinitionConfig();
         $config->setAclResource('test_acl_resource');
 
-        $this->securityFacade->expects($this->once())
+        $this->authorizationChecker->expects($this->once())
             ->method('isGranted')
             ->with($config->getAclResource())
             ->willReturn(true);
@@ -105,7 +101,7 @@ class LoadConfigurationSectionsTest extends GetListProcessorTestCase
         $config = new EntityDefinitionConfig();
         $config->setAclResource('test_acl_resource');
 
-        $this->securityFacade->expects($this->once())
+        $this->authorizationChecker->expects($this->once())
             ->method('isGranted')
             ->with($config->getAclResource())
             ->willReturn(false);

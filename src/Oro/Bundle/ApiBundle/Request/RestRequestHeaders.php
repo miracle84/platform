@@ -2,14 +2,16 @@
 
 namespace Oro\Bundle\ApiBundle\Request;
 
+use Oro\Component\ChainProcessor\AbstractParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 
-use Oro\Component\ChainProcessor\AbstractParameterBag;
-
+/**
+ * A collection of headers and their values for REST API requests.
+ */
 class RestRequestHeaders extends AbstractParameterBag
 {
     /** @var Request */
-    protected $request;
+    private $request;
 
     /**
      * @var array|null
@@ -22,7 +24,7 @@ class RestRequestHeaders extends AbstractParameterBag
      *  false          - a parameter was removed
      *  ['v' => value] - a parameter exists and its value is stored in this array
      */
-    protected $parameters;
+    private $parameters;
 
     /**
      * @param Request $request
@@ -118,7 +120,7 @@ class RestRequestHeaders extends AbstractParameterBag
     {
         $this->ensureInternalStorageInitialized();
 
-        $keys = array_keys($this->parameters);
+        $keys = \array_keys($this->parameters);
         foreach ($keys as $key) {
             $this->parameters[$key] = false;
         }
@@ -148,15 +150,15 @@ class RestRequestHeaders extends AbstractParameterBag
      *
      * @return string
      */
-    protected function normalizeKey($key)
+    private function normalizeKey($key)
     {
-        return str_replace('_', '-', strtolower($key));
+        return \str_replace('_', '-', \strtolower($key));
     }
 
     /**
      * Makes sure $this->parameters was initialized
      */
-    protected function ensureInternalStorageInitialized()
+    private function ensureInternalStorageInitialized()
     {
         if (null === $this->parameters) {
             $this->parameters = [];

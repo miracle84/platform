@@ -6,9 +6,9 @@ use Oro\Component\Layout\Extension\Theme\DataProvider\ThemeProvider;
 use Oro\Component\Layout\Extension\Theme\Model\Theme;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeManager;
 
-class ThemeProviderTest extends \PHPUnit_Framework_TestCase
+class ThemeProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ThemeManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ThemeManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $themeManager;
 
     /** @var ThemeProvider */
@@ -44,8 +44,11 @@ class ThemeProviderTest extends \PHPUnit_Framework_TestCase
             'assets' => [
                 'styles' => [
                     'output' => 'path/to/output/css'
-                ]
-            ]
+                ],
+                'styles_new' => [
+                    'output' => 'path/to/output/css/new'
+                ],
+            ],
         ]);
 
         $this->themeManager->expects($this->once())
@@ -54,6 +57,9 @@ class ThemeProviderTest extends \PHPUnit_Framework_TestCase
             ->willReturn($theme);
 
         $this->assertSame('path/to/output/css', $this->provider->getStylesOutput($themeName));
+        $this->assertSame('path/to/output/css', $this->provider->getStylesOutput($themeName, 'styles'));
+        $this->assertSame('path/to/output/css/new', $this->provider->getStylesOutput($themeName, 'styles_new'));
+        $this->assertSame(null, $this->provider->getStylesOutput($themeName, 'undefined section'));
     }
 
     public function testGetStylesOutputNull()
@@ -67,5 +73,32 @@ class ThemeProviderTest extends \PHPUnit_Framework_TestCase
             ->willReturn($theme);
 
         $this->assertNull($this->provider->getStylesOutput($themeName));
+    }
+
+    public function testGetStylesOutputWithFallback()
+    {
+        $grandParentThemeName = 'grand-parent';
+        $grandParentTheme = new Theme($grandParentThemeName);
+        $grandParentTheme->setConfig([
+            'assets' => [
+                'styles' => [
+                    'output' => 'grand/parent/theme/path/to/output/css'
+                ]
+            ],
+        ]);
+
+        $parentThemeName = 'parent';
+        $parentTheme = new Theme($parentThemeName, $grandParentThemeName);
+
+        $themeName = 'theme';
+        $theme = new Theme($themeName, $parentThemeName);
+
+        $this->themeManager->expects($this->any())
+            ->method('getTheme')
+            ->withConsecutive([$themeName], [$parentThemeName], [$grandParentThemeName])
+            ->willReturnOnConsecutiveCalls($theme, $parentTheme, $grandParentTheme);
+
+        $this->assertSame('grand/parent/theme/path/to/output/css', $this->provider->getStylesOutput($themeName));
+        $this->assertNull($this->provider->getStylesOutput($themeName, 'undefined'));
     }
 }

@@ -3,6 +3,7 @@
 namespace Oro\Bundle\TestFrameworkBundle\Behat\Driver;
 
 use Behat\Mink\Driver\Selenium2Driver;
+use Behat\Mink\Element\NodeElement;
 use Behat\Mink\Selector\Xpath\Escaper;
 use Behat\Mink\Selector\Xpath\Manipulator;
 use Oro\Bundle\TestFrameworkBundle\Behat\Context\AssertTrait;
@@ -10,6 +11,9 @@ use Oro\Bundle\TestFrameworkBundle\Behat\Element\ElementValueInterface;
 use WebDriver\Element;
 use WebDriver\Key;
 
+/**
+ * Contains overrides of some Selenium2Driver methods as well as new methods related to selenium driver functionality
+ */
 class OroSelenium2Driver extends Selenium2Driver
 {
     use AssertTrait;
@@ -66,27 +70,17 @@ class OroSelenium2Driver extends Selenium2Driver
         }
 
         if ('input' === $elementName) {
-            $classes = explode(' ', $element->attribute('class'));
-
-            if (true === in_array('select2-input', $classes, true)) {
-                $parent = $this->findElement($this->xpathManipulator->prepend('/../../..', $xpath));
-
-                if (in_array('select2-container-multi', explode(' ', $parent->attribute('class')), true)) {
-                    $this->fillSelect2Entities($xpath, $value);
-
-                    return;
-                }
-
-                $this->findElement($xpath)->postValue(['value' => [$value]]);
-
-                return;
-            } elseif ('text' === $element->attribute('type')) {
+            if ('text' === $element->attribute('type')) {
                 $this->setTextInputElement($element, $value);
+                $this->triggerEvent($xpath, 'keyup');
+                $this->triggerEvent($xpath, 'change');
 
                 return;
             }
         } elseif ('textarea' === $elementName && 'true' === $element->attribute('aria-hidden')) {
             $this->fillTinyMce($element, $value);
+            $this->triggerEvent($xpath, 'keyup');
+            $this->triggerEvent($xpath, 'change');
 
             return;
         }
@@ -142,121 +136,126 @@ class OroSelenium2Driver extends Selenium2Driver
      */
     protected function setTextInputElement(Element $element, $value)
     {
+        $value = json_encode($value);
         $script = <<<JS
 var node = {{ELEMENT}};
-node.value = '$value';
+node.value = $value;
 JS;
         $this->executeJsOnElement($element, $script);
     }
 
     /**
-     * Fill field with many entities
-     * See contexts field in send email form
-     * It will remove all existed entities in field
-     *
-     * @param string $xpath
-     * @param string|array $values Any string(s) for search entity
-     */
-    protected function fillSelect2Entities($xpath, $values)
-    {
-        $input = $this->findElement($xpath);
-
-        // Remove all existing entities
-        $results = $this->findElementXpaths($this->xpathManipulator->prepend(
-            '/../../li/a[contains(@class, "select2-search-choice-close")]',
-            $xpath
-        ));
-
-        foreach ($results as $result) {
-            $this->executeJsOnXpath($result, '{{ELEMENT}}.click()');
-        }
-
-        $this->waitForAjax();
-
-        $values = true === is_array($values) ? $values : [$values];
-
-        foreach ($values as $value) {
-            $input->postValue(['value' => [$value]]);
-            $this->wait(30000, "0 == $('ul.select2-results li.select2-searching').length");
-
-            $results = $this->getEntitiesSearchResultXpaths();
-            $firstResult = $this->findElement(array_shift($results));
-
-            self::assertNotEquals(
-                'select2-no-results',
-                $firstResult->attribute('class'),
-                sprintf('Not found result for "%s"', $value)
-            );
-
-            $firstResult->click();
-            $this->waitForAjax();
-        }
-    }
-
-    /**
-     * @return string[]
-     */
-    protected function getEntitiesSearchResultXpaths()
-    {
-        $resultsHoldersXpaths = [
-            '//ul[contains(@class, "select2-result-sub")]',
-            '//ul[contains(@class, "select2-result")]',
-        ];
-
-        while ($resultsHoldersXpath = array_shift($resultsHoldersXpaths)) {
-            foreach ($this->findElementXpaths($resultsHoldersXpath) as $xpath) {
-                $resultsHolder = $this->findElement($xpath);
-
-                if ($resultsHolder->displayed()) {
-                    return $this->findElementXpaths($xpath.'/li');
-                }
-            }
-        }
-
-        return [];
-    }
-
-    /**
      * Wait PAGE load
      * @param int $time Time should be in milliseconds
+     * @return bool
      */
     public function waitPageToLoad($time = 60000)
     {
-        $this->wait(
-            $time,
-            '"complete" == document["readyState"] '.
-            '&& document.title !=="Loading..." '
-        );
+        $jsCheck = <<<JS
+        (function () {
+            if (document["readyState"] !== "complete") {
+                return false;
+            }
+            
+            if (document.title === "Loading...") {
+                return false;
+            }
+            
+            if (jQuery == null || jQuery.active) {
+                return false;
+            }
+            
+            if (document.body.classList.contains('loading')) {
+                return false;
+            }
+
+            if (document.querySelector('.loader-mask.shown') !== null) {
+                return false;
+            }
+            
+            if (document.querySelector('div.lazy-loading') !== null) {
+                return false;
+            }
+            
+            return true;
+        })();
+JS;
+
+        $result = $this->wait($time, $jsCheck);
+
+        if (!$result) {
+            self::fail(sprintf('Wait for page init more than %d seconds', $time / 1000));
+        }
+
+        return $result;
     }
 
     /**
      * Wait AJAX request
      * @param int $time Time should be in milliseconds
+     * @return bool
      */
-    public function waitForAjax($time = 60000)
+    public function waitForAjax($time = 120000)
     {
-        $this->waitPageToLoad($time);
-
         $jsAppActiveCheck = <<<JS
         (function () {
-            if (typeof(jQuery) == "undefined" || jQuery == null) {
+            if (document['readyState'] !== 'complete') {
+                return false;
+            }
+            
+            if (document.title === 'Loading...') {
+                return false;
+            }
+            
+            if (document.body.classList.contains('loading')) {
                 return false;
             }
 
-            var isAppActive = 0 !== jQuery("div.loader-mask.shown").length;
+            if (document.querySelector('.loader-mask.shown, .lazy-loading') !== null) {
+                return false;
+            }
+            
             try {
+                if (jQuery == null || jQuery.active) {
+                    return false;
+                }
+                
                 if (!window.mediatorCachedForSelenium) {
                     window.mediatorCachedForSelenium = require('oroui/js/mediator');
                 }
-                isAppActive = isAppActive || window.mediatorCachedForSelenium.execute('isInAction');
+                
+                var isInAction = window.mediatorCachedForSelenium.execute('isInAction')
+                
+                if (isInAction !== false || jQuery.active) {
+                    return false;
+                }
             } catch (e) {
                 return false;
             }
 
-            return !(jQuery && (jQuery.active || jQuery(document.body).hasClass('loading'))) && !isAppActive;
+            return true;
         })();
 JS;
-        $this->wait($time, $jsAppActiveCheck);
+
+        $result = $this->wait($time, $jsAppActiveCheck);
+
+        if (!$result) {
+            self::fail(sprintf('Wait for ajax more than %d seconds', $time / 1000));
+        }
+
+        return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function doubleClick($xpath)
+    {
+        // Original method doesn't work properly with chromedriver,
+        // as it doesn't generate a pair of mouseDown/mouseUp events
+        // mouseDown event is used to postpone single click handler
+        $script = 'Syn.trigger("dblclick", {}, {{ELEMENT}})';
+        $this->withSyn()->executeJsOnXpath($xpath, $script);
     }
 
     /**
@@ -352,5 +351,70 @@ JS;
         } while (microtime(true) < $end && !$result);
 
         return (bool) $result;
+    }
+
+    /**
+     * Trigger given event $eventName on DOM element, found by $xpath
+     *
+     * This method created to trigger events instead of $this->keyup, $this->blur, etc, becaouse of "Syn" library error
+     * (in Syn.trigger function), used in these methods.
+     *
+     * @param string $xpath
+     * @param string $eventName
+     */
+    private function triggerEvent($xpath, $eventName)
+    {
+        $script = <<<JS
+// Function to triger an event. Cross-browser compliant. See http://stackoverflow.com/a/2490876/135494
+var triggerEvent = function (element, eventName) {
+    var event;
+    if (document.createEvent) {
+        event = document.createEvent("HTMLEvents");
+        event.initEvent(eventName, true, true);
+    } else {
+        event = document.createEventObject();
+        event.eventType = eventName;
+    }
+    event.eventName = eventName;
+    if (document.createEvent) {
+        element.dispatchEvent(event);
+    } else {
+        element.fireEvent("on" + event.eventType, event);
+    }
+}
+var node = {{ELEMENT}};
+triggerEvent(node, '$eventName');
+JS;
+        $this->executeJsOnXpath($xpath, $script);
+    }
+
+    /**
+     * @param NodeElement $element
+     */
+    public function switchToIFrameByElement(NodeElement $element)
+    {
+        $id = $element->getAttribute('id');
+
+        if ($id === null) {
+            $elementXpath = $element->getXpath();
+            $id = sprintf('iframe-%s', md5($elementXpath));
+
+            $function = <<<JS
+(function(){
+    var iframeElement = document.evaluate(
+        "{$elementXpath}",
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+    ).singleNodeValue;
+    iframeElement.id = "{$id}";
+})()
+JS;
+
+            $this->executeScript($function);
+        }
+
+        parent::switchToIFrame($id);
     }
 }

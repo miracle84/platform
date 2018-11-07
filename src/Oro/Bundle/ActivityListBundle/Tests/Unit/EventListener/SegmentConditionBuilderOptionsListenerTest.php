@@ -5,32 +5,22 @@ namespace Oro\Bundle\ActivityListBundle\Tests\Unit\EventListener;
 use Oro\Bundle\ActivityListBundle\EventListener\SegmentConditionBuilderOptionsListener;
 use Oro\Bundle\SegmentBundle\Event\ConditionBuilderOptionsLoadEvent;
 
-class SegmentConditionBuilderOptionsListenerTest extends \PHPUnit_Framework_TestCase
+class SegmentConditionBuilderOptionsListenerTest extends \PHPUnit\Framework\TestCase
 {
     public function testListener()
     {
         $options = [
-            'criteriaListSelector' => '#selector',
-            'entityChoiceSelector' => '#selector2',
-            'onFieldsUpdate' => [
-                'toggleCriteria' => [
-                    'condition-item',
-                    'condition-segment',
-                    'conditions-group',
-                ],
+            'fieldsRelatedCriteria' => [
+                'condition-item',
+                'condition-segment',
             ],
         ];
 
         $expectedOptions = [
-            'criteriaListSelector' => '#selector',
-            'entityChoiceSelector' => '#selector2',
-            'onFieldsUpdate' => [
-                'toggleCriteria' => [
-                    'condition-item',
-                    'condition-segment',
-                    'conditions-group',
-                    'condition-activity',
-                ],
+            'fieldsRelatedCriteria' => [
+                'condition-item',
+                'condition-segment',
+                'condition-activity',
             ],
         ];
 

@@ -3,22 +3,27 @@
 namespace Oro\Bundle\ConfigBundle\Tests\Unit\Form\Handler;
 
 use Oro\Bundle\ConfigBundle\Config\ConfigChangeSet;
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\ConfigBundle\Form\Handler\ConfigHandler;
+use Symfony\Component\Form\Test\FormInterface;
+use Symfony\Component\HttpFoundation\Request;
 
-class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
+class ConfigHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    const FORM_DATA = ['field' => 'value'];
+
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var FormInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $form;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var Request
      */
     protected $request;
 
@@ -29,14 +34,17 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->configManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->configManager = $this->createMock(ConfigManager::class);
 
-        $this->form = $this->createMock('Symfony\Component\Form\Test\FormInterface');
-        $this->request = $request = $this->createMock('Symfony\Component\HttpFoundation\Request');
+        $this->form = $this->createMock(FormInterface::class);
+        $this->request = new Request();
 
         $this->handler = new ConfigHandler($this->configManager);
+    }
+
+    public function testGetConfigManager()
+    {
+        $this->assertSame($this->configManager, $this->handler->getConfigManager());
     }
 
     public function testProcessWithoutAdditionalHandler()
@@ -52,13 +60,12 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($settings);
 
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize([], self::FORM_DATA);
+        $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->equalTo($this->request));
+            ->with($this->equalTo(self::FORM_DATA));
 
         $this->form->expects($this->once())
             ->method('isValid')
@@ -93,13 +100,12 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($settings);
 
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize([], self::FORM_DATA);
+        $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->equalTo($this->request));
+            ->with($this->equalTo(self::FORM_DATA));
 
         $this->form->expects($this->once())
             ->method('isValid')
@@ -145,9 +151,7 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
         $this->form->expects($this->once())
             ->method('setData');
 
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('GET'));
+        $this->request->setMethod('GET');
 
         $this->form->expects($this->never())
             ->method('submit');
@@ -170,9 +174,8 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
             ->with($this->isInstanceOf('Symfony\Component\Form\Test\FormInterface'))
             ->will($this->returnValue($settings));
 
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue('POST'));
+        $this->request->initialize([], self::FORM_DATA);
+        $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('setData')
@@ -180,7 +183,7 @@ class ConfigHandlerTest extends \PHPUnit_Framework_TestCase
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->equalTo($this->request));
+            ->with($this->equalTo(self::FORM_DATA));
 
         $this->form->expects($this->once())
             ->method('isValid')

@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Datagrid;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\DataGridBundle\Datagrid\Datagrid;
 use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
 use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
@@ -14,21 +13,21 @@ use Oro\Bundle\SecurityBundle\Model\AclPrivilegeIdentity;
 use Oro\Bundle\UserBundle\Entity\Role;
 use Oro\Bundle\WorkflowBundle\Datagrid\WorkflowPermissionDatasource;
 
-class WorkflowPermissionDatasourceTest extends \PHPUnit_Framework_TestCase
+class WorkflowPermissionDatasourceTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $permissionManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $aclRoleHandler;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $categoryProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configEntityManager;
 
     /** @var WorkflowPermissionDatasource */
@@ -128,7 +127,6 @@ class WorkflowPermissionDatasourceTest extends \PHPUnit_Framework_TestCase
 
     protected function validateResult($result)
     {
-
         $this->assertCount(2, $result);
 
         /** @var ResultRecord $item1 */

@@ -2,21 +2,20 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Cache;
 
-use Symfony\Bundle\FrameworkBundle\CacheWarmer\TranslationsCacheWarmer as InnerCacheWarmer;
-
 use Oro\Bundle\TranslationBundle\Cache\TranslationCacheWarmer;
 use Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyInterface;
 use Oro\Bundle\TranslationBundle\Strategy\TranslationStrategyProvider;
+use Symfony\Bundle\FrameworkBundle\CacheWarmer\TranslationsCacheWarmer as InnerCacheWarmer;
 
-class TranslationCacheWarmerTest extends \PHPUnit_Framework_TestCase
+class TranslationCacheWarmerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var InnerCacheWarmer|\PHPUnit_Framework_MockObject_MockObject
+     * @var InnerCacheWarmer|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $innerWarmer;
 
     /**
-     * @var TranslationStrategyProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var TranslationStrategyProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $strategyProvider;
 
@@ -92,7 +91,7 @@ class TranslationCacheWarmerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param string $name
-     * @return TranslationStrategyInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return TranslationStrategyInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getStrategy($name)
     {

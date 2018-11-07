@@ -4,7 +4,7 @@
 {% import 'OroEntityConfigBundle::macros.html.twig' as entityConfig %}
 {% oro_title_set({params : {"%entityName%": entity_config.get('label')|default('N/A')|trans }}) %}
 
-{% if resource_granted('oro_entityconfig_manage') %}
+{% if is_granted('oro_entityconfig_manage') %}
     {% set audit_entity_class = entity.classname|replace('\\', '_') %}
     {% set audit_title = entity_config.get('label')|default(entity_name)|trans %}
     {% set audit_path = 'oro_entityconfig_audit' %}
@@ -12,19 +12,11 @@
 {% endif %}
 
 {% block navButtons %}
-    {% if resource_granted('oro_entityconfig_manage') %}
+    {% if is_granted('oro_entityconfig_manage') %}
         {% if extend_config.is('is_extend') %}
-            {% include 'OroImportExportBundle:ImportExport:buttons.html.twig' with {
-                entity_class: 'Oro\\Bundle\\EntityConfigBundle\\Entity\\FieldConfigModel',
-                importJob: 'entity_fields_import_from_csv',
-                importProcessor: 'oro_entity_config_entity_field.add_or_replace',
-                importTitle: 'oro.entity_config.import.title'|trans,
-                exportTemplateJob: 'entity_export_template_to_csv',
-                exportTemplateProcessor: 'oro_entity_config_entity_field.export_template',
-                refreshPageOnSuccess: true,
-                afterRefreshPageMessage: 'oro.entity_config.import.message.require_update_schema'|trans,
-                options: {'entity_id': entity.id},
-                importLabel: 'oro.entity_config.import.label'|trans,
+            {% include 'OroImportExportBundle:ImportExport:buttons_from_configuration.html.twig' with {
+                'alias': 'oro_field_config_model',
+                'options': {'entity_id': entity.id}
             } %}
         {% endif %}
 

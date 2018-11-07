@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Config;
 
+use Oro\Bundle\ApiBundle\Config\FeatureConfigurationExtension;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Processor;
 
-use Oro\Bundle\ApiBundle\Config\FeatureConfigurationExtension;
-
-class FeatureConfigurationExtensionTest extends \PHPUnit_Framework_TestCase
+class FeatureConfigurationExtensionTest extends \PHPUnit\Framework\TestCase
 {
     public function testExtendConfigurationTree()
     {

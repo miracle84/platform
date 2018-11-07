@@ -1,8 +1,18 @@
-define(['orotranslation/js/translator', 'routing', 'oro/dialog-widget', 'underscore'],
-    function(__, routing, DialogWidget, _) {
+define(['orotranslation/js/translator', 'routing', 'oro/dialog-widget', 'underscore'
+], function(__, routing, DialogWidget, _) {
     'use strict';
 
     var ConfigurationWidget = DialogWidget.extend({
+        /**
+         * @inheritDoc
+         */
+        constructor: function ConfigurationWidget() {
+            ConfigurationWidget.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             if (typeof options.widget === 'undefined') {
                 throw new Error('Option "widget" was not specified.');
@@ -17,7 +27,7 @@ define(['orotranslation/js/translator', 'routing', 'oro/dialog-widget', 'undersc
                     title: __('oro.dashboard.widget_configuration_label') + ' - ' + options.widget.options.title,
                     modal: true,
                     minHeight: 50,
-                    minWidth: 680,
+                    minWidth: 380,
                     resizable: false,
                     width: 'auto'
                 },

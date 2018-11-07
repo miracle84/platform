@@ -3,6 +3,7 @@
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\EntityExtendBundle\Form\Type\EnumChoiceType;
+use Oro\Bundle\TranslationBundle\Form\Type\TranslatableEntityType;
 
 class EnumChoiceTypeTest extends AbstractEnumTypeTestCase
 {
@@ -19,16 +20,8 @@ class EnumChoiceTypeTest extends AbstractEnumTypeTestCase
     public function testGetParent()
     {
         $this->assertEquals(
-            'translatable_entity',
+            TranslatableEntityType::class,
             $this->type->getParent()
-        );
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals(
-            'oro_enum_choice',
-            $this->type->getName()
         );
     }
 
@@ -68,27 +61,25 @@ class EnumChoiceTypeTest extends AbstractEnumTypeTestCase
     }
 
     /**
-     * @dataProvider setDefaultOptionsProvider
+     * @dataProvider configureOptionsProvider
+     *
+     * @param array $options
+     * @param array $expectedOptions
      */
-    public function testSetDefaultOptions($multiple, $expanded, $expectedEmptyValue, $expectedEmptyData)
+    public function testConfigureOptions($multiple, array $options, array $expectedOptions)
     {
         $resolver = $this->getOptionsResolver();
 
-        $resolvedOptions = $this->doTestSetDefaultOptions(
+        $resolvedOptions = $this->doTestConfigureOptions(
             $this->type,
             $resolver,
             'test_enum',
             $multiple,
-            $expanded
+            $options['expanded'],
+            $options
         );
 
-        $this->assertEquals(
-            [
-                'empty_value' => $expectedEmptyValue,
-                'empty_data' => $expectedEmptyData
-            ],
-            $resolvedOptions
-        );
+        $this->assertEquals($expectedOptions, $resolvedOptions);
     }
 
     /**
@@ -98,7 +89,7 @@ class EnumChoiceTypeTest extends AbstractEnumTypeTestCase
     public function testClassNormalizerOptionsException()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
         $resolver->resolve([
             'enum_code' => null,
             'class' => null
@@ -112,19 +103,70 @@ class EnumChoiceTypeTest extends AbstractEnumTypeTestCase
     public function testClassNormalizerUnexpectedEnumException()
     {
         $resolver = $this->getOptionsResolver();
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
         $resolver->resolve([
             'enum_code' => 'unknown'
         ]);
     }
 
-    public function setDefaultOptionsProvider()
+    /**
+     * @return array
+     */
+    public function configureOptionsProvider()
     {
         return [
-            [false, false, 'oro.form.choose_value', null],
-            [false, true, null, null],
-            [true, false, null, null],
-            [true, true, null, null]
+            'not multiple, not expanded' => [
+                'multiple' => false,
+                'options' => ['expanded' => false],
+                'expectedOptions' => [
+                    'placeholder' => 'oro.form.choose_value',
+                    'empty_data' => null,
+                ]
+            ],
+            'not multiple, not expanded, not null "placeholder"' => [
+                'multiple' => false,
+                'options' => ['expanded' => false, 'placeholder' => false],
+                'expectedOptions' => [
+                    'placeholder' => false,
+                    'empty_data' => null,
+                ]
+            ],
+            'not multiple, expanded' => [
+                'multiple' => true,
+                'options' => ['expanded' => false],
+                'expectedOptions' => [
+                    'placeholder' => null,
+                    'empty_data' => null,
+                ]
+            ],
+            'multiple, not expanded' => [
+                'multiple' => false,
+                'options' => ['expanded' => true],
+                'expectedOptions' => [
+                    'placeholder' => null,
+                    'empty_data' => null,
+                ]
+            ],
+            'multiple, expanded' => [
+                'multiple' => true,
+                'options' => ['expanded' => true],
+                'expectedOptions' => [
+                    'placeholder' => null,
+                    'empty_data' => null,
+                ]
+            ],
+            'multiple, expanded, other options' => [
+                'multiple' => true,
+                'options' => [
+                    'expanded' => true,
+                    'placeholder' => 'test',
+                    'empty_data' => '123',
+                ],
+                'expectedOptions' => [
+                    'placeholder' => 'test',
+                    'empty_data' => '123',
+                ]
+            ],
         ];
     }
 }

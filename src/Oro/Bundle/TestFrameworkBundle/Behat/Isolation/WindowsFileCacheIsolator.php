@@ -2,33 +2,26 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Behat\Isolation;
 
-use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\AfterFinishTestsEvent;
-use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\AfterIsolatedTestEvent;
-use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\BeforeIsolatedTestEvent;
-use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\BeforeStartTestsEvent;
-use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\RestoreStateEvent;
-use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
-final class WindowsFileCacheIsolator extends AbstractFileCacheOsRelatedIsolator implements IsolatorInterface
+class WindowsFileCacheIsolator extends AbstractFileCacheOsRelatedIsolator implements IsolatorInterface
 {
     /** @var array */
     protected $cacheDirectories = [
         'doctrine',
         'oro_data',
         'oro_entities',
-        'oro'
     ];
 
     /** {@inheritdoc} */
     public function isApplicable(ContainerInterface $container)
     {
-        return
-            $this->isApplicableOS()
-            && 'session.handler.native_file' == $container->getParameter('session_handler');
+        if ($container->hasParameter('kernel.debug') && $container->getParameter('kernel.debug')) {
+            $this->cacheDirectories['oro'] = 'oro';
+        }
+
+        return $this->isApplicableOS();
     }
 
     /**
@@ -52,9 +45,15 @@ final class WindowsFileCacheIsolator extends AbstractFileCacheOsRelatedIsolator 
         $commands = [];
 
         foreach ($this->cacheDirectories as $directory) {
+            $cacheTempDirPath = $this->cacheTempDir.'\\'.$directory;
+
+            if (!is_dir($cacheTempDirPath)) {
+                continue;
+            }
+
             $commands[] = sprintf(
                 "move %s %s",
-                $this->cacheTempDir.'\\'.$directory,
+                $cacheTempDirPath,
                 $this->cacheDir.'\\'.$directory
             );
         }
@@ -86,9 +85,15 @@ final class WindowsFileCacheIsolator extends AbstractFileCacheOsRelatedIsolator 
         $commands = [];
 
         foreach ($this->cacheDirectories as $directory) {
+            $cacheDirPath = $this->cacheDir.'\\'.$directory;
+
+            if (!is_dir($cacheDirPath)) {
+                continue;
+            }
+
             $commands[] = sprintf(
                 'xcopy %s %s /E /R /H /I /K /Y',
-                $this->cacheDir.'\\'.$directory,
+                $cacheDirPath,
                 $this->cacheDumpDir.'\\'.$directory
             );
         }
@@ -116,6 +121,12 @@ final class WindowsFileCacheIsolator extends AbstractFileCacheOsRelatedIsolator 
         $commands = [];
 
         foreach ($this->cacheDirectories as $directory) {
+            $cacheDirPath = $this->cacheDir.'\\'.$directory;
+
+            if (!is_dir($cacheDirPath)) {
+                continue;
+            }
+
             $commands[] = sprintf('rd /s /q %s', $this->cacheDir.'\\'.$directory);
         }
 

@@ -2,12 +2,11 @@
 
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class NotHasValueTest extends \PHPUnit_Framework_TestCase
+class NotHasValueTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Condition\NotHasValue */
     protected $condition;

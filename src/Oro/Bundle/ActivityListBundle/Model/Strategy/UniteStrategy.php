@@ -2,17 +2,19 @@
 
 namespace Oro\Bundle\ActivityListBundle\Model\Strategy;
 
-use Symfony\Component\Security\Core\Util\ClassUtils;
-
-use Oro\Component\PhpUtils\ArrayUtil;
-
-use Oro\Bundle\ActivityListBundle\Entity\Manager\ActivityListManager;
 use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
+use Oro\Bundle\ActivityListBundle\Entity\Manager\ActivityListManager;
 use Oro\Bundle\ActivityListBundle\Model\MergeModes;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\EntityMergeBundle\Model\Strategy\StrategyInterface;
 use Oro\Bundle\EntityMergeBundle\Data\FieldData;
+use Oro\Bundle\EntityMergeBundle\Model\Strategy\StrategyInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
 
+/**
+ * Realization of EntityMergeBundle FieldData merge StrategyInterface
+ * Does db update plain SQL query, using activityListManager
+ * batch updates FieldData.entities association (neq FieldData.masterEntity.id) with FieldData.masterEntity.id
+ */
 class UniteStrategy implements StrategyInterface
 {
     /** @var ActivityListManager  */
@@ -51,7 +53,7 @@ class UniteStrategy implements StrategyInterface
 
                 $activityListItems = $queryBuilder->getQuery()->getResult();
 
-                $activityIds = ArrayUtil::arrayColumn($activityListItems, 'id');
+                $activityIds = \array_column($activityListItems, 'id');
                 $this->activityListManager
                     ->replaceActivityTargetWithPlainQuery(
                         $activityIds,
@@ -60,7 +62,7 @@ class UniteStrategy implements StrategyInterface
                         $masterEntity->getId()
                     );
 
-                $activityIds = ArrayUtil::arrayColumn($activityListItems, 'relatedActivityId');
+                $activityIds = \array_column($activityListItems, 'relatedActivityId');
                 $this->activityListManager
                     ->replaceActivityTargetWithPlainQuery(
                         $activityIds,

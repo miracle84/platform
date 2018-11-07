@@ -4,35 +4,35 @@ namespace Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Persistence;
 
 use Oro\Bundle\SecurityBundle\Acl\Domain\ObjectIdentityFactory;
 use Oro\Bundle\SecurityBundle\Acl\Persistence\AclManager;
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 use Oro\Bundle\SecurityBundle\Acl\Persistence\Batch\BatchItem;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 use Symfony\Component\Security\Acl\Exception\AclNotFoundException;
 use Symfony\Component\Security\Acl\Model\MutableAclInterface;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
-class AclManagerTest extends \PHPUnit_Framework_TestCase
+class AclManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AclManager */
     private $manager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $objectIdentityFactory;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $aclProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $aceProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $extension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $fieldExtension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $extensionSelector;
 
     protected function setUp()

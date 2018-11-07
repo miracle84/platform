@@ -3,30 +3,29 @@
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Async\Manager;
 
 use Doctrine\ORM\Query;
-
 use Oro\Bundle\EmailBundle\Async\Manager\AssociationManager;
 use Oro\Bundle\EmailBundle\Entity\Email;
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailActivityManager;
-use Oro\Bundle\EmailBundle\Provider\EmailOwnersProvider;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailManager;
+use Oro\Bundle\EmailBundle\Provider\EmailOwnersProvider;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 
-class AssociationManagerTest extends \PHPUnit_Framework_TestCase
+class AssociationManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AssociationManager */
     private $associationManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     private $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailActivityManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailActivityManager */
     private $emailActivityManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailManager */
     private $emailManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailOwnersProvider */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailOwnersProvider */
     private $emailOwnersProvider;
 
     protected function setUp()
@@ -114,7 +113,7 @@ class AssociationManagerTest extends \PHPUnit_Framework_TestCase
                 'addAssociation' => false
             ],
             [
-                'ids' => null,
+                'ids' => [],
                 'targetClass' => 'TestClass',
                 'targetId' => 1,
                 'expectedCountAssociation' => 0,

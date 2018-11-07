@@ -5,7 +5,7 @@ namespace Oro\Bundle\DistributionBundle\Tests\Unit;
 use Oro\Bundle\DistributionBundle\OroKernel;
 use Oro\Bundle\DistributionBundle\Tests\Unit\Stub\OroKernelStub;
 
-class OroKernelTest extends \PHPUnit_Framework_TestCase
+class OroKernelTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var OroKernel|OroKernelStub
@@ -33,46 +33,6 @@ class OroKernelTest extends \PHPUnit_Framework_TestCase
     public function bundleList()
     {
         return [
-            [
-                [
-                    ['name' => 'OroCallBundle', 'priority' => 30],
-                    ['name' => 'OroCRMTestBundle', 'priority' => 30],
-                ],
-                [
-                    'OroCallBundle',
-                    'OroCRMTestBundle'
-                ]
-            ],
-            [
-                [
-                    ['name' => 'OroCRMTestBundle', 'priority' => 30],
-                    ['name' => 'OroCallBundle', 'priority' => 30],
-                ],
-                [
-                    'OroCallBundle',
-                    'OroCRMTestBundle'
-                ]
-            ],
-            [
-                [
-                    ['name' => 'OroCallBundle', 'priority' => 30],
-                    ['name' => 'OroCRMTestBundle', 'priority' => 30],
-                ],
-                [
-                    'OroCallBundle',
-                    'OroCRMTestBundle'
-                ]
-            ],
-            [
-                [
-                    ['name' => 'OroCRMTestBundle', 'priority' => 30],
-                    ['name' => 'OroCallBundle', 'priority' => 30],
-                ],
-                [
-                    'OroCallBundle',
-                    'OroCRMTestBundle'
-                ]
-            ],
             [
                 [
                     ['name' => 'OroCallBundle', 'priority' => 30],
@@ -107,15 +67,15 @@ class OroKernelTest extends \PHPUnit_Framework_TestCase
             [
                 [
                     ['name' => 'AcmeLastBundle', 'priority' => 100],
-                    ['name' => 'OroCRMAnotherBundle', 'priority' => 30],
-                    ['name' => 'AcmeTestBundle', 'priority' => 1],
                     ['name' => 'OroSomeBundle', 'priority' => 30],
+                    ['name' => 'AcmeTestBundle', 'priority' => 1],
+                    ['name' => 'OroAnotherBundle', 'priority' => 30],
                     ['name' => 'AcmeDemoBundle', 'priority' => 100],
                 ],
                 [
                     'AcmeTestBundle',
+                    'OroAnotherBundle',
                     'OroSomeBundle',
-                    'OroCRMAnotherBundle',
                     'AcmeDemoBundle',
                     'AcmeLastBundle',
                 ]

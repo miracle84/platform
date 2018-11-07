@@ -9,13 +9,14 @@ use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\UniqueEnumName;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\UniqueEnumNameValidator;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class UniqueEnumNameValidatorTest extends \PHPUnit_Framework_TestCase
+class UniqueEnumNameValidatorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $context;
 
     /** @var UniqueEnumNameValidator */
@@ -26,7 +27,7 @@ class UniqueEnumNameValidatorTest extends \PHPUnit_Framework_TestCase
         $this->configManager = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()
             ->getMock();
-        $this->context       = $this->createMock('Symfony\Component\Validator\ExecutionContextInterface');
+        $this->context       = $this->createMock(ExecutionContextInterface::class);
 
         $this->validator = new UniqueEnumNameValidator($this->configManager);
         $this->validator->initialize($this->context);
@@ -175,7 +176,7 @@ class UniqueEnumNameValidatorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getConfigProviderMock()
     {

@@ -2,38 +2,49 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Config\Shared;
 
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Oro\Bundle\ApiBundle\Config\Config;
 use Oro\Bundle\ApiBundle\Config\ExpandRelatedEntitiesConfigExtra;
 use Oro\Bundle\ApiBundle\Processor\Config\Shared\ExpandRelatedEntities;
+use Oro\Bundle\ApiBundle\Provider\ConfigProvider;
+use Oro\Bundle\ApiBundle\Provider\EntityOverrideProviderInterface;
+use Oro\Bundle\ApiBundle\Provider\EntityOverrideProviderRegistry;
 use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Config\ConfigProcessorTestCase;
 use Oro\Bundle\ApiBundle\Tests\Unit\Processor\TestConfigSection;
+use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 
 class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $doctrineHelper;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
+    private $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $configProvider;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigProvider */
+    private $configProvider;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityOverrideProviderInterface */
+    private $entityOverrideProvider;
 
     /** @var ExpandRelatedEntities */
-    protected $processor;
+    private $processor;
 
     protected function setUp()
     {
         parent::setUp();
 
-        $this->doctrineHelper = $this->getMockBuilder('Oro\Bundle\ApiBundle\Util\DoctrineHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->configProvider = $this
-            ->getMockBuilder('Oro\Bundle\ApiBundle\Provider\ConfigProvider')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->doctrineHelper = $this->createMock(DoctrineHelper::class);
+        $this->configProvider = $this->createMock(ConfigProvider::class);
+        $this->entityOverrideProvider = $this->createMock(EntityOverrideProviderInterface::class);
+
+        $entityOverrideProviderRegistry = $this->createMock(EntityOverrideProviderRegistry::class);
+        $entityOverrideProviderRegistry->expects(self::any())
+            ->method('getEntityOverrideProvider')
+            ->with($this->context->getRequestType())
+            ->willReturn($this->entityOverrideProvider);
 
         $this->processor = new ExpandRelatedEntities(
             $this->doctrineHelper,
-            $this->configProvider
+            $this->configProvider,
+            $entityOverrideProviderRegistry
         );
     }
 
@@ -43,8 +54,24 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
             'exclusion_policy' => 'all'
         ];
 
-        $this->doctrineHelper->expects($this->never())
+        $this->doctrineHelper->expects(self::never())
             ->method('isManageableEntityClass');
+
+        $this->context->setResult($this->createConfigObject($config));
+        $this->processor->process($this->context);
+    }
+
+    // @codingStandardsIgnoreStart
+    /**
+     * @expectedException \Oro\Bundle\ApiBundle\Exception\NotSupportedConfigOperationException
+     * @expectedExceptionMessage Requested unsupported operation "expand_related_entities" when building config for "Test\Class".
+     */
+    // @codingStandardsIgnoreEnd
+    public function testProcessForDisabledInclusion()
+    {
+        $config = [
+            'disable_inclusion' => true
+        ];
 
         $this->context->setResult($this->createConfigObject($config));
         $this->processor->process($this->context);
@@ -64,7 +91,7 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                 ],
                 'association3' => [
                     'target_class' => 'Test\Association3Target'
-                ],
+                ]
             ]
         ];
 
@@ -77,14 +104,14 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
             ]
         );
 
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects(self::once())
             ->method('isManageableEntityClass')
             ->with(self::TEST_CLASS_NAME)
             ->willReturn(false);
-        $this->doctrineHelper->expects($this->never())
+        $this->doctrineHelper->expects(self::never())
             ->method('getEntityMetadataForClass');
 
-        $this->configProvider->expects($this->exactly(3))
+        $this->configProvider->expects(self::exactly(3))
             ->method('getConfig')
             ->willReturnMap(
                 [
@@ -108,7 +135,7 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                         $this->context->getRequestType(),
                         $this->context->getPropagableExtras(),
                         $this->createRelationConfigObject(['exclusion_policy' => 'all'])
-                    ],
+                    ]
                 ]
             );
 
@@ -133,7 +160,7 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                     'association3' => [
                         'target_class'     => 'Test\Association3Target',
                         'exclusion_policy' => 'all'
-                    ],
+                    ]
                 ]
             ],
             $this->context->getResult()
@@ -164,7 +191,7 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
         );
 
         $rootEntityMetadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
-        $rootEntityMetadata->expects($this->exactly(5))
+        $rootEntityMetadata->expects(self::exactly(5))
             ->method('hasAssociation')
             ->willReturnMap(
                 [
@@ -172,30 +199,30 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                     ['association1', true],
                     ['association2', true],
                     ['realAssociation3', true],
-                    ['association4', true],
+                    ['association4', true]
                 ]
             );
-        $rootEntityMetadata->expects($this->exactly(4))
+        $rootEntityMetadata->expects(self::exactly(4))
             ->method('getAssociationTargetClass')
             ->willReturnMap(
                 [
                     ['association1', 'Test\Association1Target'],
                     ['association2', 'Test\Association2Target'],
                     ['realAssociation3', 'Test\Association3Target'],
-                    ['association4', 'Test\Association4Target'],
+                    ['association4', 'Test\Association4Target']
                 ]
             );
 
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects(self::once())
             ->method('isManageableEntityClass')
             ->with(self::TEST_CLASS_NAME)
             ->willReturn(true);
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects(self::once())
             ->method('getEntityMetadataForClass')
             ->with(self::TEST_CLASS_NAME)
             ->willReturn($rootEntityMetadata);
 
-        $this->configProvider->expects($this->exactly(4))
+        $this->configProvider->expects(self::exactly(4))
             ->method('getConfig')
             ->willReturnMap(
                 [
@@ -226,7 +253,7 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                         $this->context->getRequestType(),
                         $this->context->getPropagableExtras(),
                         $this->createRelationConfigObject()
-                    ],
+                    ]
                 ]
             );
 
@@ -253,7 +280,90 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                         'property_path'    => 'realAssociation3',
                         'target_type'      => 'to-one',
                         'target_class'     => 'Test\Association3Target'
+                    ]
+                ]
+            ],
+            $this->context->getResult()
+        );
+    }
+
+    public function testProcessForManageableEntityWithPropertyPath()
+    {
+        $entityDefinition = $this->createConfigObject([
+            'fields' => [
+                'account'             => [
+                    'property_path' => 'customerAssociation.account'
+                ],
+                'customerAssociation' => [
+                    'fields' => [
+                        'account' => null
+                    ]
+                ]
+            ]
+        ]);
+        $this->context->setResult($entityDefinition);
+        $this->context->setExtras(
+            [
+                new ExpandRelatedEntitiesConfigExtra(['account']),
+                new TestConfigSection('test_section')
+            ]
+        );
+
+        $this->configProvider->expects(self::any())
+            ->method('getConfig')
+            ->with(
+                'Account',
+                $this->context->getVersion(),
+                $this->context->getRequestType(),
+                [new TestConfigSection('test_section')]
+            )
+            ->willReturn($this->createRelationConfigObject([]));
+
+        $metadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
+        new ClassMetadata(self::TEST_CLASS_NAME);
+        $metadata->associationMappings = [
+            'customerAssociation' => [
+                'fieldName'    => 'customerAssociation',
+                'type'         => ClassMetadata::MANY_TO_ONE,
+                'targetEntity' => 'CustomerAssociation'
+            ]
+        ];
+        $customerAssociationMetadata = new ClassMetadata('CustomerAssociation');
+        $customerAssociationMetadata->associationMappings = [
+            'account' => [
+                'fieldName'    => 'account',
+                'type'         => ClassMetadata::MANY_TO_ONE,
+                'targetEntity' => 'Account'
+            ]
+        ];
+        $this->doctrineHelper->expects(self::once())
+            ->method('isManageableEntityClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn(true);
+        $this->doctrineHelper->expects(self::once())
+            ->method('getEntityMetadataForClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn($metadata);
+        $this->doctrineHelper->expects(self::once())
+            ->method('findEntityMetadataByPath')
+            ->with(self::TEST_CLASS_NAME, 'customerAssociation')
+            ->willReturn($customerAssociationMetadata);
+
+        $this->processor->process($this->context);
+
+        $this->assertConfig(
+            [
+                'fields' => [
+                    'account'             => [
+                        'property_path' => 'customerAssociation.account',
+                        'target_class'  => 'Account',
+                        'target_type'   => 'to-one'
                     ],
+                    'customerAssociation' => [
+                        'fields' => [
+                            'account' => null
+                        ]
+                    ]
                 ]
             ],
             $this->context->getResult()
@@ -271,25 +381,25 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
         );
 
         $rootEntityMetadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
-        $rootEntityMetadata->expects($this->once())
+        $rootEntityMetadata->expects(self::once())
             ->method('hasAssociation')
             ->with('association1')
             ->willReturn(true);
-        $rootEntityMetadata->expects($this->once())
+        $rootEntityMetadata->expects(self::once())
             ->method('getAssociationTargetClass')
             ->with('association1')
             ->willReturn('Test\Association1Target');
 
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects(self::once())
             ->method('isManageableEntityClass')
             ->with(self::TEST_CLASS_NAME)
             ->willReturn(true);
-        $this->doctrineHelper->expects($this->once())
+        $this->doctrineHelper->expects(self::once())
             ->method('getEntityMetadataForClass')
             ->with(self::TEST_CLASS_NAME)
             ->willReturn($rootEntityMetadata);
 
-        $this->configProvider->expects($this->once())
+        $this->configProvider->expects(self::once())
             ->method('getConfig')
             ->with(
                 'Test\Association1Target',
@@ -312,7 +422,164 @@ class ExpandRelatedEntitiesTest extends ConfigProcessorTestCase
                         'exclusion_policy' => 'all',
                         'target_class'     => 'Test\Association1Target',
                         'target_type'      => 'to-one'
-                    ],
+                    ]
+                ]
+            ],
+            $this->context->getResult()
+        );
+    }
+
+    public function testProcessForAssociationDoesNotExistInEntityAndConfiguredByTargetClassAndTargetType()
+    {
+        $config = [
+            'fields' => [
+                'association1' => [
+                    'target_class' => 'Test\Association1Target',
+                    'target_type'  => 'to-one'
+                ]
+            ]
+        ];
+
+        $this->context->setExtras([new ExpandRelatedEntitiesConfigExtra(['association1'])]);
+
+        $rootEntityMetadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
+        $rootEntityMetadata->expects(self::once())
+            ->method('hasAssociation')
+            ->willReturn(false);
+
+        $this->doctrineHelper->expects(self::once())
+            ->method('isManageableEntityClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn(true);
+        $this->doctrineHelper->expects(self::once())
+            ->method('getEntityMetadataForClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn($rootEntityMetadata);
+
+        $this->configProvider->expects(self::once())
+            ->method('getConfig')
+            ->with(
+                'Test\Association1Target',
+                $this->context->getVersion(),
+                $this->context->getRequestType(),
+                $this->context->getPropagableExtras()
+            )
+            ->willReturn($this->createRelationConfigObject(['exclusion_policy' => 'all']));
+
+        $this->context->setResult($this->createConfigObject($config));
+        $this->processor->process($this->context);
+
+        $this->assertConfig(
+            [
+                'fields' => [
+                    'association1' => [
+                        'exclusion_policy' => 'all',
+                        'target_class'     => 'Test\Association1Target',
+                        'target_type'      => 'to-one'
+                    ]
+                ]
+            ],
+            $this->context->getResult()
+        );
+    }
+
+    public function testProcessForAssociationWithTargetClassAndTargetTypeAndDataType()
+    {
+        $config = [
+            'fields' => [
+                'association1' => [
+                    'data_type'    => 'some_custom_association',
+                    'target_class' => 'Test\Association1Target',
+                    'target_type'  => 'to-one'
+                ]
+            ]
+        ];
+
+        $this->context->setExtras([new ExpandRelatedEntitiesConfigExtra(['association1'])]);
+
+        $rootEntityMetadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
+        $rootEntityMetadata->expects(self::once())
+            ->method('hasAssociation')
+            ->willReturn(false);
+
+        $this->doctrineHelper->expects(self::once())
+            ->method('isManageableEntityClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn(true);
+        $this->doctrineHelper->expects(self::once())
+            ->method('getEntityMetadataForClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn($rootEntityMetadata);
+
+        $this->configProvider->expects(self::never())
+            ->method('getConfig');
+
+        $this->context->setResult($this->createConfigObject($config));
+        $this->processor->process($this->context);
+
+        $this->assertConfig(
+            [
+                'fields' => [
+                    'association1' => [
+                        'data_type'    => 'some_custom_association',
+                        'target_class' => 'Test\Association1Target',
+                        'target_type'  => 'to-one'
+                    ]
+                ]
+            ],
+            $this->context->getResult()
+        );
+    }
+
+    public function testProcessForManageableEntityWithAssociationToOverriddenEntity()
+    {
+        $this->context->setExtras([new ExpandRelatedEntitiesConfigExtra(['association1'])]);
+
+        $rootEntityMetadata = $this->getClassMetadataMock(self::TEST_CLASS_NAME);
+        $rootEntityMetadata->expects(self::once())
+            ->method('hasAssociation')
+            ->with('association1')
+            ->willReturn(true);
+        $rootEntityMetadata->expects(self::once())
+            ->method('getAssociationTargetClass')
+            ->with('association1')
+            ->willReturn('Test\Association1Target');
+
+        $this->doctrineHelper->expects(self::once())
+            ->method('isManageableEntityClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn(true);
+        $this->doctrineHelper->expects(self::once())
+            ->method('getEntityMetadataForClass')
+            ->with(self::TEST_CLASS_NAME)
+            ->willReturn($rootEntityMetadata);
+
+        $this->entityOverrideProvider->expects(self::once())
+            ->method('getSubstituteEntityClass')
+            ->with('Test\Association1Target')
+            ->willReturn('Test\Association1SubstituteTarget');
+
+        $this->configProvider->expects(self::once())
+            ->method('getConfig')
+            ->with(
+                'Test\Association1SubstituteTarget',
+                $this->context->getVersion(),
+                $this->context->getRequestType(),
+                $this->context->getPropagableExtras()
+            )
+            ->willReturn($this->createRelationConfigObject(['exclusion_policy' => 'all']));
+
+        $this->context->setResult($this->createConfigObject([]));
+        $this->processor->process($this->context);
+
+        $this->assertConfig(
+            [
+                'fields' => [
+                    'association1' => [
+                        'exclusion_policy' => 'all',
+                        'target_class'     => 'Test\Association1SubstituteTarget',
+                        'target_type'      => 'to-one'
+                    ]
                 ]
             ],
             $this->context->getResult()

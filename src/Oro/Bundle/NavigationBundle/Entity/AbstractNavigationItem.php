@@ -3,15 +3,28 @@
 namespace Oro\Bundle\NavigationBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareInterface;
+use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareTrait;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
+use Oro\Bundle\NavigationBundle\Model\UrlAwareInterface;
+use Oro\Bundle\NavigationBundle\Model\UrlAwareTrait;
+use Oro\Bundle\OrganizationBundle\Entity\OrganizationAwareInterface;
+use Oro\Bundle\OrganizationBundle\Entity\Ownership\OrganizationAwareTrait;
 use Oro\Bundle\UserBundle\Entity\AbstractUser;
 
 /**
  * @ORM\MappedSuperclass
  */
-abstract class AbstractNavigationItem implements NavigationItemInterface
+abstract class AbstractNavigationItem implements
+    NavigationItemInterface,
+    OrganizationAwareInterface,
+    UrlAwareInterface,
+    DatesAwareInterface
 {
+    use OrganizationAwareTrait;
+    use UrlAwareTrait;
+    use DatesAwareTrait;
+
     /**
      * @var integer $id
      *
@@ -32,13 +45,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     protected $type;
 
     /**
-     * @var string $url
-     *
-     * @ORM\Column(name="url", type="string", length=1023)
-     */
-    protected $url;
-
-    /**
      * @var string $title
      *
      * @ORM\Column(name="title", type="text")
@@ -53,29 +59,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     protected $position;
 
     /**
-     * @var \DateTime
-     *
-     * @ORM\Column(name="created_at", type="datetime")
-     */
-    protected $createdAt;
-
-    /**
-     * @var \DateTime
-     *
-     * @ORM\Column(name="updated_at", type="datetime")
-     */
-    protected $updatedAt;
-
-    /**
-     * @var Organization
-     *
-     * @ORM\ManyToOne(targetEntity="Oro\Bundle\OrganizationBundle\Entity\Organization")
-     * @ORM\JoinColumn(name="organization_id", referencedColumnName="id", onDelete="SET NULL")
-     */
-    protected $organization;
-
-    /**
-     * Constructor
      * @param array $values
      */
     public function __construct(array $values = null)
@@ -86,8 +69,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Get id
-     *
      * @return integer
      */
     public function getId()
@@ -96,10 +77,8 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Set type
-     *
-     * @param  string    $type
-     * @return PinbarTab
+     * @param string $type
+     * @return AbstractNavigationItem
      */
     public function setType($type)
     {
@@ -109,8 +88,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Get type
-     *
      * @return string
      */
     public function getType()
@@ -119,33 +96,8 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Set url
-     *
-     * @param  string    $url
-     * @return PinbarTab
-     */
-    public function setUrl($url)
-    {
-        $this->url = $url;
-
-        return $this;
-    }
-
-    /**
-     * Get url
-     *
-     * @return string
-     */
-    public function getUrl()
-    {
-        return $this->url;
-    }
-
-    /**
-     * Set title
-     *
-     * @param  string    $title
-     * @return PinbarTab
+     * @param string $title
+     * @return AbstractNavigationItem
      */
     public function setTitle($title)
     {
@@ -155,8 +107,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Get title
-     *
      * @return string
      */
     public function getTitle()
@@ -165,10 +115,8 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Set position
-     *
-     * @param  integer   $position
-     * @return PinbarTab
+     * @param integer $position
+     * @return AbstractNavigationItem
      */
     public function setPosition($position)
     {
@@ -178,8 +126,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Get position
-     *
      * @return integer
      */
     public function getPosition()
@@ -188,56 +134,8 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Set createdAt
-     *
-     * @param  \DateTime $createdAt
-     * @return PinbarTab
-     */
-    public function setCreatedAt($createdAt)
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    /**
-     * Get createdAt
-     *
-     * @return \DateTime
-     */
-    public function getCreatedAt()
-    {
-        return $this->createdAt;
-    }
-
-    /**
-     * Set updatedAt
-     *
-     * @param  \DateTime $updatedAt
-     * @return PinbarTab
-     */
-    public function setUpdatedAt($updatedAt)
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    /**
-     * Get updatedAt
-     *
-     * @return \DateTime
-     */
-    public function getUpdatedAt()
-    {
-        return $this->updatedAt;
-    }
-
-    /**
-     * Set user
-     *
-     * @param  AbstractUser $user
-     * @return NavigationHistoryItem
+     * @param AbstractUser $user
+     * @return AbstractNavigationItem
      */
     public function setUser(AbstractUser $user = null)
     {
@@ -247,8 +145,6 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     }
 
     /**
-     * Get user
-     *
      * @return AbstractUser
      */
     public function getUser()
@@ -299,29 +195,5 @@ abstract class AbstractNavigationItem implements NavigationItemInterface
     public function doPreUpdate()
     {
         $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
-    }
-
-
-    /**
-     * Set organization
-     *
-     * @param Organization $organization
-     * @return NavigationItem
-     */
-    public function setOrganization(Organization $organization = null)
-    {
-        $this->organization = $organization;
-
-        return $this;
-    }
-
-    /**
-     * Get organization
-     *
-     * @return Organization
-     */
-    public function getOrganization()
-    {
-        return $this->organization;
     }
 }

@@ -3,17 +3,14 @@
 namespace Oro\Bundle\AddressBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
 use Gedmo\Mapping\Annotation as Gedmo;
 use Gedmo\Translatable\Translatable;
-
 use JMS\Serializer\Annotation as JMS;
-
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 
 /**
- * Region
+ * Address region entity
  *
  * @ORM\Table("oro_dictionary_region", indexes={
  *      @ORM\Index(name="region_name_idx", columns={"name"})
@@ -144,7 +141,7 @@ class Region implements Translatable
     /**
      * Get country ISO2 code
      *
-     * @return Country
+     * @return string|null
      */
     public function getCountryIso2Code()
     {

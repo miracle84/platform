@@ -2,25 +2,23 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Validator;
 
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\UserBundle\Validator\UserGridFieldValidator;
 
-class UserGridFieldValidatorTest extends \PHPUnit_Framework_TestCase
+class UserGridFieldValidatorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var UserGridFieldValidator */
     protected $validator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->setMethods(['getLoggedUser'])
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
-        $this->validator = new UserGridFieldValidator($this->securityFacade);
+        $this->validator = new UserGridFieldValidator($this->tokenAccessor);
     }
 
     /**
@@ -42,7 +40,7 @@ class UserGridFieldValidatorTest extends \PHPUnit_Framework_TestCase
             $currentUser->expects(self::once())->method('getId')->willReturn($currentUserId);
         }
 
-        $this->securityFacade->expects(self::once())->method('getLoggedUser')->willReturn($currentUser);
+        $this->tokenAccessor->expects(self::once())->method('getUser')->willReturn($currentUser);
 
         $entity = new User();
         $entity->setId($userId);

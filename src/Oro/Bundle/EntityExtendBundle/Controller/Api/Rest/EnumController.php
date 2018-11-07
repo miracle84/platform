@@ -4,23 +4,25 @@ namespace Oro\Bundle\EntityExtendBundle\Controller\Api\Rest;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query;
-
-use Symfony\Component\HttpFoundation\Response;
-
-use FOS\RestBundle\Util\Codes;
-use FOS\RestBundle\Controller\FOSRestController;
 use FOS\RestBundle\Controller\Annotations\Get;
 use FOS\RestBundle\Controller\Annotations\NamePrefix;
 use FOS\RestBundle\Controller\Annotations\RouteResource;
-
+use FOS\RestBundle\Controller\FOSRestController;
+use FOS\RestBundle\Util\Codes;
 use Nelmio\ApiDocBundle\Annotation\ApiDoc;
+use Oro\Bundle\TranslationBundle\Translation\TranslatableQueryTrait;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
+ * Manage result data by specified entity class
+ *
  * @RouteResource("entity_extend_enum")
  * @NamePrefix("oro_api_")
  */
 class EnumController extends FOSRestController
 {
+    use TranslatableQueryTrait;
+
     /**
      * Get all values of the specified enumeration.
      * Deprecated since 1.9. Use /api/rest/{version}/{dictionary}.{_format} instead.
@@ -49,13 +51,17 @@ class EnumController extends FOSRestController
         /** @var EntityManager $em */
         $em       = $this->get('doctrine')->getManagerForClass($entityName);
         $enumRepo = $em->getRepository($entityName);
-        $data = $enumRepo->createQueryBuilder('e')
+        $query = $enumRepo
+            ->createQueryBuilder('e')
             ->getQuery()
             ->setHint(
                 Query::HINT_CUSTOM_OUTPUT_WALKER,
                 'Gedmo\\Translatable\\Query\\TreeWalker\\TranslationWalker'
-            )
-            ->getArrayResult();
+            );
+
+        $this->addTranslatableLocaleHint($query, $em);
+
+        $data = $query->getArrayResult();
 
         return $this->handleView(
             $this->view($data, Codes::HTTP_OK)

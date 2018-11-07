@@ -7,7 +7,7 @@ datagrids:
                     - item.id
                     - item.stringValue
                 from:
-                    - { table: %oro_test.entity.item.class%, alias: item }
+                    - { table: '%oro_test.entity.item.class%', alias: item }
         columns:
             id:
                 label: id
@@ -16,12 +16,69 @@ datagrids:
 
     items-values-grid:
         source:
+            hints:
+                - { name: HINT_DISABLE_ORDER_BY_MODIFICATION_NULLS, value: false }
             type: orm
             query:
                 select:
                     - itemValue.id
                 from:
-                    - { table: %oro_test.entity.item_value.class%, alias: itemValue }
+                    - { table: '%oro_test.entity.item_value.class%', alias: itemValue }
         columns:
             id:
                 label: id
+
+    test-entity-grid:
+        source:
+            type: orm
+            query:
+                select:
+                    - item.id
+                    - item.name
+                from:
+                    - { table: Oro\Bundle\TestFrameworkBundle\Entity\TestEntityWithUserOwnership, alias: item }
+        columns:
+            id:
+                label: id
+        sorters:
+            default:
+                id: ASC
+
+    test-search-grid:
+        source:
+            type: search
+            query:
+                select:
+                    - text.stringValue
+                    - integer.id as id
+                from:
+                    - oro_test_item
+        columns:
+            id:
+                data_name: id
+        sorters:
+            columns:
+                id:
+                    data_name: id
+                    type: integer
+            default:
+                id: ASC
+
+    items-grid-with-export-page-size:
+        source:
+            type: orm
+            query:
+                select:
+                    - item.id
+                    - item.stringValue
+                from:
+                    - { table: '%oro_test.entity.item.class%', alias: item }
+        columns:
+            id:
+                label: id
+            stringValue:
+                label: stringValue
+        options:
+            export:
+                csv:
+                    page_size: 499

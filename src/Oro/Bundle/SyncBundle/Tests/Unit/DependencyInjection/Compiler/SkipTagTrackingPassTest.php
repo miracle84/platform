@@ -3,13 +3,12 @@
 namespace Oro\Bundle\SyncBundle\Tests\Unit\DependencyInjection\Compiler;
 
 use Oro\Bundle\SyncBundle\DependencyInjection\Compiler\SkipTagTrackingPass;
-
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
-class SkipTagTrackingPassTest extends \PHPUnit_Framework_TestCase
+class SkipTagTrackingPassTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject */
     protected $container;
 
     /** @var SkipTagTrackingPass */
@@ -48,22 +47,16 @@ class SkipTagTrackingPassTest extends \PHPUnit_Framework_TestCase
             ->with($this->equalTo(SkipTagTrackingPass::SERVICE_ID))
             ->will($this->returnValue(true));
 
-        /** @var Definition|\PHPUnit_Framework_MockObject_MockObject $definition */
+        $skippedEntityClasses = [];
+
+        /** @var Definition|\PHPUnit\Framework\MockObject\MockObject $definition */
         $definition = $this->createMock(Definition::class);
-        $definition->expects($this->exactly(10))
+        $definition->expects($this->any())
             ->method('addMethodCall')
-            ->withConsecutive(
-                ['markSkipped', ['Oro\Bundle\DataAuditBundle\Entity\Audit']],
-                ['markSkipped', ['Oro\Bundle\NavigationBundle\Entity\PageState']],
-                ['markSkipped', ['Oro\Bundle\NavigationBundle\Entity\NavigationHistoryItem']],
-                ['markSkipped', ['Oro\Bundle\SearchBundle\Entity\Item']],
-                ['markSkipped', ['Oro\Bundle\SearchBundle\Entity\IndexText']],
-                ['markSkipped', ['Oro\Bundle\SearchBundle\Entity\IndexInteger']],
-                ['markSkipped', ['Oro\Bundle\SearchBundle\Entity\IndexDecimal']],
-                ['markSkipped', ['Oro\Bundle\SearchBundle\Entity\IndexDatetime']],
-                ['markSkipped', ['Akeneo\Bundle\BatchBundle\Entity\JobExecution']],
-                ['markSkipped', ['Akeneo\Bundle\BatchBundle\Entity\StepExecution']]
-            );
+            ->with('markSkipped')
+            ->willReturnCallback(function ($method, array $arguments) use (&$skippedEntityClasses) {
+                $skippedEntityClasses[] = $arguments[0];
+            });
 
         $this->container
             ->expects($this->once())
@@ -72,5 +65,23 @@ class SkipTagTrackingPassTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($definition));
 
         $this->skipTagTrackingPass->process($this->container);
+
+        self::assertEquals(
+            [
+                'Oro\Bundle\DataAuditBundle\Entity\Audit',
+                'Oro\Bundle\DataAuditBundle\Entity\AuditField',
+                'Oro\Bundle\NavigationBundle\Entity\PageState',
+                'Oro\Bundle\NavigationBundle\Entity\NavigationHistoryItem',
+                'Oro\Bundle\SearchBundle\Entity\Item',
+                'Oro\Bundle\SearchBundle\Entity\IndexText',
+                'Oro\Bundle\SearchBundle\Entity\IndexInteger',
+                'Oro\Bundle\SearchBundle\Entity\IndexDecimal',
+                'Oro\Bundle\SearchBundle\Entity\IndexDatetime',
+                'Akeneo\Bundle\BatchBundle\Entity\JobExecution',
+                'Akeneo\Bundle\BatchBundle\Entity\StepExecution',
+                'Oro\Bundle\MessageQueueBundle\Entity\Job',
+            ],
+            $skippedEntityClasses
+        );
     }
 }

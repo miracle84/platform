@@ -5,7 +5,6 @@ define(function(require) {
     var $ = require('jquery');
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
-    var mediator = require('oroui/js/mediator');
     var BaseView = require('oroui/js/app/views/base/view');
 
     JobQueueView = BaseView.extend({
@@ -18,6 +17,13 @@ define(function(require) {
         intervalUpdate: 10000,
 
         intervalId: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function JobQueueView() {
+            JobQueueView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc
@@ -56,14 +62,12 @@ define(function(require) {
             $loader.show();
 
             $.getJSON($link.attr('href'), _.bind(function(data) {
-                if (data.error) {
-                    mediator.execute('showErrorMessage', data.message, data);
-                } else {
+                if (!data.error) {
                     $link.closest('div')
-                            .find('span:first')
-                                .toggleClass('label-success label-important')
-                                .text($.isNumeric(data.message) ? __('Running') : __('Not running'))
-                            .end()
+                        .find('span:first')
+                        .toggleClass('label-success label-important')
+                        .text($.isNumeric(data.message) ? __('Running') : __('Not running'))
+                        .end()
                         .closest('div').find('span:last').text(data.message).end();
 
                     this.updateButtons(!$.isNumeric(data.message));
@@ -111,11 +115,11 @@ define(function(require) {
 
                 $statusLink
                     .closest('div')
-                        .find('span:first')
-                            .removeClass(data > 0 ? 'label-important' : 'label-success')
-                            .addClass(data > 0 ? 'label-success' : 'label-important')
-                            .text(data > 0 ? __('Running') : __('Not running'))
-                        .end()
+                    .find('span:first')
+                    .removeClass(data > 0 ? 'label-important' : 'label-success')
+                    .addClass(data > 0 ? 'label-success' : 'label-important')
+                    .text(data > 0 ? __('Running') : __('Not running'))
+                    .end()
                     .closest('div').find('span:last').text(data > 0 ? data : __('N/A')).end();
 
                 this.updateButtons(!data);

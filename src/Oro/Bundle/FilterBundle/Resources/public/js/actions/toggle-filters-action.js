@@ -6,7 +6,7 @@ define(function(require) {
     var AbstractAction = require('oro/datagrid/action/abstract-action');
     var FiltersManager = require('orofilter/js/filters-manager');
 
-    ToggleFiltersAction =  AbstractAction.extend({
+    ToggleFiltersAction = AbstractAction.extend({
         initialize: function(options) {
             var opts = options || {};
 
@@ -23,13 +23,16 @@ define(function(require) {
         },
 
         execute: function() {
-            var newMode = this.datagrid.filterManager.getViewMode() === FiltersManager.STATE_VIEW_MODE ?
-                FiltersManager.MANAGE_VIEW_MODE : FiltersManager.STATE_VIEW_MODE;
+            var newMode = this.datagrid.filterManager.getViewMode() === FiltersManager.STATE_VIEW_MODE
+                ? FiltersManager.MANAGE_VIEW_MODE : FiltersManager.STATE_VIEW_MODE;
+
             this.datagrid.filterManager.setViewMode(newMode);
         },
 
         onFilterManagerModeChange: function(mode) {
-            this.launcherInstanse.$el.toggleClass('pressed', mode === FiltersManager.MANAGE_VIEW_MODE);
+            if (this.launcherInstanse) {
+                this.launcherInstanse.$el.toggleClass('pressed', mode === FiltersManager.MANAGE_VIEW_MODE);
+            }
             mediator.trigger('layout:adjustHeight');
         }
     });

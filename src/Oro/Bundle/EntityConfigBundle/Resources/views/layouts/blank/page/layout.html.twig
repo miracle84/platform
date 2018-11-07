@@ -1,38 +1,65 @@
 {% block attribute_group_rest_widget -%}
     {% import 'OroUIBundle::macros.html.twig' as UI -%}
-    {% if tabsOptions is not empty %}
+
+    {% set content = '' %}
+    {% set visibleTabsOptions = [] %}
+
+    {% set tabsOptionsById = [] %}
+    {% for tab in tabsOptions %}
+        {% set tabsOptionsById = tabsOptionsById|merge({
+            (tab.id): tab
+        }) %}
+    {% endfor %}
+
+    {% for child in block if child.vars.visible -%}
+        {% set childContent = block_widget(child) %}
+        {% if childContent|trim|length > 0 %}
+            {% set content = content ~ childContent %}
+            {% set visibleTabsOptions = visibleTabsOptions|merge([tabsOptionsById[child.vars.group]]) %}
+        {% endif %}
+    {%- endfor %}
+
+    {% if visibleTabsOptions is not empty %}
         <div {{ block('block_attributes') }}>
             <div {{ UI.renderPageComponentAttributes({
                 module: 'oroentityconfig/js/attribute-group-tabs-component',
-                options: {data: tabsOptions}
+                options: {data: visibleTabsOptions}
             }) }}></div>
 
-            {{ block_widget(block) }}
+            {{ content|raw }}
         </div>
     {% endif %}
 {%- endblock %}
 
 {% block attribute_group_rest_attribute_group_widget %}
+    {% set content = block_widget(block) %}
+    {% if content|trim|length > 0 %}
     {% set attr = layout_attr_defaults(attr, {
         'data-page-component-module': 'oroentityconfig/js/attribute-group-tab-content-component',
-        'data-page-component-options': {'id': group}|json_encode
+        '~data-page-component-options': {'id': group}|json_encode
     }) %}
-
     <div {{ block('block_attributes') }} style="display: none;" class="tab-content">
-        {{ block_widget(block) }}
+        {{ content|raw }}
     </div>
-{% endblock %}
-
-{% block attribute_group_widget %}
-    {{ block_widget(block) }}
+    {% endif %}
 {% endblock %}
 
 {% block attribute_label_widget %}
-    <label>{{ label }}:</label>
+    {% if label|trans|first != '_' %}
+        <label>{{ label|trans }}:</label>
+    {% endif %}
 {% endblock %}
 
 {% block attribute_text_widget %}
-    {{ value|nl2br }}
+    {% if value is not iterable %}
+        {{ value|nl2br }}
+    {% else %}
+        {{ value|join('\n')|nl2br }}
+    {% endif %}
+{% endblock %}
+
+{% block attribute_html_escaped_widget %}
+    {{ value|oro_html_escape }}
 {% endblock %}
 
 {% block attribute_boolean_widget %}
@@ -56,14 +83,14 @@
 {% endblock %}
 
 {% block attribute_multiselect_widget %}
-    {% for item in value %}
-        {{ item }}
-        {% if not loop.last %}
+    {%- for item in value -%}
+        {{- item -}}
+        {%- if not loop.last -%}
             ,&nbsp;
-        {% endif %}
-    {% else %}
+        {%- endif -%}
+    {%- else -%}
         {{ 'N/A'|trans }}
-    {% endfor %}
+    {%- endfor -%}
 {% endblock %}
 
 {% block attribute_image_widget %}
@@ -75,9 +102,9 @@
 {% endblock %}
 
 {% block attribute_localized_fallback_widget %}
-    {{ translated_value|raw }}
+    {{ translated_value|oro_html_sanitize }}
 {% endblock %}
 
 {% block attribute_group_rest_attribute_widget %}
-    <p>{{ block('attribute_label_widget') }} {{ block_widget(block) }}</p>
+    <div class="tab-content__wrapper">{{ block('attribute_label_widget') }} {{ block_widget(block) }}</div>
 {% endblock %}

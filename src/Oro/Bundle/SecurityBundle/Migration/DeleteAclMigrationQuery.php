@@ -2,13 +2,11 @@
 
 namespace Oro\Bundle\SecurityBundle\Migration;
 
+use Oro\Bundle\MigrationBundle\Migration\MigrationQuery;
+use Oro\Bundle\SecurityBundle\Acl\Dbal\MutableAclProvider;
 use Psr\Log\LoggerInterface;
-
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Acl\Model\ObjectIdentityInterface;
-
-use Oro\Bundle\SecurityBundle\Acl\Dbal\MutableAclProvider;
-use Oro\Bundle\MigrationBundle\Migration\MigrationQuery;
 
 /**
  * Deletes all ACL related data including class information for the given object identity.
@@ -28,7 +26,7 @@ class DeleteAclMigrationQuery implements MigrationQuery
     public function __construct(ContainerInterface $container, ObjectIdentityInterface $oid)
     {
         $this->aclProvider = $container->get(
-            'security.acl.dbal.provider',
+            'oro_security.alias.acl.dbal.provider',
             ContainerInterface::NULL_ON_INVALID_REFERENCE
         );
         $this->oid         = $oid;

@@ -5,20 +5,17 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Async;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\EntityNotFoundException;
-
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerMessage;
 use Oro\Bundle\WorkflowBundle\Async\TransitionTriggerProcessor;
 use Oro\Bundle\WorkflowBundle\Entity\BaseTransitionTrigger;
 use Oro\Bundle\WorkflowBundle\Handler\TransitionTriggerHandlerInterface;
-
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Oro\Component\Testing\Unit\EntityTrait;
+use Psr\Log\LoggerInterface;
 
-class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
+class TransitionTriggerProcessorTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
@@ -26,22 +23,22 @@ class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
     const MAIN_ENTITY_CLASS = 'stdClass';
     const MAIN_ENTITY_ID = 105;
 
-    /** @var ObjectManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ObjectManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $objectManager;
 
-    /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var LoggerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $logger;
     
-    /** @var TransitionTriggerHandlerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TransitionTriggerHandlerInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $handler;
 
     /** @var TransitionTriggerProcessor */
     protected $processor;
 
-    /** @var SessionInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var SessionInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $session;
 
     protected function setUp()
@@ -88,9 +85,8 @@ class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
         $this->setUpObjectManager($trigger);
         $this->setUpLogger(
             true,
-            '[TransitionTriggerProcessor] Transition not allowed',
+            'Transition not allowed',
             [
-                'message_body' => $message->getBody(),
                 'trigger' => $trigger
             ],
             'warning'
@@ -116,9 +112,8 @@ class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
         $this->setUpObjectManager($trigger);
         $this->setUpLogger(
             true,
-            '[TransitionTriggerProcessor] Queue message could not be processed.',
+            'Queue message could not be processed.',
             [
-                'message_body' => $message->getBody(),
                 'exception' => $expectedException
             ]
         );
@@ -158,7 +153,7 @@ class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return BaseTransitionTrigger|\PHPUnit_Framework_MockObject_MockObject
+     * @return BaseTransitionTrigger|\PHPUnit\Framework\MockObject\MockObject
      */
     private function getTriggerMock()
     {
@@ -173,7 +168,7 @@ class TransitionTriggerProcessorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param array $data
-     * @return MessageInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @return MessageInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     private function getMessageMock(array $data = null)
     {

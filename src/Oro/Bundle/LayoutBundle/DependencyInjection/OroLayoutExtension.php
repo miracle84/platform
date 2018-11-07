@@ -2,18 +2,19 @@
 
 namespace Oro\Bundle\LayoutBundle\DependencyInjection;
 
+use Oro\Component\Config\CumulativeResourceInfo;
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\FolderingCumulativeFileLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
-use Oro\Component\Config\CumulativeResourceInfo;
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
-use Oro\Component\Config\Loader\FolderingCumulativeFileLoader;
-
 class OroLayoutExtension extends Extension
 {
+    const ALIAS                         = 'oro_layout';
+
     const THEME_MANAGER_SERVICE_ID      = 'oro_layout.theme_manager';
     const THEME_RESOURCE_PROVIDER_SERVICE_ID = 'oro_layout.theme_extension.resource_provider.theme';
 
@@ -47,10 +48,11 @@ class OroLayoutExtension extends Extension
         $loader->load('services.yml');
         $loader->load('block_types.yml');
         $loader->load('collectors.yml');
+        $loader->load('commands.yml');
 
         if ($config['view']['annotations']) {
             $loader->load('view_annotations.yml');
-            $this->addClassesToCompile(['Oro\\Bundle\\LayoutBundle\\EventListener\\LayoutListener']);
+            $this->addClassesToCompile(['Oro\Bundle\LayoutBundle\EventListener\LayoutListener']);
         }
 
         $container->setParameter(
@@ -84,7 +86,22 @@ class OroLayoutExtension extends Extension
         $themeResourceProviderDef = $container->getDefinition(self::THEME_RESOURCE_PROVIDER_SERVICE_ID);
         $themeResourceProviderDef->replaceArgument(2, $excludedPaths);
 
-        $this->addClassesToCompile(['Oro\Bundle\LayoutBundle\EventListener\ThemeListener']);
+        if ($container->getParameter('kernel.debug')) {
+            $loader->load('debug.yml');
+        }
+
+        $this->addClassesToCompile([
+            'Oro\Bundle\LayoutBundle\EventListener\ThemeListener',
+            'Oro\Bundle\LayoutBundle\Request\LayoutHelper'
+        ]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getAlias()
+    {
+        return self::ALIAS;
     }
 
     /**
@@ -96,17 +113,13 @@ class OroLayoutExtension extends Extension
      */
     protected function loadThemeResources(ContainerBuilder $container)
     {
-        $resourceLoaders = [
-            new FolderingCumulativeFileLoader(
-                self::RESOURCES_FOLDER_PLACEHOLDER,
-                self::RESOURCES_FOLDER_PATTERN,
-                new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/theme.yml')
-            )
-        ];
+        $resourceLoader = new FolderingCumulativeFileLoader(
+            self::RESOURCES_FOLDER_PLACEHOLDER,
+            self::RESOURCES_FOLDER_PATTERN,
+            new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/theme.yml')
+        );
 
-        $resourceLoaders[] = new YamlCumulativeFileLoader('Resources/config/oro/layout.yml');
-
-        $configLoader = new CumulativeConfigLoader('oro_layout', $resourceLoaders);
+        $configLoader = new CumulativeConfigLoader('oro_layout', $resourceLoader);
 
         return $configLoader->load($container);
     }
@@ -127,7 +140,8 @@ class OroLayoutExtension extends Extension
             self::RESOURCES_FOLDER_PATTERN,
             [
                 new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/config/assets.yml'),
-                new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/config/images.yml')
+                new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/config/images.yml'),
+                new YamlCumulativeFileLoader('Resources/views/layouts/{folder}/config/page_templates.yml'),
             ]
         );
 

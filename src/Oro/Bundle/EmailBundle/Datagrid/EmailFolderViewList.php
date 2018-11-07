@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\EmailBundle\Datagrid;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\DataGridBundle\Extension\GridViews\AbstractViewsList;
 use Oro\Bundle\DataGridBundle\Extension\GridViews\View;
 use Oro\Bundle\EmailBundle\Model\FolderType;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class EmailFolderViewList extends AbstractViewsList
 {
@@ -47,7 +46,7 @@ class EmailFolderViewList extends AbstractViewsList
 
         $choiceList = $this->mailboxChoiceList->getChoiceList();
 
-        foreach ($choiceList as $id => $label) {
+        foreach ($choiceList as $label => $id) {
             $mailboxLabel = $this->translator->trans('oro.email.datagrid.mailbox.view', ['%mailbox%' => $label]);
             $view = new View(
                 $mailboxLabel,

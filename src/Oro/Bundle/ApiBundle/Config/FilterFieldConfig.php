@@ -2,41 +2,21 @@
 
 namespace Oro\Bundle\ApiBundle\Config;
 
+use Oro\Bundle\ApiBundle\Model\Label;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 
 /**
- * Represents a filter configuration for a field.
+ * Represents the configuration of a field that can be used to filter data.
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class FilterFieldConfig implements FieldConfigInterface
 {
-    use Traits\ConfigTrait;
-    use Traits\FieldConfigTrait;
-    use Traits\DataTypeTrait;
-    use Traits\DescriptionTrait;
+    /** @var bool|null */
+    protected $exclude;
 
-    /** a flag indicates whether the field should be excluded */
-    const EXCLUDE = EntityDefinitionFieldConfig::EXCLUDE;
-
-    /** a human-readable description of the filter */
-    const DESCRIPTION = EntityDefinitionFieldConfig::DESCRIPTION;
-
-    /** the path of the field value */
-    const PROPERTY_PATH = EntityDefinitionFieldConfig::PROPERTY_PATH;
-
-    /** the type of the filter */
-    const TYPE = 'type';
-
-    /** the filter options  */
-    const OPTIONS = 'options';
-
-    /** a list of operators supported by the filter */
-    const OPERATORS = 'operators';
-
-    /** the data type of the filter value */
-    const DATA_TYPE = EntityDefinitionFieldConfig::DATA_TYPE;
-
-    /** a flag indicates whether the filter value can be an array */
-    const ALLOW_ARRAY = 'allow_array';
+    /** @var string|null */
+    protected $dataType;
 
     /** @var array */
     protected $items = [];
@@ -48,9 +28,22 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function toArray()
     {
-        $result = $this->convertItemsToArray();
-        $this->removeItemWithDefaultValue($result, self::EXCLUDE);
-        $this->removeItemWithDefaultValue($result, self::ALLOW_ARRAY);
+        $result = ConfigUtil::convertItemsToArray($this->items);
+        if (true === $this->exclude) {
+            $result[ConfigUtil::EXCLUDE] = $this->exclude;
+        }
+        if (null !== $this->dataType) {
+            $result[ConfigUtil::DATA_TYPE] = $this->dataType;
+        }
+        if (isset($result[ConfigUtil::COLLECTION]) && false === $result[ConfigUtil::COLLECTION]) {
+            unset($result[ConfigUtil::COLLECTION]);
+        }
+        if (isset($result[ConfigUtil::ALLOW_ARRAY]) && false === $result[ConfigUtil::ALLOW_ARRAY]) {
+            unset($result[ConfigUtil::ALLOW_ARRAY]);
+        }
+        if (isset($result[ConfigUtil::ALLOW_RANGE]) && false === $result[ConfigUtil::ALLOW_RANGE]) {
+            unset($result[ConfigUtil::ALLOW_RANGE]);
+        }
 
         return $result;
     }
@@ -64,13 +57,229 @@ class FilterFieldConfig implements FieldConfigInterface
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function has($key)
+    {
+        return \array_key_exists($key, $this->items);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function get($key, $defaultValue = null)
+    {
+        if (!\array_key_exists($key, $this->items)) {
+            return $defaultValue;
+        }
+
+        return $this->items[$key];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function set($key, $value)
+    {
+        if (null !== $value) {
+            $this->items[$key] = $value;
+        } else {
+            unset($this->items[$key]);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function remove($key)
+    {
+        unset($this->items[$key]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function keys()
+    {
+        return \array_keys($this->items);
+    }
+
+    /**
+     * Indicates whether the exclusion flag is set explicitly.
+     *
+     * @return bool
+     */
+    public function hasExcluded()
+    {
+        return null !== $this->exclude;
+    }
+
+    /**
+     * Indicates whether the exclusion flag.
+     *
+     * @return bool
+     */
+    public function isExcluded()
+    {
+        if (null === $this->exclude) {
+            return false;
+        }
+
+        return $this->exclude;
+    }
+
+    /**
+     * Sets the exclusion flag.
+     *
+     * @param bool|null $exclude The exclude flag or NULL to remove this option
+     */
+    public function setExcluded($exclude = true)
+    {
+        $this->exclude = $exclude;
+    }
+
+    /**
+     * Indicates whether the description attribute exists.
+     *
+     * @return bool
+     */
+    public function hasDescription()
+    {
+        return $this->has(ConfigUtil::DESCRIPTION);
+    }
+
+    /**
+     * Gets the value of the description attribute.
+     *
+     * @return string|Label|null
+     */
+    public function getDescription()
+    {
+        return $this->get(ConfigUtil::DESCRIPTION);
+    }
+
+    /**
+     * Sets the value of the description attribute.
+     *
+     * @param string|Label|null $description
+     */
+    public function setDescription($description)
+    {
+        if ($description) {
+            $this->items[ConfigUtil::DESCRIPTION] = $description;
+        } else {
+            unset($this->items[ConfigUtil::DESCRIPTION]);
+        }
+    }
+
+    /**
+     * Indicates whether the path of the field value exists.
+     *
+     * @return bool
+     */
+    public function hasPropertyPath()
+    {
+        return $this->has(ConfigUtil::PROPERTY_PATH);
+    }
+
+    /**
+     * Gets the path of the field value.
+     *
+     * @param string|null $defaultValue
+     *
+     * @return string|null
+     */
+    public function getPropertyPath($defaultValue = null)
+    {
+        if (empty($this->items[ConfigUtil::PROPERTY_PATH])) {
+            return $defaultValue;
+        }
+
+        return $this->items[ConfigUtil::PROPERTY_PATH];
+    }
+
+    /**
+     * Sets the path of the field value.
+     *
+     * @param string|null $propertyPath
+     */
+    public function setPropertyPath($propertyPath = null)
+    {
+        if ($propertyPath) {
+            $this->items[ConfigUtil::PROPERTY_PATH] = $propertyPath;
+        } else {
+            unset($this->items[ConfigUtil::PROPERTY_PATH]);
+        }
+    }
+
+    /**
+     * Indicates whether the "collection" option is set explicitly.
+     *
+     * @return bool
+     */
+    public function hasCollection()
+    {
+        return $this->has(ConfigUtil::COLLECTION);
+    }
+
+    /**
+     * Indicates whether the filter represents a collection valued association.
+     *
+     * @return bool
+     */
+    public function isCollection()
+    {
+        return (bool)$this->get(ConfigUtil::COLLECTION);
+    }
+
+    /**
+     * Sets a flag indicates whether the filter represents a collection valued association.
+     *
+     * @param bool $value
+     */
+    public function setIsCollection($value)
+    {
+        $this->set(ConfigUtil::COLLECTION, $value);
+    }
+
+    /**
+     * Indicates whether the data type is set.
+     *
+     * @return bool
+     */
+    public function hasDataType()
+    {
+        return null !== $this->dataType;
+    }
+
+    /**
+     * Gets expected data type of the filter value.
+     *
+     * @return string|null
+     */
+    public function getDataType()
+    {
+        return $this->dataType;
+    }
+
+    /**
+     * Sets expected data type of the filter value.
+     *
+     * @param string|null $dataType
+     */
+    public function setDataType($dataType)
+    {
+        $this->dataType = $dataType;
+    }
+
+    /**
      * Indicates whether the filter type is set.
      *
      * @return bool
      */
     public function hasType()
     {
-        return array_key_exists(self::TYPE, $this->items);
+        return $this->has(ConfigUtil::FILTER_TYPE);
     }
 
     /**
@@ -80,9 +289,7 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function getType()
     {
-        return array_key_exists(self::TYPE, $this->items)
-            ? $this->items[self::TYPE]
-            : null;
+        return $this->get(ConfigUtil::FILTER_TYPE);
     }
 
     /**
@@ -93,9 +300,9 @@ class FilterFieldConfig implements FieldConfigInterface
     public function setType($type)
     {
         if ($type) {
-            $this->items[self::TYPE] = $type;
+            $this->items[ConfigUtil::FILTER_TYPE] = $type;
         } else {
-            unset($this->items[self::TYPE]);
+            unset($this->items[ConfigUtil::FILTER_TYPE]);
         }
     }
 
@@ -106,9 +313,7 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function getOptions()
     {
-        return array_key_exists(self::OPTIONS, $this->items)
-            ? $this->items[self::OPTIONS]
-            : null;
+        return $this->get(ConfigUtil::FILTER_OPTIONS);
     }
 
     /**
@@ -119,9 +324,9 @@ class FilterFieldConfig implements FieldConfigInterface
     public function setOptions($options)
     {
         if ($options) {
-            $this->items[self::OPTIONS] = $options;
+            $this->items[ConfigUtil::FILTER_OPTIONS] = $options;
         } else {
-            unset($this->items[self::OPTIONS]);
+            unset($this->items[ConfigUtil::FILTER_OPTIONS]);
         }
     }
 
@@ -132,9 +337,7 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function getOperators()
     {
-        return array_key_exists(self::OPERATORS, $this->items)
-            ? $this->items[self::OPERATORS]
-            : null;
+        return $this->get(ConfigUtil::FILTER_OPERATORS);
     }
 
     /**
@@ -145,9 +348,9 @@ class FilterFieldConfig implements FieldConfigInterface
     public function setOperators($operators)
     {
         if ($operators) {
-            $this->items[self::OPERATORS] = $operators;
+            $this->items[ConfigUtil::FILTER_OPERATORS] = $operators;
         } else {
-            unset($this->items[self::OPERATORS]);
+            unset($this->items[ConfigUtil::FILTER_OPERATORS]);
         }
     }
 
@@ -158,7 +361,7 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function hasArrayAllowed()
     {
-        return array_key_exists(self::ALLOW_ARRAY, $this->items);
+        return $this->has(ConfigUtil::ALLOW_ARRAY);
     }
 
     /**
@@ -168,9 +371,7 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function isArrayAllowed()
     {
-        return array_key_exists(self::ALLOW_ARRAY, $this->items)
-            ? $this->items[self::ALLOW_ARRAY]
-            : false;
+        return $this->get(ConfigUtil::ALLOW_ARRAY, false);
     }
 
     /**
@@ -180,6 +381,36 @@ class FilterFieldConfig implements FieldConfigInterface
      */
     public function setArrayAllowed($allowArray = true)
     {
-        $this->items[self::ALLOW_ARRAY] = $allowArray;
+        $this->items[ConfigUtil::ALLOW_ARRAY] = $allowArray;
+    }
+
+    /**
+     * Indicates whether the "range allowed" flag is set explicitly.
+     *
+     * @return bool
+     */
+    public function hasRangeAllowed()
+    {
+        return $this->has(ConfigUtil::ALLOW_RANGE);
+    }
+
+    /**
+     * Indicates whether the filter value can be a pair of "from" and "to" values.
+     *
+     * @return bool
+     */
+    public function isRangeAllowed()
+    {
+        return $this->get(ConfigUtil::ALLOW_RANGE, false);
+    }
+
+    /**
+     * Sets a flag indicates whether the filter value can be a pair of "from" and "to" values.
+     *
+     * @param bool $allowRange
+     */
+    public function setRangeAllowed($allowRange = true)
+    {
+        $this->items[ConfigUtil::ALLOW_RANGE] = $allowRange;
     }
 }

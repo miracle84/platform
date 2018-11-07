@@ -2,36 +2,31 @@
 
 namespace Oro\Bundle\DataAuditBundle\Async;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
-
-use Oro\Bundle\DataAuditBundle\Model\EntityReference;
 use Oro\Bundle\DataAuditBundle\Service\EntityChangesToAuditEntryConverter;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\UserBundle\Entity\Impersonation;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
-use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Oro\Component\MessageQueue\Util\JSON;
+use Psr\Log\LoggerInterface;
 
-class AuditChangedEntitiesRelationsProcessor implements MessageProcessorInterface, TopicSubscriberInterface
+class AuditChangedEntitiesRelationsProcessor extends AbstractAuditProcessor implements TopicSubscriberInterface
 {
-    /** @var ManagerRegistry */
-    private $doctrine;
-
     /** @var EntityChangesToAuditEntryConverter */
     private $entityChangesToAuditEntryConverter;
 
+    /** @var LoggerInterface */
+    private $logger;
+
     /**
-     * @param ManagerRegistry                    $doctrine
      * @param EntityChangesToAuditEntryConverter $entityChangesToAuditEntryConverter
+     * @param LoggerInterface                    $logger
      */
     public function __construct(
-        ManagerRegistry $doctrine,
-        EntityChangesToAuditEntryConverter $entityChangesToAuditEntryConverter
+        EntityChangesToAuditEntryConverter $entityChangesToAuditEntryConverter,
+        LoggerInterface $logger
     ) {
-        $this->doctrine = $doctrine;
         $this->entityChangesToAuditEntryConverter = $entityChangesToAuditEntryConverter;
+        $this->logger = $logger;
     }
 
     /**
@@ -40,24 +35,19 @@ class AuditChangedEntitiesRelationsProcessor implements MessageProcessorInterfac
     public function process(MessageInterface $message, SessionInterface $session)
     {
         $body = JSON::decode($message->getBody());
+        if (empty($body['collections_updated'])) {
+            // it seems that a producer sent unnecessary message
+            $this->logger->warning('The "collections_updated" should not be empty.');
 
-        $loggedAt = \DateTime::createFromFormat('U', $body['timestamp']);
-        $transactionId = $body['transaction_id'];
-
-        $user = new EntityReference();
-        if (isset($body['user_id'])) {
-            $user = new EntityReference($body['user_class'], $body['user_id']);
+            return self::REJECT;
         }
 
-        $organization = new EntityReference();
-        if (isset($body['organization_id'])) {
-            $organization = new EntityReference(Organization::class, $body['organization_id']);
-        }
-
-        $impersonation = new EntityReference();
-        if (isset($body['impersonation_id'])) {
-            $impersonation = new EntityReference(Impersonation::class, $body['impersonation_id']);
-        }
+        $loggedAt = $this->getLoggedAt($body);
+        $transactionId = $this->getTransactionId($body);
+        $user = $this->getUserReference($body);
+        $organization = $this->getOrganizationReference($body);
+        $impersonation = $this->getImpersonationReference($body);
+        $ownerDescription = $this->getOwnerDescription($body);
 
         $this->entityChangesToAuditEntryConverter->convert(
             $body['collections_updated'],
@@ -65,9 +55,10 @@ class AuditChangedEntitiesRelationsProcessor implements MessageProcessorInterfac
             $loggedAt,
             $user,
             $organization,
-            $impersonation
+            $impersonation,
+            $ownerDescription
         );
-        
+
         return self::ACK;
     }
 

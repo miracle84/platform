@@ -7,11 +7,10 @@ use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\BatchBundle\ORM\Query\QueryCountCalculator;
 use Oro\Bundle\BatchBundle\ORM\QueryBuilder\CountQueryBuilderOptimizer;
 use Oro\Bundle\DataGridBundle\Extension\Pager\AbstractPager;
-use Oro\Bundle\DataGridBundle\Extension\Pager\PagerInterface;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 use Oro\Component\DoctrineUtils\ORM\QueryHintResolver;
 
-class Pager extends AbstractPager implements PagerInterface
+class Pager extends AbstractPager
 {
     /** @var QueryBuilder */
     protected $qb;
@@ -281,5 +280,13 @@ class Pager extends AbstractPager implements PagerInterface
         $results = $queryForRetrieve->getQuery()->execute();
 
         return $results[0];
+    }
+
+    /**
+     * @param array $countQueryHints
+     */
+    public function setCountQueryHints(array $countQueryHints)
+    {
+        $this->countQueryHints = $countQueryHints;
     }
 }

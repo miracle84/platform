@@ -2,20 +2,19 @@
 
 namespace Oro\Bundle\EmbeddedFormBundle\Tests\Unit\Layout\Extension;
 
-use Oro\Component\Layout\LayoutContext;
-
-use Oro\Bundle\EmbeddedFormBundle\Layout\Form\FormAction;
+use Oro\Bundle\EmbeddedFormBundle\Layout\Extension\FormContextConfigurator;
 use Oro\Bundle\EmbeddedFormBundle\Layout\Form\DependencyInjectionFormAccessor;
 use Oro\Bundle\EmbeddedFormBundle\Layout\Form\FormAccessor;
-use Oro\Bundle\EmbeddedFormBundle\Layout\Extension\FormContextConfigurator;
+use Oro\Bundle\EmbeddedFormBundle\Layout\Form\FormAction;
+use Oro\Component\Layout\LayoutContext;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class FormContextConfiguratorTest extends \PHPUnit_Framework_TestCase
+class FormContextConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $container;
 
     /** @var FormContextConfigurator */

@@ -2,14 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared\JsonApi;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Filter\FilterValue;
 use Oro\Bundle\ApiBundle\Filter\StandaloneFilterWithDefaultValue;
 use Oro\Bundle\ApiBundle\Processor\Context;
+use Oro\Bundle\ApiBundle\Request\JsonApi\JsonApiDocumentBuilder as JsonApiDoc;
 use Oro\Bundle\ApiBundle\Request\ValueNormalizer;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Replaces sorting by "id" field with sorting by real entity identifier field name.
@@ -84,7 +85,7 @@ class CorrectSortValue implements ProcessorInterface
      *
      * @return mixed
      */
-    protected function normalizeValue($value, $entityClass, EntityDefinitionConfig $config = null)
+    protected function normalizeValue($value, $entityClass, ?EntityDefinitionConfig $config)
     {
         if (empty($value) || !is_array($value)) {
             return $value;
@@ -92,7 +93,7 @@ class CorrectSortValue implements ProcessorInterface
 
         $result = [];
         foreach ($value as $fieldName => $direction) {
-            if ('id' === $fieldName) {
+            if (JsonApiDoc::ID === $fieldName) {
                 $this->addEntityIdentifierFieldNames($result, $entityClass, $direction, $config);
             } else {
                 $result[$fieldName] = $direction;
@@ -112,17 +113,29 @@ class CorrectSortValue implements ProcessorInterface
         array &$result,
         $entityClass,
         $direction,
-        EntityDefinitionConfig $config = null
+        ?EntityDefinitionConfig $config
     ) {
-        $idFieldNames = $this->doctrineHelper->getEntityIdentifierFieldNamesForClass($entityClass);
-        foreach ($idFieldNames as $propertyPath) {
-            if (null !== $config) {
-                $fieldName = $config->findFieldNameByPropertyPath($propertyPath);
-                if ($fieldName) {
-                    $propertyPath = $fieldName;
+        if (null === $config) {
+            $idFieldNames = $this->doctrineHelper->getEntityIdentifierFieldNamesForClass($entityClass);
+            foreach ($idFieldNames as $propertyPath) {
+                $result[$propertyPath] = $direction;
+            }
+        } else {
+            $idFieldNames = $config->getIdentifierFieldNames();
+            if (empty($idFieldNames)) {
+                $idFieldNames = $this->doctrineHelper->getEntityIdentifierFieldNamesForClass($entityClass);
+                foreach ($idFieldNames as $propertyPath) {
+                    $fieldName = $config->findFieldNameByPropertyPath($propertyPath);
+                    if ($fieldName) {
+                        $propertyPath = $fieldName;
+                    }
+                    $result[$propertyPath] = $direction;
+                }
+            } else {
+                foreach ($idFieldNames as $fieldName) {
+                    $result[$fieldName] = $direction;
                 }
             }
-            $result[$propertyPath] = $direction;
         }
     }
 }

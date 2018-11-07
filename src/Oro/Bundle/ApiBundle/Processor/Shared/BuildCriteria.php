@@ -2,13 +2,14 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Filter\FilterInterface;
+use Oro\Bundle\ApiBundle\Filter\StandaloneFilterWithDefaultValue;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Model\ErrorSource;
 use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Bundle\ApiBundle\Request\Constraint;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Applies all requested filters to the Criteria object.
@@ -33,22 +34,31 @@ class BuildCriteria implements ProcessorInterface
             return;
         }
 
+        /** @var FilterInterface[] $filters */
         $filters = $context->getFilters();
         $filterValues = $context->getFilterValues();
-        /** @var FilterInterface $filter */
+
+        /**
+         * it is important to iterate by $filters, not by $filterValues,
+         * because the the order of filters is matter,
+         * e.g. "page size" filter should be processed before "page number" filter
+         * @see \Oro\Bundle\ApiBundle\Processor\Shared\SetDefaultPaging::addPageNumberFilter
+         */
         foreach ($filters as $filterKey => $filter) {
             if ($filterValues->has($filterKey)) {
-                $value = $filterValues->get($filterKey);
+                $filterValue = $filterValues->get($filterKey);
                 try {
-                    $filter->apply($criteria, $value);
+                    $filter->apply($criteria, $filterValue);
                 } catch (\Exception $e) {
-                    $error = null === $value || !$value->getSourceKey()
+                    $error = null === $filterValue || !$filterValue->getSourceKey()
                         ? Error::createByException($e)
                         : Error::createValidationError(Constraint::FILTER)
                             ->setInnerException($e)
-                            ->setSource(ErrorSource::createByParameter($value->getSourceKey()));
+                            ->setSource(ErrorSource::createByParameter($filterValue->getSourceKey()));
                     $context->addError($error);
                 }
+            } elseif ($filter instanceof StandaloneFilterWithDefaultValue) {
+                $filter->apply($criteria);
             }
         }
     }

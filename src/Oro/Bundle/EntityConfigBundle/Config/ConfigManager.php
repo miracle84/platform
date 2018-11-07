@@ -3,11 +3,7 @@
 namespace Oro\Bundle\EntityConfigBundle\Config;
 
 use Doctrine\ORM\EntityManager;
-
 use Metadata\MetadataFactory;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
 use Oro\Bundle\EntityConfigBundle\Audit\AuditManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
@@ -22,15 +18,18 @@ use Oro\Bundle\EntityConfigBundle\Exception\RuntimeException;
 use Oro\Bundle\EntityConfigBundle\Metadata\EntityMetadata;
 use Oro\Bundle\EntityConfigBundle\Metadata\FieldMetadata;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProviderBag;
 use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigContainer;
 use Oro\Bundle\EntityConfigBundle\Tools\ConfigHelper;
-
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
+ * The main entry point for entity configs.
  * IMPORTANT: A performance of this class is very crucial. Double check a performance during a refactoring.
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
+ * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  */
 class ConfigManager
 {
@@ -49,11 +48,8 @@ class ConfigManager
     /** @var ConfigModelManager */
     protected $modelManager;
 
-    /** @var ConfigProvider[] */
-    protected $providers = [];
-
-    /** @var PropertyConfigContainer[] */
-    protected $propertyConfigs = [];
+    /** @var ConfigProviderBag */
+    private $providerBag;
 
     /** @var array */
     protected $originalValues = [];
@@ -63,13 +59,6 @@ class ConfigManager
 
     /** @var array */
     protected $configChangeSets = [];
-
-    /**
-     * @deprecated since 1.9. Should be removed together with deprecated events
-     * @see Oro\Bundle\EntityConfigBundle\Event\Events
-     * @var array
-     */
-    private $hasListenersCache = [];
 
     /**
      * @param EventDispatcherInterface $eventDispatcher
@@ -108,7 +97,7 @@ class ConfigManager
      */
     public function getProviders()
     {
-        return $this->providers;
+        return $this->providerBag->getProviders();
     }
 
     /**
@@ -118,15 +107,15 @@ class ConfigManager
      */
     public function getProvider($scope)
     {
-        return isset($this->providers[$scope]) ? $this->providers[$scope] : null;
+        return $this->providerBag->getProvider($scope);
     }
 
     /**
-     * @param ConfigProvider $provider
+     * @param ConfigProviderBag $providerBag
      */
-    public function addProvider(ConfigProvider $provider)
+    public function setProviderBag(ConfigProviderBag $providerBag)
     {
-        $this->providers[$provider->getScope()] = $provider;
+        $this->providerBag = $providerBag;
     }
 
     /**
@@ -257,6 +246,24 @@ class ConfigManager
         return new Config(
             new EntityConfigId($scope),
             $this->getEntityDefaultValues($scope)
+        );
+    }
+
+    /**
+     * @param FieldConfigModel $fieldConfigModel
+     * @param string $scope
+     * @return ConfigInterface
+     */
+    public function createFieldConfigByModel(FieldConfigModel $fieldConfigModel, string $scope)
+    {
+        return new Config(
+            new FieldConfigId(
+                $scope,
+                $fieldConfigModel->getEntity()->getClassName(),
+                $fieldConfigModel->getFieldName(),
+                $fieldConfigModel->getType()
+            ),
+            $fieldConfigModel->toArray($scope)
         );
     }
 
@@ -417,7 +424,12 @@ class ConfigManager
     public function getId($scope, $className, $fieldName = null)
     {
         if ($fieldName) {
-            return $this->getFieldConfig($scope, $className, $fieldName)->getId();
+            $field = $this->findField($className, $fieldName);
+            if (null === $field) {
+                throw new RuntimeException(sprintf('Field "%s::%s" is not configurable', $className, $fieldName));
+            }
+
+            return new FieldConfigId($scope, $className, $fieldName, $field['t']);
         } else {
             return new EntityConfigId($scope, $className);
         }
@@ -477,9 +489,9 @@ class ConfigManager
      */
     public function flushAllCaches()
     {
-        //$this->cache->flushAllConfigurable();
-        //$this->cache->flushAllConfigs();
-        // @todo temporary solution. 'flush' methods should be used. should be fixed in BAP-9151
+        // 'flushAllConfigurable' and 'flushAllConfigs' methods cannot be used due to them are removed
+        // entries from all caches, not only from entity config related caches
+        // for details, see BAP-9151
         $this->cache->deleteAllConfigurable();
         $this->cache->deleteAllConfigs();
     }
@@ -537,13 +549,6 @@ class ConfigManager
             $this->auditManager->save($logEntry);
         }
 
-        // @todo: Should be removed together with deprecated events
-        if ($this->hasListeners(Events::POST_FLUSH_CONFIG)) {
-            $this->eventDispatcher->dispatch(
-                Events::POST_FLUSH_CONFIG,
-                new Event\FlushConfigEvent($models, $this)
-            );
-        }
         $this->eventDispatcher->dispatch(
             Events::POST_FLUSH,
             new Event\PostFlushConfigEvent($models, $this)
@@ -567,14 +572,6 @@ class ConfigManager
         $groupedConfigs = [];
         foreach ($this->persistConfigs as $config) {
             $this->calculateConfigChangeSet($config);
-
-            // @todo: Should be removed together with deprecated events
-            if ($this->hasListeners(Events::PRE_PERSIST_CONFIG)) {
-                $this->eventDispatcher->dispatch(
-                    Events::PRE_PERSIST_CONFIG,
-                    new Event\PersistConfigEvent($config, $this)
-                );
-            }
 
             $configId = $config->getId();
             $modelKey = $configId instanceof FieldConfigId
@@ -660,9 +657,34 @@ class ConfigManager
     {
         $configKey = $this->buildConfigKey($config->getId());
 
-        return isset($this->configChangeSets[$configKey])
-            ? $this->configChangeSets[$configKey]
-            : [];
+        return $this->configChangeSets[$configKey] ?? [];
+    }
+
+    /**
+     * @param string $scope
+     * @param string $className
+     *
+     * @return array [old_value, new_value] or empty array
+     */
+    public function getEntityConfigChangeSet($scope, $className)
+    {
+        $configKey = $this->buildEntityConfigKey($scope, $className);
+
+        return $this->configChangeSets[$configKey] ?? [];
+    }
+
+    /**
+     * @param string $scope
+     * @param string $className
+     * @param string $fieldName
+     *
+     * @return array [old_value, new_value] or empty array
+     */
+    public function getFieldConfigChangeSet($scope, $className, $fieldName)
+    {
+        $configKey = $this->buildFieldConfigKey($scope, $className, $fieldName);
+
+        return $this->configChangeSets[$configKey] ?? [];
     }
 
     /**
@@ -738,7 +760,8 @@ class ConfigManager
                         : ConfigModel::MODE_DEFAULT;
                 }
                 $entityModel = $this->modelManager->createEntityModel($className, $mode);
-                foreach ($this->providers as $scope => $provider) {
+                $providers = $this->getProviders();
+                foreach ($providers as $scope => $provider) {
                     $configKey = $scope . '.' . $className;
                     $config    = new Config(
                         new EntityConfigId($scope, $className),
@@ -765,13 +788,6 @@ class ConfigManager
                     $this->cache->saveEntities($entities, true);
                 }
 
-                // @todo: Should be removed together with deprecated events
-                if ($this->hasListeners(Events::NEW_ENTITY_CONFIG)) {
-                    $this->eventDispatcher->dispatch(
-                        Events::NEW_ENTITY_CONFIG,
-                        new Event\EntityConfigEvent($className, $this)
-                    );
-                }
                 $this->eventDispatcher->dispatch(
                     Events::CREATE_ENTITY,
                     new Event\EntityConfigEvent($className, $this)
@@ -801,7 +817,8 @@ class ConfigManager
                     : ConfigModel::MODE_DEFAULT;
             }
             $fieldModel = $this->modelManager->createFieldModel($className, $fieldName, $fieldType, $mode);
-            foreach ($this->providers as $scope => $provider) {
+            $providers = $this->getProviders();
+            foreach ($providers as $scope => $provider) {
                 $configKey = $scope . '.' . $className . '.' . $fieldName;
                 $config    = new Config(
                     new FieldConfigId($scope, $className, $fieldName, $fieldType),
@@ -829,13 +846,6 @@ class ConfigManager
                 $this->cache->saveFields($className, $fields, true);
             }
 
-            // @todo: Should be removed together with deprecated events
-            if ($this->hasListeners(Events::NEW_FIELD_CONFIG)) {
-                $this->eventDispatcher->dispatch(
-                    Events::NEW_FIELD_CONFIG,
-                    new Event\FieldConfigEvent($className, $fieldName, $this)
-                );
-            }
             $this->eventDispatcher->dispatch(
                 Events::CREATE_FIELD,
                 new Event\FieldConfigEvent($className, $fieldName, $this)
@@ -848,8 +858,6 @@ class ConfigManager
     /**
      * @param string $className
      * @param bool   $force - if TRUE overwrite existing value from annotation
-     *
-     * @TODO: need handling for removed values
      */
     public function updateConfigEntityModel($className, $force = false)
     {
@@ -861,7 +869,8 @@ class ConfigManager
         $metadata = $this->getEntityMetadata($className);
         $entityModel = $this->createConfigEntityModel($className, $metadata->mode);
         $entityModel->setMode($metadata->mode);
-        foreach ($this->providers as $scope => $provider) {
+        $providers = $this->getProviders();
+        foreach ($providers as $scope => $provider) {
             $config        = $provider->getConfig($className);
             $defaultValues = $this->getEntityDefaultValues($scope, $className, $metadata);
             $hasChanges    = $this->updateConfigValues($config, $defaultValues, $force);
@@ -872,13 +881,6 @@ class ConfigManager
             }
         }
 
-        // @todo: Should be removed together with deprecated events
-        if ($this->hasListeners(Events::UPDATE_ENTITY_CONFIG)) {
-            $this->eventDispatcher->dispatch(
-                Events::UPDATE_ENTITY_CONFIG,
-                new Event\EntityConfigEvent($className, $this)
-            );
-        }
         $this->eventDispatcher->dispatch(
             Events::UPDATE_ENTITY,
             new Event\EntityConfigEvent($className, $this)
@@ -889,8 +891,6 @@ class ConfigManager
      * @param string $className
      * @param string $fieldName
      * @param bool   $force - if TRUE overwrite existing value from annotation
-     *
-     * @TODO: need handling for removed values
      */
     public function updateConfigFieldModel($className, $fieldName, $force = false)
     {
@@ -900,7 +900,8 @@ class ConfigManager
         }
 
         $metadata = $this->getFieldMetadata($className, $fieldName);
-        foreach ($this->providers as $scope => $provider) {
+        $providers = $this->getProviders();
+        foreach ($providers as $scope => $provider) {
             $config = $provider->getConfig($className, $fieldName);
             /** @var FieldConfigId $configId */
             $configId      = $config->getId();
@@ -919,13 +920,6 @@ class ConfigManager
             }
         }
 
-        // @todo: Should be removed together with deprecated events
-        if ($this->hasListeners(Events::UPDATE_FIELD_CONFIG)) {
-            $this->eventDispatcher->dispatch(
-                Events::UPDATE_FIELD_CONFIG,
-                new Event\FieldConfigEvent($className, $fieldName, $this)
-            );
-        }
         $this->eventDispatcher->dispatch(
             Events::UPDATE_FIELD,
             new Event\FieldConfigEvent($className, $fieldName, $this)
@@ -945,18 +939,12 @@ class ConfigManager
     {
         $result = $this->modelManager->changeFieldName($className, $fieldName, $newFieldName);
         if ($result) {
-            // @todo: Should be removed together with deprecated events
-            if ($this->hasListeners(Events::RENAME_FIELD_OLD)) {
-                $this->eventDispatcher->dispatch(
-                    Events::RENAME_FIELD_OLD,
-                    new Event\RenameFieldEvent($className, $fieldName, $newFieldName, $this)
-                );
-            }
             $this->eventDispatcher->dispatch(
                 Events::RENAME_FIELD,
                 new Event\RenameFieldEvent($className, $fieldName, $newFieldName, $this)
             );
-            foreach ($this->providers as $scope => $provider) {
+            $providers = $this->getProviders();
+            foreach ($providers as $scope => $provider) {
                 $cachedConfig = $this->cache->getFieldConfig($scope, $className, $fieldName, true);
                 if ($cachedConfig) {
                     $this->cache->saveConfig($this->changeConfigFieldName($cachedConfig, $newFieldName), true);
@@ -1245,8 +1233,35 @@ class ConfigManager
     protected function buildConfigKey(ConfigIdInterface $configId)
     {
         return $configId instanceof FieldConfigId
-            ? $configId->getScope() . '.' . $configId->getClassName() . '.' . $configId->getFieldName()
-            : $configId->getScope() . '.' . $configId->getClassName();
+            ? $this->buildFieldConfigKey($configId->getScope(), $configId->getClassName(), $configId->getFieldName())
+            : $this->buildEntityConfigKey($configId->getScope(), $configId->getClassName());
+    }
+
+    /**
+     * Returns a string unique identifies each entity config item
+     *
+     * @param string $scope
+     * @param string $className
+     *
+     * @return string
+     */
+    protected function buildEntityConfigKey($scope, $className)
+    {
+        return $scope . '.' . $className;
+    }
+
+    /**
+     * Returns a string unique identifies each field config item
+     *
+     * @param string $scope
+     * @param string $className
+     * @param string $fieldName
+     *
+     * @return string
+     */
+    protected function buildFieldConfigKey($scope, $className, $fieldName)
+    {
+        return $scope . '.' . $className . '.' . $fieldName;
     }
 
     /**
@@ -1256,15 +1271,7 @@ class ConfigManager
      */
     protected function getPropertyConfig($scope)
     {
-        if (isset($this->propertyConfigs[$scope])) {
-            return $this->propertyConfigs[$scope];
-        }
-
-        $propertyConfig = $this->providers[$scope]->getPropertyConfig();
-
-        $this->propertyConfigs[$scope] = $propertyConfig;
-
-        return $propertyConfig;
+        return $this->providerBag->getProvider($scope)->getPropertyConfig();
     }
 
     /**
@@ -1484,22 +1491,5 @@ class ConfigManager
             'Database is not synced, if you use ConfigManager, when a db schema may be hasn\'t synced.'
             . ' check it by ConfigManager::modelManager::checkDatabase'
         );
-    }
-
-    /**
-     * @deprecated since 1.9. Should be removed together with deprecated events
-     * @see Oro\Bundle\EntityConfigBundle\Event\Events
-     *
-     * @param string $eventName
-     *
-     * @return bool
-     */
-    private function hasListeners($eventName)
-    {
-        if (!isset($this->hasListenersCache[$eventName])) {
-            $this->hasListenersCache[$eventName] = $this->eventDispatcher->hasListeners($eventName);
-        }
-
-        return $this->hasListenersCache[$eventName];
     }
 }

@@ -3,33 +3,29 @@
 namespace Oro\Bundle\ImportExportBundle\Tests\Unit\Writer;
 
 use Akeneo\Bundle\BatchBundle\Entity\StepExecution;
-
 use Liuggio\ExcelBundle\Factory;
-
 use Oro\Bundle\ImportExportBundle\Context\ContextRegistry;
 use Oro\Bundle\ImportExportBundle\Writer\XlsxFileWriter;
+use Oro\Component\Testing\TempDirExtension;
 
-class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
+class XlsxFileWriterTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var XlsxFileWriter
-     */
+    use TempDirExtension;
+
+    /** @var XlsxFileWriter */
     protected $writer;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $filePath;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ContextRegistry
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ContextRegistry */
     protected $contextRegistry;
 
-    /**
-     * @var Factory
-     */
+    /** @var Factory */
     protected $excel;
+
+    /** @var string */
+    private $tmpDir;
 
     protected function setUp()
     {
@@ -40,15 +36,15 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
 
         $this->excel = new Factory();
 
-        $this->filePath = __DIR__.'/fixtures/new_file.xlsx';
+        $this->tmpDir = $this->getTempDir('XlsxFileWriterTest');
+
+        $this->filePath = $this->tmpDir . '/new_file.xlsx';
         $this->writer = new XlsxFileWriter($this->contextRegistry, $this->excel);
     }
 
     protected function tearDown()
     {
-        if (is_file($this->filePath)) {
-            unlink($this->filePath);
-        }
+        $this->writer->close();
     }
 
     /**
@@ -68,7 +64,7 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
         $this->writer->setStepExecution(
             $this->getMockStepExecution(
                 [
-                    'filePath' => __DIR__.'/unknown/new_file.xlsx'
+                    'filePath' => __DIR__ . '/unknown/new_file.xlsx'
                 ]
             )
         );
@@ -82,13 +78,13 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
             'header'            => ['one', 'two']
         ];
 
-        $this->assertAttributeEquals(true, 'firstLineIsHeader', $this->writer);
-        $this->assertAttributeEmpty('header', $this->writer);
+        self::assertAttributeEquals(true, 'firstLineIsHeader', $this->writer);
+        self::assertAttributeEmpty('header', $this->writer);
 
         $this->writer->setStepExecution($this->getMockStepExecution($options));
 
-        $this->assertAttributeEquals($options['firstLineIsHeader'], 'firstLineIsHeader', $this->writer);
-        $this->assertAttributeEquals($options['header'], 'header', $this->writer);
+        self::assertAttributeEquals($options['firstLineIsHeader'], 'firstLineIsHeader', $this->writer);
+        self::assertAttributeEquals($options['header'], 'header', $this->writer);
     }
 
     /**
@@ -105,13 +101,13 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
         $this->writer->write($data);
         $this->writer->close();
 
-        $this->assertFileExists($expected);
-        $this->assertXlsx($expected, $options['filePath']);
+        self::assertFileExists($expected);
+        self::assertXlsx($expected, $options['filePath']);
     }
 
     public function optionsDataProvider()
     {
-        $filePath = __DIR__.'/fixtures/new_file.xlsx';
+        $filePath = $this->getTempDir('XlsxFileWriterTest', null) . DIRECTORY_SEPARATOR . 'new_file.xlsx';
 
         return [
             'first_item_header' => [
@@ -128,7 +124,7 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
                         'field_three' => 'test3',
                     ]
                 ],
-                __DIR__.'/fixtures/first_item_header.xlsx'
+                __DIR__ . '/fixtures/first_item_header.xlsx'
             ],
             'defined_header'    => [
                 [
@@ -142,7 +138,7 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
                         'h3' => 'field_three'
                     ]
                 ],
-                __DIR__.'/fixtures/defined_header.xlsx'
+                __DIR__ . '/fixtures/defined_header.xlsx'
             ],
             'no_header'         => [
                 [
@@ -153,7 +149,7 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
                     ['1', '2', '3'],
                     ['test1', 'test2', 'test3']
                 ],
-                __DIR__.'/fixtures/no_header.xlsx'
+                __DIR__ . '/fixtures/no_header.xlsx'
             ]
         ];
     }
@@ -179,14 +175,14 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
         $this->writer->write($data);
         $this->writer->close();
 
-        $this->assertFileExists($expected);
-        $this->assertXlsx($expected, $options['filePath']);
+        self::assertFileExists($expected);
+        self::assertXlsx($expected, $options['filePath']);
     }
 
     /**
      * @param array $jobInstanceRawConfiguration
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject|StepExecution
+     * @return \PHPUnit\Framework\MockObject\MockObject|StepExecution
      */
     protected function getMockStepExecution(array $jobInstanceRawConfiguration)
     {
@@ -215,8 +211,8 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
         $expectedReader = $this->excel->createPHPExcelObject($expectedPath);
         $actualReader = $this->excel->createPHPExcelObject($actualPath);
 
-        $expectedSheet =  $expectedReader->getActiveSheet();
-        $actualSheet =  $actualReader->getActiveSheet();
+        $expectedSheet = $expectedReader->getActiveSheet();
+        $actualSheet = $actualReader->getActiveSheet();
 
         $expectedHighestRow = $expectedSheet->getHighestRow();
         $expectedHighestColumn = $expectedSheet->getHighestColumn();
@@ -225,16 +221,16 @@ class XlsxFileWriterTest extends \PHPUnit_Framework_TestCase
         $actualHighestColumn = $actualSheet->getHighestColumn();
         $actualHighestColumnIndex = \PHPExcel_Cell::columnIndexFromString($actualHighestColumn);
 
-        $this->assertEquals($expectedHighestRow, $actualHighestRow);
-        $this->assertEquals($expectedHighestColumn, $actualHighestColumn);
-        $this->assertEquals($expectedHighestColumnIndex, $actualHighestColumnIndex);
+        self::assertEquals($expectedHighestRow, $actualHighestRow);
+        self::assertEquals($expectedHighestColumn, $actualHighestColumn);
+        self::assertEquals($expectedHighestColumnIndex, $actualHighestColumnIndex);
 
         for ($col = 0; $col < $expectedHighestColumnIndex; $col++) {
             for ($row = 1; $row <= $expectedHighestRow; $row++) {
                 $expectedValue = $expectedSheet->getCellByColumnAndRow($col, $row)->getValue();
                 $actualValue = $actualSheet->getCellByColumnAndRow($col, $row)->getValue();
 
-                $this->assertEquals($expectedValue, $actualValue);
+                self::assertEquals($expectedValue, $actualValue);
             }
         }
     }

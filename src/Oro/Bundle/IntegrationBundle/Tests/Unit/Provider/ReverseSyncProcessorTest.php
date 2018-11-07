@@ -6,27 +6,27 @@ use Oro\Bundle\ImportExportBundle\Job\JobResult;
 use Oro\Bundle\ImportExportBundle\Processor\ProcessorRegistry;
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\IntegrationBundle\Provider\ReverseSyncProcessor;
-use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestTwoWayConnector as TestConnector;
 use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestContext;
+use Oro\Bundle\IntegrationBundle\Tests\Unit\Fixture\TestTwoWayConnector as TestConnector;
 
-class ReverseSyncProcessorTest extends \PHPUnit_Framework_TestCase
+class ReverseSyncProcessorTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Integration|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Integration|\PHPUnit\Framework\MockObject\MockObject */
     protected $integration;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $processorRegistry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $jobExecutor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $log;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $eventDispatcher;
 
     public function setUp()
@@ -65,7 +65,7 @@ class ReverseSyncProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('getConnectorType')
             ->will($this->returnValue($realConnector));
 
-        $processor = $this->getReverseSyncProcessor(['processExport']);
+        $processor = $this->getReverseSyncProcessor(['processExport', 'addConnectorStatusAndFlush']);
         $processor->process($this->integration, $connectors, $params);
     }
 
@@ -84,7 +84,7 @@ class ReverseSyncProcessorTest extends \PHPUnit_Framework_TestCase
         $this->processorRegistry->expects($this->once())
             ->method('getProcessorAliasesByEntity')
             ->with(ProcessorRegistry::TYPE_EXPORT)
-            ->will($this->returnValue(array($expectedAlias)));
+            ->will($this->returnValue([$expectedAlias]));
 
         $realConnector = new TestConnector();
 
@@ -107,16 +107,16 @@ class ReverseSyncProcessorTest extends \PHPUnit_Framework_TestCase
                 'tstJobName',
                 [
                     'export' => [
-                        'entityName'    => 'testEntity',
-                        'channel'       => 'testChannel',
-                        'processorAlias'=> $expectedAlias,
-                        'testParameter' => 'testValue'
+                        'entityName'     => 'testEntity',
+                        'channel'        => 'testChannel',
+                        'processorAlias' => $expectedAlias,
+                        'testParameter'  => 'testValue'
                     ]
                 ]
             )
             ->will($this->returnValue($jobResult));
 
-        $processor = $this->getReverseSyncProcessor();
+        $processor = $this->getReverseSyncProcessor(['addConnectorStatusAndFlush']);
         $processor->process($this->integration, $connector, ['testParameter' => 'testValue']);
     }
 
@@ -125,13 +125,16 @@ class ReverseSyncProcessorTest extends \PHPUnit_Framework_TestCase
      *
      * @param array $mockedMethods
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject|ReverseSyncProcessor
+     * @return \PHPUnit\Framework\MockObject\MockObject|ReverseSyncProcessor
      */
     protected function getReverseSyncProcessor($mockedMethods = null)
     {
+        $registry = $this->createMock('Doctrine\Common\Persistence\ManagerRegistry');
+
         return $this->getMockBuilder('Oro\Bundle\IntegrationBundle\Provider\ReverseSyncProcessor')
             ->setMethods($mockedMethods)
             ->setConstructorArgs([
+                $registry,
                 $this->processorRegistry,
                 $this->jobExecutor,
                 $this->registry,

@@ -2,8 +2,8 @@
 
 namespace Oro\Bundle\CurrencyBundle\Datagrid\InlineEditing\InlineEditColumnOptions;
 
-use Oro\Bundle\CurrencyBundle\Utils\CurrencyNameHelper;
 use Oro\Bundle\CurrencyBundle\Converter\CurrencyToString;
+use Oro\Bundle\CurrencyBundle\Utils\CurrencyNameHelper;
 use Oro\Bundle\DataGridBundle\Extension\Formatter\Property\PropertyInterface;
 use Oro\Bundle\DataGridBundle\Extension\InlineEditing\Configuration;
 use Oro\Bundle\DataGridBundle\Extension\InlineEditing\InlineEditColumnOptions\GuesserInterface;
@@ -57,7 +57,7 @@ class MultiCurrencyGuesser implements GuesserInterface
             if (empty($column[Configuration::CHOICES_KEY])) {
                 $choices = $this->currencyHelper->getCurrencyChoices();
                 $result[Configuration::CHOICES_KEY] = !empty($choices) ?
-                    array_keys($choices) :
+                    array_values($choices) :
                     [];
             }
 

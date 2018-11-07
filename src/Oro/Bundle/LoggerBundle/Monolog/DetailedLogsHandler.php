@@ -2,16 +2,18 @@
 
 namespace Oro\Bundle\LoggerBundle\Monolog;
 
-use Monolog\Handler\AbstractHandler;
+use Doctrine\Common\Cache\CacheProvider;
+use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Handler\HandlerInterface;
-use Monolog\Logger;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\LoggerBundle\DependencyInjection\Configuration;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
-
-class DetailedLogsHandler extends AbstractHandler implements ContainerAwareInterface
+/**
+ * The handler that allows to switch a logging level for some period of time.
+ */
+class DetailedLogsHandler extends AbstractProcessingHandler implements ContainerAwareInterface
 {
     /** @var HandlerInterface */
     protected $handler;
@@ -43,39 +45,26 @@ class DetailedLogsHandler extends AbstractHandler implements ContainerAwareInter
      */
     public function isHandling(array $record)
     {
-        return true;
+        $this->setLevel($this->getLogLevel());
+
+        return parent::isHandling($record);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function handle(array $record)
+    protected function write(array $record)
     {
-        if ($this->processors) {
-            foreach ($this->processors as $processor) {
-                $record = call_user_func($processor, $record);
-            }
+        if (!$this->handler) {
+            throw new \LogicException(
+                \sprintf(
+                    "Trying to execute method `%s` which requires Handler to be set.",
+                    __METHOD__
+                )
+            );
         }
 
-        $this->buffer[] = $record;
-
-        return false === $this->bubble;
-    }
-
-    public function close()
-    {
-        if (empty($this->buffer)) {
-            return;
-        }
-        $monologLevel = $this->getLogLevel();
-        $this->handler->handleBatch(
-            array_filter(
-                $this->buffer,
-                function ($record) use ($monologLevel) {
-                    return $record['level'] >= $monologLevel;
-                }
-            )
-        );
+        $this->handler->handle($record);
     }
 
     /**
@@ -83,16 +72,39 @@ class DetailedLogsHandler extends AbstractHandler implements ContainerAwareInter
      */
     private function getLogLevel()
     {
+        /** @var CacheProvider $cache */
+        $cache = $this->container->get('oro_logger.cache');
+        $logLevel = $cache->fetch(Configuration::LOGS_LEVEL_KEY);
+        if (false !== $logLevel) {
+            return $logLevel;
+        }
+
         $logLevel = $this->container->getParameter('oro_logger.detailed_logs_default_level');
-        if ($this->container->has('oro_config.user')) {
+        if ($this->isInstalled() && $this->container->has('oro_config.user')) {
             /** @var ConfigManager $config */
             $config = $this->container->get('oro_config.user');
-            $endTimestamp = $config->get('oro_logger.detailed_logs_end_timestamp');
-            if (null !== $endTimestamp && time() <= $endTimestamp) {
-                $logLevel = $config->get('oro_logger.detailed_logs_level');
+
+            $curTimestamp = time();
+            $endTimestamp = $config->get(Configuration::getFullConfigKey(Configuration::LOGS_TIMESTAMP_KEY));
+            if (null !== $endTimestamp && $curTimestamp <= $endTimestamp) {
+                $logLevel = $config->get(Configuration::getFullConfigKey(Configuration::LOGS_LEVEL_KEY));
+
+                $cache->save(Configuration::LOGS_LEVEL_KEY, $logLevel, $endTimestamp - $curTimestamp);
+
+                return $logLevel;
             }
         }
 
-        return Logger::toMonologLevel($logLevel);
+        $cache->save(Configuration::LOGS_LEVEL_KEY, $logLevel);
+
+        return $logLevel;
+    }
+
+    /**
+     * @return bool
+     */
+    private function isInstalled()
+    {
+        return $this->container->hasParameter('installed') && $this->container->getParameter('installed');
     }
 }

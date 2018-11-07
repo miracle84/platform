@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\UIBundle\DependencyInjection;
 
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
-
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 
 /**
  * This is the class that loads and manages your bundle configuration
@@ -37,10 +36,11 @@ class OroUIExtension extends Extension
 
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.yml');
-        $loader->load('twig.yml');
         $loader->load('content_providers.yml');
         $loader->load('layouts.yml');
         $loader->load('block_types.yml');
+        $loader->load('form_types.yml');
+        $loader->load('commands.yml');
 
         $container->setParameter(
             'oro_ui.placeholders',
@@ -52,7 +52,10 @@ class OroUIExtension extends Extension
 
         $container->prependExtensionConfig($this->getAlias(), array_intersect_key($config, array_flip(['settings'])));
 
-        $this->addClassesToCompile(['Oro\Bundle\UIBundle\EventListener\ContentProviderListener']);
+        $this->addClassesToCompile([
+            'Oro\Bundle\UIBundle\EventListener\ContentProviderListener',
+            'Oro\Bundle\UIBundle\Twig\Environment'
+        ]);
     }
 
     /**

@@ -1,8 +1,10 @@
 <?php
+
 namespace Oro\Bundle\SearchBundle\Async;
 
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\SearchBundle\Engine\IndexerInterface;
+use Oro\Bundle\SearchBundle\Transformer\MessageTransformerInterface;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 
 class Indexer implements IndexerInterface
@@ -13,18 +15,28 @@ class Indexer implements IndexerInterface
     protected $doctrineHelper;
 
     /**
+     * @var MessageTransformerInterface
+     */
+    private $transformer;
+
+    /**
      * @var MessageProducerInterface
      */
     protected $producer;
 
     /**
      * @param MessageProducerInterface $producer
-     * @param DoctrineHelper           $doctrineHelper
+     * @param DoctrineHelper $doctrineHelper
+     * @param MessageTransformerInterface $transformer
      */
-    public function __construct(MessageProducerInterface $producer, DoctrineHelper $doctrineHelper)
-    {
+    public function __construct(
+        MessageProducerInterface $producer,
+        DoctrineHelper $doctrineHelper,
+        MessageTransformerInterface $transformer
+    ) {
         $this->producer = $producer;
         $this->doctrineHelper = $doctrineHelper;
+        $this->transformer = $transformer;
     }
 
     /**
@@ -70,6 +82,11 @@ class Indexer implements IndexerInterface
             $classes = $class ? [$class] : [];
         }
 
+        //Ensure specified class exists, if not - exception will be thrown
+        foreach ($classes as $class) {
+            $this->doctrineHelper->getEntityManagerForClass($class);
+        }
+
         $this->producer->send(Topics::REINDEX, $classes);
     }
 
@@ -80,21 +97,16 @@ class Indexer implements IndexerInterface
      */
     protected function doIndex($entity)
     {
-        if (false == $entity) {
+        if (!$entity) {
             return false;
         }
 
         $entities = is_array($entity) ? $entity : [$entity];
 
-        $body = [];
-        foreach ($entities as $entity) {
-            $body[] = [
-                'class' => $this->doctrineHelper->getEntityMetadata($entity)->getName(),
-                'id' => $this->doctrineHelper->getSingleEntityIdentifier($entity),
-            ];
+        $messages = $this->transformer->transform($entities);
+        foreach ($messages as $message) {
+            $this->producer->send(Topics::INDEX_ENTITIES, $message);
         }
-
-        $this->producer->send(Topics::INDEX_ENTITIES, $body);
 
         return true;
     }

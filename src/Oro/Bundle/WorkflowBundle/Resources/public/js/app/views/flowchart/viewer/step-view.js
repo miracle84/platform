@@ -12,6 +12,7 @@ define(function(require) {
         template: require('tpl!oroworkflow/templates/flowchart/viewer/step.html'),
 
         jsPlumbSource: null,
+
         jsPlumbTarget: null,
 
         className: function() {
@@ -37,8 +38,15 @@ define(function(require) {
             maxConnections: 100
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function FlowchartViewerStepView() {
+            FlowchartViewerStepView.__super__.constructor.apply(this, arguments);
+        },
+
         updateStepMinWidth: function() {
-            var STEP_MAX_WIDTH = 180; //that's taken from css .workflow-flowchart .workflow-step 'max-width' definition
+            var STEP_MAX_WIDTH = 180; // that's taken from css .workflow-flowchart .workflow-step 'max-width' definition
             var currentId = this.el.id;
             var connections = this.jsPlumbSource.getConnections();
             var count = _.countBy(connections, function(connection) {
@@ -84,7 +92,7 @@ define(function(require) {
                     onMaxConnections: function(info, e) {
                         mediator.execute(
                             'showErrorMessage',
-                            __('Maximum connections ({{ maxConnections }}) reached', info),
+                            __('oro.workflow.error.maxconnections', info),
                             e
                         );
                     }

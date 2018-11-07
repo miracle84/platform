@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\DataGridBundle\Tests\Unit\Entity;
 
-use Oro\Bundle\DataGridBundle\Entity\GridView;
 use Oro\Bundle\DataGridBundle\Entity\AppearanceType;
+use Oro\Bundle\DataGridBundle\Entity\GridView;
 use Oro\Bundle\DataGridBundle\Extension\GridViews\View;
 use Oro\Bundle\UserBundle\Entity\User;
 
-class GridViewTest extends \PHPUnit_Framework_TestCase
+class GridViewTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider provider

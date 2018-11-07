@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\FilterBundle\Filter;
 
-use Symfony\Component\Form\FormFactoryInterface;
-
 use Oro\Bundle\EntityBundle\Entity\Manager\DictionaryApiEntityManager;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
-use Oro\Bundle\FilterBundle\Form\Type\Filter\EnumFilterType;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
+use Oro\Bundle\FilterBundle\Form\Type\Filter\DictionaryFilterType;
+use Oro\Bundle\FilterBundle\Form\Type\Filter\EnumFilterType;
+use Symfony\Component\Form\FormFactoryInterface;
 
 class EnumFilter extends BaseMultiChoiceFilter
 {
@@ -94,6 +94,33 @@ class EnumFilter extends BaseMultiChoiceFilter
      */
     protected function getFormType()
     {
-        return EnumFilterType::NAME;
+        return EnumFilterType::class;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function buildComparisonExpr(
+        FilterDatasourceAdapterInterface $ds,
+        $comparisonType,
+        $fieldName,
+        $parameterName
+    ) {
+        switch ($comparisonType) {
+            case DictionaryFilterType::TYPE_NOT_IN:
+                return $ds->expr()->orX(
+                    $ds->expr()->isNull($fieldName),
+                    $ds->expr()->notIn($fieldName, $parameterName, true)
+                );
+            case DictionaryFilterType::EQUAL:
+                return $ds->expr()->eq($fieldName, $parameterName, true);
+            case DictionaryFilterType::NOT_EQUAL:
+                return $ds->expr()->orX(
+                    $ds->expr()->isNull($fieldName),
+                    $ds->expr()->neq($fieldName, $parameterName, true)
+                );
+            default:
+                return $ds->expr()->in($fieldName, $parameterName, true);
+        }
     }
 }

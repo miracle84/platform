@@ -2,15 +2,14 @@
 
 namespace Oro\Bundle\EntityBundle\Tests\Unit\ORM;
 
-use Doctrine\ORM\PersistentCollection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
+use Doctrine\ORM\PersistentCollection;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Fixtures\TestEntity;
-use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Stub\ItemStub;
 use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Stub\__CG__\ItemStubProxy;
+use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Stub\ItemStub;
 use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Stub\ReflectionProperty;
 
 /**
@@ -19,22 +18,22 @@ use Oro\Bundle\EntityBundle\Tests\Unit\ORM\Stub\ReflectionProperty;
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
-class DoctrineHelperTest extends \PHPUnit_Framework_TestCase
+class DoctrineHelperTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_IDENTIFIER = 42;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry
+     * @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry
      */
     protected $registry;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $em;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $classMetadata;
 

@@ -4,14 +4,13 @@ namespace Oro\Bundle\FilterBundle\Filter;
 
 use Doctrine\ORM\Query\Expr as Expr;
 use Doctrine\ORM\QueryBuilder;
-
-use Symfony\Component\Form\Form;
-use Symfony\Component\Form\FormFactoryInterface;
-
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
 use Oro\Bundle\FilterBundle\Datasource\Orm\OrmFilterDatasourceAdapter;
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
+use Oro\Component\DoctrineUtils\ORM\DqlUtil;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 use Oro\Component\PhpUtils\ArrayUtil;
+use Symfony\Component\Form\Form;
+use Symfony\Component\Form\FormFactoryInterface;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -45,6 +44,11 @@ abstract class AbstractFilter implements FilterInterface
 
     /** @var array */
     protected $joinOperators = [];
+
+    /**
+     * @var string
+     */
+    protected $dataFieldName;
 
     /**
      * Constructor
@@ -91,7 +95,7 @@ abstract class AbstractFilter implements FilterInterface
         $joinOperator = $this->getJoinOperator($data['type']);
         $relatedJoin = $this->findRelatedJoin($ds);
         $type = ($joinOperator && $relatedJoin) ? $joinOperator : $data['type'];
-        $comparisonExpr = $this->buildExpr($ds, $type, $this->get(FilterUtility::DATA_NAME_KEY), $data);
+        $comparisonExpr = $this->buildExpr($ds, $type, $this->getDataFieldName(), $data);
         if (!$comparisonExpr) {
             return true;
         }
@@ -113,8 +117,8 @@ abstract class AbstractFilter implements FilterInterface
                     ->andWhere($comparisonExpr)
                     ->andWhere(sprintf('%1$s = %1$s', $fieldExpr));
                 if ($groupBy) {
-                    // replace aliases from SELECT by expressions, since SELECT clause is changed
-                    $subQb->groupBy($groupBy);
+                    // replace aliases from SELECT by expressions, since SELECT clause is changed, add current field
+                    $subQb->groupBy(sprintf('%s, %s', $groupBy, $fieldExpr));
                 }
                 list($dql, $replacements) = $this->createDQLWithReplacedAliases($ds, $subQb);
                 list($fieldAlias, $field) = explode('.', $fieldExpr);
@@ -279,6 +283,16 @@ abstract class AbstractFilter implements FilterInterface
     }
 
     /**
+     * @param string $paramName
+     *
+     * @return bool
+     */
+    protected function has($paramName)
+    {
+        return isset($this->params[$paramName]);
+    }
+
+    /**
      * Get param if exists or default value
      *
      * @param string $paramName
@@ -381,11 +395,11 @@ abstract class AbstractFilter implements FilterInterface
                     $ds->generateParameterName($this->getName()),
                 ];
             },
-            QueryUtils::getDqlAliases($qb->getDQL())
+            DqlUtil::getAliases($qb->getDQL())
         );
 
         return [
-            QueryUtils::replaceDqlAliases($qb->getDQL(), $replacements),
+            DqlUtil::replaceAliases($qb->getDQL(), $replacements),
             array_combine(array_column($replacements, 0), array_column($replacements, 1))
         ];
     }
@@ -403,7 +417,7 @@ abstract class AbstractFilter implements FilterInterface
 
         list($alias) = explode('.', $this->getOr(FilterUtility::DATA_NAME_KEY));
 
-        return QueryUtils::findJoinByAlias($ds->getQueryBuilder(), $alias);
+        return QueryBuilderUtil::findJoinByAlias($ds->getQueryBuilder(), $alias);
     }
 
     /**
@@ -413,11 +427,6 @@ abstract class AbstractFilter implements FilterInterface
      */
     protected function createConditionFieldExprs(QueryBuilder $qb)
     {
-        $groupByFields = $this->getSelectFieldFromGroupBy($qb);
-        if ($groupByFields) {
-            return $groupByFields;
-        }
-
         $entities = $qb->getRootEntities();
         $idField = $qb
             ->getEntityManager()
@@ -447,7 +456,7 @@ abstract class AbstractFilter implements FilterInterface
 
         $fields = [];
         foreach ($expressions as $expression) {
-            $fields[] = QueryUtils::getSelectExprByAlias($qb, $expression) ?: $expression;
+            $fields[] = QueryBuilderUtil::getSelectExprByAlias($qb, $expression) ?: $expression;
         }
 
         return $fields;
@@ -469,7 +478,7 @@ abstract class AbstractFilter implements FilterInterface
             }
         } else {
             $trimmedGroupByPart = trim($groupByPart);
-            $expr = QueryUtils::getSelectExprByAlias($qb, $groupByPart);
+            $expr = QueryBuilderUtil::getSelectExprByAlias($qb, $groupByPart);
             $expressions[] = $expr ?: $trimmedGroupByPart;
         }
 
@@ -487,9 +496,41 @@ abstract class AbstractFilter implements FilterInterface
             return false;
         }
 
-        $fieldName = $this->get(FilterUtility::DATA_NAME_KEY);
+        $fieldName = $this->getDataFieldName();
         list($joinAlias) = explode('.', $fieldName);
 
-        return QueryUtils::isToOne($ds->getQueryBuilder(), $joinAlias);
+        return QueryBuilderUtil::isToOne($ds->getQueryBuilder(), $joinAlias);
+    }
+
+    /**
+     * @param mixed $data
+     *
+     * @return mixed
+     */
+    protected function convertData($data)
+    {
+        if ($this->has(FilterUtility::VALUE_CONVERSION_KEY)) {
+            if (($callback = $this->get(FilterUtility::VALUE_CONVERSION_KEY)) && is_callable($callback)) {
+                return call_user_func($callback, $data);
+            } else {
+                throw new \BadFunctionCallException(
+                    sprintf('\'%s\' is not callable', json_encode($callback))
+                );
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDataFieldName()
+    {
+        if (!$this->dataFieldName) {
+            $this->dataFieldName = $this->get(FilterUtility::DATA_NAME_KEY);
+        }
+
+        return $this->dataFieldName;
     }
 }

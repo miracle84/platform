@@ -3,16 +3,12 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Functional\Entity\Repository;
 
 use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
 use Oro\Bundle\WorkflowBundle\Entity\Repository\ProcessTriggerRepository;
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadProcessEntities;
 
-/**
- * @dbIsolation
- */
 class ProcessTriggerRepositoryTest extends WebTestCase
 {
     /**

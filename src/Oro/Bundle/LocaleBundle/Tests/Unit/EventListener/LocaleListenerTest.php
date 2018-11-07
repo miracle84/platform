@@ -2,35 +2,38 @@
 
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\EventListener;
 
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\RequestContext;
-use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\EventListener\LocaleListener;
 use Oro\Bundle\LocaleBundle\Provider\CurrentLocalizationProvider;
+use Oro\Bundle\TranslationBundle\Entity\Language;
+use Oro\Component\Testing\Unit\EntityTrait;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Event\GetResponseEvent;
+use Symfony\Component\Routing\RequestContext;
 
-class LocaleListenerTest extends \PHPUnit_Framework_TestCase
+class LocaleListenerTest extends \PHPUnit\Framework\TestCase
 {
+    use EntityTrait;
+
     /** @var LocaleListener */
     protected $listener;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $localeSettings;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $transListener;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $router;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $container;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var CurrentLocalizationProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var CurrentLocalizationProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $currentLocalizationProvider;
 
     /** @var string */
@@ -160,7 +163,9 @@ class LocaleListenerTest extends \PHPUnit_Framework_TestCase
                 'installed' => '2012-12-12T12:12:12+02:00',
                 'isSetLocale' => true,
                 'language' => 'en_US',
-                'localization' => (new Localization())->setLanguageCode('en_US'),
+                'localization' => (new Localization())->setLanguage(
+                    $this->getEntity(Language::class, ['code' => 'en_US',])
+                ),
             ],
         ];
     }

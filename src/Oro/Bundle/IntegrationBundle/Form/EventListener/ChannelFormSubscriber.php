@@ -3,18 +3,16 @@
 namespace Oro\Bundle\IntegrationBundle\Form\EventListener;
 
 use Doctrine\Common\Util\Inflector;
-
+use Oro\Bundle\FormBundle\Utils\FormUtils;
+use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
+use Oro\Bundle\IntegrationBundle\Form\Type\IntegrationSettingsDynamicFormType;
+use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Oro\Bundle\IntegrationBundle\Provider\SettingsProvider;
 use Oro\Bundle\IntegrationBundle\Utils\EditModeUtils;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
-use Oro\Bundle\FormBundle\Utils\FormUtils;
-use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
-use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
-use Oro\Bundle\IntegrationBundle\Provider\SettingsProvider;
-use Oro\Bundle\IntegrationBundle\Form\Type\IntegrationSettingsDynamicFormType;
 
 class ChannelFormSubscriber implements EventSubscriberInterface
 {
@@ -206,7 +204,7 @@ class ChannelFormSubscriber implements EventSubscriberInterface
             }
 
             $choices = array_flip($registry->getAvailableTransportTypesChoiceList($type));
-            FormUtils::replaceField($form, 'transportType', ['choices' => $choices], ['choice_list']);
+            FormUtils::replaceField($form, 'transportType', ['choices' => $choices]);
         };
     }
 
@@ -227,7 +225,7 @@ class ChannelFormSubscriber implements EventSubscriberInterface
             }
 
             $choices = array_flip($registry->getAvailableConnectorsTypesChoiceList($type));
-            FormUtils::replaceField($form, 'connectors', ['choices' => $choices], ['choice_list']);
+            FormUtils::replaceField($form, 'connectors', ['choices' => $choices]);
         };
     }
 
@@ -281,7 +279,11 @@ class ChannelFormSubscriber implements EventSubscriberInterface
 
             $fields = $settingsProvider->getFormSettings($formName, $type);
             if ($fields) {
-                $form->add(Inflector::camelize($formName), new IntegrationSettingsDynamicFormType($fields));
+                $form->add(
+                    Inflector::camelize($formName),
+                    IntegrationSettingsDynamicFormType::class,
+                    ['fields' => $fields]
+                );
             }
         };
     }

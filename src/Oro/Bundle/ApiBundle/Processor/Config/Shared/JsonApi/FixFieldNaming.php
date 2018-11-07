@@ -2,22 +2,21 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Config\Shared\JsonApi;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Exception\RuntimeException;
 use Oro\Bundle\ApiBundle\Processor\Config\ConfigContext;
+use Oro\Bundle\ApiBundle\Request\JsonApi\JsonApiDocumentBuilder as JsonApiDoc;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Tries to rename fields if they are equal to reserved words.
+ * Tries to rename fields if they are equal to reserved words or not conform JSON.API specification.
  * * "type" field is renamed to {short class name} + "Type"
- * * "id" field is renamed to {short class name} + "Id" in case if it is not an identifier of an entity
+ * * "id" field is renamed to {short class name} + "Id" if it is not the identifier of an entity
+ * * the single identifier field is renamed to "id" if it has a different name
  */
 class FixFieldNaming implements ProcessorInterface
 {
-    const TYPE_FIELD_NAME = 'type';
-    const ID_FIELD_NAME   = 'id';
-
     /**
      * {@inheritdoc}
      */
@@ -33,14 +32,24 @@ class FixFieldNaming implements ProcessorInterface
 
         $entityClass = $context->getClassName();
         // process "type" field
-        if ($definition->hasField(self::TYPE_FIELD_NAME)) {
-            $this->renameReservedField($definition, $entityClass, self::TYPE_FIELD_NAME);
+        if ($definition->hasField(JsonApiDoc::TYPE)) {
+            $this->renameReservedField($definition, $entityClass, JsonApiDoc::TYPE);
         }
         // process "id" field
-        if ($definition->hasField(self::ID_FIELD_NAME)
-            && !$this->isIdentifierField($definition, self::ID_FIELD_NAME)
-        ) {
-            $this->renameReservedField($definition, $entityClass, self::ID_FIELD_NAME);
+        $idFieldNames = $definition->getIdentifierFieldNames();
+        $numberOfIdFields = count($idFieldNames);
+        if ($numberOfIdFields === 1) {
+            $idFieldName = reset($idFieldNames);
+            if (JsonApiDoc::ID !== $idFieldName) {
+                if ($definition->hasField(JsonApiDoc::ID)) {
+                    $this->renameReservedField($definition, $entityClass, JsonApiDoc::ID);
+                }
+                $this->renameIdField($definition, $idFieldName, JsonApiDoc::ID);
+            }
+        } elseif ($numberOfIdFields > 1) {
+            if ($definition->hasField(JsonApiDoc::ID)) {
+                $this->renameReservedField($definition, $entityClass, JsonApiDoc::ID);
+            }
         }
     }
 
@@ -82,18 +91,19 @@ class FixFieldNaming implements ProcessorInterface
     }
 
     /**
-     * Checks whether the given field is an identifier of the given entity
-     *
      * @param EntityDefinitionConfig $definition
      * @param string                 $fieldName
-     *
-     * @return bool
+     * @param string                 $newFieldName
      */
-    protected function isIdentifierField(EntityDefinitionConfig $definition, $fieldName)
+    protected function renameIdField(EntityDefinitionConfig $definition, $fieldName, $newFieldName)
     {
-        $idFieldNames = $definition->getIdentifierFieldNames();
-
-        return count($idFieldNames) === 1 && reset($idFieldNames) === $fieldName;
+        $field = $definition->getField($fieldName);
+        if (null !== $field && !$field->hasPropertyPath()) {
+            $definition->removeField($fieldName);
+            $field->setPropertyPath($fieldName);
+            $definition->addField($newFieldName, $field);
+            $definition->setIdentifierFieldNames([$newFieldName]);
+        }
     }
 
     /**

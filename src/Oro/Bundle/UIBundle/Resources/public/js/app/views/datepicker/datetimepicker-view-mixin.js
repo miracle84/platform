@@ -47,6 +47,11 @@ define(function(require) {
         defaultTime: null,
 
         /**
+         * ClassName for empty field
+         */
+        emptyClassName: 'input--empty',
+
+        /**
          * Returns supper prototype
          *
          * @returns {Object}
@@ -83,6 +88,7 @@ define(function(require) {
             this.$frontTimeField.off().remove();
             if (this.$frontDateField.data('isWrapped')) {
                 this.$frontDateField.unwrap();
+                this.$frontDateField.removeData('isWrapped');
             }
             this._super().dispose.apply(this, arguments);
         },
@@ -105,6 +111,8 @@ define(function(require) {
             this.$frontTimeField.attr(options.timeInputAttrs);
             this.$frontTimeField.attr('data-fake-front-field', '');
             this.$frontTimeField.on('keyup change', _.bind(this.updateOrigin, this));
+            this.$frontTimeField.on('keypress keyup change focus blur', _.bind(this.checkEmpty, this));
+            this.checkEmpty();
             this.$frontDateField.on('blur', function(e) {
                 $(this).parent().removeClass(DATEPICKER_DROPDOWN_CLASS_NAME + ' ' + DATEPICKER_DROPUP_CLASS_NAME);
             }).on('datepicker:dialogReposition', function(e, position) {
@@ -165,10 +173,25 @@ define(function(require) {
          * Destroys picker widget
          */
         destroyTimePickerWidget: function() {
+            if (!this.$frontTimeField.data('timepicker-settings')) {
+                // the widget was already removed.
+                return;
+            }
             // this will trigger hide event before remove
             // that is not done by default implementation
             this.$frontTimeField.timepicker('hide');
             this.$frontTimeField.timepicker('remove');
+        },
+
+        /**
+         * Update empty state
+         */
+        checkEmpty: function() {
+            this._super().checkEmpty.apply(this, arguments);
+
+            if (this.nativeMode && this.$frontTimeField) {
+                this.$frontTimeField.toggleClass(this.emptyClassName, !this.$frontTimeField.val().length);
+            }
         },
 
         /**
@@ -280,6 +303,9 @@ define(function(require) {
         getFrontendMoment: function() {
             var date = this.$frontDateField.val();
             var time = this.$frontTimeField.val();
+            if (_.isEmpty(_.trim(date + time))) {
+                return null;
+            }
             var value = date + this.getSeparatorFormat() + time;
             var format = this.getDateTimeFormat();
             var momentInstance = moment.utc(value, format, true);

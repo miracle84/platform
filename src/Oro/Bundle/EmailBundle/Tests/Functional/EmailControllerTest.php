@@ -4,9 +4,6 @@ namespace Oro\Bundle\EmailBundle\Tests\Functional;
 
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 
-/**
- * @dbIsolation
- */
 class EmailControllerTest extends WebTestCase
 {
     protected function setUp()
@@ -109,6 +106,9 @@ class EmailControllerTest extends WebTestCase
         $result = $this->client->getResponse();
         $this->assertResponseStatusCodeEquals($result, 200);
         $this->assertResponseContentTypeEquals($result, $attachment->getContentType());
+
+        $path = substr($this->client->getRequest()->getPathInfo(), 1);
+        $this->getContainer()->get('oro_attachment.file_manager')->deleteFile($path);
     }
 
     public function testDownloadAttachments()
@@ -194,7 +194,7 @@ class EmailControllerTest extends WebTestCase
                 'values' => $this->getReference('emailUser_for_mass_mark_test')->getId()
             ]
         );
-        $this->client->request('GET', $url);
+        $this->client->request('POST', $url);
         $result = $this->client->getResponse();
         $data = json_decode($result->getContent(), true);
         $this->assertTrue($data['successful'] === true);
@@ -213,7 +213,7 @@ class EmailControllerTest extends WebTestCase
                 'values' => $this->getReference('emailUser_for_mass_mark_test')->getId()
             ]
         );
-        $this->client->request('GET', $url);
+        $this->client->request('POST', $url);
         $result = $this->client->getResponse();
         $data = json_decode($result->getContent(), true);
         $this->assertTrue($data['successful'] === true);
@@ -284,5 +284,53 @@ class EmailControllerTest extends WebTestCase
         $response = $this->getJsonResponseContent($this->client->getResponse(), 200);
         $this->assertEquals(1, $response['count']);
         $this->assertCount(1, $response['emails']);
+    }
+
+    public function testAccessRoutesInWrongWayValidation()
+    {
+        $this->client->followRedirects();
+        $emailId = $this->getReference('email_1')->getId();
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_view_group', ['id' => $emailId])
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_email_create')
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_email_reply', ['id' => $emailId])
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_email_reply_all', ['id' => $emailId])
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_email_forward', ['id' => $emailId])
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_widget_base_emails')
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
+
+        $this->client->request(
+            'GET',
+            $this->getUrl('oro_email_widget_emails')
+        );
+        $this->assertHtmlResponseStatusCodeEquals($this->client->getResponse(), 404);
     }
 }

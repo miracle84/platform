@@ -4,7 +4,7 @@ namespace Oro\Bundle\ImportExportBundle\Tests\Unit\Processor;
 
 use Oro\Bundle\ImportExportBundle\Processor\ImportProcessor;
 
-class ImportProcessorTest extends \PHPUnit_Framework_TestCase
+class ImportProcessorTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ImportProcessor
@@ -12,12 +12,12 @@ class ImportProcessorTest extends \PHPUnit_Framework_TestCase
     protected $processor;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $serializer;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $context;
 
@@ -53,9 +53,9 @@ class ImportProcessorTest extends \PHPUnit_Framework_TestCase
             ->method('getOption', 'addFailureException')
             ->with('entityName')
             ->will($this->returnValue('\stdClass'));
-        $this->context->expects($this->once())
+        $this->context
             ->method('setValue')
-            ->with('itemData', $this->item);
+            ->withConsecutive(...[['rawItemData', $this->anything()], ['itemData', $this->item]]);
         $this->context->expects($this->any())
             ->method('getConfiguration')
             ->will($this->returnValue([]));

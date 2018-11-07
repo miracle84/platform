@@ -3,7 +3,7 @@
 {% block content %}
     <div class="layout-content dashboard-container-wrapper">
         <div class="container-fluid page-title">
-            <div class="navigation clearfix navbar-extra navbar-extra-right">
+            <div class="navigation navbar-extra navbar-extra-right">
                 <div class="row">
                     {% block title %}
                         <div class="pull-left pull-left-extra">
@@ -18,9 +18,13 @@
 
                             {% block navButtons %}
                                 {% if dashboards|length > 1 %}
+                                    {% import 'OroUIBundle::macros.html.twig' as UI %}
+
                                     <div class="dashboard-selector-container pull-left">
                                         <label for="dashboard_selector">{{ 'oro.dashboard.entity_plural_label'|trans }}:</label>
-                                        <select id="dashboard_selector">
+                                        <select id="dashboard_selector" {{ UI.renderPageComponentAttributes({
+                                            view: 'orodashboard/js/app/views/dashboard-change-view'
+                                        }) }}>
                                             <option>{{ 'oro.dashboard.title.chose_dashboard'|trans }}</option>
                                             {% for dashboardModel in dashboards %}
                                                 <option value="{{ dashboardModel.id }}">
@@ -29,16 +33,6 @@
                                             {% endfor %}
                                         </select>
                                     </div>
-
-                                    <script type="text/javascript">
-                                        require(['jquery', 'routing', 'oroui/js/mediator'],
-                                        function($, routing, mediator){
-                                            $('#dashboard_selector').on('change', function (e) {
-                                                var url = routing.generate('oro_dashboard_view', {id: $(e.currentTarget).val(), change_dashboard: true});
-                                                mediator.execute('redirectTo', {url: url}, {redirect: true});
-                                            });
-                                        });
-                                    </script>
                                 {% endif %}
                             {% endblock navButtons %}
                             {% placeholder dashboard_navButtons_after %}
@@ -48,20 +42,16 @@
             </div>
         </div>
         {% block widgets_content %}
-            <div class="scrollable-container">
-                <div class="responsive-section launchpad-container">
-                    <div class="clearfix">
-                        <div class="container">
-                            {% block widgets %}
-                                <div class="responsive-cell dashboard-column">
-                                    {% placeholder quick_launchpad_left_column %}
-                                </div>
-                                <div class="responsive-cell dashboard-column">
-                                    {% placeholder quick_launchpad_right_column %}
-                                </div>
-                            {% endblock widgets %}
-                        </div>
+            <div class="container-fluid scrollable-container">
+                <div class="row launchpad-container">
+                {% block widgets %}
+                    <div class="launchpad-first-column">
+                        {% placeholder quick_launchpad_left_column %}
                     </div>
+                    <div class="launchpad-second-column">
+                        {% placeholder quick_launchpad_right_column %}
+                    </div>
+                {% endblock widgets %}
                 </div>
             </div>
         {% endblock widgets_content %}

@@ -1,78 +1,122 @@
 <?php
+
 namespace Oro\Bundle\SyncBundle\Tests\Unit\EventListener;
 
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SyncBundle\Client\ConnectionChecker;
+use Oro\Bundle\SyncBundle\Client\WebsocketClientInterface;
 use Oro\Bundle\SyncBundle\EventListener\MaintenanceListener;
 
-class MaintenanceListenerTest extends \PHPUnit_Framework_TestCase
+class MaintenanceListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var WebsocketClientInterface|\PHPUnit\Framework\MockObject\MockObject
      */
-    private $topicPublisher;
+    private $websocketClient;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var ConnectionChecker|\PHPUnit\Framework\MockObject\MockObject
      */
-    private $securityFacade;
+    private $connectionChecker;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var TokenAccessorInterface|\PHPUnit\Framework\MockObject\MockObject
      */
-    private $logger;
+    private $tokenAccessor;
+
+    /**
+     * @var MaintenanceListener
+     */
+    private $publisher;
 
     protected function setUp()
     {
-        $this->topicPublisher = $this->getMockBuilder('Oro\Bundle\SyncBundle\Wamp\TopicPublisher')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->logger = $this->getMockBuilder('Psr\Log\LoggerInterface')
-            ->disableOriginalConstructor()
-            ->getMock();
-    }
+        $this->websocketClient = $this->createMock(WebsocketClientInterface::class);
+        $this->connectionChecker = $this->createMock(ConnectionChecker::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
-    protected function tearDown()
-    {
-        unset($this->topicPublisher);
+        $this->publisher = new MaintenanceListener(
+            $this->websocketClient,
+            $this->connectionChecker,
+            $this->tokenAccessor
+        );
     }
 
     public function testOnModeOn()
     {
         $expectedUserId = 0;
-        $this->topicPublisher
-            ->expects($this->once())
-            ->method('send')
-            ->with('oro/maintenance', array('isOn' => true, 'userId' => $expectedUserId));
-        $this->securityFacade->expects($this->once())
-            ->method('getLoggedUserId')
-            ->will($this->returnValue($expectedUserId));
-        /** @var MaintenanceListener $publisher */
-        $publisher = new MaintenanceListener(
-            $this->topicPublisher,
-            $this->securityFacade,
-            $this->logger
-        );
-        $publisher->onModeOn();
+
+        $this->connectionChecker
+            ->expects(self::once())
+            ->method('checkConnection')
+            ->willReturn(true);
+
+        $this->websocketClient
+            ->expects(self::once())
+            ->method('publish')
+            ->with('oro/maintenance', ['isOn' => true, 'userId' => $expectedUserId]);
+        $this->tokenAccessor
+            ->expects(self::once())
+            ->method('getUserId')
+            ->willReturn($expectedUserId);
+
+        $this->publisher->onModeOn();
+    }
+
+    public function testOnModeOnNoConnection()
+    {
+        $this->connectionChecker
+            ->expects(self::once())
+            ->method('checkConnection')
+            ->willReturn(false);
+
+        $this->websocketClient
+            ->expects(self::never())
+            ->method(self::anything());
+
+        $this->tokenAccessor
+            ->expects(self::never())
+            ->method(self::anything());
+
+        $this->publisher->onModeOn();
     }
 
     public function testOnModeOff()
     {
         $expectedUserId = 42;
-        $this->topicPublisher
-            ->expects($this->once())
-            ->method('send')
-            ->with('oro/maintenance', array('isOn' => false, 'userId' => $expectedUserId));
-        $this->securityFacade->expects($this->once())
-            ->method('getLoggedUserId')
-            ->will($this->returnValue($expectedUserId));
-        /** @var MaintenanceListener $publisher */
-        $publisher = new MaintenanceListener(
-            $this->topicPublisher,
-            $this->securityFacade,
-            $this->logger
-        );
-        $publisher->onModeOff();
+
+        $this->connectionChecker
+            ->expects(self::once())
+            ->method('checkConnection')
+            ->willReturn(true);
+
+        $this->websocketClient
+            ->expects(self::once())
+            ->method('publish')
+            ->with('oro/maintenance', ['isOn' => false, 'userId' => $expectedUserId]);
+        $this->tokenAccessor
+            ->expects(self::once())
+            ->method('getUserId')
+            ->willReturn($expectedUserId);
+
+        $this->publisher->onModeOff();
+    }
+
+    public function testOnModeOffNoConnection()
+    {
+        $this->connectionChecker
+            ->expects(self::once())
+            ->method('checkConnection')
+            ->willReturn(false);
+
+        $this->websocketClient
+            ->expects(self::never())
+            ->method(self::anything());
+
+        $this->tokenAccessor
+            ->expects(self::never())
+            ->method(self::anything());
+
+        $this->publisher->onModeOff();
     }
 }

@@ -12,6 +12,7 @@ class Lexer
         Query::KEYWORD_SELECT,
         Query::KEYWORD_FROM,
         Query::KEYWORD_WHERE,
+        Query::KEYWORD_AGGREGATE,
 
         Query::KEYWORD_AND,
         Query::KEYWORD_OR,
@@ -89,7 +90,7 @@ class Lexer
                 $cursor += strlen($match[0]);
             } elseif (preg_match(
                 '/and(?=[\s(])|\>\=|or(?=[\s(])|\<\=|in(?=[\s(])|\=|\!\=|\*|~|\!~|\>|\<|' .
-                'exists(?=[\s(])|notexists(?=[\s(])|starts_with(?=[\s(])|like(?=[\s(])/A',
+                'exists(?=[\s(])|notexists(?=[\s(])|starts_with(?=[\s(])|like(?=[\s(])|notlike(?=[\s(])/A',
                 $expression,
                 $match,
                 null,

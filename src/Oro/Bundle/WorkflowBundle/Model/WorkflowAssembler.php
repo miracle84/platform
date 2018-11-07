@@ -2,19 +2,16 @@
 
 namespace Oro\Bundle\WorkflowBundle\Model;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Doctrine\Common\Collections\Collection;
-
 use Oro\Bundle\ActionBundle\Model\Attribute;
-use Oro\Bundle\WorkflowBundle\Exception\UnknownStepException;
-use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
+use Oro\Bundle\WorkflowBundle\Exception\UnknownStepException;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
-
 use Oro\Component\Action\Exception\AssemblerException;
 use Oro\Component\Action\Model\AbstractAssembler as BaseAbstractAssembler;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class WorkflowAssembler extends BaseAbstractAssembler
 {
@@ -240,23 +237,7 @@ class WorkflowAssembler extends BaseAbstractAssembler
      */
     protected function assembleTransitions(array $configuration, Collection $steps, Collection $attributes)
     {
-        $transitionsConfiguration = $this->getOption(
-            $configuration,
-            WorkflowConfiguration::NODE_TRANSITIONS,
-            []
-        );
-        $transitionDefinitionsConfiguration = $this->getOption(
-            $configuration,
-            WorkflowConfiguration::NODE_TRANSITION_DEFINITIONS,
-            []
-        );
-
-        return $this->transitionAssembler->assemble(
-            $transitionsConfiguration,
-            $transitionDefinitionsConfiguration,
-            $steps,
-            $attributes
-        );
+        return $this->transitionAssembler->assemble($configuration, $steps, $attributes);
     }
 
     /**

@@ -5,17 +5,16 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Layout\Mapper;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\Mapping\ClassMetadata;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\Stub\Layout\Mapper\AttributeBlockTypeMapperStub;
 
-class AbstractAttributeBlockTypeMapperTest extends \PHPUnit_Framework_TestCase
+class AbstractAttributeBlockTypeMapperTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AttributeBlockTypeMapperStub */
     private $mapper;
 
-    /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
     private $registry;
 
     /**

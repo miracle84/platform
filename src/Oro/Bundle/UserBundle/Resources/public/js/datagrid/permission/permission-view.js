@@ -8,15 +8,27 @@ define(function(require) {
 
     PermissionView = BaseView.extend({
         tagName: 'li',
+
         className: 'action-permissions__item dropdown',
+
         template: require('tpl!orouser/templates/datagrid/permission/permission-view.html'),
+
         events: {
             'shown.bs.dropdown': 'onDropdownOpen',
             'hide.bs.dropdown': 'onDropdownClose'
         },
+
         listen: {
             'change:access_level model': 'render'
         },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function PermissionView() {
+            PermissionView.__super__.constructor.apply(this, arguments);
+        },
+
         id: function() {
             return 'ActionPermissionsCell-' + this.cid;
         },
@@ -32,11 +44,12 @@ define(function(require) {
             var dropdown = this.subview('dropdown');
             this.$el.trigger('tohide.bs.dropdown');
             if (dropdown) {
+                this.$('[data-toggle="dropdown"]').dropdown('dispose');
                 dropdown.$el.detach();
             }
             PermissionView.__super__.render.call(this);
             if (dropdown) {
-                this.$el.append(dropdown.$el);
+                this.$('[data-role="dropdown-menu-content"]').replaceWith(dropdown.$el);
             }
         },
 
@@ -45,18 +58,18 @@ define(function(require) {
             var accessLevels = this.model.accessLevels;
             if (!dropdown) {
                 dropdown = new DropdownMenuCollectionView({
+                    el: this.$('[data-role="dropdown-menu-content"]'),
                     collection: accessLevels,
                     keysMap: {
                         id: 'access_level',
                         text: 'access_level_label'
-                    },
-                    dropdownMenuOptions: {
-                        flipMode: true
                     }
                 });
                 this.listenTo(dropdown, 'selected', this.onAccessLevelSelect);
+                this.listenTo(this.model.accessLevels, 'sync', function() {
+                    this.$('[data-toggle="dropdown"]').dropdown('update');
+                });
                 this.subview('dropdown', dropdown);
-                this.$el.append(dropdown.$el);
             }
             if (!accessLevels.length) {
                 accessLevels.fetch({

@@ -2,18 +2,17 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\DependencyInjection;
 
+use Oro\Bundle\TranslationBundle\DependencyInjection\OroTranslationExtension;
 use Symfony\Component\DependencyInjection\Definition;
 
-use Oro\Bundle\TranslationBundle\DependencyInjection\OroTranslationExtension;
-
-class OroTranslationExtensionTest extends \PHPUnit_Framework_TestCase
+class OroTranslationExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var array
      */
     protected $expectedDefinitions = array(
         'oro_translation.form.type.translatable_entity',
-        'oro_translation.form.type.jqueryselect2_translatable_entity',
+        'oro_translation.form.type.select2_translatable_entity',
         'oro_translation.controller',
     );
 
@@ -36,7 +35,11 @@ class OroTranslationExtensionTest extends \PHPUnit_Framework_TestCase
             'js_translation' => array(
                 'domains' => array('validators'),
                 'debug' => false,
-            )
+            ),
+            'locales' => ['en'],
+            'default_required' => true,
+            'manager_registry' => 'doctrine',
+            'templating' => 'foo.html.twig'
         )
     );
 

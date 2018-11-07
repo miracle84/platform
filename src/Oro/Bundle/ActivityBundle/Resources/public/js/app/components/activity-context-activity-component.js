@@ -1,18 +1,31 @@
 define(function(require) {
     'use strict';
 
+    var ActivityContextActivityComponent;
     var BaseComponent = require('oroui/js/app/components/base/component');
     var ActivityContextActivityView = require('oroactivity/js/app/views/activity-context-activity-view');
 
     /**
      * @exports ActivityContextActivityComponent
      */
-    return BaseComponent.extend({
+    ActivityContextActivityComponent = BaseComponent.extend({
         contextsView: null,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityContextActivityComponent() {
+            ActivityContextActivityComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
+            this._deferredInit();
             this.options = options;
             this.initView();
+            this.listenTo(this.contextsView, 'render', this._resolveDeferredInit.bind(this));
         },
 
         initView: function() {
@@ -29,4 +42,6 @@ define(function(require) {
             });
         }
     });
+
+    return ActivityContextActivityComponent;
 });

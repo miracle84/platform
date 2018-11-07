@@ -20,10 +20,10 @@ define([
         widgetOptions: null,
         widgetComponent: null,
         widgetDefaultOptions: {
-            type: 'dialog',
-            multiple: false,
+            'type': 'dialog',
+            'multiple': false,
             'reload-grid-name': '',
-            options: {
+            'options': {
                 dialogOptions: {
                     title: __('Update item'),
                     allowMaximize: false,
@@ -31,12 +31,19 @@ define([
                     modal: true,
                     resizable: false,
                     maximizedHeightDecreaseBy: 'minimize-bar',
-                    width: 550
+                    width: 635
                 }
             }
         },
         defaultMessages: {
             saved: __('Item updated successfully')
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DialogAction() {
+            DialogAction.__super__.constructor.apply(this, arguments);
         },
 
         /**

@@ -6,7 +6,7 @@ use Oro\Component\ExpressionLanguage\Lexer;
 use Symfony\Component\ExpressionLanguage\Token;
 use Symfony\Component\ExpressionLanguage\TokenStream;
 
-class LexerTest extends \PHPUnit_Framework_TestCase
+class LexerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider getTokenizeData
@@ -87,6 +87,14 @@ class LexerTest extends \PHPUnit_Framework_TestCase
                     new Token('number', '5', 5),
                 ],
                 '3 = 5',
+            ],
+            [
+                [
+                    new Token('number', '3', 1),
+                    new Token('operator', '==', 3),
+                    new Token('number', '5', 6),
+                ],
+                '3 == 5',
             ],
         ];
     }

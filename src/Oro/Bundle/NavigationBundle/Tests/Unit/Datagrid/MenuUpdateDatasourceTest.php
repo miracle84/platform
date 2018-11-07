@@ -4,24 +4,27 @@ namespace Oro\Bundle\NavigationBundle\Tests\Unit\Datagrid;
 
 use Knp\Menu\MenuFactory;
 use Knp\Menu\Util\MenuManipulator;
-
 use Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface;
+use Oro\Bundle\NavigationBundle\Config\MenuConfiguration;
 use Oro\Bundle\NavigationBundle\Datagrid\MenuUpdateDatasource;
 use Oro\Bundle\NavigationBundle\Provider\BuilderChainProvider;
 
-class MenuUpdateDatasourceTest extends \PHPUnit_Framework_TestCase
+class MenuUpdateDatasourceTest extends \PHPUnit\Framework\TestCase
 {
     /** @var MenuUpdateDatasource */
     protected $datasource;
 
-    /** @var BuilderChainProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var BuilderChainProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $chainProvider;
 
-    /** @var MenuManipulator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var MenuManipulator|\PHPUnit\Framework\MockObject\MockObject */
     protected $menuManipulator;
 
     /** @var string */
     protected $scopeType = 'default';
+
+    /** @var MenuConfiguration|\PHPUnit\Framework\MockObject\MockObject */
+    protected $menuConfiguration;
 
     /**
      * {@inheritdoc}
@@ -30,13 +33,21 @@ class MenuUpdateDatasourceTest extends \PHPUnit_Framework_TestCase
     {
         $this->chainProvider = $this->createMock(BuilderChainProvider::class);
         $this->menuManipulator = $this->createMock(MenuManipulator::class);
+        $this->menuConfiguration = $this->getMockBuilder(MenuConfiguration::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
-        $this->datasource = new MenuUpdateDatasource($this->chainProvider, $this->menuManipulator, $this->scopeType);
+        $this->datasource = new MenuUpdateDatasource(
+            $this->chainProvider,
+            $this->menuManipulator,
+            $this->scopeType,
+            $this->menuConfiguration
+        );
     }
 
     public function testProcess()
     {
-        /** @var DatagridInterface|\PHPUnit_Framework_MockObject_MockObject $grid */
+        /** @var DatagridInterface|\PHPUnit\Framework\MockObject\MockObject $grid */
         $grid = $this->createMock(DatagridInterface::class);
         $grid->expects($this->once())
             ->method('setDatasource')
@@ -53,7 +64,9 @@ class MenuUpdateDatasourceTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetResults(array $menu, $resultCount)
     {
-        $this->datasource->setMenuConfiguration(['tree' => [$menu['name'] => $menu]]);
+        $this->menuConfiguration->expects(self::once())
+            ->method('getTree')
+            ->willReturn([$menu['name'] => $menu]);
 
         $factory = new MenuFactory();
         $menuItem = $factory->createItem($menu['name'], $menu);

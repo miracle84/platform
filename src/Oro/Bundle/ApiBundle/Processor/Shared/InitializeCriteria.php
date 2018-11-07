@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Collection\Criteria;
 use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Checks whether the Criteria object exists in the Context and adds it if not.
+ * Checks whether the Criteria object exists in the context and adds it if not.
  */
 class InitializeCriteria implements ProcessorInterface
 {
@@ -47,13 +47,13 @@ class InitializeCriteria implements ProcessorInterface
             return;
         }
 
-        $entityClass = $context->getClassName();
-        if (!$this->doctrineHelper->isManageableEntityClass($entityClass)) {
+        $entityClass = $this->doctrineHelper->getManageableEntityClass(
+            $context->getClassName(),
+            $context->getConfig()
+        );
+        if (!$entityClass) {
             // only manageable entities or resources based on manageable entities are supported
-            $entityClass = $context->getConfig()->getParentResourceClass();
-            if (!$entityClass || !$this->doctrineHelper->isManageableEntityClass($entityClass)) {
-                return;
-            }
+            return;
         }
 
         $context->setCriteria(new Criteria($this->entityClassResolver));

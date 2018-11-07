@@ -3,9 +3,9 @@
 namespace Oro\Bundle\EntityExtendBundle\Tools\DumperExtensions;
 
 use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
+use Oro\Bundle\EntityBundle\EntityConfig\IndexScope;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
-
 use Oro\Bundle\EntityExtendBundle\Extend\FieldTypeHelper;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendConfigDumper;
 
@@ -82,7 +82,10 @@ class IndexEntityConfigDumperExtension extends AbstractEntityConfigDumperExtensi
                     if (!isset($indices[$fieldName]) || !$indices[$fieldName]) {
                         // TODO: need to be changed to fieldName => columnName
                         // TODO: should be done in scope https://magecore.atlassian.net/browse/BAP-3940
-                        $indices[$fieldName] = true;
+                        $indices[$fieldName] = IndexScope::INDEX_SIMPLE;
+                        if ($fieldConfig->is('unique')) {
+                            $indices[$fieldName] = IndexScope::INDEX_UNIQUE;
+                        }
                         $hasChanges          = true;
                     }
                 } elseif (isset($indices[$fieldName]) || array_key_exists($fieldName, $indices)) {

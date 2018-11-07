@@ -2,41 +2,46 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource\Shared\JsonApi;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
+use Oro\Bundle\ApiBundle\Exception\RuntimeException;
+use Oro\Bundle\ApiBundle\Metadata\AssociationMetadata;
+use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Model\ErrorSource;
 use Oro\Bundle\ApiBundle\Processor\Subresource\ChangeRelationshipContext;
 use Oro\Bundle\ApiBundle\Request\Constraint;
 use Oro\Bundle\ApiBundle\Request\EntityIdTransformerInterface;
+use Oro\Bundle\ApiBundle\Request\EntityIdTransformerRegistry;
 use Oro\Bundle\ApiBundle\Request\JsonApi\JsonApiDocumentBuilder as JsonApiDoc;
+use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Bundle\ApiBundle\Request\ValueNormalizer;
 use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Prepares JSON.API request data to be processed by Symfony Forms.
+ * Prepares JSON.API request data for a relationship to be processed by Symfony Forms.
  */
 class NormalizeRequestData implements ProcessorInterface
 {
     /** @var ValueNormalizer */
     protected $valueNormalizer;
 
-    /** @var EntityIdTransformerInterface */
-    protected $entityIdTransformer;
+    /** @var EntityIdTransformerRegistry */
+    protected $entityIdTransformerRegistry;
 
     /** @var ChangeRelationshipContext */
     protected $context;
 
     /**
-     * @param ValueNormalizer              $valueNormalizer
-     * @param EntityIdTransformerInterface $entityIdTransformer
+     * @param ValueNormalizer             $valueNormalizer
+     * @param EntityIdTransformerRegistry $entityIdTransformerRegistry
      */
     public function __construct(
         ValueNormalizer $valueNormalizer,
-        EntityIdTransformerInterface $entityIdTransformer
+        EntityIdTransformerRegistry $entityIdTransformerRegistry
     ) {
         $this->valueNormalizer = $valueNormalizer;
-        $this->entityIdTransformer = $entityIdTransformer;
+        $this->entityIdTransformerRegistry = $entityIdTransformerRegistry;
     }
 
     /**
@@ -62,6 +67,7 @@ class NormalizeRequestData implements ProcessorInterface
     protected function normalizeData(array $data)
     {
         $associationName = $this->context->getAssociationName();
+        $targetMetadata = $this->getAssociationMetadata($associationName)->getTargetMetadata();
         $dataPointer = $this->buildPointer('', JsonApiDoc::DATA);
         if ($this->context->isCollection()) {
             $associationData = [];
@@ -69,14 +75,16 @@ class NormalizeRequestData implements ProcessorInterface
                 $associationData[] = $this->normalizeRelationId(
                     $this->buildPointer($dataPointer, $key),
                     $value[JsonApiDoc::TYPE],
-                    $value[JsonApiDoc::ID]
+                    $value[JsonApiDoc::ID],
+                    $targetMetadata
                 );
             }
         } elseif (null !== $data[JsonApiDoc::DATA]) {
             $associationData = $this->normalizeRelationId(
                 $dataPointer,
                 $data[JsonApiDoc::DATA][JsonApiDoc::TYPE],
-                $data[JsonApiDoc::DATA][JsonApiDoc::ID]
+                $data[JsonApiDoc::DATA][JsonApiDoc::ID],
+                $targetMetadata
             );
         } else {
             $associationData = null;
@@ -86,13 +94,14 @@ class NormalizeRequestData implements ProcessorInterface
     }
 
     /**
-     * @param string $pointer
-     * @param string $entityType
-     * @param mixed  $entityId
+     * @param string         $pointer
+     * @param string         $entityType
+     * @param mixed          $entityId
+     * @param EntityMetadata $entityMetadata
      *
      * @return array ['class' => entity class, 'id' => entity id]
      */
-    protected function normalizeRelationId($pointer, $entityType, $entityId)
+    protected function normalizeRelationId($pointer, $entityType, $entityId, EntityMetadata $entityMetadata)
     {
         $entityClass = $this->normalizeEntityClass(
             $this->buildPointer($pointer, JsonApiDoc::TYPE),
@@ -101,8 +110,8 @@ class NormalizeRequestData implements ProcessorInterface
         if ($entityClass) {
             $entityId = $this->normalizeEntityId(
                 $this->buildPointer($pointer, JsonApiDoc::ID),
-                $entityClass,
-                $entityId
+                $entityId,
+                $entityMetadata
             );
         }
 
@@ -113,16 +122,17 @@ class NormalizeRequestData implements ProcessorInterface
     }
 
     /**
-     * @param string $pointer
-     * @param string $entityClass
-     * @param mixed  $entityId
+     * @param string         $pointer
+     * @param mixed          $entityId
+     * @param EntityMetadata $entityMetadata
      *
      * @return mixed
      */
-    protected function normalizeEntityId($pointer, $entityClass, $entityId)
+    protected function normalizeEntityId($pointer, $entityId, EntityMetadata $entityMetadata)
     {
         try {
-            return $this->entityIdTransformer->reverseTransform($entityClass, $entityId);
+            return $this->getEntityIdTransformer($this->context->getRequestType())
+                ->reverseTransform($entityId, $entityMetadata);
         } catch (\Exception $e) {
             $error = Error::createValidationError(Constraint::ENTITY_ID)
                 ->setInnerException($e)
@@ -158,6 +168,16 @@ class NormalizeRequestData implements ProcessorInterface
     }
 
     /**
+     * @param RequestType $requestType
+     *
+     * @return EntityIdTransformerInterface
+     */
+    protected function getEntityIdTransformer(RequestType $requestType): EntityIdTransformerInterface
+    {
+        return $this->entityIdTransformerRegistry->getEntityIdTransformer($requestType);
+    }
+
+    /**
      * @param string $parentPath
      * @param string $property
      *
@@ -166,5 +186,24 @@ class NormalizeRequestData implements ProcessorInterface
     protected function buildPointer($parentPath, $property)
     {
         return $parentPath . '/' . $property;
+    }
+
+    /**
+     * @param string $associationName
+     *
+     * @return AssociationMetadata
+     */
+    private function getAssociationMetadata($associationName)
+    {
+        $associationMetadata = $this->context->getParentMetadata()->getAssociation($associationName);
+        if (null === $associationMetadata) {
+            throw new RuntimeException(\sprintf(
+                'The metadata for association "%s::%s" does not exist.',
+                $this->context->getParentClassName(),
+                $associationName
+            ));
+        }
+
+        return $associationMetadata;
     }
 }

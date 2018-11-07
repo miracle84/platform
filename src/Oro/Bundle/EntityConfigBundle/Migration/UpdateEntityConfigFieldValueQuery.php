@@ -3,11 +3,9 @@
 namespace Oro\Bundle\EntityConfigBundle\Migration;
 
 use Doctrine\DBAL\Types\Type;
-
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\MigrationBundle\Migration\ArrayLogger;
 use Oro\Bundle\MigrationBundle\Migration\ParametrizedMigrationQuery;
+use Psr\Log\LoggerInterface;
 
 class UpdateEntityConfigFieldValueQuery extends ParametrizedMigrationQuery
 {
@@ -46,8 +44,8 @@ class UpdateEntityConfigFieldValueQuery extends ParametrizedMigrationQuery
      * @param string $fieldName
      * @param string $scope
      * @param string $code
-     * @param string $value
-     * @param string $replaceValue if passed, updating will not happen if existing value !== replaceValue
+     * @param string|array $value
+     * @param string|array $replaceValue if passed, updating will not happen if existing value !== replaceValue
      */
     public function __construct($entityName, $fieldName, $scope, $code, $value, $replaceValue = null)
     {

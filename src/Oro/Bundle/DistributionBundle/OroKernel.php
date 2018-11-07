@@ -2,21 +2,21 @@
 
 namespace Oro\Bundle\DistributionBundle;
 
+use Oro\Bundle\DistributionBundle\Dumper\PhpBundlesDumper;
+use Oro\Bundle\DistributionBundle\Error\ErrorHandler;
+use Oro\Component\Config\CumulativeResourceManager;
+use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
 use OroRequirements;
-
-use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Bridge\ProxyManager\LazyProxy\Instantiator\RuntimeInstantiator;
+use Symfony\Bridge\ProxyManager\LazyProxy\PhpDumper\ProxyDumper;
+use Symfony\Component\ClassLoader\ClassCollectionLoader;
 use Symfony\Component\Config\ConfigCache;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
-use Symfony\Bridge\ProxyManager\LazyProxy\PhpDumper\ProxyDumper;
-use Symfony\Bridge\ProxyManager\LazyProxy\Instantiator\RuntimeInstantiator;
-
-use Oro\Component\Config\CumulativeResourceManager;
-use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
-use Oro\Bundle\DistributionBundle\Dumper\PhpBundlesDumper;
-use Oro\Bundle\DistributionBundle\Error\ErrorHandler;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * This class should work on PHP 5.3
@@ -31,43 +31,38 @@ abstract class OroKernel extends Kernel
      */
     protected function initializeBundles()
     {
+        // clear state of CumulativeResourceManager
+        CumulativeResourceManager::getInstance()->clear();
+
         parent::initializeBundles();
 
-        // pass bundles to CumulativeResourceManager
+        // initialize CumulativeResourceManager
         $bundles = array();
         foreach ($this->bundles as $name => $bundle) {
             $bundles[$name] = get_class($bundle);
         }
-
-        CumulativeResourceManager::getInstance()->setBundles($bundles)
-                                                ->setAppRootDir($this->rootDir);
+        CumulativeResourceManager::getInstance()
+            ->setBundles($bundles)
+            ->setAppRootDir($this->rootDir);
     }
 
     /**
-     * Get the list of all "autoregistered" bundles
-     *
-     * @return array List ob bundle objects
+     * {@inheritdoc}
      */
     public function registerBundles()
     {
-        // clear state of CumulativeResourceManager
-        CumulativeResourceManager::getInstance()->clear();
-
         $bundles = array();
-
-        if (!$this->getCacheDir()) {
+        $cacheDir = $this->getCacheDir();
+        if (!$cacheDir) {
             foreach ($this->collectBundles() as $class => $params) {
                 $bundles[] = $params['kernel']
                     ? new $class($this)
                     : new $class;
             }
         } else {
-            $file  = $this->getCacheDir() . '/bundles.php';
-            $cache = new ConfigCache($file, false);
-
-            if (!$cache->isFresh($file)) {
+            $cache = new ConfigCache($cacheDir . '/bundles.php', false);
+            if (!$cache->isFresh()) {
                 $dumper = new PhpBundlesDumper($this->collectBundles());
-
                 $cache->write($dumper->dump());
             }
 
@@ -134,15 +129,15 @@ abstract class OroKernel extends Kernel
     {
         $files = $this->findBundles(
             array(
-                $this->getRootDir() . '/../src',
-                $this->getRootDir() . '/../vendor'
+                $this->getProjectDir() . '/src',
+                $this->getProjectDir() . '/vendor'
             )
         );
 
-        $bundles    = array();
+        $bundles = array();
         $exclusions = array();
         foreach ($files as $file) {
-            $import  = Yaml::parse(file_get_contents($file));
+            $import = Yaml::parse(file_get_contents($file));
             if (!empty($import)) {
                 if (!empty($import['bundles'])) {
                     $bundles = array_merge($bundles, $this->getBundlesMapping($import['bundles']));
@@ -198,30 +193,11 @@ abstract class OroKernel extends Kernel
      */
     public function compareBundles($a, $b)
     {
-        // @todo: this is preliminary algorithm. we need to implement more sophisticated one,
-        // for example using bundle dependency info from composer.json
         $p1 = (int)$a['priority'];
         $p2 = (int)$b['priority'];
-
-        if ($p1 == $p2) {
-            $n1 = (string)$a['name'];
-            $n2 = (string)$b['name'];
-
-            // make sure OroCRM bundles follow Oro bundles
-            if (strpos($n1, 'Oro') === 0 && strpos($n2, 'Oro') === 0) {
-                if ((strpos($n1, 'OroCRM') === 0) && (strpos($n2, 'OroCRM') === 0)) {
-                    return strcasecmp($n1, $n2);
-                }
-                if (strpos($n1, 'OroCRM') === 0) {
-                    return 1;
-                }
-                if (strpos($n2, 'OroCRM') === 0) {
-                    return -1;
-                }
-            }
-
-            // bundles with the same priorities are sorted alphabetically
-            return strcasecmp($n1, $n2);
+        if ($p1 === $p2) {
+            // bundles with the same priority are sorted alphabetically
+            return strcasecmp((string)$a['name'], (string)$b['name']);
         }
 
         // sort be priority
@@ -237,7 +213,7 @@ abstract class OroKernel extends Kernel
     {
         $phpVersion = phpversion();
 
-        include_once $this->getRootDir() . '/OroRequirements.php';
+        include_once $this->getProjectDir() . '/var/OroRequirements.php';
 
         if (!version_compare($phpVersion, OroRequirements::REQUIRED_PHP_VERSION, '>=')) {
             throw new \Exception(
@@ -254,6 +230,7 @@ abstract class OroKernel extends Kernel
 
     /**
      * {@inheritdoc}
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     protected function dumpContainer(ConfigCache $cache, ContainerBuilder $container, $class, $baseClass)
     {
@@ -264,17 +241,42 @@ abstract class OroKernel extends Kernel
             && class_exists('ProxyManager\Configuration')
             && class_exists('Symfony\Bridge\ProxyManager\LazyProxy\PhpDumper\ProxyDumper')
         ) {
-            $dumper->setProxyDumper(new ProxyDumper(md5($cache->getPath())));
+            $dumper->setProxyDumper(new ProxyDumper());
         }
 
-        $content = $dumper->dump(array('class' => $class, 'base_class' => $baseClass, 'file' => $cache->getPath()));
-        $cache->write($content, $container->getResources());
+        $content = $dumper->dump(array(
+            'class' => $class,
+            'base_class' => $baseClass,
+            'file' => $cache->getPath(),
+            'as_files' => true,
+            'debug' => $this->debug,
+            'inline_class_loader_parameter' => \PHP_VERSION_ID >= 70000 && !$this->loadClassCache
+                && !class_exists(ClassCollectionLoader::class, false)
+                ? 'container.dumper.inline_class_loader'
+                : null,
+            'build_time' => $container->hasParameter('kernel.container_build_time')
+                ? $container->getParameter('kernel.container_build_time')
+                : time(),
+        ));
+
+        $rootCode = array_pop($content);
+        $dir = dirname($cache->getPath()).'/';
+        $fs = new Filesystem();
+
+        foreach ($content as $file => $code) {
+            $fs->dumpFile($dir.$file, $code);
+            @chmod($dir.$file, 0666 & ~umask());
+        }
+        @unlink(dirname($dir.$file).'.legacy');
+
+        $cache->write($rootCode, $container->getResources());
 
         // we should not use parent::stripComments method to cleanup source code from the comments to avoid
         // memory leaks what generate token_get_all function.
-        if (!$this->debug) {
-            $cache->write(php_strip_whitespace($cache->getPath()), $container->getResources());
-        }
+        //@TODO investigate actuality memory leaks what generate token_get_all function in scope BAP-15236.
+//        if (!$this->debug) {
+//            $cache->write(php_strip_whitespace($cache->getPath()), $container->getResources());
+//        }
     }
 
     /**

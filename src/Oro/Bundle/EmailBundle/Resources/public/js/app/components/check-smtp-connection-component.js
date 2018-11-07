@@ -10,6 +10,13 @@ define(function(require) {
 
     CheckSmtpConnectionComponent = BaseComponent.extend({
         /**
+         * @inheritDoc
+         */
+        constructor: function CheckSmtpConnectionComponent() {
+            CheckSmtpConnectionComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Initialize component
          *
          * @param {Object} options
@@ -18,11 +25,11 @@ define(function(require) {
         initialize: function(options) {
             if (options.elementNamePrototype) {
                 var viewOptions = _.extend({
-                    'model': new CheckSmtpConnectionModel({}),
-                    'el': $(options._sourceElement).closest(options.parentElementSelector),
-                    'entity': options.forEntity || 'user',
-                    'entityId': options.id,
-                    'organization': options.organization || ''
+                    model: new CheckSmtpConnectionModel({}),
+                    el: $(options._sourceElement).closest(options.parentElementSelector),
+                    entity: options.forEntity || 'user',
+                    entityId: options.id,
+                    organization: options.organization || ''
                 }, options.viewOptions || {});
                 this.view = new CheckSmtpConnectionView(viewOptions);
             } else {

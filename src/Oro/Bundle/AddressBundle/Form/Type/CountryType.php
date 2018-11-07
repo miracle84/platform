@@ -1,13 +1,17 @@
 <?php
 namespace Oro\Bundle\AddressBundle\Form\Type;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
 use Doctrine\ORM\EntityRepository;
+use Oro\Bundle\TranslationBundle\Form\Type\Select2TranslatableEntityType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class CountryType extends AbstractType
 {
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    /**
+     * {@inheritdoc}
+     */
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             array(
@@ -18,21 +22,28 @@ class CountryType extends AbstractType
                     return $er->createQueryBuilder('c')
                         ->orderBy('c.name', 'ASC');
                 },
+                'choice_label' => 'name',
                 'configs' => array(
                     'allowClear' => true,
                     'placeholder'   => 'oro.address.form.choose_country'
                 ),
-                'empty_value' => '',
+                'placeholder' => '',
                 'empty_data'  => null
             )
         );
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_translatable_entity';
+        return Select2TranslatableEntityType::class;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getName()
     {
         return $this->getBlockPrefix();

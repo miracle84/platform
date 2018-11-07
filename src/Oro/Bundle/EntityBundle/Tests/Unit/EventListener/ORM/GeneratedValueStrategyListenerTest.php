@@ -7,19 +7,18 @@ use Doctrine\ORM\Id\AbstractIdGenerator;
 use Doctrine\ORM\Id\BigIntegerIdentityGenerator;
 use Doctrine\ORM\Id\IdentityGenerator;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\EntityBundle\EventListener\ORM\GeneratedValueStrategyListener;
 use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
 
-class GeneratedValueStrategyListenerTest extends \PHPUnit_Framework_TestCase
+class GeneratedValueStrategyListenerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $event;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $metadata;
 

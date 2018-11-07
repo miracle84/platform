@@ -1,7 +1,7 @@
 layout:
     actions:
         - '@setBlockTheme':
-            themes: 'layout.html.twig'
+            themes: 'OroUIBundle:layouts:blank/page/layout.html.twig'
         - '@addTree':
             items:
                 head:
@@ -9,7 +9,8 @@ layout:
                 title:
                     blockType: title
                     options:
-                        value: '=data["title_provider"].getTitle(context["route_name"], params)'
+                        defaultValue: '=data["title_provider"].getTitle(context["route_name"], params)'
+                        value: '=defaultValue'
                         params: []
                 meta_charset:
                     blockType: meta
@@ -33,13 +34,14 @@ layout:
                 body:
                     blockType: body
                 wrapper:
-                      options:
-                          attr:
-                              id: 'container'
                       blockType: container
                 page_container:
                     blockType: container
                 page_main:
+                    blockType: container
+                page_main_content:
+                    blockType: container
+                page_main_header:
                     blockType: container
                 page_sidebar:
                     blockType: container
@@ -56,7 +58,7 @@ layout:
                 app_script:
                     blockType: script
                     options:
-                        content: 'require(["oroui/js/app"]); require(["oroui/js/init-layout"]);'
+                        content: 'require(["oroui/js/app"]);'
             tree:
                 root:
                     head:
@@ -65,13 +67,15 @@ layout:
                         meta_viewport: ~
                         theme_icon: ~
                         styles: ~
-                        require_js:
-                            requirejs_scripts: ~
-                        require_modules:
-                            app_script: ~
                     body:
                         wrapper:
                             page_container:
                                 page_main:
-                                    page_sidebar: ~
-                                    page_content: ~
+                                    page_main_content:
+                                        page_main_header: ~
+                                        page_sidebar: ~
+                                        page_content: ~
+                        require_js:
+                            requirejs_scripts: ~
+                        require_modules:
+                            app_script: ~

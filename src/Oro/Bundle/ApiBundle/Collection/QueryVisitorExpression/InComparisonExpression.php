@@ -2,8 +2,6 @@
 
 namespace Oro\Bundle\ApiBundle\Collection\QueryVisitorExpression;
 
-use Doctrine\Common\Collections\Expr\Comparison;
-
 use Oro\Bundle\ApiBundle\Collection\QueryExpressionVisitor;
 
 /**
@@ -16,15 +14,14 @@ class InComparisonExpression implements ComparisonExpressionInterface
      */
     public function walkComparisonExpression(
         QueryExpressionVisitor $visitor,
-        Comparison $comparison,
-        $fieldName,
-        $parameterName
+        string $field,
+        string $expression,
+        string $parameterName,
+        $value
     ) {
-        // set parameter
-        $visitor->addParameter($parameterName, $visitor->walkValue($comparison->getValue()));
+        $visitor->addParameter($parameterName, $value);
 
-        // generate expression
         return $visitor->getExpressionBuilder()
-            ->in($fieldName, $visitor->buildPlaceholder($parameterName));
+            ->in($expression, $visitor->buildPlaceholder($parameterName));
     }
 }

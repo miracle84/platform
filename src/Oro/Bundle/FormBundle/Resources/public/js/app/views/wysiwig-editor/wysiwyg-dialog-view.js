@@ -24,6 +24,16 @@ define(function(require) {
             'component:parentResize': 'resizeEditor'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function WysiwygDialogView() {
+            WysiwygDialogView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, _.pick(options, ['minimalWysiwygEditorHeight', 'editorComponentName']));
             WysiwygDialogView.__super__.initialize.apply(this, arguments);
@@ -41,6 +51,10 @@ define(function(require) {
         },
 
         resizeEditor: function() {
+            if (this.$el.closest('[data-spy="scroll"]').length) {
+                // switch off resizer in case an editor is inside of scroll spy
+                return;
+            }
             this.getEditorView().setHeight(this.calcWysiwygHeight());
         },
 

@@ -3,25 +3,26 @@
 namespace Oro\Bundle\EmailBundle\Acl\Voter;
 
 use Doctrine\Common\Util\ClassUtils;
-
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
-
+use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
 use Oro\Bundle\EmailBundle\Entity\EmailBody;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\SecurityBundle\Authentication\Token\UsernamePasswordOrganizationToken;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 
 class EmailVoter implements VoterInterface
 {
     /**
-     * @var array
+     * If you want to change content of this array, please pay attention to classes
+     * Oro\Bundle\EmailBundle\Migrations\Data\ORM\UpdateEmailEditAclRule
+     * Oro\Bundle\EmailBundle\EventListener\RoleSubscriber
      */
-    protected static $supportedClasses = [
-        'Oro\Bundle\EmailBundle\Entity\Email',
-        'Oro\Bundle\EmailBundle\Entity\EmailBody',
-        'Oro\Bundle\EmailBundle\Entity\EmailAttachment'
+    const SUPPORTED_CLASSES = [
+        Email::class,
+        EmailBody::class,
+        EmailAttachment::class,
     ];
 
     /**
@@ -38,19 +39,27 @@ class EmailVoter implements VoterInterface
     }
 
     /**
-     * {@inheritDoc}
+     * Checks if the voter supports the given attribute.
+     *
+     * @param mixed $attribute An attribute (usually the attribute name string)
+     *
+     * @return bool true if this Voter supports the attribute, false otherwise
      */
-    public function supportsAttribute($attribute)
+    protected function supportsAttribute($attribute)
     {
         return in_array($attribute, ['VIEW', 'EDIT'], true);
     }
 
     /**
-     * {@inheritDoc}
+     * Checks if the voter supports the given class.
+     *
+     * @param string $class A class name
+     *
+     * @return bool true if this Voter can process the class
      */
-    public function supportsClass($class)
+    protected function supportsClass($class)
     {
-        return in_array($class, self::$supportedClasses, true);
+        return in_array($class, self::SUPPORTED_CLASSES, true);
     }
 
     /**
@@ -79,7 +88,7 @@ class EmailVoter implements VoterInterface
         $emailUsers = $object->getEmailUsers();
         foreach ($attributes as $attribute) {
             foreach ($emailUsers as $emailUser) {
-                if ($this->container->get('oro_security.security_facade')->isGranted($attribute, $emailUser)) {
+                if ($this->container->get('security.authorization_checker')->isGranted($attribute, $emailUser)) {
                     return self::ACCESS_GRANTED;
                 }
                 if ($mailbox = $emailUser->getMailboxOwner() !== null

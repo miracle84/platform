@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\ChartBundle\Tests\Unit\DependencyInjection;
 
+use Oro\Bundle\ChartBundle\DependencyInjection\Configuration;
 use Symfony\Component\Config\Definition\Processor;
 
-use Oro\Bundle\ChartBundle\DependencyInjection\Configuration;
-
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+class ConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetConfigTreeBuilder()
     {

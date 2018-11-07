@@ -2,19 +2,19 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Async;
 
-use Doctrine\DBAL\Driver\DriverException;
-
+use Oro\Bundle\EntityBundle\ORM\DatabaseExceptionHelper;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
-use Oro\Bundle\EntityBundle\ORM\DatabaseExceptionHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\DeletedAttributeProviderInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Oro\Component\MessageQueue\Util\JSON;
-
 use Psr\Log\LoggerInterface;
 
+/**
+ * Deletes attribute relations
+ */
 class DeletedAttributeRelationProcessor implements MessageProcessorInterface
 {
     /**
@@ -62,7 +62,7 @@ class DeletedAttributeRelationProcessor implements MessageProcessorInterface
     {
         $messageData = JSON::decode($message->getBody());
         if (!isset($messageData['attributeFamilyId'])) {
-            $this->logger->critical('Invalid message: key "attributeFamilyId" is missing.', ['message' => $message]);
+            $this->logger->critical('Invalid message: key "attributeFamilyId" is missing.');
 
             return self::REJECT;
         }
@@ -87,7 +87,8 @@ class DeletedAttributeRelationProcessor implements MessageProcessorInterface
                 ['exception' => $e]
             );
 
-            if ($e instanceof DriverException && $this->databaseExceptionHelper->isDeadlock($e)) {
+            $driverException = $this->databaseExceptionHelper->getDriverException($e);
+            if ($driverException && $this->databaseExceptionHelper->isDeadlock($driverException)) {
                 return self::REQUEUE;
             } else {
                 return self::REJECT;

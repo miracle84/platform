@@ -4,7 +4,7 @@ define(function(require) {
     var $ = require('jquery');
     var _ = require('underscore');
     var tools = require('oroui/js/tools');
-    var console = window.console;
+    var error = require('oroui/js/error');
 
     var inlineEdititngBuilder = {
         /**
@@ -42,12 +42,7 @@ define(function(require) {
                 });
                 deferred.resolve();
             }).fail(function(e) {
-                if (console && console.error) {
-                    console.log(e);
-                    console.error('Inline editing loading failed. Reason: ' + e.message);
-                } else {
-                    throw e;
-                }
+                error.showErrorInConsole(e);
                 deferred.resolve();
             });
         },
@@ -69,7 +64,7 @@ define(function(require) {
                 },
                 save_api_accessor: {
                     'class': 'oroui/js/tools/api-accessor',
-                    http_method: 'PATCH'
+                    'http_method': 'PATCH'
                 }
             };
         },
@@ -123,48 +118,45 @@ define(function(require) {
                     editor.component = defaultOptions.cell_editor.component;
                 }
                 if (!editor.view) {
-                    options.metadata.inline_editing.defaultEditorsLoadPromise.then(function(defaultEditors) {
-                        var realization = defaultEditors[columnMeta.type || inlineEdititngBuilder.DEFAULT_COLUMN_TYPE];
-                        editor.view = realization;
-                        if (realization === void 0) {
+                    promises.push(options.metadata.inline_editing.defaultEditorsLoadPromise.then(function(editors) {
+                        var editorView = editors[columnMeta.type || inlineEdititngBuilder.DEFAULT_COLUMN_TYPE];
+                        editor.view = editorView;
+                        if (editorView === void 0) {
                             columnMeta.inline_editing.enable = false;
                             columnMeta.inline_editing.enable$changeReason =
                                 'Automatically disabled due to absent editor realization';
                             if (behaviour === 'enable_selected') {
-                                // if user selected this column as editable and there is no editor - show an error
-                                if (console && console.error) {
-                                    console.error(
-                                        'Could not enable editing on grid column due to absent editor realization' +
-                                        ' for type `' + columnMeta.type + '`'
-                                    );
-                                }
+                                error.showErrorInConsole(
+                                    'Could not enable editing on grid column due to absent editor realization' +
+                                    ' for type `' + columnMeta.type + '`'
+                                );
                             }
                             return;
                         }
-                        if (_.isFunction(realization.processMetadata)) {
-                            return realization.processMetadata(columnMeta);
+                        if (_.isFunction(editorView.processMetadata)) {
+                            return editorView.processMetadata(columnMeta);
                         }
-                        return realization;
-                    });
+                        return editorView;
+                    }));
                 } else {
-                    promises.push(tools.loadModule(editor.view)
-                        .then(function(realization) {
-                            editor.view = realization;
-                            if (_.isFunction(realization.processMetadata)) {
-                                return realization.processMetadata(columnMeta);
+                    promises.push(tools.loadModules(editor.view)
+                        .then(function(editorView) {
+                            editor.view = editorView;
+                            if (_.isFunction(editorView.processMetadata)) {
+                                return editorView.processMetadata(columnMeta);
                             }
-                            return realization;
+                            return editorView;
                         }));
                 }
 
                 if (_.isString(editor.component)) {
-                    promises.push(tools.loadModule(editor.component)
-                        .then(function(realization) {
-                            editor.component = realization;
-                            if (_.isFunction(realization.processMetadata)) {
-                                return realization.processMetadata(columnMeta);
+                    promises.push(tools.loadModules(editor.component)
+                        .then(function(editorComponent) {
+                            editor.component = editorComponent;
+                            if (_.isFunction(editorComponent.processMetadata)) {
+                                return editorComponent.processMetadata(columnMeta);
                             }
-                            return realization;
+                            return editorComponent;
                         }));
                 } else {
                     if (_.isFunction(editor.component.processMetadata)) {

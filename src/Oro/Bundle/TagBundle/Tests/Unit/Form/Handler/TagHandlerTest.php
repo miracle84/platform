@@ -3,17 +3,18 @@
 namespace Oro\Bundle\TagBundle\Tests\Unit\Form\Handler;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
 use Oro\Bundle\TagBundle\Entity\Tag;
 use Oro\Bundle\TagBundle\Form\Handler\TagHandler;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class TagHandlerTest extends \PHPUnit_Framework_TestCase
+class TagHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    const FORM_DATA = ['field' => 'value'];
+
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FormInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|FormInterface
      */
     protected $form;
 
@@ -23,7 +24,7 @@ class TagHandlerTest extends \PHPUnit_Framework_TestCase
     protected $request;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ObjectManager
+     * @var \PHPUnit\Framework\MockObject\MockObject|ObjectManager
      */
     protected $manager;
 
@@ -43,12 +44,14 @@ class TagHandlerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $this->request = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
         $this->manager = $this->getMockBuilder('Doctrine\Common\Persistence\ObjectManager')
             ->disableOriginalConstructor()
             ->getMock();
 
         $this->entity  = new Tag();
-        $this->handler = new TagHandler($this->form, $this->request, $this->manager);
+        $this->handler = new TagHandler($this->form, $requestStack, $this->manager);
     }
 
     public function testProcessUnsupportedRequest()
@@ -73,11 +76,12 @@ class TagHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($this->entity);
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod($method);
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->assertFalse($this->handler->process($this->entity));
     }
@@ -96,11 +100,12 @@ class TagHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($this->entity);
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->form->expects($this->once())
             ->method('isValid')

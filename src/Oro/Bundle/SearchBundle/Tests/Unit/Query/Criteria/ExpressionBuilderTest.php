@@ -3,11 +3,10 @@
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Query\Criteria;
 
 use Doctrine\Common\Collections\Expr\Value;
-
 use Oro\Bundle\SearchBundle\Query\Criteria\Comparison;
 use Oro\Bundle\SearchBundle\Query\Criteria\ExpressionBuilder;
 
-class ExpressionBuilderTest extends \PHPUnit_Framework_TestCase
+class ExpressionBuilderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExpressionBuilder */
     private $builder;
@@ -58,6 +57,15 @@ class ExpressionBuilderTest extends \PHPUnit_Framework_TestCase
         $comparison = $this->builder->like('test_field', 'test_value');
         $this->assertEquals(
             new Comparison('test_field', Comparison::LIKE, new Value('test_value')),
+            $comparison
+        );
+    }
+
+    public function testNotLike()
+    {
+        $comparison = $this->builder->notLike('test_field', 'test_value');
+        $this->assertEquals(
+            new Comparison('test_field', Comparison::NOT_LIKE, new Value('test_value')),
             $comparison
         );
     }

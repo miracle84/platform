@@ -63,9 +63,10 @@ define(function(require) {
             configuration.priority = options.entity.priority;
             configuration.exclusive_active_groups = options.entity.exclusive_active_groups;
             configuration.exclusive_record_groups = options.entity.exclusive_record_groups;
+            configuration.applications = options.entity.applications;
 
             var workflowModel = new WorkflowModel(configuration);
-            workflowModel.setSystemEntities(options.system_entities);
+            workflowModel.setAvailableDestinations(options.availableDestinations);
 
             workflowModel.url = options._sourceElement.attr('action');
             if (translateLinks && 'label' in translateLinks) {
@@ -80,7 +81,7 @@ define(function(require) {
          * @param {WorkflowModel} model
          */
         addStartingStep: function(model) {
-            //if start step doesn't exist in database, create it
+            // if start step doesn't exist in database, create it
             if (model.getStartStep().length === 0) {
                 model.get('steps').add(this._createStartingStep(model));
             }

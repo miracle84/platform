@@ -2,18 +2,17 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Helper;
 
+use Oro\Bundle\ActionBundle\Helper\DefaultOperationRequestHelper;
+use Oro\Bundle\ActionBundle\Provider\RouteProviderInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-use Oro\Bundle\ActionBundle\Helper\DefaultOperationRequestHelper;
-use Oro\Bundle\ActionBundle\Provider\RouteProviderInterface;
-
-class DefaultOperationRequestHelperTest extends \PHPUnit_Framework_TestCase
+class DefaultOperationRequestHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|RequestStack */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|RequestStack */
     protected $requestStack;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|RouteProviderInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|RouteProviderInterface */
     protected $routeProvider;
 
     /** @var DefaultOperationRequestHelper */

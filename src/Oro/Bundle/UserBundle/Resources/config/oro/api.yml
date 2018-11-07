@@ -5,8 +5,10 @@ api:
             plural_alias: userprofile
 
     entities:
-        Oro\Bundle\UserBundle\Entity\Group: ~
+        Oro\Bundle\UserBundle\Entity\Group:
+            documentation_resource: '@OroUserBundle/Resources/doc/api/group.md'
         Oro\Bundle\UserBundle\Entity\Role:
+            documentation_resource: '@OroUserBundle/Resources/doc/api/role.md'
             delete_handler: oro_user.role.handler.delete
 
         Oro\Bundle\UserBundle\Entity\User:
@@ -18,6 +20,8 @@ api:
                     exclusion_policy: all
                     fields:
                         email: ~
+                emailLowercase:
+                    exclude: true
             actions:
                 delete:
                     exclude: false # set manually because this entity is marked as a dictionary
@@ -25,16 +29,11 @@ api:
                     exclude: false # set manually because this entity is marked as a dictionary
                 create:
                     exclude: false # set manually because this entity is marked as a dictionary
-                    fields:
-                        password:
-                            exclude: false # set manually because this field is excluded globally
-                            form_options:
-                                property_path: plainPassword
-                                constraints:
-                                    - NotNull: ~
-                                    - NotBlank: ~
                 update:
                     exclude: false # set manually because this entity is marked as a dictionary
+
+        Extend\Entity\EV_Auth_Status:
+            documentation_resource: '@OroUserBundle/Resources/doc/api/user.md'
 
         Oro\Bundle\UserBundle\Entity\Email:
             # this entity does not have own Data API resource
@@ -43,11 +42,11 @@ api:
         Oro\Bundle\UserBundle\Api\Model\UserProfile:
             fields:
                 id:
-                    description: The unique identifier of an user
+                    description: The unique identifier of a user.
             actions:
                 get:
                     description: Get current logged in user
-                    documentation: Get information about current logged in user.
+                    documentation: Retrieve a record of the currently logged in user.
                 get_list: false
                 create: false
                 update: false

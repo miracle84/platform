@@ -3,7 +3,7 @@ namespace Oro\Component\MessageQueue\Tests\Unit\Client;
 
 use Oro\Component\MessageQueue\Client\Config;
 
-class ConfigTest extends \PHPUnit_Framework_TestCase
+class ConfigTest extends \PHPUnit\Framework\TestCase
 {
     public function testShouldReturnRouterMessageProcessorNameSetInConstructor()
     {
@@ -24,5 +24,18 @@ class ConfigTest extends \PHPUnit_Framework_TestCase
         $config = new Config('aPrefix', 'aRouterMessageProcessorName', 'aRouterQueueName', 'aDefaultQueueName');
 
         $this->assertEquals('aprefix.adefaultqueuename', $config->getDefaultQueueName());
+    }
+
+    public function testShouldReturnDefaultTopicNameSetInConstructor()
+    {
+        $config = new Config(
+            'aPrefix',
+            'aRouterMessageProcessorName',
+            'aRouterQueueName',
+            'aDefaultQueueName',
+            'aDefaultTopicName'
+        );
+
+        $this->assertEquals('aprefix.adefaulttopicname', $config->getDefaultTopicName());
     }
 }

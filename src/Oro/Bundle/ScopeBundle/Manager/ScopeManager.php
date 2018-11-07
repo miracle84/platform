@@ -3,6 +3,7 @@
 namespace Oro\Bundle\ScopeBundle\Manager;
 
 use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIteratorInterface;
 use Oro\Bundle\EntityBundle\Provider\EntityFieldProvider;
 use Oro\Bundle\ScopeBundle\Entity\Repository\ScopeRepository;
 use Oro\Bundle\ScopeBundle\Entity\Scope;
@@ -10,6 +11,11 @@ use Oro\Bundle\ScopeBundle\Model\ScopeCriteria;
 use Oro\Component\DependencyInjection\ServiceLink;
 use Oro\Component\PropertyAccess\PropertyAccessor;
 
+/**
+ * Creates / finds scopes and scope criteria.
+ *
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
 class ScopeManager
 {
     const BASE_SCOPE = 'base_scope';
@@ -60,9 +66,9 @@ class ScopeManager
     protected $nullContext = null;
 
     /**
-     * @param string $scopeType
+     * @param string            $scopeType
      * @param array|object|null $context
-     * @return Scope
+     * @return Scope|null
      */
     public function find($scopeType, $context = null)
     {
@@ -77,19 +83,20 @@ class ScopeManager
     }
 
     /**
-     * @param $scopeType
-     * @param null $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      * @return Scope
      */
     public function findMostSuitable($scopeType, $context = null)
     {
         $criteria = $this->getCriteria($scopeType, $context);
+
         return $this->getScopeRepository()->findMostSuitable($criteria);
     }
 
     /**
-     * @param $scopeType
-     * @param null $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      * @return BufferedQueryResultIterator|\Oro\Bundle\ScopeBundle\Entity\Scope[]
      */
     public function findBy($scopeType, $context = null)
@@ -108,9 +115,9 @@ class ScopeManager
     }
 
     /**
-     * @param $scopeType
+     * @param string            $scopeType
      * @param array|object|null $context
-     * @return BufferedQueryResultIterator|Scope[]
+     * @return BufferedQueryResultIteratorInterface|Scope[]
      */
     public function findRelatedScopes($scopeType, $context = null)
     {
@@ -120,8 +127,8 @@ class ScopeManager
     }
 
     /**
-     * @param $scopeType
-     * @param null $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      * @return array
      */
     public function findRelatedScopeIds($scopeType, $context = null)
@@ -132,8 +139,8 @@ class ScopeManager
     }
 
     /**
-     * @param string     $scopeType
-     * @param array|null $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      *
      * @return array
      */
@@ -145,17 +152,16 @@ class ScopeManager
     }
 
     /**
-     * @param string $scopeType
-     * @param array|object $context
-     * @param bool $flush
+     * @param string            $scopeType
+     * @param array|object|null $context
+     * @param bool              $flush
      * @return Scope
      */
     public function findOrCreate($scopeType, $context = null, $flush = true)
     {
-        $criteria = $this->getCriteria($scopeType, $context);
-
         $scope = $this->find($scopeType, $context);
         if (!$scope) {
+            $criteria = $this->getCriteria($scopeType, $context);
             $scope = $this->createScopeByCriteria($criteria, $flush);
         }
 
@@ -164,7 +170,7 @@ class ScopeManager
 
     /**
      * @param ScopeCriteria $criteria
-     * @param bool $flush
+     * @param bool          $flush
      * @return Scope
      */
     public function createScopeByCriteria(ScopeCriteria $criteria, $flush = true)
@@ -191,7 +197,7 @@ class ScopeManager
 
     /**
      * @param string $scopeType
-     * @param $provider
+     * @param        $provider
      */
     public function addProvider($scopeType, $provider)
     {
@@ -215,7 +221,7 @@ class ScopeManager
     }
 
     /**
-     * @param Scope $scope
+     * @param Scope  $scope
      * @param string $type
      * @return ScopeCriteria
      */
@@ -231,8 +237,8 @@ class ScopeManager
     }
 
     /**
-     * @param string $scopeType
-     * @param array $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      * @return ScopeCriteria
      */
     public function getCriteria($scopeType, $context = null)
@@ -241,7 +247,6 @@ class ScopeManager
         if (self::BASE_SCOPE === $scopeType && is_array($context)) {
             $criteria = $context;
         } else {
-            /** @var ScopeCriteriaProviderInterface[] $providers */
             $providers = $this->getProviders($scopeType);
             foreach ($providers as $provider) {
                 if (null === $context) {
@@ -258,6 +263,29 @@ class ScopeManager
         }
 
         return new ScopeCriteria($criteria, $this->getFields());
+    }
+
+
+    /**
+     * @param Scope $scope
+     * @param ScopeCriteria $criteria
+     * @param string $scopeType
+     *
+     * @return bool
+     */
+    public function isScopeMatchCriteria(Scope $scope, ScopeCriteria $criteria, $scopeType)
+    {
+        $criteriaContext = $criteria->toArray();
+        $scopeCriteriaContext = $this->getCriteriaByScope($scope, $scopeType)
+            ->toArray();
+
+        foreach ($scopeCriteriaContext as $field => $value) {
+            if (null !== $value && $criteriaContext[$field] !== $value) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -288,7 +316,7 @@ class ScopeManager
     }
 
     /**
-     * @param $scopeType
+     * @param string $scopeType
      * @return ScopeCriteriaProviderInterface[]
      */
     protected function getProviders($scopeType)
@@ -314,8 +342,8 @@ class ScopeManager
     }
 
     /**
-     * @param $scopeType
-     * @param $context
+     * @param string            $scopeType
+     * @param array|object|null $context
      * @return ScopeCriteria
      */
     public function getCriteriaForRelatedScopes($scopeType, $context)
@@ -352,7 +380,7 @@ class ScopeManager
     protected function getFields()
     {
         if ($this->fields === null) {
-            $this->fields = $this->getEntityFieldProvider()->getRelations(Scope::class);
+            $this->fields = $this->getEntityFieldProvider()->getRelations(Scope::class, false, true, false);
         }
 
         return $this->fields;

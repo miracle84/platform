@@ -2,55 +2,57 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Provider;
 
-use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\Form\Forms;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigBag;
+use Oro\Bundle\ConfigBundle\Provider\ChainSearchProvider;
+use Oro\Bundle\ConfigBundle\Tests\Unit\Provider\AbstractProviderTest;
 use Oro\Bundle\UserBundle\Provider\UserConfigurationFormProvider;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormRegistryInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class UserConfigurationFormProviderTest extends \PHPUnit_Framework_TestCase
+class UserConfigurationFormProviderTest extends AbstractProviderTest
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    const CONFIG_NAME = 'user_configuration';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $configBag;
-
-    /** @var FormFactoryInterface */
-    protected $factory;
-    
-    /** @var  UserConfigurationFormProvider */
-    protected $provider;
-    
-    protected function setUp()
+    /**
+     * {@inheritdoc}
+     */
+    public function getParentCheckboxLabel()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->configBag = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigBag')
-            ->disableOriginalConstructor()
-            ->getMock();
-        
-        $this->factory = Forms::createFormFactoryBuilder()
-            ->getFormFactory();
-        
-        $this->provider = new UserConfigurationFormProvider($this->configBag, $this->factory, $this->securityFacade);
+        return 'oro.user.user_configuration.use_default';
     }
 
-    protected function tearDown()
-    {
-        unset($this->securityFacade);
-        unset($this->factory);
-        unset($this->configBag);
-        unset($this->provider);
+    /**
+     * {@inheritdoc}
+     */
+    public function getProvider(
+        ConfigBag $configBag,
+        TranslatorInterface $translator,
+        FormFactoryInterface $formFactory,
+        AuthorizationCheckerInterface $authorizationChecker,
+        ChainSearchProvider $searchProvider,
+        FormRegistryInterface $formRegistry
+    ) {
+        return new UserConfigurationFormProvider(
+            $configBag,
+            $translator,
+            $formFactory,
+            $authorizationChecker,
+            $searchProvider,
+            $formRegistry
+        );
     }
 
-    public function testParentCheckboxLabelUpdate()
+    /**
+     * Return correct path to fileName
+     *
+     * @param string $fileName
+     *
+     * @return string
+     */
+    protected function getFilePath($fileName)
     {
-        $this->provider->setParentCheckboxLabel('test label');
-        $class = new \ReflectionClass($this->provider);
-        $prop  = $class->getProperty('parentCheckboxLabel');
-        $prop->setAccessible(true);
-        $this->assertEquals('test label', $prop->getValue($this->provider));
+        return __DIR__ . '/data/' . $fileName;
     }
 }

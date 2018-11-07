@@ -2,15 +2,17 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Form\Handler;
 
-use Symfony\Component\HttpFoundation\Request;
-
 use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
 use Oro\Bundle\EmailBundle\Form\Handler\EmailTemplateHandler;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
+class EmailTemplateHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    const FORM_DATA = ['field' => 'value'];
+
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $form;
 
@@ -20,12 +22,12 @@ class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
     protected $request;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $manager;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $translator;
 
@@ -45,6 +47,8 @@ class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $this->request = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
         $this->manager = $this->getMockBuilder('Doctrine\Common\Persistence\ObjectManager')
             ->disableOriginalConstructor()
             ->getMock();
@@ -53,7 +57,7 @@ class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
             ->getMock();
 
         $this->entity  = new EmailTemplate();
-        $this->handler = new EmailTemplateHandler($this->form, $this->request, $this->manager, $this->translator);
+        $this->handler = new EmailTemplateHandler($this->form, $requestStack, $this->manager, $this->translator);
     }
 
     public function testProcessUnsupportedRequest()
@@ -78,11 +82,12 @@ class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($this->entity);
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod($method);
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->assertFalse($this->handler->process($this->entity));
     }
@@ -101,11 +106,12 @@ class EmailTemplateHandlerTest extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($this->entity);
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->form->expects($this->once())
             ->method('isValid')

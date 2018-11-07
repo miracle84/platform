@@ -4,22 +4,23 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Configuration;
 
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\ActionBundle\Model\AttributeManager;
-
+use Oro\Bundle\ActionBundle\Provider\CurrentApplicationProviderInterface;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowDefinitionBuilderExtensionInterface;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowDefinitionConfigurationBuilder;
-use Oro\Bundle\WorkflowBundle\Entity\WorkflowEntityAcl;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
+use Oro\Bundle\WorkflowBundle\Entity\WorkflowEntityAcl;
 use Oro\Bundle\WorkflowBundle\Model\Step;
 use Oro\Bundle\WorkflowBundle\Model\StepManager;
 use Oro\Bundle\WorkflowBundle\Model\Transition;
 use Oro\Bundle\WorkflowBundle\Model\TransitionManager;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowAssembler;
+use Oro\Bundle\WorkflowBundle\Resolver\TransitionOptionsResolver;
 
-class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
+class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var WorkflowAssembler|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowAssembler|\PHPUnit\Framework\MockObject\MockObject */
     protected $workflowAssembler;
 
     /** @var WorkflowDefinitionConfigurationBuilder */
@@ -74,6 +75,7 @@ class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_Test
 
         $activeGroups = [];
         $recordGroups = [];
+        $applications = [CurrentApplicationProviderInterface::DEFAULT_APPLICATION];
         if (!empty($workflowConfiguration[WorkflowConfiguration::NODE_EXCLUSIVE_ACTIVE_GROUPS])) {
             $activeGroups = array_map(
                 'strtolower',
@@ -86,8 +88,14 @@ class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_Test
                 $workflowConfiguration[WorkflowConfiguration::NODE_EXCLUSIVE_RECORD_GROUPS]
             );
         }
+        if (!empty($workflowConfiguration[WorkflowConfiguration::NODE_APPLICATIONS])) {
+            $applications = array_map(
+                'strtolower',
+                $workflowConfiguration[WorkflowConfiguration::NODE_APPLICATIONS]
+            );
+        }
 
-        /** @var Workflow|\PHPUnit_Framework_MockObject_MockObject $workflow */
+        /** @var Workflow|\PHPUnit\Framework\MockObject\MockObject $workflow */
         $workflow = $this->getMockBuilder(Workflow::class)
             ->disableOriginalConstructor()
             ->setMethods(['getStepManager', 'getAttributeManager', 'getRestrictions', 'getTransitionManager'])
@@ -119,6 +127,7 @@ class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_Test
         $this->assertEquals($expectedData, $this->getDataAsArray($workflowDefinition));
         $this->assertEquals($workflowDefinition->getExclusiveActiveGroups(), $activeGroups);
         $this->assertEquals($workflowDefinition->getExclusiveRecordGroups(), $recordGroups);
+        $this->assertEquals($workflowDefinition->getApplications(), $applications);
 
         $actualAcls = $workflowDefinition->getEntityAcls()->toArray();
         $this->assertSameSize($expectedAcls, $actualAcls);
@@ -157,6 +166,10 @@ class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_Test
             'steps_display_ordered' => true,
             'scopes' => [
                 ['scope1' => 'value1'],
+            ],
+            WorkflowConfiguration::NODE_APPLICATIONS => [
+                CurrentApplicationProviderInterface::DEFAULT_APPLICATION,
+                'Some Extra Application'
             ],
             WorkflowConfiguration::NODE_EXCLUSIVE_ACTIVE_GROUPS => [
                 'active_group1',
@@ -403,7 +416,7 @@ class WorkflowDefinitionConfigurationBuilderTest extends \PHPUnit_Framework_Test
         $transitions = [];
         if (!empty($configuration[WorkflowConfiguration::NODE_TRANSITIONS])) {
             foreach ($configuration[WorkflowConfiguration::NODE_TRANSITIONS] as $transitionData) {
-                $transition = new Transition();
+                $transition = new Transition($this->createMock(TransitionOptionsResolver::class));
                 $transition
                     ->setStart($this->getOption($transitionData, 'is_start', false))
                     ->setName($transitionData['name'])

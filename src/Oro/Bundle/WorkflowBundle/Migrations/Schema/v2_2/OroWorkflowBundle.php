@@ -4,12 +4,10 @@ namespace Oro\Bundle\WorkflowBundle\Migrations\Schema\v2_2;
 
 use Doctrine\DBAL\Schema\Comparator;
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\MigrationBundle\Migration\Extension\DatabasePlatformAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\Extension\DatabasePlatformAwareTrait;
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
-
 use Oro\Bundle\WorkflowBundle\Migrations\Schema\v1_14\SplitGroupsToIndividualFieldsQuery;
 
 class OroWorkflowBundle implements Migration, DatabasePlatformAwareInterface
@@ -23,6 +21,8 @@ class OroWorkflowBundle implements Migration, DatabasePlatformAwareInterface
      */
     public function up(Schema $schema, QueryBag $queries)
     {
+        $this->addIndex($schema);
+
         $table = $schema->getTable(self::TABLE_NAME);
         $table->addColumn('exclusive_active_groups', 'simple_array', [
             'comment' => '(DC2Type:simple_array)',
@@ -48,5 +48,14 @@ class OroWorkflowBundle implements Migration, DatabasePlatformAwareInterface
         $comparator = new Comparator();
 
         return $comparator->compare($schema, $toSchema)->toSql($this->platform);
+    }
+
+    /**
+     * @param Schema $schema
+     */
+    protected function addIndex(Schema $schema)
+    {
+        $table = $schema->getTable('oro_workflow_item');
+        $table->addIndex(['entity_class', 'entity_id'], 'oro_workflow_item_entity_idx', []);
     }
 }

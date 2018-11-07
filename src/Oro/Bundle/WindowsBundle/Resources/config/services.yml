@@ -1,28 +1,26 @@
 parameters:
     oro_windows.entity.windows_state.class: Oro\Bundle\WindowsBundle\Entity\WindowsState
-    oro_windows.twig.extension.class: Oro\Bundle\WindowsBundle\Twig\WindowsExtension
     oro_windows.manager.windows_state.class: Oro\Bundle\WindowsBundle\Manager\WindowsStateManager
     oro_windows.manager.windows_state_registry.class: Oro\Bundle\WindowsBundle\Manager\WindowsStateManagerRegistry
     oro_windows.manager.windows_state_request.class: Oro\Bundle\WindowsBundle\Manager\WindowsStateRequestManager
 
 services:
     oro_windows.twig.extension:
-        class: %oro_windows.twig.extension.class%
+        class: Oro\Bundle\WindowsBundle\Twig\WindowsExtension
+        public: false
         arguments:
-            - '@oro_windows.manager.windows_state_registry'
-            - '@oro_windows.manager.windows_state_request'
+            - '@service_container'
         tags:
             - { name: twig.extension }
 
     oro_windows.manager.windows_state_registry:
-        class: %oro_windows.manager.windows_state_registry.class%
+        class: '%oro_windows.manager.windows_state_registry.class%'
         arguments:
             - '@oro_windows.manager.windows_state'
 
     oro_windows.manager.windows_state.abstract:
-        class: %oro_windows.manager.windows_state.class%
+        class: '%oro_windows.manager.windows_state.class%'
         abstract: true
-        private: true
         arguments:
             - '@security.token_storage'
             - '@oro_entity.doctrine_helper'
@@ -31,10 +29,10 @@ services:
     oro_windows.manager.windows_state:
         parent: oro_windows.manager.windows_state.abstract
         arguments:
-            - %oro_windows.entity.windows_state.class%
-            - %oro_user.entity.class%
+            - '%oro_windows.entity.windows_state.class%'
+            - '%oro_user.entity.class%'
 
     oro_windows.manager.windows_state_request:
-        class: %oro_windows.manager.windows_state_request.class%
+        class: '%oro_windows.manager.windows_state_request.class%'
         arguments:
             - '@request_stack'

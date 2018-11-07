@@ -2,134 +2,143 @@
 
 namespace Oro\Bundle\SidebarBundle\Tests\Unit\Twig;
 
-use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Translation\TranslatorInterface;
-use Symfony\Component\Asset\Packages as AssetHelper;
-
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
 use Oro\Bundle\SidebarBundle\Model\WidgetDefinitionRegistry;
 use Oro\Bundle\SidebarBundle\Twig\SidebarExtension;
+use Oro\Component\Testing\Unit\TwigExtensionTestCaseTrait;
+use Symfony\Component\Asset\Packages;
+use Symfony\Component\Asset\Packages as AssetHelper;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class SidebarExtensionTest extends \PHPUnit_Framework_TestCase
+class SidebarExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|WidgetDefinitionRegistry
-     */
+    use TwigExtensionTestCaseTrait;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject|WidgetDefinitionRegistry */
     protected $widgetDefinitionsRegistry;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TranslatorInterface */
     protected $translator;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|AssetHelper
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AssetHelper */
     protected $assetHelper;
 
-    /**
-     * @var SidebarExtension
-     */
+    /** @var SidebarExtension */
     protected $extension;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $featureChecker;
 
     protected function setUp()
     {
-        $this->widgetDefinitionsRegistry = $this
-            ->getMockBuilder('Oro\Bundle\SidebarBundle\Model\WidgetDefinitionRegistry')
+        $this->widgetDefinitionsRegistry = $this->getMockBuilder(WidgetDefinitionRegistry::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->assetHelper = $this->getMockBuilder(Packages::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $this->featureChecker = $this->getMockBuilder(FeatureChecker::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->translator = $this->getMockBuilder('Symfony\Component\Translation\TranslatorInterface')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $container = self::getContainerBuilder()
+            ->add('oro_sidebar.widget_definition.registry', $this->widgetDefinitionsRegistry)
+            ->add('translator', $this->translator)
+            ->add('assets.packages', $this->assetHelper)
+            ->getContainer($this);
 
-        $this->assetHelper = $this->getMockBuilder('Symfony\Component\Asset\Packages')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->extension = new SidebarExtension(
-            $this->widgetDefinitionsRegistry,
-            $this->translator,
-            $this->assetHelper
-        );
-
-        $this->featureChecker = $this->getMockBuilder('Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker')
-            ->disableOriginalConstructor()
-            ->getMock();
-    }
-
-    public function testGetFunctions()
-    {
-        /** @var \Twig_SimpleFunction[] $functions */
-        $functions = $this->extension->getFunctions();
-        $this->assertCount(1, $functions);
-
-        $this->assertInstanceOf('\Twig_SimpleFunction', $functions[0]);
-        $this->assertEquals('oro_sidebar_get_available_widgets', $functions[0]->getName());
-        $this->assertEquals(array($this->extension, 'getWidgetDefinitions'), $functions[0]->getCallable());
+        $this->extension = new SidebarExtension($container);
+        $this->extension->setFeatureChecker($this->featureChecker);
     }
 
     public function testGetName()
     {
-        $this->assertEquals(SidebarExtension::NAME, $this->extension->getName());
+        self::assertEquals(SidebarExtension::NAME, $this->extension->getName());
     }
 
     public function testGetWidgetDefinitions()
     {
         $placement = 'left';
-        $title = 'Foo';
-        $definitions = new ArrayCollection();
-        $dialogIcon = 'test-icon.png';
 
         $definitionKey = 'test';
-        $definitions->set(
-            $definitionKey,
-            array(
-                'title' => $title,
+        $definitions = [
+            $definitionKey => [
+                'title' => 'Foo',
                 'icon' => 'test.ico',
                 'module' => 'widget/foo',
                 'placement' => 'left',
                 'description' => 'Simple',
-                'dialogIcon' => $dialogIcon
-            )
-        );
+                'dialogIcon' => 'test-icon.png'
+            ]
+        ];
 
-        $this->widgetDefinitionsRegistry->expects($this->once())
+        $this->widgetDefinitionsRegistry->expects(self::once())
             ->method('getWidgetDefinitionsByPlacement')
             ->with($placement)
-            ->will($this->returnValue($definitions));
-
-        $this->translator->expects($this->once())
-            ->method('trans')
-            ->with($title)
-            ->will($this->returnValue('trans' . $title));
-
-        $this->assetHelper->expects($this->once())
-            ->method('getUrl')
-            ->with($dialogIcon)
-            ->will($this->returnValue('/' . $dialogIcon));
-
-        $this->featureChecker
+            ->willReturn($definitions);
+        $this->featureChecker->expects(self::once())
             ->method('isResourceEnabled')
             ->with($definitionKey, 'sidebar_widgets')
             ->willReturn(true);
-        $this->extension->setFeatureChecker($this->featureChecker);
+        $this->translator->expects(self::any())
+            ->method('trans')
+            ->willReturnCallback(function ($label) {
+                return 'trans' . $label;
+            });
+        $this->assetHelper->expects(self::any())
+            ->method('getUrl')
+            ->willReturnCallback(function ($icon) {
+                return '/' . $icon;
+            });
 
-        $expected = array(
-            'test' => array(
-                'title' => 'transFoo',
+        self::assertEquals(
+            [
+                $definitionKey => [
+                    'title' => 'transFoo',
+                    'icon' => '/test.ico',
+                    'module' => 'widget/foo',
+                    'placement' => 'left',
+                    'description' => 'Simple',
+                    'dialogIcon' => "/test-icon.png"
+                ]
+            ],
+            self::callTwigFunction($this->extension, 'oro_sidebar_get_available_widgets', [$placement])
+        );
+    }
+
+    public function testGetWidgetDefinitionsForDisabledWidget()
+    {
+        $placement = 'left';
+
+        $definitionKey = 'test';
+        $definitions = [
+            $definitionKey => [
+                'title' => 'Foo',
                 'icon' => 'test.ico',
                 'module' => 'widget/foo',
                 'placement' => 'left',
                 'description' => 'Simple',
-                'dialogIcon' => "/test-icon.png"
-            )
+                'dialogIcon' => 'test-icon.png'
+            ]
+        ];
+
+        $this->widgetDefinitionsRegistry->expects(self::once())
+            ->method('getWidgetDefinitionsByPlacement')
+            ->with($placement)
+            ->willReturn($definitions);
+        $this->featureChecker->expects(self::once())
+            ->method('isResourceEnabled')
+            ->with($definitionKey, 'sidebar_widgets')
+            ->willReturn(false);
+        $this->translator->expects(self::never())
+            ->method('trans');
+        $this->assetHelper->expects(self::never())
+            ->method('getUrl');
+
+        self::assertEquals(
+            [],
+            self::callTwigFunction($this->extension, 'oro_sidebar_get_available_widgets', [$placement])
         );
-        $this->assertEquals($expected, $this->extension->getWidgetDefinitions($placement));
     }
 }

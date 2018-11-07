@@ -1,4 +1,3 @@
-/** @lends DateEditorView */
 define(function(require) {
     'use strict';
 
@@ -7,7 +6,7 @@ define(function(require) {
      *
      * ### Column configuration samples:
      * ``` yml
-     * datagrid:
+     * datagrids:
      *   {grid-uid}:
      *     inline_editing:
      *       enable: true
@@ -31,6 +30,11 @@ define(function(require) {
      *                 showButtonPanel: true
      *           validation_rules:
      *             NotBlank: true
+     *           save_api_accessor:
+     *               route: '<route>'
+     *               query_parameter_names:
+     *                  - '<parameter1>'
+     *                  - '<parameter2>'
      * ```
      *
      * ### Options in yml:
@@ -39,8 +43,9 @@ define(function(require) {
      * :---------------------------------------------------|:-----------
      * inline_editing.editor.view_options.css_class_name   | Optional. Additional css class name for editor view DOM el
      * inline_editing.editor.view_options.dateInputAttrs   | Optional. Attributes for the date HTML input element
-     * inline_editing.editor.view_options.datePickerOptions| Optional. See [documentation here](http://goo.gl/pddxZU)
-     * inline_editing.editor.validation_rules | Optional. Validation rules. See [documentation](https://goo.gl/j9dj4Y)
+     * inline_editing.editor.view_options.datePickerOptions| Optional. See [documentation here](http://api.jqueryui.com/datepicker/)
+     * inline_editing.validation_rules | Optional. Validation rules. See [documentation](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * inline_editing.save_api_accessor                    | Optional. Sets accessor module, route, parameters etc.
      *
      * ### Constructor parameters
      *
@@ -48,9 +53,10 @@ define(function(require) {
      * @param {Object} options - Options container
      * @param {Object} options.model - Current row model
      * @param {string} options.fieldName - Field name to edit in model
-     * @param {Object} options.validationRules - Validation rules. See [documentation here](https://goo.gl/j9dj4Y)
+     * @param {Object} options.validationRules - Validation rules. See [documentation here](../reference/js_validation.md#conformity-server-side-validations-to-client-once)
      * @param {Object} options.dateInputAttrs - Attributes for date HTML input element
-     * @param {Object} options.datePickerOptions - See [documentation here](http://goo.gl/pddxZU)
+     * @param {Object} options.datePickerOptions - See [documentation here](http://api.jqueryui.com/datepicker/)
+     * @param {string} options.value - initial value of edited field
      *
      * @augments [TextEditorView](./text-editor-view.md)
      * @exports DateEditorView
@@ -72,10 +78,10 @@ define(function(require) {
         DROPDOWN_BELOW_INPUT_CSS_CLASS: 'dropdown-below-input',
         DEFAULT_OPTIONS: {
             dateInputAttrs: {
-                placeholder: __('oro.form.choose_date'),
-                name: 'date',
-                autocomplete: 'off',
-                'data-validation': JSON.stringify({Date: {}}),
+                'placeholder': __('oro.form.choose_date'),
+                'name': 'date',
+                'autocomplete': 'off',
+                'data-validation': JSON.stringify({Date: {}})
             },
             datePickerOptions: {
                 altFormat: 'yy-mm-dd',
@@ -92,6 +98,13 @@ define(function(require) {
         },
 
         format: datetimeFormatter.getBackendDateFormat(),
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DateEditorView() {
+            DateEditorView.__super__.constructor.apply(this, arguments);
+        },
 
         render: function() {
             DateEditorView.__super__.render.call(this);
@@ -144,6 +157,7 @@ define(function(require) {
             if (this.disposed) {
                 return;
             }
+            this._isFocused = false;
             this.$('.hasDatepicker').off(this.eventNamespace());
             this.view.getDatePickerWidget().off(this.eventNamespace());
             this.view.dispose();

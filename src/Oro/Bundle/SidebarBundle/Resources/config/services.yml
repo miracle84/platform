@@ -2,32 +2,20 @@ parameters:
     oro_sidebar.entity.sidebar_state.class: Oro\Bundle\SidebarBundle\Entity\SidebarState
     oro_sidebar.entity.widget.class: Oro\Bundle\SidebarBundle\Entity\Widget
 
-    oro_sidebar.widget_definition.registry.class: Oro\Bundle\SidebarBundle\Model\WidgetDefinitionRegistry
-    oro_sidebar.twig.extension.class: Oro\Bundle\SidebarBundle\Twig\SidebarExtension
-    oro_sidebar.request.handler.class: Oro\Bundle\SidebarBundle\EventListener\RequestHandler
-
 services:
     oro_sidebar.widget_definition.registry:
-        class: %oro_sidebar.widget_definition.registry.class%
+        class: Oro\Bundle\SidebarBundle\Model\WidgetDefinitionRegistry
         arguments:
-            - %oro_sidebar.sidebar_widgets_definitions%
+            - '%oro_sidebar.sidebar_widgets_definitions%'
 
     oro_sidebar.twig.extension:
-        class: %oro_sidebar.twig.extension.class%
-        arguments:
-            - '@oro_sidebar.widget_definition.registry'
-            - '@translator'
-            - '@assets.packages'
-        tags:
-            - { name: twig.extension }
-            - { name: oro_featuretogle.feature, feature: email }
-
-    oro_sidebar.request.handler:
-        class: %oro_sidebar.request.handler.class%
+        class: Oro\Bundle\SidebarBundle\Twig\SidebarExtension
+        public: false
         arguments:
             - '@service_container'
         tags:
-            - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest }
+            - { name: twig.extension }
+            - { name: oro_featuretogle.feature, feature: email }
 
     oro_sidebar.config_extension.feature:
         class: 'Oro\Bundle\SidebarBundle\Configuration\FeatureConfigurationExtension'

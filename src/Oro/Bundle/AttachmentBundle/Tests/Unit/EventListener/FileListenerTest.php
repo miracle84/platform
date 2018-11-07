@@ -2,26 +2,26 @@
 
 namespace Oro\Bundle\AttachmentBundle\Tests\Unit\EventListener;
 
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\LifecycleEventArgs;
-
-use Symfony\Component\HttpFoundation\File\File as ComponentFile;
-
 use Oro\Bundle\AttachmentBundle\Entity\File;
 use Oro\Bundle\AttachmentBundle\EventListener\FileListener;
-use Oro\Bundle\AttachmentBundle\Tests\Unit\Fixtures\TestClass;
+use Oro\Bundle\AttachmentBundle\Manager\FileManager;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\HttpFoundation\File\File as ComponentFile;
 
-class FileListenerTest extends \PHPUnit_Framework_TestCase
+class FileListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var FileListener  */
     protected $listener;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject  */
+    /** @var \PHPUnit\Framework\MockObject\MockObject  */
     protected $fileManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject  */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject  */
+    protected $tokenAccessor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject  */
+    /** @var \PHPUnit\Framework\MockObject\MockObject  */
     protected $em;
 
     /**
@@ -31,38 +31,14 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->fileManager = $this->getMockBuilder('Oro\Bundle\AttachmentBundle\Manager\FileManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->fileManager = $this->createMock(FileManager::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->em = $this->createMock(EntityManager::class);
 
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $securityFacadeLink = $this->getMockBuilder('Oro\Component\DependencyInjection\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $securityFacadeLink->expects($this->any())
-            ->method('getService')
-            ->willReturn($this->securityFacade);
-
-        $this->em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->listener = new FileListener($this->fileManager, $securityFacadeLink);
+        $this->listener = new FileListener($this->fileManager, $this->tokenAccessor);
     }
 
-    public function testPrePersistForNotFileEntity()
-    {
-        $entity = new TestClass();
-
-        $this->fileManager->expects($this->never())
-            ->method('preUpload');
-
-        $this->listener->prePersist(new LifecycleEventArgs($entity, $this->em));
-    }
-
-    public function testPrePersistForFileEntityButWithoutFileObject()
+    public function testPrePersistWithoutFileObject()
     {
         $entity = new File();
 
@@ -70,11 +46,11 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('preUpload')
             ->with($entity);
 
-        $this->listener->prePersist(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->prePersist($entity, new LifecycleEventArgs($entity, $this->em));
         $this->assertNull($entity->getOwner());
     }
 
-    public function testPrePersistForFileEntityButWithFileObject()
+    public function testPrePersistWithFileObject()
     {
         $entity = new File();
         $file = new ComponentFile(__DIR__ . '/../Fixtures/testFile/test.txt');
@@ -86,25 +62,15 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
         $this->fileManager->expects($this->once())
             ->method('preUpload')
             ->with($entity);
-        $this->securityFacade->expects($this->once())
-            ->method('getLoggedUser')
+        $this->tokenAccessor->expects($this->once())
+            ->method('getUser')
             ->willReturn($loggedUser);
 
-        $this->listener->prePersist(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->prePersist($entity, new LifecycleEventArgs($entity, $this->em));
         $this->assertSame($loggedUser, $entity->getOwner());
     }
 
-    public function testPreUpdateForNotFileEntity()
-    {
-        $entity = new TestClass();
-
-        $this->fileManager->expects($this->never())
-            ->method('preUpload');
-
-        $this->listener->preUpdate(new LifecycleEventArgs($entity, $this->em));
-    }
-
-    public function testPreUpdateForFileEntityButWithoutFileObject()
+    public function testPreUpdateWithoutFileObject()
     {
         $entity = new File();
 
@@ -112,11 +78,11 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('preUpload')
             ->with($entity);
 
-        $this->listener->preUpdate(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->preUpdate($entity, new LifecycleEventArgs($entity, $this->em));
         $this->assertNull($entity->getOwner());
     }
 
-    public function testPreUpdateForFileEntityButWithFileObject()
+    public function testPreUpdateWithFileObject()
     {
         $entity = new File();
         $file = new ComponentFile(__DIR__ . '/../Fixtures/testFile/test.txt');
@@ -128,25 +94,15 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
         $this->fileManager->expects($this->once())
             ->method('preUpload')
             ->with($entity);
-        $this->securityFacade->expects($this->once())
-            ->method('getLoggedUser')
+        $this->tokenAccessor->expects($this->once())
+            ->method('getUser')
             ->willReturn($loggedUser);
 
-        $this->listener->preUpdate(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->preUpdate($entity, new LifecycleEventArgs($entity, $this->em));
         $this->assertSame($loggedUser, $entity->getOwner());
     }
 
-    public function testPostPersistForNotFileEntity()
-    {
-        $entity = new TestClass();
-
-        $this->fileManager->expects($this->never())
-            ->method('upload');
-
-        $this->listener->postPersist(new LifecycleEventArgs($entity, $this->em));
-    }
-
-    public function testPostPersistForFileEntityWhenFileObjectIsRemoved()
+    public function testPostPersistWhenFileObjectIsRemoved()
     {
         $entity = new File();
         $entity->setEmptyFile(true);
@@ -172,10 +128,10 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test.txt');
 
-        $this->listener->postPersist(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postPersist($entity, new LifecycleEventArgs($entity, $this->em));
     }
 
-    public function testPostPersistForFileEntityButWithoutFileObject()
+    public function testPostPersistWithoutFileObject()
     {
         $entity = new File();
 
@@ -199,10 +155,10 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test.txt');
 
-        $this->listener->postPersist(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postPersist($entity, new LifecycleEventArgs($entity, $this->em));
     }
 
-    public function testPostPersistForFileEntityButWithFileObject()
+    public function testPostPersistWithFileObject()
     {
         $entity = new File();
         $file = new ComponentFile(__DIR__ . '/../Fixtures/testFile/test.txt');
@@ -228,20 +184,10 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test1.txt');
 
-        $this->listener->postPersist(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postPersist($entity, new LifecycleEventArgs($entity, $this->em));
     }
 
-    public function testPostUpdateForNotFileEntity()
-    {
-        $entity = new TestClass();
-
-        $this->fileManager->expects($this->never())
-            ->method('upload');
-
-        $this->listener->postUpdate(new LifecycleEventArgs($entity, $this->em));
-    }
-
-    public function testPostUpdateForFileEntityWhenFileObjectIsRemoved()
+    public function testPostUpdateWhenFileObjectIsRemoved()
     {
         $entity = new File();
         $entity->setEmptyFile(true);
@@ -267,10 +213,10 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test.txt');
 
-        $this->listener->postUpdate(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postUpdate($entity, new LifecycleEventArgs($entity, $this->em));
     }
 
-    public function testPostUpdateForFileEntityButWithoutFileObject()
+    public function testPostUpdateWithoutFileObject()
     {
         $entity = new File();
 
@@ -294,10 +240,10 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test.txt');
 
-        $this->listener->postUpdate(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postUpdate($entity, new LifecycleEventArgs($entity, $this->em));
     }
 
-    public function testPostUpdateForFileEntityButWithFileObject()
+    public function testPostUpdateWithFileObject()
     {
         $entity = new File();
         $file = new ComponentFile(__DIR__ . '/../Fixtures/testFile/test.txt');
@@ -323,6 +269,6 @@ class FileListenerTest extends \PHPUnit_Framework_TestCase
             ->method('deleteFile')
             ->with('test1.txt');
 
-        $this->listener->postUpdate(new LifecycleEventArgs($entity, $this->em));
+        $this->listener->postUpdate($entity, new LifecycleEventArgs($entity, $this->em));
     }
 }

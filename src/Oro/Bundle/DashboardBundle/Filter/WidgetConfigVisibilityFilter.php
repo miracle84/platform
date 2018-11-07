@@ -3,13 +3,13 @@
 namespace Oro\Bundle\DashboardBundle\Filter;
 
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Component\Config\Resolver\ResolverInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class WidgetConfigVisibilityFilter
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /** @var ResolverInterface */
     protected $resolver;
@@ -18,16 +18,16 @@ class WidgetConfigVisibilityFilter
     protected $featureChecker;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param ResolverInterface $resolver
-     * @param FeatureChecker $featureChecker
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param ResolverInterface             $resolver
+     * @param FeatureChecker                $featureChecker
      */
     public function __construct(
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
         ResolverInterface $resolver,
         FeatureChecker $featureChecker
     ) {
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
         $this->resolver = $resolver;
         $this->featureChecker = $featureChecker;
     }
@@ -70,7 +70,7 @@ class WidgetConfigVisibilityFilter
      */
     protected function isItemAllowed($widgetName, $itemName, $enabled, $acl, $applicable)
     {
-        if (!$enabled || ($acl && !$this->securityFacade->isGranted($acl))) {
+        if (!$enabled || ($acl && !$this->authorizationChecker->isGranted($acl))) {
             return false;
         }
 

@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\MessageQueueBundle\Test\Functional;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
-use Oro\Bundle\TestFrameworkBundle\Test\Client;
-use Oro\Bundle\ImportExportBundle\Async\ExportMessageProcessor;
+use Oro\Bundle\ImportExportBundle\Async\Export\ExportMessageProcessor;
 use Oro\Bundle\NotificationBundle\Async\Topics;
+use Oro\Bundle\TestFrameworkBundle\Test\Client;
 use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 trait MessageProcessTrait
 {
@@ -21,7 +20,7 @@ trait MessageProcessTrait
     {
         $sentMessages = $this->getSentMessages();
         $exportMessageData = reset($sentMessages);
-        $this->tearDownMessageCollector();
+        $this->clearMessageCollector();
 
         $message = new NullMessage();
         $message->setMessageId('abc');
@@ -65,7 +64,7 @@ trait MessageProcessTrait
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionInterfaceMock()
     {

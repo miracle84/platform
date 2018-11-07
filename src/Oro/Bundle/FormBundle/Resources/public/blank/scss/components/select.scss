@@ -1,4 +1,4 @@
-// @theme: blank
+/* @theme: blank; */
 
 .select {
     @include base-ui-element($use-base-style-for-select,
@@ -9,13 +9,17 @@
                              $select-border,
                              $select-border-radius,
                              $select-background-color,
-                             $select-color
+                             $select-color,
+                             $select-disable-platform-style
                             );
 
     background: $select-bg;
 
-    @if ($use-select-appearance) {
-        @include appearance();
+    /* Hide expand button of select in IE11
+     * Remove when stop supporting IE11
+     */
+    &::-ms-expand {
+        display: none;
     }
 
     @include element-state('hover') {
@@ -30,5 +34,17 @@
 
     @include element-state('error') {
         border-color: $select-border-color-error-state;
+    }
+}
+
+@-moz-document url-prefix() {
+    .select {
+    /**
+     * Set fixed height for Firefox
+     */
+        height: $select-firefox-height;
+        line-height: $select-firefox-line-height;
+        padding-top: $select-firefox-inner-offset-top;
+        padding-bottom: $select-firefox-inner-offset-bottom;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Extension;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Oro\Bundle\ActionBundle\Button\ButtonContext;
 use Oro\Bundle\ActionBundle\Button\ButtonInterface;
 use Oro\Bundle\ActionBundle\Button\ButtonSearchContext;
@@ -14,13 +15,11 @@ use Oro\Bundle\ActionBundle\Model\Criteria\OperationFindCriteria;
 use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationDefinition;
 use Oro\Bundle\ActionBundle\Model\OperationRegistry;
-use Oro\Bundle\ActionBundle\Model\OptionsAssembler;
 use Oro\Bundle\ActionBundle\Provider\RouteProviderInterface;
+use Oro\Bundle\ActionBundle\Resolver\OptionsResolver;
 use Oro\Bundle\ActionBundle\Tests\Unit\Stub\StubButton;
 
-use Oro\Component\ConfigExpression\ContextAccessor;
-
-class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
+class OperationButtonProviderExtensionTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_CLASS = 'stdClass';
     const ENTITY_ID = 42;
@@ -35,20 +34,17 @@ class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
     /** @var OperationButtonProviderExtension */
     protected $extension;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ContextHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ContextHelper */
     protected $contextHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|OperationRegistry */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|OperationRegistry */
     protected $operationRegistry;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|RouteProviderInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|RouteProviderInterface */
     protected $routeProvider;
 
-    /** @var OptionsAssembler|\PHPUnit_Framework_MockObject_MockObject|RouteProviderInterface */
-    protected $optionsAssembler;
-
-    /** @var ContextAccessor|\PHPUnit_Framework_MockObject_MockObject|RouteProviderInterface */
-    protected $contextAccessor;
+    /** @var OptionsResolver|\PHPUnit\Framework\MockObject\MockObject */
+    protected $optionsResolver;
 
     /**
      * {@inheritdoc}
@@ -74,21 +70,13 @@ class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
             ->method('getFormPageRoute')
             ->willReturn(self::FORM_PAGE_ROUTE_NAME);
 
-        $this->optionsAssembler = $this->createMock(OptionsAssembler::class);
-        $this->optionsAssembler->expects($this->any())
-            ->method('assemble')
-            ->willReturnCallback(function (array $options) {
-                return $options;
-            });
-
-        $this->contextAccessor = $this->createMock(ContextAccessor::class);
+        $this->optionsResolver = $this->createMock(OptionsResolver::class);
 
         $this->extension = new OperationButtonProviderExtension(
             $this->operationRegistry,
             $this->contextHelper,
             $this->routeProvider,
-            $this->optionsAssembler,
-            $this->contextAccessor
+            $this->optionsResolver
         );
     }
 
@@ -173,13 +161,27 @@ class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
     /**
      * @dataProvider isAvailableDataProvider
      *
-     * @param ButtonInterface $button
+     * @param OperationButton $button
      * @param bool $expected
      */
-    public function testIsAvailable(ButtonInterface $button, $expected)
+    public function testIsAvailable(OperationButton $button, $expected)
     {
+        $definition = $button->getOperation()->getDefinition();
+        $definition->setFrontendOptions(['frontend' => 'not resolved'])->setButtonOptions(['button' => 'not resolved']);
+        $this->optionsResolver->expects($this->at(0))
+            ->method('resolveOptions')
+            ->with($this->anything(), $definition->getFrontendOptions())
+            ->willReturn(['frontend' => 'resolved']);
+        $this->optionsResolver->expects($this->at(1))
+            ->method('resolveOptions')
+            ->with($this->anything(), $definition->getButtonOptions())
+            ->willReturn(['button' => 'resolved']);
+
         $this->assertContextHelperCalled((int)($button instanceof OperationButton));
         $this->assertEquals($expected, $this->extension->isAvailable($button, $this->createButtonSearchContext()));
+
+        $this->assertEquals(['frontend' => 'resolved'], $definition->getFrontendOptions());
+        $this->assertEquals(['button' => 'resolved'], $definition->getButtonOptions());
     }
 
     /**
@@ -204,6 +206,45 @@ class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
 
     public function testIsAvailableException()
     {
+        $this->assertContextHelperCalled(1);
+
+        $button = $this->createOperationButton();
+        /** @var Operation|\PHPUnit\Framework\MockObject\MockObject $operation */
+        $operation = $button->getOperation();
+        $definition = $operation->getDefinition();
+        $definition->setFrontendOptions(['frontend' => 'not resolved'])->setButtonOptions(['button' => 'not resolved']);
+        $this->optionsResolver->expects($this->at(0))
+            ->method('resolveOptions')
+            ->with($this->anything(), $definition->getFrontendOptions())
+            ->willReturn(['frontend' => 'resolved']);
+        $this->optionsResolver->expects($this->at(1))
+            ->method('resolveOptions')
+            ->with($this->anything(), $definition->getButtonOptions())
+            ->willReturn(['button' => 'resolved']);
+
+        $exception = new \Exception('exception when check conditions');
+
+        $operation->expects($this->any())
+            ->method('isAvailable')
+            ->willThrowException($exception);
+
+        $errors = new ArrayCollection();
+        $this->extension->isAvailable($button, $this->createButtonSearchContext(), $errors);
+        $this->assertCount(1, $errors);
+        $this->assertEquals(
+            $errors->first(),
+            [
+                'message' => sprintf(
+                    'Checking conditions of operation "%s" failed.',
+                    $operation->getName()
+                ),
+                'parameters' => ['exception' => $exception]
+            ]
+        );
+    }
+
+    public function testIsAvailableExceptionUnsupportedButton()
+    {
         $this->assertContextHelperCalled(0);
 
         $stubButton = new StubButton();
@@ -227,7 +268,7 @@ class OperationButtonProviderExtensionTest extends \PHPUnit_Framework_TestCase
      * @param string $name
      * @param bool $isAvailable
      * @param bool $withForm
-     * @return Operation|\PHPUnit_Framework_MockObject_MockObject
+     * @return Operation|\PHPUnit\Framework\MockObject\MockObject
      */
     private function createOperationMock($name, $isAvailable = false, $withForm = false)
     {

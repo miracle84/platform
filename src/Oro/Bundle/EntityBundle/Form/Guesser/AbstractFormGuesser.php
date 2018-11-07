@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EntityBundle\Form\Guesser;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\Common\Persistence\Mapping\ClassMetadata;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormTypeGuesserInterface;
 use Symfony\Component\Form\Guess\TypeGuess;
 use Symfony\Component\Form\Guess\ValueGuess;
-
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Doctrine\Common\Persistence\Mapping\ClassMetadata;
-
-use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 
 abstract class AbstractFormGuesser implements FormTypeGuesserInterface
 {
@@ -92,7 +91,7 @@ abstract class AbstractFormGuesser implements FormTypeGuesserInterface
      */
     protected function createDefaultTypeGuess()
     {
-        return new TypeGuess('text', array(), TypeGuess::LOW_CONFIDENCE);
+        return new TypeGuess(TextType::class, array(), TypeGuess::LOW_CONFIDENCE);
     }
 
     /**

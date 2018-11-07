@@ -20,18 +20,20 @@ class OptimizedProcessorIterator extends ProcessorIterator
 
     /**
      * @param array                      $processors
+     * @param string[]                   $groups
      * @param ComponentContextInterface  $context
      * @param ApplicableCheckerInterface $applicableChecker
      * @param ProcessorFactoryInterface  $processorFactory
      */
     public function __construct(
         array $processors,
+        array $groups,
         ComponentContextInterface $context,
         ApplicableCheckerInterface $applicableChecker,
         ProcessorFactoryInterface $processorFactory
     ) {
         parent::__construct($processors, $context, $applicableChecker, $processorFactory);
-        $this->groups = $this->loadGroups();
+        $this->groups = $this->loadGroups($groups);
     }
 
     /**
@@ -75,10 +77,10 @@ class OptimizedProcessorIterator extends ProcessorIterator
 
         $applicable = $this->applicableChecker->isApplicable(
             $this->context,
-            $this->processors[$this->index]['attributes']
+            $this->processors[$this->index][1]
         );
 
-        return $applicable !== ApplicableCheckerInterface::NOT_APPLICABLE;
+        return ApplicableCheckerInterface::NOT_APPLICABLE !== $applicable;
     }
 
     /**
@@ -89,7 +91,7 @@ class OptimizedProcessorIterator extends ProcessorIterator
     protected function processSkippedGroups($skippedGroups)
     {
         $index = $this->index + 1;
-        while ($index <= $this->maxIndex && in_array($this->getGroupByIndex($index), $skippedGroups, true)) {
+        while ($index <= $this->maxIndex && \in_array($this->getGroupByIndex($index), $skippedGroups, true)) {
             $index++;
         }
         $this->index = $index - 1;
@@ -150,14 +152,15 @@ class OptimizedProcessorIterator extends ProcessorIterator
      */
     protected function getIndexOfUngroupedProcessor($index)
     {
-        while ($index <= $this->maxIndex) {
-            if (!$this->getGroupByIndex($index)) {
+        $i = $this->maxIndex;
+        while ($i > $index) {
+            if ($this->getGroupByIndex($i)) {
                 break;
             }
-            $index++;
+            $i--;
         }
 
-        return $index;
+        return $i + 1;
     }
 
     /**
@@ -167,29 +170,21 @@ class OptimizedProcessorIterator extends ProcessorIterator
      */
     protected function getGroupByIndex($index)
     {
-        return isset($this->processors[$index]['attributes']['group'])
-            ? $this->processors[$index]['attributes']['group']
-            : null;
+        return $this->processors[$index][1]['group'] ?? null;
     }
 
     /**
-     * Loads groups for the given action
+     * @param string[] $groups
      *
      * @return array [group name => group index, ...]
      */
-    protected function loadGroups()
+    protected function loadGroups(array $groups)
     {
         $result = [];
         $groupIndex = 0;
-        foreach ($this->processors as $processor) {
-            if (!isset($processor['attributes']['group'])) {
-                continue;
-            }
-            $group = $processor['attributes']['group'];
-            if (!isset($result[$group])) {
-                $result[$group] = $groupIndex;
-                $groupIndex++;
-            }
+        foreach ($groups as $group) {
+            $result[$group] = $groupIndex;
+            $groupIndex++;
         }
 
         return $result;

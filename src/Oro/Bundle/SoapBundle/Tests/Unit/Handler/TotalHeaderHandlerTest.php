@@ -3,25 +3,24 @@
 namespace Oro\Bundle\SoapBundle\Tests\Unit\Handler;
 
 use Doctrine\ORM\Query;
-
+use Oro\Bundle\BatchBundle\ORM\QueryBuilder\CountQueryBuilderOptimizer;
 use Oro\Bundle\EntityBundle\ORM\SqlQuery;
 use Oro\Bundle\EntityBundle\ORM\SqlQueryBuilder;
-use Oro\Bundle\SoapBundle\Handler\TotalHeaderHandler;
-use Oro\Bundle\SoapBundle\Entity\Manager\ApiEntityManager;
 use Oro\Bundle\SoapBundle\Controller\Api\Rest\RestApiReadInterface;
-use Oro\Bundle\BatchBundle\ORM\QueryBuilder\CountQueryBuilderOptimizer;
+use Oro\Bundle\SoapBundle\Entity\Manager\ApiEntityManager;
+use Oro\Bundle\SoapBundle\Handler\TotalHeaderHandler;
 
-class TotalHeaderHandlerTest extends \PHPUnit_Framework_TestCase
+class TotalHeaderHandlerTest extends \PHPUnit\Framework\TestCase
 {
     use ContextAwareTest;
 
-    /** @var CountQueryBuilderOptimizer|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var CountQueryBuilderOptimizer|\PHPUnit\Framework\MockObject\MockObject */
     protected $optimizer;
 
-    /** @var TotalHeaderHandler|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TotalHeaderHandler|\PHPUnit\Framework\MockObject\MockObject */
     protected $handler;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
     protected function setUp()

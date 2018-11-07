@@ -4,49 +4,47 @@ namespace Oro\Bundle\EntityConfigBundle\Provider;
 
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\PersistentCollection;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
-use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
-use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
-use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\EntityConfigBundle\Config\Id\ConfigIdInterface;
+use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
+use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Exception\RuntimeException;
 
 /**
  * The configuration provider can be used to get configuration data inside particular configuration scope.
  */
-class ConfigProvider implements ConfigProviderInterface
+class ConfigProvider
 {
     /** @var ConfigManager */
     protected $configManager;
 
-    /** @var PropertyConfigContainer */
-    protected $propertyConfig;
-
     /** @var string */
     protected $scope;
 
+    /** @var PropertyConfigBag */
+    private $configBag;
+
     /**
-     * @param ConfigManager $configManager The configuration manager
-     * @param string        $scope         The configuration scope this provider works with
-     * @param array         $config        The scope configuration
+     * @param ConfigManager     $configManager The configuration manager
+     * @param string            $scope         The configuration scope this provider works with
+     * @param PropertyConfigBag $configBag     A bag contains the configuration of all scopes
      */
-    public function __construct(ConfigManager $configManager, $scope, array $config)
+    public function __construct(ConfigManager $configManager, $scope, PropertyConfigBag $configBag)
     {
-        $this->scope          = $scope;
-        $this->configManager  = $configManager;
-        $this->propertyConfig = new PropertyConfigContainer($config);
+        $this->scope = $scope;
+        $this->configManager = $configManager;
+        $this->configBag = $configBag;
     }
 
     /**
-     * Gets a configuration the scope this provider works with.
+     * Gets a configuration of the scope this provider works with.
      *
      * @return PropertyConfigContainer
      */
     public function getPropertyConfig()
     {
-        return $this->propertyConfig;
+        return $this->configBag->getPropertyConfig($this->scope);
     }
 
     /**
@@ -256,51 +254,6 @@ class ConfigProvider implements ConfigProviderInterface
                 gettype($object)
             )
         );
-    }
-
-    /**
-     * Removes configuration data for the given object (entity or field) from the cache.
-     *
-     * @param string      $className
-     * @param string|null $fieldName
-     *
-     * @deprecated since 1.9. Use ConfigManager::clearCache instead
-     */
-    public function clearCache($className, $fieldName = null)
-    {
-        $this->configManager->clearCache($this->getId($className, $fieldName));
-    }
-
-    /**
-     * Tells the ConfigManager to make the given configuration data managed and persistent.
-     *
-     * @param ConfigInterface $config
-     *
-     * @deprecated since 1.9. Use ConfigManager::persist instead
-     */
-    public function persist(ConfigInterface $config)
-    {
-        $this->configManager->persist($config);
-    }
-
-    /**
-     * @param ConfigInterface $config
-     *
-     * @deprecated since 1.9. Use ConfigManager::merge instead
-     */
-    public function merge(ConfigInterface $config)
-    {
-        $this->configManager->merge($config);
-    }
-
-    /**
-     * Flushes all changes to configuration data that have been queued up to now to the database.
-     *
-     * @deprecated since 1.9. Use ConfigManager::flush instead
-     */
-    public function flush()
-    {
-        $this->configManager->flush();
     }
 
     /**

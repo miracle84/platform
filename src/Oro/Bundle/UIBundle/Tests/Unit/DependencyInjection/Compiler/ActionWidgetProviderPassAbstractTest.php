@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\UIBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\UIBundle\DependencyInjection\Compiler\AbstractGroupingWidgetProviderPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-use Oro\Bundle\UIBundle\DependencyInjection\Compiler\AbstractGroupingWidgetProviderPass;
-
-abstract class ActionWidgetProviderPassAbstractTest extends \PHPUnit_Framework_TestCase
+abstract class ActionWidgetProviderPassAbstractTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AbstractGroupingWidgetProviderPass */
     protected $widgetProvider;
@@ -23,7 +22,7 @@ abstract class ActionWidgetProviderPassAbstractTest extends \PHPUnit_Framework_T
 
     public function testGetChainProviderServiceId()
     {
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $container */
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $container */
         $container = $this->createMock('\Symfony\Component\DependencyInjection\ContainerBuilder');
         $container->expects($this->once())
             ->method('hasDefinition')
@@ -37,7 +36,7 @@ abstract class ActionWidgetProviderPassAbstractTest extends \PHPUnit_Framework_T
 
     public function testGetProviderTagName()
     {
-        /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject $container */
+        /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject $container */
         $container = $this->createMock('\Symfony\Component\DependencyInjection\ContainerBuilder');
         $container->expects($this->once())
             ->method('hasDefinition')

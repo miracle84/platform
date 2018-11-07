@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Update;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Saves all changes of ORM entity to the database.
@@ -31,8 +31,8 @@ class SaveEntity implements ProcessorInterface
         /** @var SingleItemContext $context */
 
         $entity = $context->getResult();
-        if (!is_object($entity)) {
-            // entity does not exist
+        if (!\is_object($entity)) {
+            // an entity does not exist
             return;
         }
 

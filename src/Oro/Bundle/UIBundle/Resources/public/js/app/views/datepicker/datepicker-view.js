@@ -44,6 +44,18 @@ define(function(require) {
         _preventFrontendUpdate: false,
 
         /**
+         * ClassName for empty field
+         */
+        emptyClassName: 'input--empty',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DatePickerView() {
+            DatePickerView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Initializes view
          *  - creates front field
          *  - updates front field
@@ -125,6 +137,8 @@ define(function(require) {
             this.$frontDateField.attr(options.dateInputAttrs);
             this.$frontDateField.attr('data-fake-front-field', '');
             this.$frontDateField.on('keyup change', _.bind(this.updateOrigin, this));
+            this.$frontDateField.on('keypress keyup change focus blur', _.bind(this.checkEmpty, this));
+            this.checkEmpty();
             this.$el.after(this.$frontDateField);
             this.$el.attr('data-format', 'backend');
         },
@@ -184,13 +198,22 @@ define(function(require) {
         },
 
         /**
+         * Update empty state
+         */
+        checkEmpty: function() {
+            if (this.nativeMode && this.$frontDateField) {
+                this.$frontDateField.toggleClass(this.emptyClassName, !this.$frontDateField.val().length);
+            }
+        },
+
+        /**
          * Updates original field on front field change
          *
          * @param {jQuery.Event} e
          */
         updateOrigin: function(e) {
             var backendFormattedValue = this.getBackendFormattedValue();
-            if (this.$el.val() !== backendFormattedValue) {
+            if (!_.isUndefined(backendFormattedValue) && this.$el.val() !== backendFormattedValue) {
                 this._preventFrontendUpdate = true;
                 this.$el.val(backendFormattedValue).trigger('change');
                 this._preventFrontendUpdate = false;
@@ -222,13 +245,13 @@ define(function(require) {
          * @returns {string}
          */
         getBackendFormattedValue: function() {
-            var value = '';
             var momentInstance = this.getFrontendMoment();
             var format = _.isArray(this.backendFormat) ? this.backendFormat[0] : this.backendFormat;
             if (momentInstance) {
-                value = momentInstance.utc().format(format);
+                return momentInstance.utc().format(format);
+            } else if (momentInstance === null) {
+                return '';
             }
-            return value;
         },
 
         /**
@@ -266,6 +289,11 @@ define(function(require) {
          */
         getFrontendMoment: function() {
             var value = this.$frontDateField.val();
+
+            if (_.isEmpty(_.trim(value))) {
+                return null;
+            }
+
             var format = this.getDateFormat();
             var momentInstance = moment.utc(value, format, true);
             if (momentInstance.isValid()) {

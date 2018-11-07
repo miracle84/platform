@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityExtendBundle\Extend;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EntityConfigBundle\Config\EntityManagerBag;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
@@ -87,7 +86,7 @@ class EntityProxyGenerator
                 if (!$extendConfig->is('is_extend')) {
                     continue;
                 }
-                if ($extendConfig->in('state', [ExtendScope::STATE_NEW])) {
+                if ($extendConfig->in('state', [ExtendScope::STATE_NEW, ExtendScope::STATE_DELETE])) {
                     continue;
                 }
 

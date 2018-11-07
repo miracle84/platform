@@ -1,24 +1,34 @@
 <?php
+
 namespace Oro\Bundle\MessageQueueBundle\Consumption\Extension;
 
-use Doctrine\DBAL\Connection;
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Oro\Component\MessageQueue\Consumption\AbstractExtension;
 use Oro\Component\MessageQueue\Consumption\Context;
-use Symfony\Bridge\Doctrine\RegistryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class DoctrinePingConnectionExtension extends AbstractExtension
+class DoctrinePingConnectionExtension extends AbstractExtension implements ResettableExtensionInterface
 {
-    /**
-     * @var RegistryInterface
-     */
-    protected $registry;
+    /** @var ContainerInterface */
+    private $container;
+
+    /** @var ManagerRegistry|null */
+    private $doctrine;
 
     /**
-     * @param RegistryInterface $registry
+     * @param ContainerInterface $container
      */
-    public function __construct(RegistryInterface $registry)
+    public function __construct(ContainerInterface $container)
     {
-        $this->registry = $registry;
+        $this->container = $container;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function reset()
+    {
+        $this->doctrine = null;
     }
 
     /**
@@ -26,22 +36,24 @@ class DoctrinePingConnectionExtension extends AbstractExtension
      */
     public function onPreReceived(Context $context)
     {
-        /** @var Connection $connection */
-        foreach ($this->registry->getConnections() as $connection) {
+        if (null === $this->doctrine) {
+            $this->doctrine = $this->container->get('doctrine');
+        }
+
+        $logger = $context->getLogger();
+        $connections = $this->doctrine->getConnectionNames();
+        foreach ($connections as $name => $serviceId) {
+            $connection = $this->doctrine->getConnection($name);
             if ($connection->ping()) {
                 return;
             }
 
-            $context->getLogger()->debug(
-                '[DoctrinePingConnectionExtension] Connection is not active trying to reconnect.'
-            );
+            $logger->debug(sprintf('Connection "%s" is not active, trying to reconnect.', $name));
 
             $connection->close();
             $connection->connect();
 
-            $context->getLogger()->debug(
-                '[DoctrinePingConnectionExtension] Connection is active now.'
-            );
+            $logger->debug(sprintf('Connection "%s" is active now.', $name));
         }
     }
 }

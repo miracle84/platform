@@ -58,12 +58,12 @@ class LimitConsumedMessagesExtension extends AbstractExtension
     {
         if ($this->messageConsumed >= $this->messageLimit) {
             $context->getLogger()->debug(sprintf(
-                '[LimitConsumedMessagesExtension] Message consumption is interrupted since the message limit reached.'.
-                ' limit: "%s"',
+                'Message consumption is interrupted since the message limit reached. limit: "%s"',
                 $this->messageLimit
             ));
 
             $context->setExecutionInterrupted(true);
+            $context->setInterruptedReason('The message limit reached.');
         }
     }
 }

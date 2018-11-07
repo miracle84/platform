@@ -8,9 +8,6 @@ use Oro\Bundle\TranslationBundle\ImportExport\Strategy\TranslationImportStrategy
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadLanguages;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadTranslations;
 
-/**
- * @dbIsolation
- */
 class TranslationImportStrategyTest extends AbstractTranslationImportStrategyTest
 {
     public function testProcessAdd()
@@ -65,7 +62,8 @@ class TranslationImportStrategyTest extends AbstractTranslationImportStrategyTes
             $container->get('oro_entity.entity_class_name_provider'),
             $container->get('translator'),
             $container->get('oro_importexport.strategy.new_entities_helper'),
-            $container->get('oro_entity.doctrine_helper')
+            $container->get('oro_entity.doctrine_helper'),
+            $container->get('oro_security.owner.checker')
         );
     }
 }

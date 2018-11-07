@@ -3,17 +3,18 @@
 namespace Oro\Bundle\EntityExtendBundle\Command;
 
 use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\EntityExtendBundle\Tools\EnumSynchronizer;
+use Oro\Bundle\EntityExtendBundle\Tools\SaveSchemaTool;
+use Oro\Bundle\EntityExtendBundle\Tools\SchemaTrait;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use Oro\Bundle\EntityExtendBundle\Tools\SchemaTrait;
-use Oro\Bundle\EntityExtendBundle\Tools\SaveSchemaTool;
-use Oro\Bundle\EntityExtendBundle\Tools\EnumSynchronizer;
-use Oro\Bundle\EntityConfigBundle\Provider\ExtendEntityConfigProvider;
-
+/**
+ * The CLI command to update schema according to data stored in entity config caches
+ */
 class UpdateSchemaCommand extends ContainerAwareCommand
 {
     use SchemaTrait;
@@ -33,12 +34,6 @@ class UpdateSchemaCommand extends ContainerAwareCommand
                         null,
                         InputOption::VALUE_NONE,
                         'Dumps the generated SQL statements to the screen (does not execute them).'
-                    ),
-                    new InputOption(
-                        'attributes-only',
-                        null,
-                        InputOption::VALUE_NONE,
-                        'Executes update schema only for entities which has attributes.'
                     )
                 ]
             );
@@ -62,15 +57,7 @@ class UpdateSchemaCommand extends ContainerAwareCommand
         /** @var EntityManager $em */
         $em = $this->getContainer()->get('doctrine.orm.entity_manager');
 
-        /** @var ExtendEntityConfigProvider $attributeProvider */
-        $extendEntityConfigProvider = $this->getContainer()
-            ->get('oro_entity_config.provider.extend_entity_config_provider');
-
-        $extendConfigs = $extendEntityConfigProvider->getExtendEntityConfigs($input->getOption('attributes-only'));
-        $metadata = [];
-        foreach ($extendConfigs as $extendConfig) {
-            $metadata[] = $em->getClassMetadata($extendConfig->getId()->getClassName());
-        }
+        $metadata = $this->getClassesMetadata($em);
 
         $schemaTool = new SaveSchemaTool($em);
         $sqls       = $schemaTool->getUpdateSchemaSql($metadata, true);
@@ -96,5 +83,26 @@ class UpdateSchemaCommand extends ContainerAwareCommand
             $enumSynchronizer = $this->getContainer()->get('oro_entity_extend.enum_synchronizer');
             $enumSynchronizer->sync();
         }
+    }
+
+    /**
+     * @param EntityManager $em
+     *
+     * @return array
+     */
+    protected function getClassesMetadata(EntityManager $em)
+    {
+        $extendEntityConfigProvider = $this->getContainer()
+            ->get('oro_entity_config.provider.extend_entity_config_provider');
+
+        $extendConfigs = $extendEntityConfigProvider->getExtendEntityConfigs();
+        $metadata = [];
+        foreach ($extendConfigs as $extendConfig) {
+            if (!$extendConfig->in('state', [ExtendScope::STATE_NEW, ExtendScope::STATE_DELETE])) {
+                $metadata[] = $em->getClassMetadata($extendConfig->getId()->getClassName());
+            }
+        }
+
+        return $metadata;
     }
 }

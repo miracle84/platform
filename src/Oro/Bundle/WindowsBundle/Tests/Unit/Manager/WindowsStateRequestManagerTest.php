@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\WindowsBundle\Tests\Manager;
 
+use Oro\Bundle\WindowsBundle\Manager\WindowsStateRequestManager;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-use Oro\Bundle\WindowsBundle\Manager\WindowsStateRequestManager;
-
-class WindowsStateRequestManagerTest extends \PHPUnit_Framework_TestCase
+class WindowsStateRequestManagerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var WindowsStateRequestManager */
     protected $manager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|RequestStack */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|RequestStack */
     protected $requestStack;
 
     protected function setUp()

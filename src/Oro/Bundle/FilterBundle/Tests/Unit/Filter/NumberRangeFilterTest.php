@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\FilterBundle\Tests\Unit\Filter;
 
-use Symfony\Component\Form\FormFactoryInterface;
-
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Filter\NumberRangeFilter;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\NumberRangeFilterType;
+use Symfony\Component\Form\FormFactoryInterface;
 
 class NumberRangeFilterTest extends NumberFilterTest
 {
@@ -22,13 +21,7 @@ class NumberRangeFilterTest extends NumberFilterTest
     {
         parent::setUp();
 
-        /* @var $formFactory FormFactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
-        $formFactory = $this->createMock('Symfony\Component\Form\FormFactoryInterface');
-
-        /* @var $filterUtility FilterUtility|\PHPUnit_Framework_MockObject_MockObject */
-        $filterUtility = $this->createMock('Oro\Bundle\FilterBundle\Filter\FilterUtility');
-
-        $this->filter = new NumberRangeFilter($formFactory, $filterUtility);
+        $this->filter = new NumberRangeFilter($this->formFactory, $this->filterUtility);
         $this->filter->init($this->filterName, [
             FilterUtility::DATA_NAME_KEY => $this->dataName,
         ]);
@@ -77,7 +70,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name >= 1 AND field-name <= 2',
+                    'where' => 'field_name >= 1 AND field_name <= 2',
                 ],
             ],
             'BETWEEN x AND NULL' => [
@@ -88,7 +81,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name >= 3',
+                    'where' => 'field_name >= 3',
                 ],
             ],
             'BETWEEN NULL AND y' => [
@@ -99,7 +92,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name <= 4',
+                    'where' => 'field_name <= 4',
                 ],
             ],
             'NOT BETWEEN x AND y' => [
@@ -111,7 +104,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name < 5 OR field-name > 6',
+                    'where' => 'field_name < 5 OR field_name > 6',
                 ],
             ],
             'NOT BETWEEN x AND NULL' => [
@@ -122,7 +115,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name < 7',
+                    'where' => 'field_name < 7',
                 ],
             ],
             'NOT BETWEEN NULL AND y' => [
@@ -133,7 +126,7 @@ class NumberRangeFilterTest extends NumberFilterTest
                     ],
                 ],
                 'expected' => [
-                    'where' => 'field-name > 8',
+                    'where' => 'field_name > 8',
                 ],
             ],
         ];

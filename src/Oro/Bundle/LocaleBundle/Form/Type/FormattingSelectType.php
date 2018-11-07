@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\LocaleBundle\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\OroChoiceType;
+use Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-
-use Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider;
 
 class FormattingSelectType extends AbstractType
 {
@@ -30,8 +30,12 @@ class FormattingSelectType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
-            'empty_value' => false,
-            'choices' => $this->provider->getFormattingChoices()
+            'placeholder' => '',
+            'choices' => $this->provider->getFormattingChoices(),
+            'translatable_options' => false,
+            'configs' => [
+                'placeholder' => 'oro.locale.localization.form.placeholder.select_formatting'
+            ],
         ]);
     }
 
@@ -40,7 +44,7 @@ class FormattingSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'choice';
+        return OroChoiceType::class;
     }
 
     /**

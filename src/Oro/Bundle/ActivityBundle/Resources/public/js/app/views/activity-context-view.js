@@ -9,6 +9,16 @@ define(function(require) {
     var WidgetManager = require('oroui/js/widget-manager');
 
     ActivityContextView = BaseView.extend({
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityContextView() {
+            ActivityContextView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = options;
             this.template = _.template($('#activity-context-item').html());
@@ -39,8 +49,8 @@ define(function(require) {
             this.collection.on('add', function(model) {
                 var gridUrl = encodeURI(self.options.params.grid_path + '/' + model.attributes.className);
                 var view = self.template({
-                        entity: model
-                    });
+                    entity: model
+                });
                 var $view = $(view);
 
                 if (model.attributes.first) {

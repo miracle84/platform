@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\LocaleBundle\Form\Type;
 
+use Oro\Bundle\FormBundle\Form\Type\OroEntitySelectOrCreateInlineType;
+use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-
-use Oro\Bundle\LocaleBundle\Entity\Localization;
 
 class LocalizationParentSelectType extends AbstractType
 {
@@ -24,7 +24,8 @@ class LocalizationParentSelectType extends AbstractType
                 'configs' => [
                     'component' => 'autocomplete-entity-parent',
                     'placeholder' => 'oro.locale.localization.form.placeholder.select_parent_localization'
-                ]
+                ],
+                'grid_name' => 'oro-locale-localizations-select-grid',
             ]
         );
     }
@@ -37,6 +38,9 @@ class LocalizationParentSelectType extends AbstractType
         $parentData = $form->getParent()->getData();
 
         $view->vars['configs']['entityId'] = $parentData instanceof Localization ? $parentData->getId() : null;
+        $view->vars['grid_parameters'] = [
+            'ids' => $parentData instanceof Localization ? $parentData->getChildrenIds(true) : []
+        ];
     }
 
     /**
@@ -44,7 +48,7 @@ class LocalizationParentSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'oro_jqueryselect2_hidden';
+        return OroEntitySelectOrCreateInlineType::class;
     }
 
     /**

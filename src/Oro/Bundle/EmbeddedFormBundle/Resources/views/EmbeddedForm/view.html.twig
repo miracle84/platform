@@ -3,7 +3,7 @@
 {% oro_title_set({ params : {"%form.title%": entity.title} }) %}
 
 {% block navButtons %}
-    {% if resource_granted('oro_embedded_form_delete') %}
+    {% if is_granted('oro_embedded_form_delete') %}
         {{ UI.deleteButton({
             'dataUrl': path('oro_embedded_form_delete', {'id': entity.id}),
             'dataRedirect': path('oro_embedded_form_list'),
@@ -14,7 +14,7 @@
         {{ UI.buttonSeparator() }}
     {% endif %}
 
-    {% if resource_granted('oro_embedded_form_delete') %}
+    {% if is_granted('oro_embedded_form_delete') %}
         {{ UI.button({'path' : path('oro_embedded_form_update', {'id': entity.id}), 'title' : 'Edit'|trans, 'label' : 'Edit'|trans}) }}
     {% endif %}
     {{ UI.button({'path' : path('oro_embedded_form_list'), 'title' : 'Cancel'|trans, 'label' : 'Cancel'|trans}) }}
@@ -53,7 +53,7 @@
                     </div>
 
                     {{ ui.renderProperty('oro.embeddedform.success_message.label'|trans, entity.successMessage) }}
-                    {{ ui.renderHtmlProperty('oro.embeddedform.allowed_domains.label'|trans, entity.allowedDomains|nl2br|escape) }}
+                    {{ ui.renderHtmlProperty('oro.embeddedform.allowed_domains.label'|trans, entity.allowedDomains|nl2br|oro_html_sanitize) }}
                 </div>
             </div>
         </div>
@@ -61,6 +61,7 @@
     {% set formPreview %}
     <div class="widget-content">
         <iframe
+            id="embedded-form"
             src="{{ url('oro_embedded_form_submit', {'id': entity.id}) }}"
             width="640"
             height="800"
@@ -89,7 +90,7 @@
     {% endset %}
 
     {% set getCodeInline %}
-        <div class="alert alert-warning">{{ 'oro.embeddedform.tabs.inline.description'|trans|raw }}</div>
+        <div class="alert alert-warning" role="alert">{{ 'oro.embeddedform.tabs.inline.description'|trans|raw }}</div>
         <textarea id="oro_embeddedform_inline" cols="60" rows="10" class="fill-tab" style="height: 300px">
 {%- autoescape %}
 <div id="embedded-form-container-{{ entity.id }}"></div>
@@ -126,8 +127,7 @@
     {% set informationWidget %}
         {{ oro_widget_render({
             'widgetType': 'block',
-            'url': path('oro_embedded_form_info', {id: entity.id}),
-            'title': ''
+            'url': path('oro_embedded_form_info', {id: entity.id})
         }) }}
     {% endset %}
 

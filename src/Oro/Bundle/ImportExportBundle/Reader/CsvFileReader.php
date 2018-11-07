@@ -3,24 +3,17 @@
 namespace Oro\Bundle\ImportExportBundle\Reader;
 
 use Akeneo\Bundle\BatchBundle\Item\InvalidItemException;
-
+use Akeneo\Bundle\BatchBundle\Item\ParseException;
+use Oro\Bundle\ImportExportBundle\Context\Context;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
+use Oro\Bundle\ImportExportBundle\Context\ContextRegistry;
 use Oro\Bundle\ImportExportBundle\Exception\InvalidConfigurationException;
-use Oro\Bundle\ImportExportBundle\Exception\InvalidArgumentException;
-use Oro\Bundle\ImportExportBundle\Exception\RuntimeException;
 
-class CsvFileReader extends AbstractReader
+/**
+ * Corresponds for reading csv file line by line using context passed
+ */
+class CsvFileReader extends AbstractFileReader
 {
-    /**
-     * @var \SplFileInfo
-     */
-    protected $fileInfo;
-
-    /**
-     * @var \SplFileObject
-     */
-    protected $file;
-
     /**
      * @var string
      */
@@ -34,26 +27,25 @@ class CsvFileReader extends AbstractReader
     /**
      * @var string
      */
-    protected $escape = '\\';
+    protected $escape;
 
     /**
-     * @var bool
+     * @param ContextRegistry $contextRegistry
      */
-    protected $firstLineIsHeader = true;
+    public function __construct(ContextRegistry $contextRegistry)
+    {
+        parent::__construct($contextRegistry);
 
-    /**
-     * @var array
-     */
-    protected $header;
+        // Please, see CsvFileStreamWriter::__construct for explanation.
+        $this->escape = chr(0);
+    }
 
     /**
      * {@inheritdoc}
      */
     public function read($context = null)
     {
-        if ($this->getFile()->eof()) {
-            $this->getFile()->rewind();
-
+        if ($this->isEof()) {
             return null;
         }
 
@@ -64,9 +56,7 @@ class CsvFileReader extends AbstractReader
             }
             $context->incrementReadOffset();
             if (null === $data || [null] === $data) {
-                if ($this->getFile()->eof()) {
-                    $this->getFile()->rewind();
-
+                if ($this->isEof()) {
                     return null;
                 }
 
@@ -78,9 +68,13 @@ class CsvFileReader extends AbstractReader
                 if (count($this->header) !== count($data)) {
                     throw new InvalidItemException(
                         sprintf(
-                            'Expecting to get %d columns, actually got %d',
+                            'Expecting to get %d columns, actually got %d.
+                            Header contains: %s 
+                            Row contains: %s',
                             count($this->header),
-                            count($data)
+                            count($data),
+                            print_r($this->header, true),
+                            print_r($data, true)
                         ),
                         $data
                     );
@@ -89,10 +83,25 @@ class CsvFileReader extends AbstractReader
                 $data = array_combine($this->header, $data);
             }
         } else {
-            throw new RuntimeException('An error occurred while reading the csv.');
+            throw new ParseException('An error occurred while reading the csv.');
         }
 
         return $data;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isEof()
+    {
+        if ($this->getFile()->eof()) {
+            $this->getFile()->rewind();
+            $this->header = null;
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -130,55 +139,26 @@ class CsvFileReader extends AbstractReader
      */
     protected function initializeFromContext(ContextInterface $context)
     {
-        if (!$context->hasOption('filePath')) {
-            throw new InvalidConfigurationException(
-                'Configuration of CSV reader must contain "filePath".'
-            );
-        } else {
-            $this->setFilePath($context->getOption('filePath'));
+        parent::initializeFromContext($context);
+
+        if ($context->hasOption(Context::OPTION_DELIMITER)) {
+            $this->delimiter = $context->getOption(Context::OPTION_DELIMITER);
         }
 
-        if ($context->hasOption('delimiter')) {
-            $this->delimiter = $context->getOption('delimiter');
+        if ($context->hasOption(Context::OPTION_ENCLOSURE)) {
+            $this->enclosure = $context->getOption(Context::OPTION_ENCLOSURE);
         }
 
-        if ($context->hasOption('enclosure')) {
-            $this->enclosure = $context->getOption('enclosure');
+        if ($context->hasOption(Context::OPTION_ESCAPE)) {
+            $this->escape = $context->getOption(Context::OPTION_ESCAPE);
         }
 
-        if ($context->hasOption('escape')) {
-            $this->escape = $context->getOption('escape');
+        if ($context->hasOption(Context::OPTION_FIRST_LINE_IS_HEADER)) {
+            $this->firstLineIsHeader = (bool)$context->getOption(Context::OPTION_FIRST_LINE_IS_HEADER);
         }
 
-        if ($context->hasOption('firstLineIsHeader')) {
-            $this->firstLineIsHeader = (bool)$context->getOption('firstLineIsHeader');
+        if ($context->hasOption(Context::OPTION_HEADER)) {
+            $this->header = $context->getOption(Context::OPTION_HEADER);
         }
-
-        if ($context->hasOption('header')) {
-            $this->header = $context->getOption('header');
-        }
-    }
-
-    /**
-     * @param string $filePath
-     * @throws InvalidArgumentException
-     */
-    protected function setFilePath($filePath)
-    {
-        $this->fileInfo = new \SplFileInfo($filePath);
-
-        if (!$this->fileInfo->isFile()) {
-            throw new InvalidArgumentException(sprintf('File "%s" does not exists.', $filePath));
-        } elseif (!$this->fileInfo->isReadable()) {
-            throw new InvalidArgumentException(sprintf('File "%s" is not readable.', $this->fileInfo->getRealPath()));
-        }
-    }
-
-    /**
-     * @param ContextInterface $context
-     */
-    public function initializeByContext(ContextInterface $context)
-    {
-        $this->initializeFromContext($context);
     }
 }

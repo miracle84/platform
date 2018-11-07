@@ -2,28 +2,27 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Validator\Constraints;
 
-use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroupRelation;
+use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
 use Oro\Bundle\EntityConfigBundle\Validator\Constraints\GroupAttributes;
 use Oro\Bundle\EntityConfigBundle\Validator\Constraints\GroupAttributesValidator;
 use Oro\Component\Testing\Unit\EntityTrait;
-
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class GroupAttributesValidatorTest extends \PHPUnit_Framework_TestCase
+class GroupAttributesValidatorTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /**
-     * @var ExecutionContextInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ExecutionContextInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $context;
 
     /**
-     * @var AttributeManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $attributeManager;
 

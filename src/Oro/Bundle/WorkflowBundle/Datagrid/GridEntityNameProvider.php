@@ -2,12 +2,10 @@
 
 namespace Oro\Bundle\WorkflowBundle\Datagrid;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\WorkflowBundle\Exception\MissedRequiredOptionException;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class GridEntityNameProvider
 {
@@ -78,7 +76,7 @@ class GridEntityNameProvider
                     $label = $this->translator->trans($config->get('label'));
                 }
 
-                $this->relatedEntities[$className] = $label;
+                $this->relatedEntities[$label] = $className;
             }
         }
 

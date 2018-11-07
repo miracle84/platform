@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Functional\Engine\Orm;
 
+use Doctrine\ORM\Configuration;
 use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
 use Oro\Bundle\SearchBundle\Engine\Orm\PdoMysql;
 
-use Doctrine\ORM\Configuration;
-
 /**
- * @dbIsolation
- * @dbReindex
+ * @group search
  */
 class PdoMysqlTest extends AbstractDriverTest
 {
@@ -54,18 +52,18 @@ class PdoMysqlTest extends AbstractDriverTest
      */
     protected function assertTruncateQueries(array $queries)
     {
-        $this->assertCount(7, $queries);
-
         $expectedQueries = [
             'SET FOREIGN_KEY_CHECKS=0',
-            'TRUNCATE oro_search_item',
-            'TRUNCATE oro_search_index_text',
-            'TRUNCATE oro_search_index_integer',
-            'TRUNCATE oro_search_index_decimal',
-            'TRUNCATE oro_search_index_datetime',
+            'DELETE FROM oro_search_item',
+            'DELETE FROM oro_search_index_text',
+            'DELETE FROM oro_search_index_integer',
+            'DELETE FROM oro_search_index_decimal',
+            'DELETE FROM oro_search_index_datetime',
             'SET FOREIGN_KEY_CHECKS=1'
         ];
 
-        $this->assertEquals($expectedQueries, $queries);
+        foreach ($expectedQueries as $expectedQuery) {
+            $this->assertContains($expectedQuery, $queries);
+        }
     }
 }

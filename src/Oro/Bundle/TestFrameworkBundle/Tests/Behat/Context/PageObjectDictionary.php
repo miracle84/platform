@@ -2,7 +2,8 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Tests\Behat\Context;
 
-use Behat\Mink\Element\DocumentElement;
+use Behat\Mink\Element\NodeElement;
+use Oro\Bundle\TestFrameworkBundle\Behat\Element\Element;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\Element as OroElement;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroElementFactory;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\OroPageFactory;
@@ -35,11 +36,31 @@ trait PageObjectDictionary
 
     /**
      * @param string $name
-     * @return OroElement
+     * @return bool
      */
-    public function createElement($name)
+    public function hasElement($name)
     {
-        return $this->elementFactory->createElement($name);
+        return $this->elementFactory->hasElement($name);
+    }
+
+    /**
+     * @param string $name
+     * @param NodeElement $context
+     * @return Element
+     */
+    public function createElement($name, NodeElement $context = null)
+    {
+        return $this->elementFactory->createElement($name, $context);
+    }
+
+    /**
+     * @param string $name
+     * @param NodeElement|null $context
+     * @return Element[]
+     */
+    public function findAllElements($name, NodeElement $context = null)
+    {
+        return $this->elementFactory->findAllElements($name, $context);
     }
 
     /**
@@ -64,5 +85,23 @@ trait PageObjectDictionary
         }
 
         return $this->pageFactory->getPage($name);
+    }
+
+    /**
+     * @param string $elementName
+     * @param NodeElement $context
+     *
+     * @return bool
+     */
+    public function isElementVisible($elementName, NodeElement $context = null)
+    {
+        if ($this->hasElement($elementName)) {
+            $element = $this->createElement($elementName, $context);
+            if ($element->isValid() && $element->isVisible()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

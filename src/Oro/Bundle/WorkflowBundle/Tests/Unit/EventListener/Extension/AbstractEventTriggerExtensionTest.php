@@ -3,32 +3,31 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\EventListener\Extension;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\TestFrameworkBundle\Entity\WorkflowAwareEntity;
 use Oro\Bundle\WorkflowBundle\Cache\EventTriggerCache;
 use Oro\Bundle\WorkflowBundle\Entity\EventTriggerInterface;
 use Oro\Bundle\WorkflowBundle\EventListener\Extension\AbstractEventTriggerExtension;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
-abstract class AbstractEventTriggerExtensionTest extends \PHPUnit_Framework_TestCase
+abstract class AbstractEventTriggerExtensionTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     const ENTITY_CLASS = WorkflowAwareEntity::class;
+    const ENTITY_ID = 42;
     const FIELD = 'name';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $repository;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EntityManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EntityManager */
     protected $entityManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     protected $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EventTriggerCache */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EventTriggerCache */
     protected $triggerCache;
 
     /** @var AbstractEventTriggerExtension */
@@ -130,10 +129,14 @@ abstract class AbstractEventTriggerExtensionTest extends \PHPUnit_Framework_Test
 
     /**
      * @param int $id
+     * @param array $fields
      * @return WorkflowAwareEntity|object
      */
-    protected function getMainEntity($id = 42)
+    protected function getMainEntity($id = self::ENTITY_ID, array $fields = [])
     {
-        return $this->getEntity(self::ENTITY_CLASS, ['id' => $id]);
+        return $this->getEntity(
+            self::ENTITY_CLASS,
+            array_merge(['id' => $id], $fields)
+        );
     }
 }

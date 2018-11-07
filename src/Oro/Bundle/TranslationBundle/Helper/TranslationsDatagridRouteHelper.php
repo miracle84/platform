@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\TranslationBundle\Helper;
 
-use Symfony\Component\Routing\RouterInterface;
-
 use Oro\Bundle\DataGridBundle\Tools\DatagridRouteHelper;
+use Symfony\Component\Routing\RouterInterface;
 
 class TranslationsDatagridRouteHelper
 {
@@ -31,16 +30,23 @@ class TranslationsDatagridRouteHelper
      * Param 'filters' uses next format ['filterName' => 'filterCriterion', ... , 'filterNameN' => 'filterCriterionN']
      *
      * @param array $filters
-     * @param int $referenceType
+     * @param int   $referenceType
+     * @param array $filtersType
      *
      * @return string
      */
-    public function generate(array $filters = [], $referenceType = RouterInterface::ABSOLUTE_PATH)
-    {
+    public function generate(
+        array $filters = [],
+        $referenceType = RouterInterface::ABSOLUTE_PATH,
+        array $filtersType = []
+    ) {
         $params = ['f' => []];
 
         foreach ($filters as $filterName => $filterCriteria) {
             $params['f'][$filterName]['value'] = (string)$filterCriteria;
+            if (isset($filtersType[$filterName])) {
+                $params['f'][$filterName]['type'] = (string)$filtersType[$filterName];
+            }
         }
 
         return $this->datagridRouteHelper->generate(

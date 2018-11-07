@@ -7,7 +7,8 @@ oro:
             all_tags: All tags
             my_tags: My tags
             tags_management.label: Tags Management
-
+        result:
+            entity_filter: "Entity filter"
         controller:
             tag.saved.message: "Tag saved"
         form:
@@ -32,9 +33,6 @@ oro:
 
         action:
             assign_unassign: "Assign/unassign tags"
-            unassign_global: 
-                label: "Unassign other tags"
-                description: "Remove tags other than users' own"
 
         tagging:
             alias.label:         Alias
@@ -54,15 +52,26 @@ oro:
             disable.alert: Disabling Tags will irreversibly erase all existing tags
 
         taxonomy:
-            owner.label: Owner
-            label: Taxonomy
-            entity_label: Taxonomy
-            entity_plural_label: Taxonomies
-            background_color.label: Background Color
-            id.label: Id
-            name.label: Name
-            organization.label: Organization
-            tags.label: Tags
+            label:                  Taxonomy
+            entity_label:           Taxonomy
+            entity_plural_label:    Taxonomies
+            entity_description:     Units that tags can be grouped into.
+            owner.label:            Owner
+            background_color:
+                label:              Background Color
+                description:        A color that designates a taxonomic unit.
+            id.label:               Id
+            name:
+                label:              Name
+                description:        A name of a taxonomic unit.
+            organization.label:     Organization
+            tags.label:             Tags
+            created:
+                label:              Created at
+                description:        The date and time when a taxonomic unit was created.
+            updated:
+                label:              Updated at
+                description:        The date and time when a taxonomic unit was last updated.
 
         system_configuration:
             groups:

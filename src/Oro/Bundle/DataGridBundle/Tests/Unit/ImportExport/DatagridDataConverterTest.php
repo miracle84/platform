@@ -2,103 +2,76 @@
 
 namespace Oro\Bundle\DataGridBundle\Tests\Unit\ImportExport;
 
-use Oro\Bundle\DataGridBundle\Datagrid\Manager;
+use Oro\Bundle\DataGridBundle\ImportExport\DatagridColumnsFromContextProviderInterface;
 use Oro\Bundle\DataGridBundle\ImportExport\DatagridDataConverter;
-use Oro\Bundle\DataGridBundle\Tools\ColumnsHelper;
 use Oro\Bundle\ImportExportBundle\Context\Context;
+use Oro\Bundle\ImportExportBundle\Formatter\FormatterProvider;
 use Oro\Bundle\TranslationBundle\Translation\Translator;
 
-class DatagridDataConverterTest extends \PHPUnit_Framework_TestCase
+class DatagridDataConverterTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var Manager|\PHPUnit_Framework_MockObject_MockObject */
-    protected $datagridManager;
+    /** @var DatagridColumnsFromContextProviderInterface|\PHPUnit\Framework\MockObject\MockObject */
+    private $datagridColumnsFromContextProvider;
 
-    /** @var Translator|\PHPUnit_Framework_MockObject_MockObject */
-    protected $translator;
-
-    /** @var ColumnsHelper|\PHPUnit_Framework_MockObject_MockObject */
-    protected $columnsHelper;
+    /** @var Translator|\PHPUnit\Framework\MockObject\MockObject */
+    private $translator;
 
     /** @var DatagridDataConverter */
-    protected $datagridDataConverter;
+    private $datagridDataConverter;
 
-    /** @var Context|\PHPUnit_Framework_MockObject_MockObject */
-    protected $context;
+    /** @var Context|\PHPUnit\Framework\MockObject\MockObject */
+    private $context;
 
     public function setUp()
     {
-        $serviceLink = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->translator = $this->createMock(Translator::class);
+        $formatterProvider = $this->createMock(FormatterProvider::class);
 
-        $this->datagridManager = $this->getMockBuilder('Oro\Bundle\DataGridBundle\Datagrid\Manager')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->translator = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Translation\Translator')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->columnsHelper = $this->getMockBuilder('Oro\Bundle\DataGridBundle\Tools\ColumnsHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $formatterProvider = $this->getMockBuilder('Oro\Bundle\ImportExportBundle\Formatter\FormatterProvider')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->context = $this->getMockBuilder('Oro\Bundle\ImportExportBundle\Context\Context')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $serviceLink->expects($this->any())
-            ->method('getService')
-            ->willReturn($this->datagridManager);
+        $this->datagridColumnsFromContextProvider = $this
+            ->createMock(DatagridColumnsFromContextProviderInterface::class);
 
         $this->datagridDataConverter = new DatagridDataConverter(
-            $serviceLink,
+            $this->datagridColumnsFromContextProvider,
             $this->translator,
-            $this->columnsHelper,
             $formatterProvider
         );
+
+        $this->context = $this->createMock(Context::class);
     }
 
     /**
-     * array $columns
-     * array $exportedRecord
-     * array $gridParameters
-     * array $expected
-     *
      * @dataProvider convertDataProvider
+     *
+     * @param array $columns
+     * @param array $exportedRecord
+     * @param array $expected
      */
-    public function testConvertToExportFormat($columns, $exportedRecord, $gridParameters, $expected)
+    public function testConvertToExportFormat(array $columns, array $exportedRecord, array $expected): void
     {
-        $this->context->expects($this->any())
-            ->method('getValue')
-            ->with('columns')
+        $this->datagridColumnsFromContextProvider
+            ->expects(self::any())
+            ->method('getColumnsFromContext')
+            ->with($this->context)
             ->willReturn($columns);
 
-        if (empty($gridParameters)) {
-            $this->context->expects($this->any())
-                ->method('hasOption')
-                ->with('gridParameters')
-                ->willReturn(false);
-        }
-
-        $this->translator->expects($this->any())
+        $this->translator
+            ->expects(self::any())
             ->method('trans')
-            ->will($this->returnCallback(
+            ->willReturnCallback(
                 function ($parameter) {
                     return $parameter;
                 }
-            ));
+            );
 
         $this->datagridDataConverter->setImportExportContext($this->context);
         $result = $this->datagridDataConverter->convertToExportFormat($exportedRecord);
-        $this->assertEquals($expected, $result);
+        self::assertEquals($expected, $result);
     }
 
-    public function convertDataProvider()
+    /**
+     * @return array
+     */
+    public function convertDataProvider(): array
     {
         return [
             'Columns with same labels' => [
@@ -122,11 +95,37 @@ class DatagridDataConverterTest extends \PHPUnit_Framework_TestCase
                     'c3' => null,
                     'id' => 3
                 ],
-                'grid_parameters' => [],
                 'expectedResult' => [
                     'Primary Email' => 'test1@test.com',
                     'Primary Email_c2' => 'test2@test.com',
                     'Primary Email_c3' => null,
+                ]
+            ],
+            'Columns with same labels and empty values' => [
+                'columns' => [
+                    'c1' => [
+                        'label' => 'Primary Email',
+                        'frontend_type' => 'string'
+                    ],
+                    'c2' => [
+                        'label' => 'Primary Email',
+                        'frontend_type' => 'string'
+                    ],
+                    'c3' => [
+                        'label' => 'Primary Email',
+                        'frontend_type' => 'string'
+                    ]
+                ],
+                'exported_record' => [
+                    'c1' => null,
+                    'c2' => 'test2@test.com',
+                    'c3' => '',
+                    'id' => 3
+                ],
+                'expectedResult' => [
+                    'Primary Email' => null,
+                    'Primary Email_c2' => 'test2@test.com',
+                    'Primary Email_c3' => '',
                 ]
             ],
             'Columns with different labels' => [
@@ -150,7 +149,6 @@ class DatagridDataConverterTest extends \PHPUnit_Framework_TestCase
                     'c3' => 'new',
                     'id' => 3
                 ],
-                'grid_parameters' => [],
                 'expectedResult' => [
                     'Primary Email' => 'test1@test.com',
                     'Primary Phone' => '08567845678',

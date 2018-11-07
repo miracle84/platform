@@ -5,7 +5,7 @@ namespace Oro\Bundle\EntityBundle\Tests\Unit\Form\DataTransformer;
 use Oro\Bundle\EntityBundle\Entity\EntityFieldFallbackValue;
 use Oro\Bundle\EntityBundle\Form\DataTransformer\EntityFieldFallbackTransformer;
 
-class EntityFieldFallbackTransformerTest extends \PHPUnit_Framework_TestCase
+class EntityFieldFallbackTransformerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EntityFieldFallbackTransformer
@@ -20,15 +20,6 @@ class EntityFieldFallbackTransformerTest extends \PHPUnit_Framework_TestCase
     public function testTransformReturnsValueIfNotFallbackType()
     {
         $this->assertEquals('testValue', $this->entityFieldFallbackTransformer->transform('testValue'));
-    }
-
-    public function testTransformSetsScalarValueIfArray()
-    {
-        $value = new EntityFieldFallbackValue();
-        $testValue = ['test' => 'test'];
-        $value->setArrayValue($testValue);
-        $value = $this->entityFieldFallbackTransformer->transform($value);
-        $this->assertSame($testValue, $value->getScalarValue());
     }
 
     public function testTransformSetsScalarValueIfScalar()

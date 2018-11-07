@@ -2,16 +2,11 @@
 
 namespace Oro\Bundle\OrganizationBundle\Tests\Functional;
 
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Form;
 
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class ControllersTest extends WebTestCase
 {
-
     protected function setUp()
     {
         $this->initClient(
@@ -34,7 +29,7 @@ class ControllersTest extends WebTestCase
     protected function getUser()
     {
         $request = array(
-            "user" => array (
+            "user" => array(
                 "username" => 'user_' . mt_rand(),
                 "email" => 'test_'  . mt_rand() . '@test.com',
                 "enabled" => '1',
@@ -60,6 +55,7 @@ class ControllersTest extends WebTestCase
         /** @var Form $form */
         $form = $crawler->selectButton('Save and Close')->form();
         $form['oro_business_unit_form[name]'] = 'testBU';
+        $form['oro_business_unit_form[parentBusinessUnit]'] = null;
         $form['oro_business_unit_form[appendUsers]'] = $user['id'];
         $form['oro_business_unit_form[email]'] = 'test@test.com';
         $form['oro_business_unit_form[phone]'] = '123-123-123';
@@ -122,7 +118,6 @@ class ControllersTest extends WebTestCase
      */
     public function testView($id)
     {
-
         $crawler = $this->client->request(
             'GET',
             $this->getUrl('oro_business_unit_view', array('id' => $id))

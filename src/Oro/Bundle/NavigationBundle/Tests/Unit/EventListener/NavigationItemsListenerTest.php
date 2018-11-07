@@ -3,11 +3,10 @@
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\EventListener;
 
 use Knp\Menu\MenuItem;
-
 use Oro\Bundle\NavigationBundle\Event\ConfigureMenuEvent;
 use Oro\Bundle\NavigationBundle\EventListener\NavigationItemsListener;
 
-class NavigationItemsListenerTest extends \PHPUnit_Framework_TestCase
+class NavigationItemsListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var NavigationItemsListener */
     protected $navigationListener;

@@ -16,13 +16,20 @@ define(function(require) {
         changesByCategory: null,
 
         /**
+         * @inheritDoc
+         */
+        constructor: function EntityCategoryTabsComponent() {
+            EntityCategoryTabsComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * @param {Object} options
          * @param {Array<Object>} options.data collection of tabs build over entities category
          */
         initialize: function(options) {
             this.changesByCategory = {};
 
-            var categories  = options.data;
+            var categories = options.data;
             categories.unshift({
                 id: 'all',
                 label: __('oro.role.tabs.all.label'),
@@ -35,12 +42,21 @@ define(function(require) {
                 multi: true
             });
 
+            var controlTabPanel = options.controlTabPanel;
+            categories = _.each(categories, function(category) {
+                category.uniqueId = _.uniqueId(category.id);
+                if (typeof controlTabPanel === 'string') {
+                    category.controlTabPanel = controlTabPanel;
+                }
+            }, this);
+
             this.categories = new BaseCollection(categories);
 
             this.view = new TabCollectionView({
                 el: options._sourceElement,
                 animationDuration: 0,
-                collection: this.categories
+                collection: this.categories,
+                useDropdown: options.useDropdown
             });
 
             this.listenTo(this.categories, 'change', this.onCategoryChange);

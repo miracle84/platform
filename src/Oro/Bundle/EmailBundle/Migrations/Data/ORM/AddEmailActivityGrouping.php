@@ -7,7 +7,6 @@ use Doctrine\Common\DataFixtures\AbstractFixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
@@ -37,6 +36,7 @@ class AddEmailActivityGrouping extends AbstractFixture implements DependentFixtu
         $threadQueryBuilder = $manager->getRepository('OroEmailBundle:Email')->createQueryBuilder('entity');
         $threadQueryBuilder->distinct()->select('entity.xThreadId');
         $threadQueryBuilder->addCriteria($criteria);
+        $threadQueryBuilder->orderBy('entity.xThreadId'); // critical for paginating on Postgre SQL
 
         $iterator = new BufferedQueryResultIterator($threadQueryBuilder);
         $iterator->setBufferSize(self::BATCH_SIZE);

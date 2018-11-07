@@ -2,30 +2,32 @@
 
 namespace Oro\Bundle\IntegrationBundle\Form\EventListener;
 
+use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Oro\Bundle\IntegrationBundle\Provider\DefaultOwnerTypeAwareInterface;
+use Oro\Bundle\OrganizationBundle\Form\Type\BusinessUnitSelectType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\UserBundle\Form\Type\OrganizationUserAclSelectType;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
-use Oro\Bundle\IntegrationBundle\Provider\DefaultOwnerTypeAwareInterface;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-
 class DefaultOwnerSubscriber implements EventSubscriberInterface
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
+
     /** @var TypesRegistry */
     protected $typesRegistry;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param TypesRegistry  $typesRegistry
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param TypesRegistry          $typesRegistry
      */
-    public function __construct(SecurityFacade $securityFacade, TypesRegistry $typesRegistry)
+    public function __construct(TokenAccessorInterface $tokenAccessor, TypesRegistry $typesRegistry)
     {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
         $this->typesRegistry = $typesRegistry;
     }
 
@@ -53,7 +55,7 @@ class DefaultOwnerSubscriber implements EventSubscriberInterface
 
         if ($data && !$data->getId() && !$data->getDefaultUserOwner() || null === $data) {
             if ($form->has('defaultUserOwner')) {
-                $form->get('defaultUserOwner')->setData($this->securityFacade->getLoggedUser());
+                $form->get('defaultUserOwner')->setData($this->tokenAccessor->getUser());
             }
         }
     }
@@ -116,7 +118,7 @@ class DefaultOwnerSubscriber implements EventSubscriberInterface
         if (!$form->has('defaultUserOwner')) {
             $form->add(
                 'defaultUserOwner',
-                'oro_user_organization_acl_select',
+                OrganizationUserAclSelectType::class,
                 [
                     'required' => true,
                     'label'    => 'oro.integration.integration.default_user_owner.label',
@@ -140,7 +142,7 @@ class DefaultOwnerSubscriber implements EventSubscriberInterface
         if (!$form->has('defaultBusinessUnitOwner')) {
             $form->add(
                 'defaultBusinessUnitOwner',
-                'oro_business_unit_select',
+                BusinessUnitSelectType::class,
                 [
                     'required'    => true,
                     'label'       => 'oro.integration.integration.default_business_unit_owner.label',

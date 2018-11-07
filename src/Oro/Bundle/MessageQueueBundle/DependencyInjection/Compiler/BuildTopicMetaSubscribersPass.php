@@ -69,6 +69,7 @@ class BuildTopicMetaSubscribersPass implements CompilerPassInterface
             }
 
             $topicName = $tagAttribute['topicName'];
+
             if (false == isset($topicsSubscribers[$topicName])) {
                 $topicsSubscribers[$topicName] = [];
             }

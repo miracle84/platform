@@ -3,12 +3,14 @@
 namespace Oro\Bundle\ApiBundle\Form\Type;
 
 use Oro\Bundle\ApiBundle\Form\EventListener\CollectionEntryFactory;
+use Oro\Bundle\ApiBundle\Form\EventListener\CollectionListener;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\ApiBundle\Form\EventListener\CollectionListener;
-
+/**
+ * The form type for a collection of objects.
+ */
 class CollectionType extends AbstractType
 {
     /**
@@ -40,21 +42,5 @@ class CollectionType extends AbstractType
             'entry_type',
             'entry_data_class'
         ]);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getName()
-    {
-        return $this->getBlockPrefix();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'oro_api_collection';
     }
 }

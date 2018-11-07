@@ -4,7 +4,7 @@ namespace Oro\Bundle\NavigationBundle\Tests\Unit\Annotation;
 
 use Oro\Bundle\NavigationBundle\Annotation\TitleTemplate;
 
-class TitleTemplateTest extends \PHPUnit_Framework_TestCase
+class TitleTemplateTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_VALUE = 'test annotation value';
 
@@ -13,9 +13,9 @@ class TitleTemplateTest extends \PHPUnit_Framework_TestCase
      */
     public function testGoodAnnotation()
     {
-        $annotation = new TitleTemplate(array('value' => self::TEST_VALUE));
+        $annotation = new TitleTemplate(['value' => self::TEST_VALUE]);
 
-        $this->assertEquals(self::TEST_VALUE, $annotation->getTitleTemplate());
+        $this->assertEquals(self::TEST_VALUE, $annotation->getValue());
     }
 
     /**
@@ -25,6 +25,9 @@ class TitleTemplateTest extends \PHPUnit_Framework_TestCase
      */
     public function testBadAnnotation()
     {
-        new TitleTemplate(array());
+        $message = 'Unknown key "test" for annotation "@Oro\Bundle\NavigationBundle\Annotation\TitleTemplate".';
+        $this->expectExceptionMessage($message);
+
+        new TitleTemplate(['test' => self::TEST_VALUE]);
     }
 }

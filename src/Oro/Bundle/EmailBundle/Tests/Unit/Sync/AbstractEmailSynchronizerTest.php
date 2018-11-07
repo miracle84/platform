@@ -3,33 +3,33 @@
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Sync;
 
 use Doctrine\ORM\ORMException;
-
+use Doctrine\ORM\Query\Expr;
 use Oro\Bundle\EmailBundle\Sync\AbstractEmailSynchronizer;
 use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestEmailOrigin;
 use Oro\Bundle\EmailBundle\Tests\Unit\Sync\Fixtures\TestEmailSynchronizer;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 
-class AbstractEmailSynchronizerTest extends \PHPUnit_Framework_TestCase
+class AbstractEmailSynchronizerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TestEmailSynchronizer */
     private $sync;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $logger;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $doctrine;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $emailEntityBuilder;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $knownEmailAddressChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $knownEmailAddressCheckerFactory;
 
     protected function setUp()
@@ -515,6 +515,19 @@ class AbstractEmailSynchronizerTest extends \PHPUnit_Framework_TestCase
             ->method('setMaxResults')
             ->with($maxConcurrentTasks + 1)
             ->will($this->returnValue($qb));
+
+        $expr = $this->createMock(Expr::class);
+        $qb->expects($this->at($index++))
+            ->method('expr')->willReturn($expr);
+        $qb->expects($this->at($index++))
+            ->method('leftJoin')->willReturn($qb);
+        $qb->expects($this->at($index++))
+            ->method('andWhere')->willReturn($qb);
+        $qb->expects($this->at($index++))
+            ->method('setParameter')
+            ->with('isOwnerEnabled', $this->equalTo(true))
+            ->willReturn($qb);
+
         $qb->expects($this->at($index++))
             ->method('getQuery')
             ->will($this->returnValue($q));
@@ -655,7 +668,7 @@ class AbstractEmailSynchronizerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|MessageProducerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|MessageProducerInterface
      */
     private function createMessageProducerMock()
     {

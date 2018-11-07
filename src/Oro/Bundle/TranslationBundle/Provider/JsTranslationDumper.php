@@ -2,15 +2,13 @@
 
 namespace Oro\Bundle\TranslationBundle\Provider;
 
+use Oro\Bundle\TranslationBundle\Controller\Controller;
+use Oro\Bundle\TranslationBundle\Provider\LanguageProvider;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
-
 use Symfony\Bundle\FrameworkBundle\Routing\Router;
 use Symfony\Component\Filesystem\Exception\IOException;
-
-use Oro\Bundle\TranslationBundle\Controller\Controller;
-use Oro\Bundle\TranslationBundle\Provider\LanguageProvider;
 
 class JsTranslationDumper implements LoggerAwareInterface
 {
@@ -23,7 +21,7 @@ class JsTranslationDumper implements LoggerAwareInterface
     protected $translationDomains;
 
     /** @var string */
-    protected $kernelRootDir;
+    protected $kernelProjectDir;
 
     /** @var LanguageProvider */
     protected $languageProvider;
@@ -38,25 +36,25 @@ class JsTranslationDumper implements LoggerAwareInterface
     protected $jsTranslationRoute;
 
     /**
-     * @param Controller $translationController
-     * @param Router     $router
-     * @param array      $translationDomains
-     * @param string     $kernelRootDir
+     * @param Controller       $translationController
+     * @param Router           $router
+     * @param array            $translationDomains
+     * @param string           $kernelProjectDir
      * @param LanguageProvider $languageProvider
-     * @param string     $jsTranslationRoute
+     * @param string           $jsTranslationRoute
      */
     public function __construct(
         Controller $translationController,
         Router $router,
         $translationDomains,
-        $kernelRootDir,
+        $kernelProjectDir,
         LanguageProvider $languageProvider,
         $jsTranslationRoute = 'oro_translation_jstranslation'
     ) {
         $this->translationController = $translationController;
         $this->router                = $router;
         $this->translationDomains    = $translationDomains;
-        $this->kernelRootDir         = $kernelRootDir;
+        $this->kernelProjectDir      = $kernelProjectDir;
         $this->languageProvider      = $languageProvider;
         $this->jsTranslationRoute    = $jsTranslationRoute;
 
@@ -76,7 +74,7 @@ class JsTranslationDumper implements LoggerAwareInterface
             $locales = array_keys($this->languageProvider->getAvailableLanguages());
         }
 
-        $targetPattern = realpath($this->kernelRootDir . '/../web')
+        $targetPattern = realpath($this->kernelProjectDir . '/public')
             . $this->router->getRouteCollection()->get($this->jsTranslationRoute)->getPath();
 
         foreach ($locales as $locale) {

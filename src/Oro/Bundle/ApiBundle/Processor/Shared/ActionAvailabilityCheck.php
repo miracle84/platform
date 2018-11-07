@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Exception\ActionNotAllowedException;
 use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Bundle\ApiBundle\Provider\ResourcesProvider;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Validates whether an access to the requested action of entity specified
- * in the "class" property of the Context is granted.
+ * Validates whether the requested action of entity specified
+ * in the "class" property of the context is not excluded.
  */
 class ActionAvailabilityCheck implements ProcessorInterface
 {

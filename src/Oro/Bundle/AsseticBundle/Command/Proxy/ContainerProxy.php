@@ -5,7 +5,6 @@ namespace Oro\Bundle\AsseticBundle\Command\Proxy;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
-use Symfony\Component\DependencyInjection\ScopeInterface;
 
 class ContainerProxy implements ContainerInterface
 {
@@ -28,6 +27,14 @@ class ContainerProxy implements ContainerInterface
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function initialized($id)
+    {
+        return $this->container->initialized($id);
+    }
+
+    /**
      * Replaces existing service with new implementation.
      *
      * @param string $id      The service identifier
@@ -46,9 +53,9 @@ class ContainerProxy implements ContainerInterface
     /**
      * {@inheritdoc}
      */
-    public function set($id, $service, $scope = ContainerInterface::SCOPE_CONTAINER)
+    public function set($id, $service)
     {
-        $this->container->set($id, $service, $scope);
+        $this->container->set($id, $service);
     }
 
     /**
@@ -91,45 +98,5 @@ class ContainerProxy implements ContainerInterface
     public function setParameter($name, $value)
     {
         $this->container->setParameter($name, $value);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function enterScope($name)
-    {
-        $this->container->enterScope($name);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function leaveScope($name)
-    {
-        $this->container->leaveScope($name);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function addScope(ScopeInterface $scope)
-    {
-        $this->container->addScope($scope);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function hasScope($name)
-    {
-        return $this->container->hasScope($name);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isScopeActive($name)
-    {
-        return $this->container->isScopeActive($name);
     }
 }

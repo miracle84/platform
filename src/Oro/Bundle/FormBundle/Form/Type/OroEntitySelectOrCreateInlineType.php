@@ -3,7 +3,11 @@
 namespace Oro\Bundle\FormBundle\Form\Type;
 
 use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\FormBundle\Autocomplete\SearchRegistry;
+use Oro\Bundle\FormBundle\Form\DataTransformer\EntityCreationTransformer;
+use Oro\Bundle\FormBundle\Form\DataTransformer\EntityToIdTransformer;
+use Oro\Bundle\FormBundle\Form\Type\OroJquerySelect2HiddenType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\InvalidConfigurationException;
@@ -12,21 +16,14 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
-use Oro\Bundle\FormBundle\Form\DataTransformer\EntityToIdTransformer;
-use Oro\Bundle\FormBundle\Form\DataTransformer\EntityCreationTransformer;
-
-use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\FormBundle\Autocomplete\SearchRegistry;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class OroEntitySelectOrCreateInlineType extends AbstractType
 {
     const NAME = 'oro_entity_create_or_select_inline';
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /** @var ConfigManager */
     protected $configManager;
@@ -38,20 +35,20 @@ class OroEntitySelectOrCreateInlineType extends AbstractType
     protected $searchRegistry;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param ConfigManager  $configManager
-     * @param EntityManager  $entityManager
-     * @param SearchRegistry $searchRegistry
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param ConfigManager                 $configManager
+     * @param EntityManager                 $entityManager
+     * @param SearchRegistry                $searchRegistry
      */
     public function __construct(
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
         ConfigManager $configManager,
         EntityManager $entityManager,
         SearchRegistry $searchRegistry
     ) {
-        $this->securityFacade = $securityFacade;
-        $this->configManager  = $configManager;
-        $this->entityManager  = $entityManager;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->configManager = $configManager;
+        $this->entityManager = $entityManager;
         $this->searchRegistry = $searchRegistry;
     }
 
@@ -76,7 +73,7 @@ class OroEntitySelectOrCreateInlineType extends AbstractType
      */
     public function getParent()
     {
-        return 'oro_jqueryselect2_hidden';
+        return OroJquerySelect2HiddenType::class;
     }
 
     /**
@@ -113,55 +110,60 @@ class OroEntitySelectOrCreateInlineType extends AbstractType
             ]
         );
 
-        $resolver->setNormalizers(
-            [
-                'create_enabled' => function (Options $options, $createEnabled) {
-                    $createRouteName = $options->offsetGet('create_form_route');
-                    $createEnabled   = $createEnabled && !empty($createRouteName);
-                    if ($createEnabled) {
-                        $createEnabled = $this->isCreateGranted($options);
-                    }
-
-                    return $createEnabled;
-                },
-                'grid_name'      => function (Options $options, $gridName) {
-                    if (!empty($gridName)) {
-                        return $gridName;
-                    }
-
-                    $entityClass = $options->offsetGet('entity_class');
-                    $formConfig = $this->configManager->getProvider('form')->getConfig($entityClass);
-                    if ($formConfig->has('grid_name')) {
-                        return $formConfig->get('grid_name');
-                    }
-
-                    throw new InvalidConfigurationException(
-                        'The option "grid_name" must be set.'
-                    );
-                },
-                'transformer'    => function (Options $options, $value) {
-                    if (!$value && !empty($options['entity_class'])) {
-                        $value = $this->createDefaultTransformer(
-                            $options['entity_class'],
-                            $options['new_item_property_name'],
-                            $options['new_item_allow_empty_property'],
-                            $options['new_item_value_path'],
-                            $this->isCreateGranted($options)
-                        );
-                    }
-
-                    if (!$value instanceof DataTransformerInterface) {
-                        throw new TransformationFailedException(
-                            sprintf(
-                                'The option "transformer" must be an instance of "%s".',
-                                'Symfony\Component\Form\DataTransformerInterface'
-                            )
-                        );
-                    }
-
-                    return $value;
+        $resolver->setNormalizer(
+            'create_enabled',
+            function (Options $options, $createEnabled) {
+                $createRouteName = $options['create_form_route'];
+                $createEnabled   = $createEnabled && !empty($createRouteName);
+                if ($createEnabled) {
+                    $createEnabled = $this->isCreateGranted($options);
                 }
-            ]
+
+                return $createEnabled;
+            }
+        )
+        ->setNormalizer(
+            'grid_name',
+            function (Options $options, $gridName) {
+                if (!empty($gridName)) {
+                    return $gridName;
+                }
+
+                $entityClass = $options['entity_class'];
+                $formConfig = $this->configManager->getProvider('form')->getConfig($entityClass);
+                if ($formConfig->has('grid_name')) {
+                    return $formConfig->get('grid_name');
+                }
+
+                throw new InvalidConfigurationException(
+                    'The option "grid_name" must be set.'
+                );
+            }
+        )
+        ->setNormalizer(
+            'transformer',
+            function (Options $options, $value) {
+                if (!$value && !empty($options['entity_class'])) {
+                    $value = $this->createDefaultTransformer(
+                        $options['entity_class'],
+                        $options['new_item_property_name'],
+                        $options['new_item_allow_empty_property'],
+                        $options['new_item_value_path'],
+                        $this->isCreateGranted($options)
+                    );
+                }
+
+                if (!$value instanceof DataTransformerInterface) {
+                    throw new TransformationFailedException(
+                        sprintf(
+                            'The option "transformer" must be an instance of "%s".',
+                            'Symfony\Component\Form\DataTransformerInterface'
+                        )
+                    );
+                }
+
+                return $value;
+            }
         );
 
         $this->setConfigsNormalizer($resolver);
@@ -174,57 +176,56 @@ class OroEntitySelectOrCreateInlineType extends AbstractType
      */
     protected function isCreateGranted(Options $options)
     {
-        $aclName = $options->offsetGet('create_acl');
+        $aclName = $options['create_acl'];
         if (empty($aclName)) {
-            $aclObjectName = 'Entity:' . $options->offsetGet('entity_class');
-            $createEnabled = $this->securityFacade->isGranted('CREATE', $aclObjectName);
+            $aclObjectName = 'Entity:' . $options['entity_class'];
+            $createEnabled = $this->authorizationChecker->isGranted('CREATE', $aclObjectName);
         } else {
-            $createEnabled = $this->securityFacade->isGranted($aclName);
+            $createEnabled = $this->authorizationChecker->isGranted($aclName);
         }
 
         return $createEnabled;
     }
 
     /**
-     * @param OptionsResolverInterface $resolver
+     * @param OptionsResolver $resolver
      */
-    protected function setConfigsNormalizer(OptionsResolverInterface $resolver)
+    protected function setConfigsNormalizer(OptionsResolver $resolver)
     {
-        $resolver->setNormalizers(
-            [
-                'configs' => function (Options $options, $configs) {
-                    if (!empty($options['autocomplete_alias'])) {
-                        $autoCompleteAlias            = $options['autocomplete_alias'];
-                        $configs['autocomplete_alias'] = $autoCompleteAlias;
-                        if (empty($configs['properties'])) {
-                            $searchHandler        = $this->searchRegistry->getSearchHandler($autoCompleteAlias);
-                            $configs['properties'] = $searchHandler->getProperties();
-                        }
-                        if (empty($configs['route_name'])) {
-                            $configs['route_name'] = 'oro_form_autocomplete_search';
-                        }
-                        if (empty($configs['component'])) {
-                            $configs['component'] = 'autocomplete';
-                        }
+        $resolver->setNormalizer(
+            'configs',
+            function (Options $options, $configs) {
+                if (!empty($options['autocomplete_alias'])) {
+                    $autoCompleteAlias            = $options['autocomplete_alias'];
+                    $configs['autocomplete_alias'] = $autoCompleteAlias;
+                    if (empty($configs['properties'])) {
+                        $searchHandler        = $this->searchRegistry->getSearchHandler($autoCompleteAlias);
+                        $configs['properties'] = $searchHandler->getProperties();
                     }
-
-                    if (!array_key_exists('route_parameters', $configs)) {
-                        $configs['route_parameters'] = [];
-                    }
-
                     if (empty($configs['route_name'])) {
-                        throw new InvalidConfigurationException(
-                            'Option "configs[route_name]" must be set.'
-                        );
+                        $configs['route_name'] = 'oro_form_autocomplete_search';
                     }
-
-                    if (isset($configs['allowCreateNew']) && $configs['allowCreateNew']) {
-                        $configs['allowCreateNew'] = $this->isCreateGranted($options);
+                    if (empty($configs['component'])) {
+                        $configs['component'] = 'autocomplete';
                     }
-
-                    return $configs;
                 }
-            ]
+
+                if (!array_key_exists('route_parameters', $configs)) {
+                    $configs['route_parameters'] = [];
+                }
+
+                if (empty($configs['route_name'])) {
+                    throw new InvalidConfigurationException(
+                        'Option "configs[route_name]" must be set.'
+                    );
+                }
+
+                if (isset($configs['allowCreateNew']) && $configs['allowCreateNew']) {
+                    $configs['allowCreateNew'] = $this->isCreateGranted($options);
+                }
+
+                return $configs;
+            }
         );
     }
 

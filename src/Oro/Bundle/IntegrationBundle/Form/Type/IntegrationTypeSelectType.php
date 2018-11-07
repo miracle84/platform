@@ -2,13 +2,13 @@
 
 namespace Oro\Bundle\IntegrationBundle\Form\Type;
 
-use Symfony\Component\Form\FormView;
+use Oro\Bundle\FormBundle\Form\Type\Select2ChoiceType;
+use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Symfony\Component\Asset\Packages as AssetHelper;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Asset\Packages as AssetHelper;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
-use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
+use Symfony\Component\Form\FormView;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class IntegrationTypeSelectType extends AbstractType
 {
@@ -36,7 +36,7 @@ class IntegrationTypeSelectType extends AbstractType
      */
     public function buildView(FormView $view, FormInterface $form, array $options)
     {
-        $choices = $options['choice_list']->getChoices();
+        $choices = $options['choices'];
 
         if (empty($choices)) {
             $options['configs']['placeholder'] = 'oro.integration.form.no_available_integrations';
@@ -48,19 +48,17 @@ class IntegrationTypeSelectType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
-                'empty_value' => '',
                 'choices'     => $this->getChoices(),
                 'choice_attr' => function ($choice) {
                     return $this->getChoiceAttributes($choice);
                 },
                 'configs'     => [
-                    'placeholder'             => 'oro.form.choose_value',
-                    'result_template_twig'    => 'OroIntegrationBundle:Autocomplete:type/result.html.twig',
-                    'selection_template_twig' => 'OroIntegrationBundle:Autocomplete:type/selection.html.twig',
+                    'placeholder' => 'oro.form.choose_value',
+                    'showIcon'    => true,
                 ]
             ]
         );
@@ -71,7 +69,7 @@ class IntegrationTypeSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_choice';
+        return Select2ChoiceType::class;
     }
 
     /**

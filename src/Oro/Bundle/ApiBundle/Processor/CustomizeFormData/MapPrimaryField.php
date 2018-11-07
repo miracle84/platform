@@ -2,18 +2,23 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\CustomizeFormData;
 
-use Symfony\Component\Form\FormError;
-use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
-
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
+use Oro\Bundle\ApiBundle\Form\FormUtil;
 use Oro\Bundle\ApiBundle\Form\ReflectionUtil;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
+use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
 /**
  * Sets a "primary" flag in a collection based on a value of "primary" field.
+ * For example this processor can be used to set a "primary" boolean property
+ * for elements of a emails collection based on a primary email property of an entity
+ * contains this collection.
+ * @see \Oro\Bundle\ApiBundle\Processor\CustomizeLoadedData\ComputePrimaryField
  */
-class MapPrimaryField extends AbstractProcessor
+class MapPrimaryField implements ProcessorInterface
 {
-    const PRIMARY_ITEM_KEY = 'primary_item_key';
+    protected const PRIMARY_ITEM_KEY = 'primary_item_key';
 
     /** @var PropertyAccessorInterface */
     protected $propertyAccessor;
@@ -59,9 +64,29 @@ class MapPrimaryField extends AbstractProcessor
 
     /**
      * {@inheritdoc}
+     */
+    public function process(ContextInterface $context)
+    {
+        /** @var CustomizeFormDataContext $context */
+
+        switch ($context->getEvent()) {
+            case CustomizeFormDataContext::EVENT_PRE_SUBMIT:
+                $this->processPreSubmit($context);
+                break;
+            case CustomizeFormDataContext::EVENT_POST_SUBMIT:
+                $this->processPostSubmit($context);
+                break;
+            case CustomizeFormDataContext::EVENT_POST_VALIDATE:
+                $this->processPostValidate($context);
+                break;
+        }
+    }
+
+    /**
+     * @param CustomizeFormDataContext $context
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function processPreSubmit(CustomizeFormDataContext $context)
+    protected function processPreSubmit(CustomizeFormDataContext $context)
     {
         $config = $context->getConfig();
         if (null === $config) {
@@ -97,9 +122,9 @@ class MapPrimaryField extends AbstractProcessor
     }
 
     /**
-     * {@inheritdoc}
+     * @param CustomizeFormDataContext $context
      */
-    public function processPostSubmit(CustomizeFormDataContext $context)
+    protected function processPostSubmit(CustomizeFormDataContext $context)
     {
         $config = $context->getConfig();
         if (null === $config) {
@@ -135,16 +160,14 @@ class MapPrimaryField extends AbstractProcessor
         );
 
         if ($primaryValue && !$isKnownPrimaryValue) {
-            $primaryFieldForm->addError(
-                new FormError($this->unknownPrimaryValueValidationMessage)
-            );
+            FormUtil::addFormError($primaryFieldForm, $this->unknownPrimaryValueValidationMessage);
         }
     }
 
     /**
-     * {@inheritdoc}
+     * @param CustomizeFormDataContext $context
      */
-    public function processFinishSubmit(CustomizeFormDataContext $context)
+    protected function processPostValidate(CustomizeFormDataContext $context)
     {
         $form = $context->getForm();
         $primaryItemKey = $context->get(self::PRIMARY_ITEM_KEY);

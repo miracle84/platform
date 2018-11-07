@@ -4,10 +4,10 @@ namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Provider\Rest\Client\Guzzle;
 
 use Oro\Bundle\IntegrationBundle\Provider\Rest\Client\Guzzle\GuzzleRestResponse;
 
-class GuzzleRestResponseTest extends \PHPUnit_Framework_TestCase
+class GuzzleRestResponseTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $sourceResponse;
 
@@ -76,18 +76,8 @@ class GuzzleRestResponseTest extends \PHPUnit_Framework_TestCase
             array('getMessage'),
             array('getHeader', array('Content-Type')),
             array('getHeaders'),
-            array('getRawHeaders'),
             array('hasHeader', array('Content-Type')),
             array('getReasonPhrase'),
-            array('getContentEncoding'),
-            array('getContentLanguage'),
-            array('getContentLength'),
-            array('getContentLocation'),
-            array('getContentDisposition'),
-            array('getContentMd5'),
-            array('getContentRange'),
-            array('getContentType'),
-            array('isContentType', array('application/json')),
             array('isClientError'),
             array('isInformational'),
             array('isRedirect'),
@@ -95,9 +85,6 @@ class GuzzleRestResponseTest extends \PHPUnit_Framework_TestCase
             array('isServerError'),
             array('isSuccessful'),
             array('json'),
-            array('xml'),
-            array('getRedirectCount'),
-            array('getEffectiveUrl'),
         );
     }
 

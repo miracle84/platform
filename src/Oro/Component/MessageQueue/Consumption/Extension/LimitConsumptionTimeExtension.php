@@ -51,13 +51,13 @@ class LimitConsumptionTimeExtension extends AbstractExtension
         $now = new \DateTime();
         if ($now >= $this->timeLimit) {
             $context->getLogger()->debug(sprintf(
-                '[LimitConsumptionTimeExtension] Execution interrupted as limit time has passed.'.
-                ' now: "%s", time-limit: "%s"',
+                'Execution interrupted as limit time has passed. now: "%s", time-limit: "%s"',
                 $now->format(DATE_ISO8601),
                 $this->timeLimit->format(DATE_ISO8601)
             ));
 
             $context->setExecutionInterrupted(true);
+            $context->setInterruptedReason('The limit time has passed.');
         }
     }
 }

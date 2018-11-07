@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Translation;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
 use Oro\Bundle\WorkflowBundle\Translation\KeyTemplateParametersResolver;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class KeyTemplateParametersResolverTest extends \PHPUnit_Framework_TestCase
+class KeyTemplateParametersResolverTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
     /** @var KeyTemplateParametersResolver */

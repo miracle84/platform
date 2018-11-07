@@ -2,6 +2,9 @@
 
 namespace Oro\Bundle\EntityBundle\Provider;
 
+use Oro\Bundle\LocaleBundle\Entity\Localization;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
+
 class EntityNameResolver
 {
     /** @var string */
@@ -55,11 +58,11 @@ class EntityNameResolver
     /**
      * Returns a text representation of the given entity.
      *
-     * @param object      $entity The entity object
-     * @param string|null $format The representation format, for example full, short, etc.
-     *                            If not specified a default representation is used
-     * @param string|null $locale The representation locale.
-     *                            If not specified a default locale is used
+     * @param object                   $entity The entity object
+     * @param string|null              $format The representation format, for example full, short, etc.
+     *                                         If not specified a default representation is used
+     * @param string|null|Localization $locale The representation locale.
+     *                                         If not specified a default locale is used
      *
      * @return string A text representation of an entity or NULL if the name cannot be resolved
      */
@@ -88,17 +91,18 @@ class EntityNameResolver
     /**
      * Returns a DQL expression that can be used to get a text representation of the given type of entities.
      *
-     * @param string      $className The FQCN of the entity
-     * @param string      $alias     The alias in SELECT or JOIN statement
-     * @param string|null $format    The representation format, for example full, short, etc.
-     *                               If not specified a default representation is used
-     * @param string|null $locale    The representation locale.
-     *                               If not specified a default locale is used
+     * @param string                   $className The FQCN of the entity
+     * @param string                   $alias     The alias in SELECT or JOIN statement
+     * @param string|null              $format    The representation format, for example full, short, etc.
+     *                                            If not specified a default representation is used
+     * @param string|null|Localization $locale    The representation locale.
+     *                                            If not specified a default locale is used
      *
      * @return string A DQL expression or NULL if the name cannot be resolved
      */
     public function getNameDQL($className, $alias, $format = null, $locale = null)
     {
+        QueryBuilderUtil::checkIdentifier($alias);
         $result = null;
 
         $formats   = $this->getFormatConfig($format ?: $this->defaultFormat);

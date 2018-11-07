@@ -4,7 +4,7 @@ namespace Oro\Bundle\SearchBundle\Tests\Unit\Twig;
 
 use Oro\Bundle\SearchBundle\Twig\OroSearchExtension;
 
-class OroSearchExtensionTest extends \PHPUnit_Framework_TestCase
+class OroSearchExtensionTest extends \PHPUnit\Framework\TestCase
 {
     private $extension;
 
@@ -39,11 +39,5 @@ class OroSearchExtensionTest extends \PHPUnit_Framework_TestCase
     public function testGetName()
     {
         $this->assertEquals('search_extension', $this->extension->getName());
-    }
-
-    public function testGetFilters()
-    {
-        $filters = $this->extension->getFilters();
-        $this->assertEquals(3, count($filters));
     }
 }

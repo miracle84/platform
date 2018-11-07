@@ -2,22 +2,24 @@
 
 namespace Oro\Bundle\SearchBundle\EventListener;
 
-use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
-
-use Doctrine\ORM\PersistentCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\OnClearEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\ORM\PersistentCollection;
 use Doctrine\ORM\UnitOfWork;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\PlatformBundle\EventListener\OptionalListenerInterface;
 use Oro\Bundle\SearchBundle\Engine\IndexerInterface;
 use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
+use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
+/**
+ * Doctrine event listener which collects changes and updates search index
+ */
 class IndexListener implements OptionalListenerInterface
 {
     /**
@@ -29,12 +31,6 @@ class IndexListener implements OptionalListenerInterface
      * @var IndexerInterface
      */
     protected $searchIndexer;
-
-    /**
-     * @var array
-     * @deprecated since 1.8 Please use mappingProvider for mapping config
-     */
-    protected $entitiesConfig = [];
 
     /**
      * @var SearchMappingProvider
@@ -85,15 +81,6 @@ class IndexListener implements OptionalListenerInterface
     public function setEnabled($enabled = true)
     {
         $this->enabled = $enabled;
-    }
-
-    /**
-     * @param array $entities
-     * @deprecated since 1.8 Please use mappingProvider for mapping config
-     */
-    public function setEntitiesConfig(array $entities)
-    {
-        $this->entitiesConfig = $entities;
     }
 
     /**
@@ -212,18 +199,15 @@ class IndexListener implements OptionalListenerInterface
             $meta = $entityManager->getClassMetadata($className);
 
             foreach ($meta->getAssociationMappings() as $association) {
-                if (!empty($association['inversedBy']) && $association['type'] === ClassMetadataInfo::MANY_TO_ONE) {
-                    $targetClass = $association['targetEntity'];
-                    $changedIndexedFields = $this->getIntersectChangedIndexedFields(
-                        $targetClass,
-                        [$association['inversedBy']]
-                    );
-                    if (!$changedIndexedFields) {
-                        continue;
+                $associationValue = $this->getAssociationValue($entity, $association);
+                if ($associationValue !== false) {
+                    if ($associationValue instanceof Collection) {
+                        foreach ($associationValue->toArray() as $value) {
+                            $entitiesToReindex[spl_object_hash($value)] = $value;
+                        }
+                    } else {
+                        $entitiesToReindex[spl_object_hash($associationValue)] = $associationValue;
                     }
-
-                    $associationValue = $this->propertyAccessor->getValue($entity, $association['fieldName']);
-                    $entitiesToReindex[spl_object_hash($associationValue)] = $associationValue;
                 }
             }
         }
@@ -260,10 +244,38 @@ class IndexListener implements OptionalListenerInterface
     }
 
     /**
+     * @param object $entity
+     * @param array $association
+     *
+     * @return bool|mixed
+     */
+    protected function getAssociationValue($entity, array $association)
+    {
+        $relationField = $this->getRelationField($association);
+        if ($relationField === null) {
+            return false;
+        }
+
+        $targetClass = $association['targetEntity'];
+        $changedIndexedFields = $this->getIntersectChangedIndexedFields($targetClass, [$relationField]);
+        if (!$changedIndexedFields) {
+            return false;
+        }
+
+        return $this->propertyAccessor->getValue($entity, $association['fieldName']);
+    }
+
+    /**
      * Synchronise all changed entities with search index
      */
     protected function indexEntities()
     {
+        foreach ($this->deletedEntities as $hash => $entity) {
+            if (array_key_exists($hash, $this->savedEntities)) {
+                unset($this->savedEntities[$hash]);
+            }
+        }
+
         if ($this->savedEntities) {
             $this->searchIndexer->save($this->savedEntities);
 
@@ -313,6 +325,10 @@ class IndexListener implements OptionalListenerInterface
         $entityConfig = $this->mappingProvider->getEntityConfig($className);
 
         foreach ($entityConfig['fields'] as $fieldConfig) {
+            if ($fieldConfig['name'] === null) {
+                continue;
+            }
+
             $this->entitiesIndexedFieldsCache[$className][$fieldConfig['name']] = $fieldConfig['name'];
         }
 
@@ -330,5 +346,27 @@ class IndexListener implements OptionalListenerInterface
     protected function getIntersectChangedIndexedFields($className, array $changedFields)
     {
         return array_intersect($this->getEntityIndexedFields($className), $changedFields);
+    }
+
+    /**
+     * @param array $association
+     *
+     * @return string
+     */
+    private function getRelationField(array $association)
+    {
+        if ($association['type'] === ClassMetadataInfo::MANY_TO_MANY) {
+            if ($association['mappedBy'] !== null) {
+                return $association['mappedBy'];
+            }
+
+            return $association['inversedBy'];
+        }
+
+        if ($association['type'] === ClassMetadataInfo::MANY_TO_ONE) {
+            return $association['inversedBy'];
+        }
+
+        return null;
     }
 }

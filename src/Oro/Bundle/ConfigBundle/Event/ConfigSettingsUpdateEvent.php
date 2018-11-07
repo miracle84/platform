@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\ConfigBundle\Event;
 
-use Symfony\Component\EventDispatcher\Event;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Symfony\Component\EventDispatcher\Event;
 
 class ConfigSettingsUpdateEvent extends Event
 {
@@ -51,7 +50,7 @@ class ConfigSettingsUpdateEvent extends Event
      * @param array $settings
      * @return ConfigSettingsUpdateEvent
      */
-    public function setSettings($settings)
+    public function setSettings(array $settings)
     {
         $this->settings = $settings;
 

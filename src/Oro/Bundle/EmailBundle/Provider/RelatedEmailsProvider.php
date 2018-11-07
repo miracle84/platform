@@ -5,22 +5,23 @@ namespace Oro\Bundle\EmailBundle\Provider;
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
 use Oro\Bundle\EmailBundle\Entity\EmailInterface;
 use Oro\Bundle\EmailBundle\Model\EmailAttribute;
 use Oro\Bundle\EmailBundle\Model\EmailHolderInterface;
 use Oro\Bundle\EmailBundle\Model\Recipient;
+use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\EntityBundle\Provider\EntityFieldProvider;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Bundle\LocaleBundle\Formatter\NameFormatter;
-use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
+/**
+ * Provides related recipients for given entity.
+ */
 class RelatedEmailsProvider
 {
     /** @var Registry */
@@ -29,8 +30,11 @@ class RelatedEmailsProvider
     /** @var ConfigManager */
     protected $configManager;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var NameFormatter */
     protected $nameFormatter;
@@ -48,18 +52,20 @@ class RelatedEmailsProvider
     protected $entityFieldProvider;
 
     /**
-     * @param Registry $registry
-     * @param ConfigManager $configManager
-     * @param SecurityFacade $securityFacade
-     * @param NameFormatter $nameFormatter
-     * @param EmailAddressHelper $emailAddressHelper
-     * @param EmailRecipientsHelper $emailRecipientsHelper
-     * @param EntityFieldProvider $entityFieldProvider
+     * @param Registry                      $registry
+     * @param ConfigManager                 $configManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenAccessorInterface        $tokenAccessor
+     * @param NameFormatter                 $nameFormatter
+     * @param EmailAddressHelper            $emailAddressHelper
+     * @param EmailRecipientsHelper         $emailRecipientsHelper
+     * @param EntityFieldProvider           $entityFieldProvider
      */
     public function __construct(
         Registry $registry,
         ConfigManager $configManager,
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor,
         NameFormatter $nameFormatter,
         EmailAddressHelper $emailAddressHelper,
         EmailRecipientsHelper $emailRecipientsHelper,
@@ -67,7 +73,8 @@ class RelatedEmailsProvider
     ) {
         $this->registry = $registry;
         $this->configManager = $configManager;
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
         $this->nameFormatter = $nameFormatter;
         $this->emailAddressHelper = $emailAddressHelper;
         $this->emailRecipientsHelper = $emailRecipientsHelper;
@@ -90,8 +97,8 @@ class RelatedEmailsProvider
             return $recipients;
         }
 
-        if (!$depth || ($ignoreAcl || !$this->securityFacade->isGranted('VIEW', $object))) {
-            if (!$depth || $this->securityFacade->getLoggedUser() !== $object) {
+        if (!$depth || ($ignoreAcl || !$this->authorizationChecker->isGranted('VIEW', $object))) {
+            if (!$depth || $this->tokenAccessor->getUser() !== $object) {
                 return $recipients;
             }
         }
@@ -147,6 +154,7 @@ class RelatedEmailsProvider
         $recipients = $this->getRecipients($object, $depth, $ignoreAcl);
 
         $emails = [];
+        /** @var Recipient $recipient */
         foreach ($recipients as $recipient) {
             $emails[$recipient->getEmail()] = $recipient->getId();
         }
@@ -209,26 +217,26 @@ class RelatedEmailsProvider
      */
     protected function getFieldAttributes(ClassMetadata $metadata)
     {
-        $attributes           = [];
-        $extendConfigProvider = $this->configManager->getProvider('extend');
-        $entityConfigProvider = $this->configManager->getProvider('entity');
+        $attributes = [];
         foreach ($metadata->fieldNames as $fieldName) {
+            if (!$this->configManager->hasConfig($metadata->name, $fieldName)) {
+                continue;
+            }
+
+            if ($this->configManager->isHiddenModel($metadata->name, $fieldName)) {
+                continue;
+            }
+
             if (false !== stripos($fieldName, 'email')) {
-                if ($extendConfigProvider->hasConfig($metadata->name, $fieldName)) {
-                    $config = $extendConfigProvider->getConfig($metadata->name, $fieldName);
-                    if (!$config->is('is_deleted')) {
-                        $attributes[] = new EmailAttribute($fieldName);
-                    }
+                $extendFieldConfig = $this->configManager->getFieldConfig('extend', $metadata->name, $fieldName);
+                if (!$extendFieldConfig->is('is_deleted')) {
+                    $attributes[] = new EmailAttribute($fieldName);
                 }
                 continue;
             }
 
-            if (!$entityConfigProvider->hasConfig($metadata->name, $fieldName)) {
-                continue;
-            }
-
-            $fieldConfig = $entityConfigProvider->getConfig($metadata->name, $fieldName);
-            if ($fieldConfig->get('contact_information') === 'email') {
+            $entityFieldConfig = $this->configManager->getFieldConfig('entity', $metadata->name, $fieldName);
+            if ($entityFieldConfig->get('contact_information') === 'email') {
                 $attributes[] = new EmailAttribute($fieldName);
             }
         }

@@ -3,13 +3,10 @@
 namespace Oro\Bundle\EmailBundle\Entity;
 
 use DateTime;
-
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\Index;
-use Doctrine\Common\Collections\ArrayCollection;
-
 use JMS\Serializer\Annotation as JMS;
-
 use Oro\Bundle\EmailBundle\Model\FolderType;
 
 /**
@@ -101,7 +98,7 @@ class EmailFolder
      * @var EmailOrigin
      *
      * @ORM\ManyToOne(targetEntity="EmailOrigin", inversedBy="folders")
-     * @ORM\JoinColumn(name="origin_id", referencedColumnName="id")
+     * @ORM\JoinColumn(name="origin_id", referencedColumnName="id", onDelete="CASCADE")
      * @JMS\Exclude
      */
     protected $origin;
@@ -346,7 +343,7 @@ class EmailFolder
      *
      * @param  EmailFolder $folder
      *
-     * @return EmailOrigin
+     * @return EmailFolder
      */
     public function setParentFolder(EmailFolder $folder)
     {
@@ -400,7 +397,7 @@ class EmailFolder
      *
      * @param DateTime $synchronizedAt
      *
-     * @return EmailOrigin
+     * @return EmailFolder
      */
     public function setSynchronizedAt($synchronizedAt)
     {
@@ -424,7 +421,7 @@ class EmailFolder
      *
      * @param DateTime $syncStartDate
      *
-     * @return EmailOrigin
+     * @return EmailFolder
      */
     public function setSyncStartDate($syncStartDate)
     {
@@ -466,11 +463,11 @@ class EmailFolder
      */
     public function getDirection()
     {
-        if (in_array($this->type, FolderType::outcomingTypes())) {
+        if (in_array($this->type, FolderType::outgoingTypes(), true)) {
             return static::DIRECTION_OUTGOING;
         }
 
-        if (in_array($this->type, FolderType::incomingTypes())) {
+        if (in_array($this->type, FolderType::incomingTypes(), true)) {
             return static::DIRECTION_INCOMING;
         }
 

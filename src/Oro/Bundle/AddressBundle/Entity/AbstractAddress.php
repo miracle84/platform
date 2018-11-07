@@ -4,24 +4,20 @@ namespace Oro\Bundle\AddressBundle\Entity;
 
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\Mapping as ORM;
-
-use Symfony\Component\Validator\Context\ExecutionContextInterface;
-
-use Oro\Bundle\AddressBundle\Validator\Constraints\ValidRegion;
-use Oro\Bundle\AddressBundle\Validator\Constraints\ValidRegionValidator;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\FormBundle\Entity\EmptyItem;
 use Oro\Bundle\LocaleBundle\Model\AddressInterface;
 use Oro\Bundle\LocaleBundle\Model\FullNameInterface;
 
 /**
- * Address
+ * The base class for address entities.
  *
  * @ORM\MappedSuperclass
  * @ORM\HasLifecycleCallbacks
  *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
+ * @SuppressWarnings(PHPMD.TooManyFields)
  */
 abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressInterface
 {
@@ -294,7 +290,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set id
      *
      * @param int $id
-     * @return AbstractAddress
+     * @return $this
      * @deprecated since 1.10, to be removed in 2.0
      */
     public function setId($id)
@@ -308,7 +304,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set label
      *
      * @param string $label
-     * @return AbstractAddress
+     * @return $this
      */
     public function setLabel($label)
     {
@@ -331,7 +327,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set street
      *
      * @param string $street
-     * @return AbstractAddress
+     * @return $this
      */
     public function setStreet($street)
     {
@@ -354,7 +350,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set street2
      *
      * @param string $street2
-     * @return AbstractAddress
+     * @return $this
      */
     public function setStreet2($street2)
     {
@@ -377,7 +373,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set city
      *
      * @param string $city
-     * @return AbstractAddress
+     * @return $this
      */
     public function setCity($city)
     {
@@ -400,7 +396,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set region
      *
      * @param Region $region
-     * @return AbstractAddress
+     * @return $this
      */
     public function setRegion($region)
     {
@@ -423,7 +419,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set region text
      *
      * @param string $regionText
-     * @return AbstractAddress
+     * @return $this
      */
     public function setRegionText($regionText)
     {
@@ -480,7 +476,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set postal_code
      *
      * @param string $postalCode
-     * @return AbstractAddress
+     * @return $this
      */
     public function setPostalCode($postalCode)
     {
@@ -503,7 +499,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set country
      *
      * @param Country $country
-     * @return AbstractAddress
+     * @return $this
      */
     public function setCountry($country)
     {
@@ -556,7 +552,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Sets organization
      *
      * @param string $organization
-     * @return AbstractAddress
+     * @return $this
      */
     public function setOrganization($organization)
     {
@@ -580,7 +576,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set name prefix
      *
      * @param string $namePrefix
-     * @return AbstractAddress
+     * @return $this
      */
     public function setNamePrefix($namePrefix)
     {
@@ -604,7 +600,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set first name
      *
      * @param string $firstName
-     * @return AbstractAddress
+     * @return $this
      */
     public function setFirstName($firstName)
     {
@@ -628,7 +624,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set middle name
      *
      * @param string $middleName
-     * @return AbstractAddress
+     * @return $this
      */
     public function setMiddleName($middleName)
     {
@@ -651,7 +647,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set last name
      *
      * @param string $lastName
-     * @return AbstractAddress
+     * @return $this
      */
     public function setLastName($lastName)
     {
@@ -674,7 +670,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set name suffix
      *
      * @param string $nameSuffix
-     * @return AbstractAddress
+     * @return $this
      */
     public function setNameSuffix($nameSuffix)
     {
@@ -707,7 +703,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set address created date/time
      *
      * @param \DateTime $created
-     * @return AbstractAddress
+     * @return $this
      */
     public function setCreated($created)
     {
@@ -730,7 +726,7 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
      * Set address updated date/time
      *
      * @param \DateTime $updated
-     * @return AbstractAddress
+     * @return $this
      */
     public function setUpdated($updated)
     {
@@ -760,28 +756,23 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
         $this->updated = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
-    /**
-     * @param ExecutionContextInterface $context
-     * @deprecated since 1.9  Use \Oro\Bundle\AddressBundle\Validator\Constraints\ValidRegionValidator instead
-     */
-    public function isRegionValid(ExecutionContextInterface $context)
+    public function __clone()
     {
-        // Use validator instead of duplicate code
-        $constraint = new ValidRegion();
-        $validator = new ValidRegionValidator();
-        $validator->initialize($context);
-        $validator->validate($this, $constraint);
+        if ($this->id) {
+            $this->id = null;
+            $this->created = null;
+            $this->updated = null;
+        }
     }
 
     /**
      * Convert address to string
-     * @todo: Address format must be used here
      *
      * @return string
      */
     public function __toString()
     {
-        $data = array(
+        $data = [
             $this->getFirstName(),
             $this->getLastName(),
             ',',
@@ -792,17 +783,17 @@ abstract class AbstractAddress implements EmptyItem, FullNameInterface, AddressI
             ',',
             $this->getCountry(),
             $this->getPostalCode(),
-        );
+        ];
 
-        $str = implode(' ', $data);
-        $check = trim(str_replace(',', '', $str));
-        return empty($check) ? '' : $str;
+        return trim(implode(' ', $data), " \t\n\r\0\x0B,");
     }
 
     /**
      * Check if entity is empty.
      *
      * @return bool
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function isEmpty()
     {

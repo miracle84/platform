@@ -12,9 +12,16 @@ define([
      * @class   oro.datagrid.action.ResetCollectionAction
      * @extends oro.datagrid.action.AbstractAction
      */
-    ResetCollectionAction =  AbstractAction.extend({
+    ResetCollectionAction = AbstractAction.extend({
         /** @property oro.PageableCollection */
         collection: undefined,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ResetCollectionAction() {
+            ResetCollectionAction.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initialize action

@@ -3,22 +3,29 @@
 namespace Oro\Bundle\DataGridBundle\ImportExport;
 
 use Akeneo\Bundle\BatchBundle\Item\ItemReaderInterface;
-
+use Oro\Bundle\BatchBundle\Item\Support\ClosableInterface;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\ResultsObject;
 use Oro\Bundle\DataGridBundle\Datagrid\DatagridInterface;
-use Oro\Bundle\DataGridBundle\Extension\Pager\PagerInterface;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
-
+use Oro\Bundle\DataGridBundle\Extension\Pager\PagerInterface;
 use Oro\Bundle\ImportExportBundle\Context\ContextAwareInterface;
 use Oro\Bundle\ImportExportBundle\Context\ContextInterface;
-use Oro\Bundle\ImportExportBundle\Exception\LogicException;
 use Oro\Bundle\ImportExportBundle\Exception\InvalidConfigurationException;
+use Oro\Bundle\ImportExportBundle\Exception\LogicException;
+use Oro\Component\DependencyInjection\ServiceLink;
 
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
-
-class DatagridExportConnector implements ItemReaderInterface, \Countable, ContextAwareInterface
+/**
+ * Datagrid export connector reads items from data grid with configured batch size.
+ *
+ */
+class DatagridExportConnector implements
+    ItemReaderInterface,
+    \Countable,
+    ContextAwareInterface,
+    ClosableInterface
 {
+    const DEFAULT_PAGE_SIZE = 500;
+
     /**
      * @var ServiceLink
      */
@@ -70,7 +77,6 @@ class DatagridExportConnector implements ItemReaderInterface, \Countable, Contex
     public function __construct(ServiceLink $gridManagerLink)
     {
         $this->gridManagerLink = $gridManagerLink;
-        $this->pageSize        = BufferedQueryResultIterator::DEFAULT_BUFFER_SIZE;
     }
 
     /**
@@ -105,6 +111,9 @@ class DatagridExportConnector implements ItemReaderInterface, \Countable, Contex
                 $result = $this->sourceData[$this->offset];
                 $this->offset++;
             }
+        } else {
+            // reader can be used again so reset source data
+            $this->close();
         }
 
         return $result;
@@ -156,11 +165,24 @@ class DatagridExportConnector implements ItemReaderInterface, \Countable, Contex
             }
 
             $this->page       = 1;
+            $this->pageSize   = $this->getPageSize();
             $gridData         = $this->getGridData();
             $this->totalCount = $gridData->getTotalRecords();
             $this->sourceData = $gridData->getData();
             $this->offset     = 0;
         }
+    }
+
+    /**
+     * @return int
+     */
+    protected function getPageSize()
+    {
+        if ($this->getContext()->hasOption('pageSize')) {
+            return $this->getContext()->getOption('pageSize');
+        }
+
+        return self::DEFAULT_PAGE_SIZE;
     }
 
     /**
@@ -184,5 +206,12 @@ class DatagridExportConnector implements ItemReaderInterface, \Countable, Contex
         $this->grid->getParameters()->set(PagerInterface::PAGER_ROOT_PARAM, $pagerParameters);
 
         return $this->grid->getData();
+    }
+
+    public function close()
+    {
+        $this->sourceData = null;
+        $this->gridDataSource = null;
+        $this->totalCount = null;
     }
 }

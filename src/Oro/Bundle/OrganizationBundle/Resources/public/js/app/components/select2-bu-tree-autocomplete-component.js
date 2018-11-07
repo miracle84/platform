@@ -6,12 +6,23 @@ define(function(require) {
     var mediator = require('oroui/js/mediator');
     var _ = require('underscore');
     var Select2BuTreeAutocompleteView = require('oroorganization/js/app/views/select2-bu-tree-autocomplete-view');
+    var tools = require('oroui/js/tools');
 
     BUTreeAutocompleteComponent = Select2TreeAutocompleteComponent.extend({
         ViewType: Select2BuTreeAutocompleteView,
 
         organizations: {},
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function BUTreeAutocompleteComponent() {
+            BUTreeAutocompleteComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             BUTreeAutocompleteComponent.__super__.initialize.apply(this, arguments);
 
@@ -88,7 +99,7 @@ define(function(require) {
         },
 
         getValueFromSelectedData: function(val) {
-            var selectedData = this.view.$el.data('selected-data');
+            var selectedData = tools.ensureArray(this.view.$el.data('selected-data'));
 
             return _.find(selectedData, function(item) {
                 return item.id === val;

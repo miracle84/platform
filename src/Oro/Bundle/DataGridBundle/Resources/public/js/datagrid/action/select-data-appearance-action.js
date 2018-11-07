@@ -13,12 +13,19 @@ define([
      * @class   oro.datagrid.action.ResetCollectionAction
      * @extends oro.datagrid.action.AbstractAction
      */
-    SelectDataAppearanceAction =  AbstractAction.extend({
+    SelectDataAppearanceAction = AbstractAction.extend({
         /** @property {Function} */
         launcher: DropdownSelectChoiceLauncher,
 
         /** @property oro.PageableCollection */
         collection: undefined,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function SelectDataAppearanceAction() {
+            SelectDataAppearanceAction.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initialize action

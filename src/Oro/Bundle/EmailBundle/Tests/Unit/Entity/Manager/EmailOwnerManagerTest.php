@@ -11,15 +11,15 @@ use Oro\Bundle\EmailBundle\Tests\Unit\Entity\TestFixtures\TestEmailOwner;
 use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\SomeEntity;
 use Oro\Component\TestUtils\ORM\Mocks\UnitOfWork;
 
-class EmailOwnerManagerTest extends \PHPUnit_Framework_TestCase
+class EmailOwnerManagerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailOwnerProviderStorage */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailOwnerProviderStorage */
     protected $emailOwnerProviderStorage;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailAddressManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailAddressManager */
     protected $emailAddressManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|EmailOwnerManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|EmailOwnerManager */
     protected $emailOwnerManager;
 
     /** @var array */
@@ -123,7 +123,7 @@ class EmailOwnerManagerTest extends \PHPUnit_Framework_TestCase
                     'updates' => [],
                     'deletions' => [],
                 ],
-                [],
+                [[],[]],
             ],
             [
                 [
@@ -142,14 +142,18 @@ class EmailOwnerManagerTest extends \PHPUnit_Framework_TestCase
                     ],
                 ],
                 [
-                    (new EmailAddress())
-                        ->setOwner($created1)
-                        ->setEmail('primary@example.com'),
-                    (new EmailAddress(1))
-                        ->setOwner($created1)
-                        ->setEmail('existing@example.com'),
-                    (new EmailAddress(2))
-                        ->setEmail('existing2@example.com')
+                    [
+                        (new EmailAddress(1))
+                            ->setOwner($created1)
+                            ->setEmail('existing@example.com'),
+                        (new EmailAddress(2))
+                            ->setEmail('existing2@example.com')
+                    ],
+                    [
+                        (new EmailAddress())
+                            ->setOwner($created1)
+                            ->setEmail('primary@example.com'),
+                    ],
                 ],
             ],
         ];

@@ -3,7 +3,6 @@
 namespace Oro\Bundle\LocaleBundle\Migrations\Schema;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Migration\Extension\ExtendExtension;
@@ -22,7 +21,7 @@ class OroLocaleBundleInstaller implements Installation, ExtendExtensionAwareInte
      */
     public function getMigrationVersion()
     {
-        return 'v1_1';
+        return 'v1_4';
     }
 
     /**
@@ -64,7 +63,7 @@ class OroLocaleBundleInstaller implements Installation, ExtendExtensionAwareInte
         $table->addColumn('id', 'integer', ['autoincrement' => true]);
         $table->addColumn('parent_id', 'integer', ['notnull' => false]);
         $table->addColumn('name', 'string', ['length' => 255]);
-        $table->addColumn('language_code', 'string', ['length' => 16]);
+        $table->addColumn('language_id', 'integer');
         $table->addColumn('formatting_code', 'string', ['length' => 16]);
         $table->addColumn('created_at', 'datetime', []);
         $table->addColumn('updated_at', 'datetime', []);
@@ -117,6 +116,12 @@ class OroLocaleBundleInstaller implements Installation, ExtendExtensionAwareInte
             ['parent_id'],
             ['id'],
             ['onDelete' => 'SET NULL', 'onUpdate' => null]
+        );
+        $table->addForeignKeyConstraint(
+            $schema->getTable('oro_language'),
+            ['language_id'],
+            ['id'],
+            ['onDelete' => 'RESTRICT', 'onUpdate' => null]
         );
     }
 

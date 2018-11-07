@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\ActionBundle\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
+use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class OroActionExtension extends Extension
 {
@@ -23,6 +23,11 @@ class OroActionExtension extends Extension
         $loader->load('form_types.yml');
         $loader->load('actions.yml');
         $loader->load('services.yml');
-        $loader->load('twig_extensions.yml');
+        $loader->load('duplicator.yml');
+        $loader->load('commands.yml');
+
+        if ($container->getParameter('kernel.debug')) {
+            $loader->load('debug.yml');
+        }
     }
 }

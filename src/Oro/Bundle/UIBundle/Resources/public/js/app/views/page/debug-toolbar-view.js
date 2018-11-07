@@ -36,6 +36,14 @@ define([
         },
 
         /**
+         * @inheritDoc
+         */
+        constructor: function DebugToolbarView(options) {
+            mediator.setHandler('updateDebugToolbar', this.updateToolbar, this);
+            DebugToolbarView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * Handles page load event
          *  - loads debug data
          *  - updates a debugger bar
@@ -65,8 +73,10 @@ define([
          */
         updateToolbar: function(xhr) {
             var token = xhr.getResponseHeader('x-debug-token');
-            var url = routing.generate('_wdt', {token: token});
-            $.get(url, _.bind(this.render, this, token, url));
+            if (token) {
+                var url = routing.generate('_wdt', {token: token});
+                $.get(url, _.bind(this.render, this, token, url));
+            }
         },
 
         /**

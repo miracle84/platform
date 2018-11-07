@@ -5,23 +5,23 @@ namespace Oro\Bundle\DashboardBundle\EventListener;
 use Oro\Bundle\DashboardBundle\Model\Manager;
 use Oro\Bundle\NavigationBundle\Event\ConfigureMenuEvent;
 use Oro\Bundle\NavigationBundle\Utils\MenuUpdateUtils;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 
 class NavigationListener
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var Manager */
     protected $manager;
 
     /**
-     * @param SecurityFacade   $securityFacade
-     * @param Manager          $manager
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param Manager                $manager
      */
-    public function __construct(SecurityFacade $securityFacade, Manager $manager)
+    public function __construct(TokenAccessorInterface $tokenAccessor, Manager $manager)
     {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
         $this->manager = $manager;
     }
 
@@ -30,18 +30,25 @@ class NavigationListener
      */
     public function onNavigationConfigure(ConfigureMenuEvent $event)
     {
-        $dashboardTab = MenuUpdateUtils::findMenuItem($event->getMenu(), 'dashboard_tab');
-        if ($dashboardTab === null || !$this->securityFacade->hasLoggedUser()) {
+        if (!$this->tokenAccessor->hasUser()) {
             return;
         }
 
-        $dashboards = $this->manager->findAllowedDashboards();
+        $dashboardTab = MenuUpdateUtils::findMenuItem($event->getMenu(), 'dashboard_tab');
+        if (!$dashboardTab || !$dashboardTab->isDisplayed()) {
+            return;
+        }
 
-        if (count($dashboards)>0) {
+        $dashboards = $this->manager->findAllowedDashboardsShortenedInfo(
+            'VIEW',
+            $this->tokenAccessor->getOrganizationId()
+        );
+
+        if ($dashboards) {
             foreach ($dashboards as $dashboard) {
-                $dashboardId = $dashboard->getId();
+                $dashboardId = $dashboard['id'];
 
-                $dashboardLabel = $dashboard->getLabel();
+                $dashboardLabel = $dashboard['label'];
                 $dashboardLabel = strlen($dashboardLabel) > 50 ? substr($dashboardLabel, 0, 50).'...' : $dashboardLabel;
 
                 $options = [

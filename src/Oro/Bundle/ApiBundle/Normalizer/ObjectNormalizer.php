@@ -3,16 +3,23 @@
 namespace Oro\Bundle\ApiBundle\Normalizer;
 
 use Doctrine\Common\Util\ClassUtils;
-
-use Oro\Component\EntitySerializer\ConfigUtil;
-use Oro\Component\EntitySerializer\DataAccessorInterface;
-use Oro\Component\EntitySerializer\DataTransformerInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
-use Oro\Bundle\ApiBundle\Config\EntityDefinitionFieldConfig;
 use Oro\Bundle\ApiBundle\Exception\RuntimeException;
 use Oro\Bundle\ApiBundle\Model\EntityIdentifier;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\EntitySerializer\ConfigUtil;
+use Oro\Component\EntitySerializer\DataAccessorInterface;
+use Oro\Component\EntitySerializer\DataNormalizer;
+use Oro\Component\EntitySerializer\SerializationHelper;
 
+/**
+ * Converts an object to an array.
+ * This class should be synchronized with EntitySerializer, the difference between this class
+ * and EntitySerializer is that this class does not load data from the database.
+ * @see \Oro\Component\EntitySerializer\EntitySerializer
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class ObjectNormalizer
 {
     const MAX_NESTING_LEVEL = 1;
@@ -23,11 +30,11 @@ class ObjectNormalizer
     /** @var DoctrineHelper */
     protected $doctrineHelper;
 
+    /** @var SerializationHelper */
+    protected $serializationHelper;
+
     /** @var DataAccessorInterface */
     protected $dataAccessor;
-
-    /** @var DataTransformerInterface */
-    protected $dataTransformer;
 
     /** @var ConfigNormalizer */
     protected $configNormalizer;
@@ -38,23 +45,23 @@ class ObjectNormalizer
     /**
      * @param ObjectNormalizerRegistry $normalizerRegistry
      * @param DoctrineHelper           $doctrineHelper
+     * @param SerializationHelper      $serializationHelper
      * @param DataAccessorInterface    $dataAccessor
-     * @param DataTransformerInterface $dataTransformer
      * @param ConfigNormalizer         $configNormalizer
      * @param DataNormalizer           $dataNormalizer
      */
     public function __construct(
         ObjectNormalizerRegistry $normalizerRegistry,
         DoctrineHelper $doctrineHelper,
+        SerializationHelper $serializationHelper,
         DataAccessorInterface $dataAccessor,
-        DataTransformerInterface $dataTransformer,
         ConfigNormalizer $configNormalizer,
         DataNormalizer $dataNormalizer
     ) {
         $this->normalizerRegistry = $normalizerRegistry;
         $this->doctrineHelper = $doctrineHelper;
+        $this->serializationHelper = $serializationHelper;
         $this->dataAccessor = $dataAccessor;
-        $this->dataTransformer = $dataTransformer;
         $this->configNormalizer = $configNormalizer;
         $this->dataNormalizer = $dataNormalizer;
     }
@@ -151,45 +158,65 @@ class ObjectNormalizer
     protected function normalizeObjectByConfig($object, $level, EntityDefinitionConfig $config, $context)
     {
         if (!$config->isExcludeAll()) {
-            throw new RuntimeException(
-                sprintf(
-                    'The "%s" must be "%s".',
-                    EntityDefinitionConfig::EXCLUSION_POLICY,
-                    EntityDefinitionConfig::EXCLUSION_POLICY_ALL
-                )
-            );
+            throw new RuntimeException(sprintf(
+                'The exclusion policy must be "%s". Object type: "%s".',
+                ConfigUtil::EXCLUSION_POLICY_ALL,
+                ClassUtils::getClass($object)
+            ));
         }
 
         $result = [];
+        $referenceFields = [];
         $entityClass = $this->getEntityClass($object);
         $fields = $config->getFields();
         foreach ($fields as $fieldName => $field) {
-            if ($field->isExcluded()) {
+            $propertyPath = $field->getPropertyPath($fieldName);
+
+            if (false !== strpos($propertyPath, ConfigUtil::PATH_DELIMITER)) {
+                $referenceFields[$fieldName] = ConfigUtil::explodePropertyPath($propertyPath);
                 continue;
             }
 
-            $propertyPath = $field->getPropertyPath($fieldName);
-            if ($this->isMetadataProperty($propertyPath)) {
-                $result[$propertyPath] = $this->getMetadataProperty($entityClass, $propertyPath);
-            } else {
-                $value = null;
-                if ($this->dataAccessor->tryGetValue($object, $propertyPath, $value)) {
-                    if (null !== $value) {
-                        $targetEntity = $field->getTargetEntity();
-                        if (null !== $targetEntity) {
-                            $value = $this->normalizeValue($value, $level + 1, $context, $targetEntity);
-                        } else {
-                            $value = $this->transformValue($entityClass, $fieldName, $value, $context, $field);
-                        }
+            $value = null;
+            if ($this->dataAccessor->tryGetValue($object, $propertyPath, $value)) {
+                if (null !== $value) {
+                    $targetConfig = $field->getTargetEntity();
+                    if (null !== $targetConfig) {
+                        $value = $this->normalizeValue($value, $level + 1, $context, $targetConfig);
+                    } else {
+                        $value = $this->serializationHelper->transformValue(
+                            $entityClass,
+                            $fieldName,
+                            $value,
+                            $context,
+                            $field
+                        );
                     }
-                    $result[$propertyPath] = $value;
                 }
+                $result[$fieldName] = $value;
+            } elseif ($this->isMetadataProperty($propertyPath)) {
+                $result[$fieldName] = $this->getMetadataProperty($entityClass, $propertyPath);
             }
+        }
+
+        if (!empty($referenceFields)) {
+            $result = $this->serializationHelper->handleFieldsReferencedToChildFields(
+                $result,
+                $entityClass,
+                $config,
+                $context,
+                $referenceFields
+            );
+            $result = $this->handleFieldsReferencedToChildFields($result, $object, $referenceFields);
         }
 
         $postSerializeHandler = $config->getPostSerializeHandler();
         if (null !== $postSerializeHandler) {
-            $result = $this->postSerialize($result, $postSerializeHandler, $context);
+            $result = $this->serializationHelper->postSerialize(
+                $result,
+                $postSerializeHandler,
+                $context
+            );
         }
 
         return $result;
@@ -207,8 +234,8 @@ class ObjectNormalizer
     {
         if (is_array($value)) {
             $nextLevel = $level + 1;
-            foreach ($value as &$val) {
-                $val = $this->normalizeValue($val, $nextLevel, $context, $config);
+            foreach ($value as $key => $val) {
+                $value[$key] = $this->normalizeValue($val, $nextLevel, $context, $config);
             }
         } elseif (is_object($value)) {
             $objectNormalizer = $this->normalizerRegistry->getObjectNormalizer($value);
@@ -262,28 +289,40 @@ class ObjectNormalizer
     }
 
     /**
-     * @param string                           $entityClass
-     * @param string                           $fieldName
-     * @param mixed                            $fieldValue
-     * @param array                            $context
-     * @param EntityDefinitionFieldConfig|null $fieldConfig
+     * @param array  $serializedData
+     * @param object $object
+     * @param array  $fields
      *
-     * @return mixed
+     * @return array
      */
-    protected function transformValue(
-        $entityClass,
-        $fieldName,
-        $fieldValue,
-        array $context,
-        EntityDefinitionFieldConfig $fieldConfig = null
-    ) {
-        return $this->dataTransformer->transform(
-            $entityClass,
-            $fieldName,
-            $fieldValue,
-            null !== $fieldConfig ? $fieldConfig->toArray(true) : [],
-            $context
-        );
+    protected function handleFieldsReferencedToChildFields(array $serializedData, $object, array $fields)
+    {
+        foreach ($fields as $fieldName => $propertyPath) {
+            if (\array_key_exists($fieldName, $serializedData)) {
+                continue;
+            }
+            $lastFieldName = \array_pop($propertyPath);
+            $currentObject = $object;
+            foreach ($propertyPath as $currentFieldName) {
+                $value = null;
+                if ($this->dataAccessor->tryGetValue($currentObject, $currentFieldName, $value)) {
+                    $currentObject = $value;
+                } else {
+                    $currentObject = null;
+                }
+                if (null === $currentObject) {
+                    break;
+                }
+            }
+            if (null !== $currentObject) {
+                $value = null;
+                if ($this->dataAccessor->tryGetValue($currentObject, $lastFieldName, $value)) {
+                    $serializedData[$fieldName] = $value;
+                }
+            }
+        }
+
+        return $serializedData;
     }
 
     /**
@@ -347,17 +386,5 @@ class ObjectNormalizer
         $map = array_flip($metadata->discriminatorMap);
 
         return $map[$entityClass];
-    }
-
-    /**
-     * @param array    $item
-     * @param callable $handler
-     * @param array    $context
-     *
-     * @return array
-     */
-    protected function postSerialize(array $item, $handler, array $context)
-    {
-        return call_user_func($handler, $item, $context);
     }
 }

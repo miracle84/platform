@@ -1,13 +1,14 @@
-define([
-    'underscore',
-    'jquery',
-    'oroui/js/app/components/base/component',
-    'routing',
-    'oroui/js/mediator'
-], function(_, $, BaseComponent, routing, mediator) {
+define(function(require) {
     'use strict';
 
-    return BaseComponent.extend({
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var BaseComponent = require('oroui/js/app/components/base/component');
+    var mediator = require('oroui/js/mediator');
+    var routing = require('routing');
+    var tinyMCE = require('tinymce/tinymce');
+
+    var CreateOrSelectChoiceComponent = BaseComponent.extend({
 
         MODE_CREATE: 'create',
         MODE_VIEW: 'view',
@@ -28,6 +29,13 @@ define([
         $existingEntityInput: null,
         $dialog: null,
         editable: false,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function CreateOrSelectChoiceComponent() {
+            CreateOrSelectChoiceComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @param options
@@ -153,7 +161,9 @@ define([
                 var newVal = self._getCleanValue($el);
                 $el.val(newVal);
                 if ($el.is('textarea')) {
-                    $el.text(newVal);
+                    $el.text(newVal).change();
+                } else {
+                    $el.change();
                 }
             });
         },
@@ -200,7 +210,12 @@ define([
                     );
                     $modifiedField.prop('checked', $element.is(':checked')).change();
                 } else {
-                    $modifiedField.val($element.val()).change();
+                    var editor = tinyMCE.get($modifiedField.attr('id'));
+                    if (editor) {
+                        editor.setContent($element.val());
+                    } else {
+                        $modifiedField.val($element.val()).change();
+                    }
                 }
             }, this));
         },
@@ -227,4 +242,6 @@ define([
             }
         }
     });
+
+    return CreateOrSelectChoiceComponent;
 });

@@ -3,67 +3,79 @@
 namespace Oro\Bundle\NotificationBundle\Event\Handler;
 
 use Doctrine\ORM\EntityManager;
-
-use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-use Oro\Bundle\NotificationBundle\Event\NotificationEvent;
 use Oro\Bundle\NotificationBundle\Entity\EmailNotification;
+use Oro\Bundle\NotificationBundle\Event\NotificationEvent;
 use Oro\Bundle\NotificationBundle\Manager\EmailNotificationManager;
+use Oro\Bundle\NotificationBundle\Model\TemplateEmailNotificationInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 
+/**
+ * Email handler sends emails for notification events defined by notification rules.
+ */
 class EmailNotificationHandler implements EventHandlerInterface
 {
-    /**
-     * @var EmailNotificationManager
-     */
+    /** @var EmailNotificationManager */
     protected $manager;
 
-    /**
-     * @var EntityManager
-     */
+    /** @var EntityManager */
     protected $em;
 
-    /** @var ConfigProvider */
-    protected $configProvider;
+    /** @var PropertyAccessor */
+    protected $propertyAccessor;
+
+    /** @var EventDispatcherInterface */
+    protected $eventDispatcher;
 
     /**
-     * Constructor
-     *
      * @param EmailNotificationManager $manager
-     * @param EntityManager              $em
-     * @param ConfigProvider             $configProvider
+     * @param EntityManager $em
+     * @param PropertyAccessor $propertyAccessor
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         EmailNotificationManager $manager,
         EntityManager $em,
-        ConfigProvider $configProvider
+        PropertyAccessor $propertyAccessor,
+        EventDispatcherInterface $eventDispatcher
     ) {
-        $this->manager      = $manager;
-        $this->em             = $em;
-        $this->configProvider = $configProvider;
+        $this->manager = $manager;
+        $this->em = $em;
+        $this->propertyAccessor = $propertyAccessor;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     /**
-     * Handle event
-     *
-     * @param NotificationEvent   $event
-     * @param EmailNotification[] $matchedNotifications
-     * @return mixed
+     * {@inheritdoc}
      */
     public function handle(NotificationEvent $event, $matchedNotifications)
     {
-        $entity = $event->getEntity();
-
         // convert notification rules to a list of EmailNotificationInterface
-        $notifications = array();
+        $notifications = [];
         foreach ($matchedNotifications as $notification) {
-            $notifications[] = new EmailNotificationAdapter(
-                $entity,
-                $notification,
-                $this->em,
-                $this->configProvider
-            );
+            $notifications[] = $this->getEmailNotificationAdapter($event, $notification);
         }
 
         // send notifications
-        $this->manager->process($entity, $notifications);
+        $this->manager->process($notifications);
+    }
+
+    /**
+     * @param NotificationEvent $event
+     * @param EmailNotification $notification
+     *
+     * @return TemplateEmailNotificationInterface
+     */
+    protected function getEmailNotificationAdapter(
+        NotificationEvent $event,
+        EmailNotification $notification
+    ): TemplateEmailNotificationInterface {
+        return new TemplateEmailNotificationAdapter(
+            $event->getEntity(),
+            $notification,
+            $this->em,
+            $this->propertyAccessor,
+            $this->eventDispatcher
+        );
     }
 }

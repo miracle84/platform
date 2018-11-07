@@ -2,17 +2,14 @@
 
 namespace Oro\Bundle\AddressBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Gedmo\Translatable\Translatable;
-
 use JMS\Serializer\Annotation as JMS;
-
+use Oro\Bundle\AddressBundle\Model\ExtendCountry;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
-use Oro\Bundle\AddressBundle\Model\ExtendCountry;
 
 /**
  * Country
@@ -20,7 +17,7 @@ use Oro\Bundle\AddressBundle\Model\ExtendCountry;
  * @ORM\Table("oro_dictionary_country", indexes={
  *      @ORM\Index(name="country_name_idx", columns={"name"})
  * })
- * @ORM\Entity
+ * @ORM\Entity(repositoryClass="Oro\Bundle\AddressBundle\Entity\Repository\CountryRepository")
  * @Gedmo\TranslationEntity(class="Oro\Bundle\AddressBundle\Entity\CountryTranslation")
  * @Config(
  *      defaultValues={

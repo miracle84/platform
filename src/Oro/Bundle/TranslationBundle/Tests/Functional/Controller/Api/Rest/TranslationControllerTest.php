@@ -3,16 +3,12 @@
 namespace Oro\Bundle\TranslationBundle\Tests\Functional\Controller\Api\Rest;
 
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationRepository;
 use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Manager\TranslationManager;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadLanguages;
 use Oro\Bundle\TranslationBundle\Tests\Functional\DataFixtures\LoadTranslations;
 
-/**
- * @dbIsolation
- */
 class TranslationControllerTest extends WebTestCase
 {
     /** @var TranslationManager */

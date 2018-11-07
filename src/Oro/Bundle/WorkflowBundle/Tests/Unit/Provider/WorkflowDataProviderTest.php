@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Provider;
 
 use Doctrine\Common\Collections\Collection;
-
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
@@ -11,41 +10,81 @@ use Oro\Bundle\WorkflowBundle\Model\Step;
 use Oro\Bundle\WorkflowBundle\Model\StepManager;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowManager;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowManagerRegistry;
 use Oro\Bundle\WorkflowBundle\Provider\TransitionDataProvider;
 use Oro\Bundle\WorkflowBundle\Provider\WorkflowDataProvider;
 
-class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
+class WorkflowDataProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var WorkflowDataProvider */
     private $workflowDataProvider;
 
-    /** @var TransitionDataProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TransitionDataProvider|\PHPUnit\Framework\MockObject\MockObject */
     private $transitionDataProvider;
 
-    /** @var WorkflowManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowManager|\PHPUnit\Framework\MockObject\MockObject */
     private $workflowManager;
+
+    /** @var WorkflowManager|\PHPUnit\Framework\MockObject\MockObject */
+    private $systemWorkflowManager;
+
+    /** @var WorkflowManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
+    private $workflowManagerRegistry;
 
     /**
      * {@inheritdoc}
      */
     protected function setUp()
     {
-        $this->transitionDataProvider = $this->getMockBuilder(TransitionDataProvider::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->transitionDataProvider = $this->createMock(TransitionDataProvider::class);
+        $this->workflowManager = $this->createMock(WorkflowManager::class);
+        $this->systemWorkflowManager = $this->createMock(WorkflowManager::class);
+        $this->workflowManagerRegistry = $this->createMock(WorkflowManagerRegistry::class);
 
-        $this->workflowManager = $this->getMockBuilder(WorkflowManager::class)->disableOriginalConstructor()->getMock();
+        $this->workflowManagerRegistry->expects($this->any())
+            ->method('getManager')
+            ->will($this->returnValueMap([
+                [null, $this->systemWorkflowManager],
+                ['default', $this->workflowManager],
+            ]));
 
-        $this->workflowDataProvider = new WorkflowDataProvider($this->workflowManager, $this->transitionDataProvider);
+        $this->workflowDataProvider = new WorkflowDataProvider(
+            $this->workflowManagerRegistry,
+            $this->transitionDataProvider
+        );
     }
 
     protected function tearDown()
     {
-        unset($this->transitionDataProvider, $this->workflowManager, $this->workflowDataProvider);
+        unset(
+            $this->transitionDataProvider,
+            $this->workflowManager,
+            $this->systemWorkflowManager,
+            $this->workflowManagerRegistry,
+            $this->workflowDataProvider
+        );
+    }
+
+    public function testWorkflowDataWithNoAvailableWorkflow()
+    {
+        $entity = new \stdClass();
+
+        $workflow = $this->getWorkflow();
+        $workflow->expects($this->atLeastOnce())->method('getLabel')->willReturn('label1');
+        $workflow->expects($this->atLeastOnce())->method('getName')->willReturn('name1');
+
+        $this->transitionDataProvider->expects($this->never())->method('getAvailableStartTransitionsData');
+
+        $this->workflowManager->expects($this->once())->method('getApplicableWorkflows')->willReturn([]);
+        $this->systemWorkflowManager->expects($this->once())->method('getWorkflowItem')->willReturn(null);
+
+        $this->workflowDataProvider->getWorkflowData($entity, $workflow, true);
     }
 
     public function testBasicWorkflowData()
     {
+        $entity = new \stdClass();
+
         $workflow = $this->getWorkflow();
         $workflow->expects($this->atLeastOnce())->method('getLabel')->willReturn('label1');
         $workflow->expects($this->atLeastOnce())->method('getName')->willReturn('name1');
@@ -54,7 +93,12 @@ class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
             ->method('getAvailableStartTransitionsData')
             ->willReturn([]);
 
-        $data = $this->workflowDataProvider->getWorkflowData(new \stdClass(), $workflow, true);
+        $this->workflowManager->expects($this->once())
+            ->method('getApplicableWorkflows')->willReturn([$workflow]);
+        $this->systemWorkflowManager->expects($this->once())
+            ->method('getWorkflowItem')->willReturn(null);
+
+        $data = $this->workflowDataProvider->getWorkflowData($entity, $workflow, true);
         $this->assertSame($data['name'], 'name1');
         $this->assertSame($data['label'], 'label1');
         $this->assertFalse($data['isStarted']);
@@ -63,15 +107,15 @@ class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
     public function testWhenWorkflowIsStarted()
     {
         $workflowItem = $this->createMock(WorkflowItem::class);
+        $workflow = $this->getWorkflow();
 
-        $this->workflowManager->expects($this->once())->method('getWorkflowItem')->willReturn($workflowItem);
+        $this->systemWorkflowManager->expects($this->once())->method('getWorkflowItem')->willReturn($workflowItem);
+        $this->workflowManager->expects($this->any())->method('getApplicableWorkflows')->willReturn([$workflow]);
 
         $this->transitionDataProvider->expects($this->once())
             ->method('getAvailableTransitionsDataByWorkflowItem')
             ->with($workflowItem)
             ->willReturn([]);
-
-        $workflow = $this->getWorkflow();
 
         $data = $this->workflowDataProvider->getWorkflowData(new \stdClass(), $workflow, true);
         $this->assertTrue($data['isStarted']);
@@ -102,10 +146,12 @@ class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
         $workflowItem->expects($this->once())->method('getCurrentStep')
             ->willReturn($workflowStep);
 
-        $this->workflowManager->expects($this->once())->method('getWorkflowItem')
-            ->willReturn($workflowItem);
-
         $workflow = $this->getWorkflow(null, $stepManager);
+
+        $this->systemWorkflowManager->expects($this->once())->method('getWorkflowItem')
+            ->willReturn($workflowItem);
+        $this->workflowManager->expects($this->any())->method('getApplicableWorkflows')
+            ->willReturn([$workflow]);
 
         $data = $this->workflowDataProvider->getWorkflowData(new \stdClass(), $workflow, true);
         $steps = $data['stepsData']['steps'];
@@ -115,10 +161,10 @@ class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param null|\PHPUnit_Framework_MockObject_MockObject|WorkflowDefinition $workflowDefinition
-     * @param null|\PHPUnit_Framework_MockObject_MockObject|StepManager $stepManager
+     * @param null|\PHPUnit\Framework\MockObject\MockObject|WorkflowDefinition $workflowDefinition
+     * @param null|\PHPUnit\Framework\MockObject\MockObject|StepManager $stepManager
      *
-     * @return Workflow|\PHPUnit_Framework_MockObject_MockObject
+     * @return Workflow|\PHPUnit\Framework\MockObject\MockObject
      */
     private function getWorkflow($workflowDefinition = null, $stepManager = null)
     {
@@ -134,7 +180,7 @@ class WorkflowDataProviderTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return Collection|\PHPUnit_Framework_MockObject_MockObject
+     * @return Collection|\PHPUnit\Framework\MockObject\MockObject
      */
     private function getCollections()
     {

@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\DependencyInjection;
 
+use Oro\Bundle\WorkflowBundle\DependencyInjection\OroWorkflowExtension;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
-use Oro\Bundle\WorkflowBundle\DependencyInjection\OroWorkflowExtension;
-
-class OroWorkflowExtensionTest extends \PHPUnit_Framework_TestCase
+class OroWorkflowExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var array
@@ -19,7 +19,8 @@ class OroWorkflowExtensionTest extends \PHPUnit_Framework_TestCase
      * @var array
      */
     protected $expectedParameters = [
-        'oro_workflow.configuration.provider.workflow_config.class',
+        'oro_workflow.configuration.default_subdirectory',
+        'oro_workflow.configuration.default_filename'
     ];
 
     public function testLoad()
@@ -27,9 +28,7 @@ class OroWorkflowExtensionTest extends \PHPUnit_Framework_TestCase
         $actualDefinitions = [];
         $actualParameters  = [];
 
-        $container = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerBuilder')
-            ->setMethods(['setDefinition', 'setParameter'])
-            ->getMock();
+        $container = $this->createMock(ContainerBuilder::class);
         $container->expects($this->any())
             ->method('setDefinition')
             ->will(

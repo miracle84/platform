@@ -4,19 +4,18 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Builder;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManager;
-
-use Symfony\Component\HttpFoundation\Request;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EmailBundle\Builder\EmailModelBuilder;
 use Oro\Bundle\EmailBundle\Builder\Helper\EmailModelBuilderHelper;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailAddress;
-use Oro\Bundle\EmailBundle\Form\Model\Factory;
 use Oro\Bundle\EmailBundle\Form\Model\Email as EmailModel;
+use Oro\Bundle\EmailBundle\Form\Model\Factory;
 use Oro\Bundle\EmailBundle\Provider\EmailAttachmentProvider;
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
+class EmailModelBuilderTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EmailModelBuilder
@@ -24,7 +23,7 @@ class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
     protected $emailModelBuilder;
 
     /**
-     * @var EmailModelBuilderHelper|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailModelBuilderHelper|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $helper;
 
@@ -34,42 +33,42 @@ class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
     protected $request;
 
     /**
-     * @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
     /**
-     * @var EmailActivityListProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailActivityListProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $activityListProvider;
 
     /**
-     * @var EntityManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $entityManager;
     
     /**
-     * @var EmailAttachmentProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailAttachmentProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $emailAttachmentProvider;
 
     /**
-     * @var Email|\PHPUnit_Framework_MockObject_MockObject
+     * @var Email|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $email;
 
     /**
-     * @var EmailAddress|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailAddress|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $fromEmailAddress;
 
     /**
-     * @var EmailAddress|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailAddress|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $fromCcEmailAddress;
 
     /**
-     * @var Factory|\PHPUnit_Framework_MockObject_MockObject
+     * @var Factory|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $factory;
 
@@ -120,16 +119,17 @@ class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
 
         $this->factory = new Factory();
 
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
         $this->emailModelBuilder = new EmailModelBuilder(
             $this->helper,
             $this->entityManager,
             $this->configManager,
             $this->activityListProvider,
             $this->emailAttachmentProvider,
-            $this->factory
+            $this->factory,
+            $requestStack
         );
-
-        $this->emailModelBuilder->setRequest($this->request);
     }
 
     /**
@@ -178,16 +178,17 @@ class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
             $this->request->query->set('subject', $subject);
         }
 
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
         $this->emailModelBuilder = new EmailModelBuilder(
             $this->helper,
             $this->entityManager,
             $this->configManager,
             $this->activityListProvider,
             $this->emailAttachmentProvider,
-            $this->factory
+            $this->factory,
+            $requestStack
         );
-
-        $this->emailModelBuilder->setRequest($this->request);
 
         $this->helper->expects($this->exactly($helperDecodeClassNameCalls))
             ->method('decodeClassName')
@@ -248,8 +249,8 @@ class EmailModelBuilderTest extends \PHPUnit_Framework_TestCase
                 'helperDecodeClassNameCalls' => 0,
                 'emGetRepositoryCalls' => 0,
                 'helperPreciseFullEmailAddressCalls' => 0,
-                'helperGetUserCalls' => 2,
-                'helperBuildFullEmailAddress' => 2,
+                'helperGetUserCalls' => 1,
+                'helperBuildFullEmailAddress' => 1,
             ],
         ];
     }

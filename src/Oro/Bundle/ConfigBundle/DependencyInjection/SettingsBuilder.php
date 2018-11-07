@@ -2,12 +2,17 @@
 
 namespace Oro\Bundle\ConfigBundle\DependencyInjection;
 
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
 class SettingsBuilder
 {
     const RESOLVED_KEY = 'resolved';
+
+    /**
+     * @internal
+     */
+    const ALLOWED_TYPES = ['scalar', 'boolean', 'array'];
 
     /**
      *
@@ -30,7 +35,7 @@ class SettingsBuilder
                 ->addDefaultsIfNotSet()
                 ->children();
 
-            if (isset($setting['type']) && in_array($setting['type'], array('scalar', 'boolean', 'array'))) {
+            if (isset($setting['type']) && in_array($setting['type'], static::ALLOWED_TYPES)) {
                 $type = $setting['type'];
             } else {
                 $type = 'scalar';

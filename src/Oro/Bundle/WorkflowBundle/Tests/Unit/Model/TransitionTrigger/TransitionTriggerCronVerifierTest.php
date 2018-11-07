@@ -8,7 +8,6 @@ use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowItemRepository;
 use Oro\Bundle\WorkflowBundle\Entity\TransitionCronTrigger;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
@@ -19,26 +18,25 @@ use Oro\Bundle\WorkflowBundle\Model\TransitionTrigger\TransitionTriggerCronVerif
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowAssembler;
 use Oro\Bundle\WorkflowBundle\Validator\Expression\ExpressionVerifierInterface;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
-class TransitionTriggerCronVerifierTest extends \PHPUnit_Framework_TestCase
+class TransitionTriggerCronVerifierTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     const ENTITY_CLASS = 'stdClass';
     const ENTITY_ID_FIELD = 'id';
 
-    /** @var WorkflowAssembler|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowAssembler|\PHPUnit\Framework\MockObject\MockObject */
     private $workflowAssembler;
 
-    /** @var WorkflowItemRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowItemRepository|\PHPUnit\Framework\MockObject\MockObject */
     private $workflowItemRepository;
 
-    /** @var ExpressionVerifierInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ExpressionVerifierInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $cronVerifier;
 
-    /** @var ExpressionVerifierInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ExpressionVerifierInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $filterVerifier;
 
     /** @var TransitionTriggerCronVerifier */
@@ -140,7 +138,7 @@ class TransitionTriggerCronVerifierTest extends \PHPUnit_Framework_TestCase
      * @param string $transitionName
      * @param string $cron
      * @param string $filter
-     * @return TransitionCronTrigger|\PHPUnit_Framework_MockObject_MockObject
+     * @return TransitionCronTrigger|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getTrigger(Workflow $workflow, $transitionName, $cron, $filter)
     {
@@ -156,7 +154,7 @@ class TransitionTriggerCronVerifierTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param array $steps
-     * @return Workflow|\PHPUnit_Framework_MockObject_MockObject
+     * @return Workflow|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getWorkflow(array $steps)
     {
@@ -185,11 +183,11 @@ class TransitionTriggerCronVerifierTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param AbstractQuery $query
-     * @return QueryBuilder|\PHPUnit_Framework_MockObject_MockObject
+     * @return QueryBuilder|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function setUpQueryBuilder(AbstractQuery $query)
     {
-        /** @var QueryBuilder|\PHPUnit_Framework_MockObject_MockObject $qb */
+        /** @var QueryBuilder|\PHPUnit\Framework\MockObject\MockObject $qb */
         $qb = $this->getMockBuilder(QueryBuilder::class)->disableOriginalConstructor()->getMock();
         $qb->expects($this->once())->method('getQuery')->willReturn($query);
 

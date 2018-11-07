@@ -1,0 +1,45 @@
+oro_behat_extension:
+  suites:
+    OroEntityExtendBundle:
+      contexts:
+        - Oro\Bundle\TestFrameworkBundle\Tests\Behat\Context\OroMainContext
+        - OroDataGridBundle::GridContext
+        - OroEmailBundle::EmailContext
+        - OroEntityExtendBundle::EntityExtendContext
+        - OroEntityExtendBundle::FeatureContext
+        - OroFormBundle::FormContext
+        - OroSecurityBundle::ACLContext
+        - OroConfigBundle::FeatureContext
+        - OroLocaleBundle::LocalizationContext
+        - OroImportExportBundle::ImportExportContext:
+            - '@oro_entity.entity_alias_resolver'
+            - '@oro_importexport.processor.registry'
+      paths:
+        - '@OroEntityExtendBundle/Tests/Behat/Features'
+  elements:
+    Create Entity:
+      selector: '.btn-primary[title="Create entity"]'
+      class: Oro\Bundle\TestFrameworkBundle\Behat\Element\Element
+
+    Create Field:
+      selector: '.btn[title="Create field"]'
+      class: Oro\Bundle\TestFrameworkBundle\Behat\Element\Element
+
+    Update Schema:
+      selector: '.btn-danger[title="Update schema"]'
+      class: Oro\Bundle\TestFrameworkBundle\Behat\Element\Element
+
+    Target Entity:
+      selector: 'select[data-name="field__target-entity"]'
+      class: Oro\Bundle\FormBundle\Tests\Behat\Element\Select2Entity
+
+    Bidirectional:
+      selector: 'select[data-name="field__bidirectional"]'
+      class: Oro\Bundle\FormBundle\Tests\Behat\Element\Select2Entity
+
+    EntityConfigForm:
+      selector: "form[name='oro_entity_config_type']"
+      class: Oro\Bundle\TestFrameworkBundle\Behat\Element\Form
+      options:
+        mapping:
+          Option First: 'oro_entity_config_type[enum][enum_options][0][label]'

@@ -3,9 +3,11 @@
 namespace Oro\Bundle\NavigationBundle\Menu;
 
 use Knp\Menu\ItemInterface;
-
 use Symfony\Component\Routing\Route;
 
+/**
+ * Interface that should implement each breadcrumb manager.
+ */
 interface BreadcrumbManagerInterface
 {
     /**
@@ -17,9 +19,10 @@ interface BreadcrumbManagerInterface
     /**
      * @param string $menuName
      * @param bool $isInverse
-     * @return array
+     * @param string|null $route
+     * @return array|null
      */
-    public function getBreadcrumbs($menuName, $isInverse = true);
+    public function getBreadcrumbs($menuName, $isInverse = true, $route = null);
 
     /**
      * @param ItemInterface|string $menu

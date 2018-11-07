@@ -2,44 +2,40 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Twig;
 
+use Oro\Bundle\WorkflowBundle\Formatter\WorkflowVariableFormatter;
+use Oro\Bundle\WorkflowBundle\Model\Variable;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowManager;
+use Oro\Bundle\WorkflowBundle\Model\WorkflowManagerRegistry;
+use Oro\Bundle\WorkflowBundle\Tests\Unit\Stub\StubEntity;
 use Oro\Bundle\WorkflowBundle\Twig\WorkflowExtension;
+use Oro\Component\Testing\Unit\TwigExtensionTestCaseTrait;
 
-class WorkflowExtensionTest extends \PHPUnit_Framework_TestCase
+class WorkflowExtensionTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var WorkflowManager|\PHPUnit_Framework_MockObject_MockObject
-     */
+    use TwigExtensionTestCaseTrait;
+
+    /** @var WorkflowManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $workflowManager;
 
-    /**
-     * @var WorkflowExtension
-     */
+    /** @var WorkflowExtension */
     protected $extension;
 
     protected function setUp()
     {
-        $this->workflowManager = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Model\WorkflowManager')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->extension = new WorkflowExtension($this->workflowManager);
-    }
+        $this->workflowManager = $this->createMock(WorkflowManager::class);
 
-    public function testGetFunctions()
-    {
-        $functions = $this->extension->getFunctions();
-        $this->assertCount(2, $functions);
+        $workflowManagerRegistry = $this->createMock(WorkflowManagerRegistry::class);
+        $workflowManagerRegistry->expects($this->any())->method('getManager')->willReturn($this->workflowManager);
 
-        $expectedFunctions = [
-            'has_workflows',
-            'has_workflow_items'
-        ];
+        $workflowVariableFormatter = $this->createMock(WorkflowVariableFormatter::class);
+        $workflowVariableFormatter->expects($this->any())->method('formatWorkflowVariableValue')->willReturn('test');
 
-        /** @var \Twig_SimpleFunction $function */
-        foreach ($functions as $function) {
-            $this->assertInstanceOf('\Twig_SimpleFunction', $function);
-            $this->assertContains($function->getName(), $expectedFunctions);
-        }
+        $container = self::getContainerBuilder()
+            ->add('oro_workflow.registry.workflow_manager', $workflowManagerRegistry)
+            ->add('oro_workflow.formatter.workflow_variable', $workflowVariableFormatter)
+            ->getContainer($this);
+
+        $this->extension = new WorkflowExtension($container);
     }
 
     public function testGetName()
@@ -47,44 +43,23 @@ class WorkflowExtensionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(WorkflowExtension::NAME, $this->extension->getName());
     }
 
-    /**
-     * @return array
-     */
-    public function workflowDataProvider()
+    public function testHasApplicableWorkflows()
     {
-        return [
-            [true],
-            [false],
-        ];
+        $entity = new StubEntity();
+        $this->workflowManager->expects($this->once())->method('hasApplicableWorkflows')->with($entity);
+        $this->callTwigFunction($this->extension, 'has_workflows', [$entity]);
     }
 
-    /**
-     * @return array
-     */
-    public function workflowItemDataProvider()
+    public function testHasWorkflowItemsByEntity()
     {
-        $workflowItem = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Entity\WorkflowItem')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        return [
-            [$workflowItem, true],
-            [null, false],
-        ];
+        $entity = new StubEntity();
+        $this->workflowManager->expects($this->once())->method('hasWorkflowItemsByEntity')->with($entity);
+        $this->callTwigFunction($this->extension, 'has_workflow_items', [$entity]);
     }
 
-    /**
-     * @return array
-     */
-    public function stepsDataProvider()
+    public function testFormatWorkflowVariableValue()
     {
-        $workflowItem = $this->getMockBuilder('Oro\Bundle\WorkflowBundle\Entity\WorkflowStep')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        return [
-            [$workflowItem, true],
-            [null, false],
-        ];
+        $entity = $this->createMock(Variable::class);
+        $this->callTwigFilter($this->extension, 'oro_format_workflow_variable_value', [$entity]);
     }
 }

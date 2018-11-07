@@ -1,5 +1,3 @@
-/*jslint nomen:true*/
-/*global define*/
 define([
     'underscore',
     'oroui/js/messenger',
@@ -63,7 +61,11 @@ define([
                 }
 
                 element.one('transitions_failure', function() {
-                    messenger.notificationFlashMessage('error', __('Could not perform transition'));
+                    var message = __('Could not perform transition');
+                    if (jqxhr.message !== undefined) {
+                        message += ': ' + jqxhr.message;
+                    }
+                    messenger.notificationFlashMessage('error', message);
                 });
                 element.trigger('transitions_failure', [jqxhr, textStatus, error]);
                 mediator.trigger('workflow:transitions_failure', element, jqxhr, textStatus, error);

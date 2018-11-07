@@ -2,13 +2,16 @@
 
 namespace Oro\Bundle\ActivityListBundle\Entity\Manager;
 
-use Doctrine\ORM\EntityManager;
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Doctrine\ORM\EntityManager;
 use Oro\Bundle\ActivityListBundle\Entity\ActivityList;
-use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
 use Oro\Bundle\ActivityListBundle\Model\ActivityListProviderInterface;
+use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
 
+/**
+ * Processes the changes that was done in activity entities
+ * and apply them to the related activity list entities.
+ */
 class CollectListManager
 {
     /** @var ActivityListChainProvider */
@@ -97,6 +100,7 @@ class CollectListManager
                 $activityList = $this->chainProvider->getActivityListEntitiesByActivityEntity($entity);
                 if ($activityList) {
                     $entityManager->persist($activityList);
+                    $this->fillOwners($this->chainProvider->getProviderForEntity($entity), $entity, $activityList);
                 }
             }
 

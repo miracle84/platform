@@ -4,8 +4,6 @@ namespace Oro\Bundle\ActionBundle\Command;
 
 use Symfony\Component\Console\Input\InputArgument;
 
-use Oro\Component\Action\Action\ActionFactory;
-
 class DebugActionCommand extends AbstractDebugCommand
 {
     const COMMAND_NAME = 'oro:debug:action';
@@ -20,7 +18,8 @@ class DebugActionCommand extends AbstractDebugCommand
         $this->setName(self::COMMAND_NAME)
             ->setDescription('Displays current "actions" for an application')
             ->addArgument(self::ARGUMENT_NAME, InputArgument::OPTIONAL, 'An "action" name')
-            ->setHelp(<<<'EOF'
+            ->setHelp(
+                <<<'EOF'
 The <info>%command.name%</info> displays the configured 'actions':
 
   <info>php %command.full_name%</info>

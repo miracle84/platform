@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\WorkflowBundle\EventListener;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
 use Oro\Bundle\DataGridBundle\Event\OrmResultBeforeQuery;
 use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class GridsSubscriber implements EventSubscriberInterface
 {
@@ -52,14 +51,14 @@ class GridsSubscriber implements EventSubscriberInterface
      */
     public function onWorkflowsResultBeforeQuery(OrmResultBeforeQuery $event)
     {
-        $disabledWorkflows = $this->featureChecker->getDisabledResourcesByType('workflows');
-        if (!$disabledWorkflows) {
+        $disabledWorkflowEntities = $this->featureChecker->getDisabledResourcesByType('entities');
+        if (!$disabledWorkflowEntities) {
             return;
         }
 
         $qb = $event->getQueryBuilder();
         $qb
-            ->andWhere($qb->expr()->notIn('w.name', ':workflows'))
-            ->setParameter('workflows', $disabledWorkflows);
+            ->andWhere($qb->expr()->notIn('w.relatedEntity', ':relatedEntities'))
+            ->setParameter('relatedEntities', $disabledWorkflowEntities);
     }
 }

@@ -3,8 +3,9 @@
 namespace Oro\Component\Routing\Tests\Unit\Resolver;
 
 use Symfony\Component\Config\Resource\ResourceInterface;
+use Symfony\Component\Config\Resource\SelfCheckingResourceInterface;
 
-class TestResource implements ResourceInterface
+class TestResource implements ResourceInterface, SelfCheckingResourceInterface
 {
     /** @var string */
     protected $name;
@@ -22,7 +23,7 @@ class TestResource implements ResourceInterface
      */
     public function __toString()
     {
-        return $this->name;
+        return (string)$this->name;
     }
 
     /**

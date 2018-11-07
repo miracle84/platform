@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\ConfigBundle\Tests\Unit\DependencyInjection\SystemConfiguration;
 
+use Oro\Bundle\ConfigBundle\DependencyInjection\SystemConfiguration\ProcessorDecorator;
 use Symfony\Component\Config\Definition\Processor;
 
-use Oro\Bundle\ConfigBundle\DependencyInjection\SystemConfiguration\ProcessorDecorator;
-
-class ProcessorDecoratorTest extends \PHPUnit_Framework_TestCase
+class ProcessorDecoratorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ProcessorDecorator */
     protected $processor;

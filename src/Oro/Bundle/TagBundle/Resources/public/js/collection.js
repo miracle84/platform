@@ -1,14 +1,23 @@
 define(['backbone', './model'
-    ], function(Backbone, TagModel) {
+], function(Backbone, TagModel) {
     'use strict';
+
+    var TagCollection;
 
     /**
      * @export  orotag/js/collection
      * @class   orotag.Collection
      * @extends Backbone.Collection
      */
-    var TagCollection = Backbone.Collection.extend({
+    TagCollection = Backbone.Collection.extend({
         model: TagModel,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function TagCollection() {
+            TagCollection.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Return filtered collection
@@ -49,13 +58,13 @@ define(['backbone', './model'
         },
 
         /**
-         * Remove item from collection, or uncheck "owner" if filter is not in global mdoe
+         * Remove item from collection, or uncheck "owner" if filter is not in global mode
          *
          * @param {string|number} id
          * @param {string} filterState
          */
         removeItem: function(id, filterState) {
-            var model = this.where({'id': id});
+            var model = this.where({id: id});
             if (model.length) {
                 model = model[0];
                 if (filterState === 'owner' && model.get('owner') === true && model.get('moreOwners') === true) {

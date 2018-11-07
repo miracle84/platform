@@ -4,11 +4,11 @@ namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Entity;
 
 use Oro\Bundle\IntegrationBundle\Entity\Transport;
 
-class TransportTest extends \PHPUnit_Framework_TestCase
+class TransportTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_ID = 123;
 
-    /** @var Transport|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Transport|\PHPUnit\Framework\MockObject\MockObject */
     protected $entity;
 
     protected function setUp()
@@ -24,5 +24,6 @@ class TransportTest extends \PHPUnit_Framework_TestCase
     public function testEntityMethods()
     {
         $this->assertNull($this->entity->getId());
+        $this->assertNull($this->entity->getChannel());
     }
 }

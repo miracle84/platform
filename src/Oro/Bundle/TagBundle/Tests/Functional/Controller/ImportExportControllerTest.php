@@ -3,18 +3,12 @@
 namespace Oro\Bundle\TagBundle\Tests\Functional\Controller;
 
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\Form\Form;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-
 use Oro\Bundle\ImportExportBundle\Job\JobExecutor;
 use Oro\Bundle\ImportExportBundle\Processor\ProcessorRegistry;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Form\Form;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-/**
- * @outputBuffering enabled
- * @dbIsolation
- */
 class ImportExportControllerTest extends WebTestCase
 {
     public function setUp()
@@ -126,12 +120,10 @@ class ImportExportControllerTest extends WebTestCase
                 ProcessorRegistry::TYPE_EXPORT_TEMPLATE
             );
 
-        $chains = explode('/', $result['url']);
         return $this
             ->getContainer()
-            ->get('oro_importexport.file.file_system_operator')
-            ->getTemporaryFile(end($chains))
-            ->getRealPath();
+            ->get('oro_importexport.file.file_manager')
+            ->writeToTmpLocalStorage($result['file']);
     }
 
     /**

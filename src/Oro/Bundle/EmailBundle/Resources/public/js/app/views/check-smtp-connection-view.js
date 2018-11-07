@@ -12,19 +12,31 @@ define(function(require) {
 
     CheckConnectionView = BaseView.extend({
         route: 'oro_email_check_smtp_connection',
+
         entity: 'user',
+
         entityId: 0,
+
         organization: '',
+
         requestPrefix: 'oro_email_configuration',
+
         events: {
             'click [data-role=check-smtp-connection]': 'checkSmtpConnection'
         },
-        initialize: function(options) {
-            _.extend(this, _.pick(options, ['entity', 'entityId', 'organization']));
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function CheckConnectionView() {
+            CheckConnectionView.__super__.constructor.apply(this, arguments);
         },
 
-        render: function() {
-            this.initLayout();
+        /**
+         * @inheritDoc
+         */
+        initialize: function(options) {
+            _.extend(this, _.pick(options, ['entity', 'entityId', 'organization']));
         },
 
         checkSmtpConnection: function(event) {
@@ -43,6 +55,7 @@ define(function(require) {
                         this.showMessage('success', 'oro.email.smtp_connection.success', $messageContainer);
                     }
                 }, this),
+                errorHandlerMessage: false,
                 error: _.bind(function() {
                     this.showMessage('error', 'oro.email.smtp_connection.error', $messageContainer);
                 }, this),
@@ -80,11 +93,11 @@ define(function(require) {
         clear: function() {
             // set model data to default
             this.model.set({
-                'host': '',
-                'port': null,
-                'encryption': null,
-                'username': '',
-                'password': ''
+                host: '',
+                port: null,
+                encryption: null,
+                username: '',
+                password: ''
             });
         }
     });

@@ -20,6 +20,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function ToolbarMassActionComponent() {
+            ToolbarMassActionComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.extend(this, _.pick(options, ['collection', 'actions', 'grid']));
 
@@ -36,7 +43,7 @@ define(function(require) {
                 );
             });
 
-            this.actionsPanel = new ActionsPanel({'actions': actions, el: options._sourceElement});
+            this.actionsPanel = new ActionsPanel({actions: actions, el: options._sourceElement});
             this.actionsPanel.render();
 
             this.listenTo(this.grid.collection, 'backgrid:refresh', function() {

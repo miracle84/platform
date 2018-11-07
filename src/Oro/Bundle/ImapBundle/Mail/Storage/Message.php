@@ -4,13 +4,12 @@ namespace Oro\Bundle\ImapBundle\Mail\Storage;
 
 use \Zend\Mail\Header\ContentType;
 use \Zend\Mail\Header\HeaderInterface;
-use \Zend\Mail\Storage\Part;
-use \Zend\Stdlib\ErrorHandler;
-use \Zend\Mime\Mime as BaseMime;
 use \Zend\Mail\Storage\AbstractStorage;
 use \Zend\Mail\Storage\Exception\InvalidArgumentException;
 use \Zend\Mail\Storage\Exception\RuntimeException;
-
+use \Zend\Mail\Storage\Part;
+use \Zend\Mime\Mime as BaseMime;
+use \Zend\Stdlib\ErrorHandler;
 use Oro\Bundle\EmailBundle\Mail\Headers;
 use Oro\Bundle\EmailBundle\Mime\Decode;
 
@@ -126,10 +125,13 @@ class Message extends \Zend\Mail\Storage\Message
      */
     public function getHeaders()
     {
-        parent::getHeaders();
-
-        if (!$this->headers instanceof Headers) {
-            $this->headers = new Headers();
+        if (null === $this->headers) {
+            if ($this->mail) {
+                $part = $this->mail->getRawHeader($this->messageNum);
+                $this->headers = Headers::fromString($part);
+            } else {
+                $this->headers = new Headers();
+            }
         }
 
         return $this->headers;

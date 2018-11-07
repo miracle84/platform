@@ -2,13 +2,19 @@
 namespace Oro\Bundle\MessageQueueBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Index;
 use Oro\Component\MessageQueue\Job\Job as BaseJob;
 
 /**
  * @ORM\Entity
- * @ORM\Table(name="oro_message_queue_job")
+ * @ORM\Table(
+ *     name="oro_message_queue_job",
+ *     indexes={
+ *          @Index(name="owner_id_idx", columns={"owner_id"}),
+ *          @Index(name="oro_message_queue_job_idx", columns={"root_job_id", "name", "status", "interrupted"})
+ *     }
+ * )
  */
 class Job extends BaseJob
 {
@@ -67,7 +73,7 @@ class Job extends BaseJob
     /**
      * @var Job[]
      *
-     * @ORM\OneToMany(targetEntity="Job", mappedBy="rootJob")
+     * @ORM\OneToMany(targetEntity="Job", mappedBy="rootJob", cascade={"persist"})
      */
     protected $childJobs;
 
@@ -84,6 +90,13 @@ class Job extends BaseJob
      * @ORM\Column(name="started_at", type="datetime", nullable=true)
      */
     protected $startedAt;
+
+    /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="last_active_at", type="datetime", nullable=true)
+     */
+    protected $lastActiveAt;
 
     /**
      * @var \DateTime
@@ -111,25 +124,5 @@ class Job extends BaseJob
         parent::__construct();
 
         $this->childJobs = new ArrayCollection();
-    }
-
-    /**
-     * @return int
-     */
-    public function getCalculateRootJobProgress()
-    {
-        $children = $this->getChildJobs();
-        $processed = 0;
-
-        if (!$children instanceof Collection || !$children->count()) {
-            return 0;
-        }
-        foreach ($children as $child) {
-            if ($child->getStatus() != self::STATUS_NEW && $child->getStatus() != self::STATUS_RUNNING) {
-                $processed++;
-            }
-        }
-
-        return round($processed/$children->count()*100, 2);
     }
 }

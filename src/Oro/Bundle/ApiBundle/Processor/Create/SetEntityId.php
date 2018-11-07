@@ -2,26 +2,26 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Create;
 
+use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
+use Oro\Bundle\ApiBundle\Util\EntityIdHelper;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
-use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
-use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 
 /**
- * Checks whether entity identifier exists in the Context,
+ * Checks whether entity identifier exists in the context,
  * and if so, sets it to the entity.
  */
 class SetEntityId implements ProcessorInterface
 {
-    /** @var DoctrineHelper */
-    protected $doctrineHelper;
+    /** @var EntityIdHelper */
+    protected $entityIdHelper;
 
     /**
-     * @param DoctrineHelper $doctrineHelper
+     * @param EntityIdHelper $entityIdHelper
      */
-    public function __construct(DoctrineHelper $doctrineHelper)
+    public function __construct(EntityIdHelper $entityIdHelper)
     {
-        $this->doctrineHelper = $doctrineHelper;
+        $this->entityIdHelper = $entityIdHelper;
     }
 
     /**
@@ -43,17 +43,17 @@ class SetEntityId implements ProcessorInterface
             return;
         }
 
-        $metadata = $this->doctrineHelper->getEntityMetadataForClass($context->getClassName(), false);
+        $metadata = $context->getMetadata();
         if (null === $metadata) {
-            // only manageable entities are supported
+            // the metadata does not exist
             return;
         }
 
-        if ($metadata->usesIdGenerator()) {
+        if ($metadata->hasIdentifierGenerator()) {
             // ignore entities with an identity generator
             return;
         }
 
-        $this->doctrineHelper->setEntityIdentifier($entity, $entityId, $metadata);
+        $this->entityIdHelper->setEntityIdentifier($entity, $entityId, $metadata);
     }
 }

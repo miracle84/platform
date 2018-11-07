@@ -3,13 +3,12 @@
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Model\ActionGroup;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\ActionBundle\Model\ActionData;
 use Oro\Bundle\ActionBundle\Model\ActionGroup;
 use Oro\Bundle\ActionBundle\Model\ActionGroup\ParametersResolver;
 use Oro\Bundle\ActionBundle\Model\Parameter;
 
-class ParametersResolverTest extends \PHPUnit_Framework_TestCase
+class ParametersResolverTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ParametersResolver */
     protected $resolver;
@@ -34,7 +33,7 @@ class ParametersResolverTest extends \PHPUnit_Framework_TestCase
      */
     public function testResolveOk(ActionData $data, array $parameters, ActionData $expected)
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ActionGroup $mockActionGroup */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ActionGroup $mockActionGroup */
         $mockActionGroup = $this->getMockBuilder('Oro\Bundle\ActionBundle\Model\ActionGroup')
             ->disableOriginalConstructor()
             ->getMock();
@@ -117,7 +116,7 @@ class ParametersResolverTest extends \PHPUnit_Framework_TestCase
         array $exception,
         array $expectedErrors
     ) {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ActionGroup $mockActionGroup */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ActionGroup $mockActionGroup */
         $mockActionGroup = $this->getMockBuilder('Oro\Bundle\ActionBundle\Model\ActionGroup')
             ->disableOriginalConstructor()
             ->getMock();

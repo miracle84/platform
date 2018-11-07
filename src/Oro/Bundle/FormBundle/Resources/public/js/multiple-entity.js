@@ -1,7 +1,8 @@
 define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multiple-entity/model', 'oro/dialog-widget'
-    ], function(_, routing, Backbone, EntityView, MultipleEntityModel, DialogWidget) {
+], function(_, routing, Backbone, EntityView, MultipleEntityModel, DialogWidget) {
     'use strict';
 
+    var MultipleEntityView;
     var $ = Backbone.$;
 
     /**
@@ -9,28 +10,38 @@ define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multip
      * @class   oroform.MultipleEntity
      * @extends Backbone.View
      */
-    return Backbone.View.extend({
+    MultipleEntityView = Backbone.View.extend({
         options: {
-            addedElement:              null,
-            allowAction:               true,
-            collection:                null,
-            defaultElement:            null,
-            elementTemplate:           null,
+            addedElement: null,
+            allowAction: true,
+            collection: null,
+            defaultElement: null,
+            elementTemplate: null,
             entitiesContainerSelector: '.entities',
-            itemsPerRow:               4,
-            name:                      null,
-            removedElement:            null,
-            selectionUrl:              null,
-            selectionRouteName:        null,
-            selectionRouteParams:      {},
-            selectorWindowTitle:       null,
-            template:                  null
+            itemsPerRow: 4,
+            name: null,
+            removedElement: null,
+            selectionUrl: null,
+            selectionRouteName: null,
+            selectionRouteParams: {},
+            selectorWindowTitle: null,
+            template: null
         },
 
         events: {
             'click .add-btn': 'addEntities'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function MultipleEntityView() {
+            MultipleEntityView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             this.template = _.template(this.options.template);
@@ -172,14 +183,14 @@ define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multip
                 }
 
                 this.selectorDialog = new DialogWidget({
-                    url:   url,
+                    url: url,
                     title: this.options.selectorWindowTitle,
                     stateEnabled: false,
                     dialogOptions: {
-                        'modal': true,
-                        'width': 1024,
-                        'height': 500,
-                        'close': _.bind(function() {
+                        modal: true,
+                        width: 1024,
+                        height: 500,
+                        close: _.bind(function() {
                             this.selectorDialog = null;
                         }, this)
                     }
@@ -200,7 +211,13 @@ define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multip
             return url + separator +
                 'added=' + (added || '') +
                 '&removed=' + (removed || '') +
-                '&default=' + (defaultEl || '') ;
+                '&default=' + (defaultEl || '');
+        },
+
+        _initWidgets: function() {
+            _.delay(_.bind(function() {
+                this.$el.inputWidget('seekAndCreate');
+            }, this));
         },
 
         processSelectedEntities: function(added, addedModels, removed) {
@@ -241,6 +258,8 @@ define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multip
             }
 
             this.selectorDialog.remove();
+
+            this._initWidgets();
         },
 
         render: function() {
@@ -252,7 +271,10 @@ define(['underscore', 'routing', 'backbone', './multiple-entity/view', './multip
 
             this.$entitiesContainer = this.$el.find(this.options.entitiesContainerSelector);
 
+            this._initWidgets();
             return this;
         }
     });
+
+    return MultipleEntityView;
 });

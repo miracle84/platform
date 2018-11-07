@@ -3,12 +3,16 @@
 namespace Oro\Bundle\DashboardBundle\Filter;
 
 use Doctrine\ORM\QueryBuilder;
-use Oro\Bundle\CurrencyBundle\Model\LocaleSettings;
 use Oro\Bundle\FilterBundle\Datasource\Orm\OrmFilterDatasourceAdapter;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\AbstractDateFilterType;
 use Oro\Bundle\FilterBundle\Utils\DateFilterModifier;
+use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
+/**
+ * Modifies datagrid`s query builder according to the values of date range filter.
+ */
 class DateFilterProcessor
 {
     /** @var DateRangeFilter */
@@ -16,6 +20,9 @@ class DateFilterProcessor
 
     /** @var DateFilterModifier */
     protected $modifier;
+
+    /** @var LocaleSettings */
+    private $localeSettings;
 
     /**
      * @param DateRangeFilter $filter
@@ -81,19 +88,19 @@ class DateFilterProcessor
         switch ($dateRange['type']) {
             case AbstractDateFilterType::TYPE_MORE_THAN:
                 $start = $this->prepareDate($dateRange['value']['start']);
-                $qb->andWhere(sprintf('%s >= :start', $fieldAlias))->setParameter('start', $start);
+                $qb->andWhere(QueryBuilderUtil::sprintf('%s >= :start', $fieldAlias))->setParameter('start', $start);
                 break;
             case AbstractDateFilterType::TYPE_LESS_THAN:
                 $end = $this->prepareDate($dateRange['value']['end']);
-                $qb->andWhere(sprintf('%s <= :end', $fieldAlias))->setParameter('end', $end);
+                $qb->andWhere(QueryBuilderUtil::sprintf('%s <= :end', $fieldAlias))->setParameter('end', $end);
                 break;
             case AbstractDateFilterType::TYPE_ALL_TIME:
                 return;
             default:
                 $start = $this->prepareDate($dateRange['value']['start']);
                 $end = $this->prepareDate($dateRange['value']['end']);
-                $qb->andWhere(sprintf('%s >= :start', $fieldAlias))->setParameter('start', $start);
-                $qb->andWhere(sprintf('%s <= :end', $fieldAlias))->setParameter('end', $end);
+                $qb->andWhere(QueryBuilderUtil::sprintf('%s >= :start', $fieldAlias))->setParameter('start', $start);
+                $qb->andWhere(QueryBuilderUtil::sprintf('%s <= :end', $fieldAlias))->setParameter('end', $end);
         }
     }
 }

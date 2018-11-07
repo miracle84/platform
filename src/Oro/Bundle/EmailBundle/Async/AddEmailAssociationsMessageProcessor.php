@@ -4,7 +4,6 @@ namespace Oro\Bundle\EmailBundle\Async;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
-
 use Oro\Component\MessageQueue\Job\Job;
 use Oro\Component\MessageQueue\Job\JobRunner;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
@@ -49,10 +48,7 @@ class AddEmailAssociationsMessageProcessor implements MessageProcessorInterface,
         $data = JSON::decode($message->getBody());
 
         if (! isset($data['emailIds'], $data['targetClass'], $data['targetId']) || ! is_array($data['emailIds'])) {
-            $this->logger->critical(
-                sprintf('[AddEmailAssociationsMessageProcessor] Got invalid message: "%s"', $message->getBody()),
-                ['message' => $message]
-            );
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }
@@ -91,10 +87,10 @@ class AddEmailAssociationsMessageProcessor implements MessageProcessorInterface,
                     );
                 }
 
-                $this->logger->info(sprintf(
-                    '[AddEmailAssociationsMessageProcessor] Sent "%s" messages',
-                    count($data['emailIds'])
-                ), ['data' => $data]);
+                $this->logger->info(
+                    sprintf('Sent "%s" messages', count($data['emailIds'])),
+                    ['data' => $data]
+                );
 
                 return true;
             }

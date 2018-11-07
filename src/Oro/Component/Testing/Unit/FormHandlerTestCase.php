@@ -2,15 +2,16 @@
 
 namespace Oro\Component\Testing\Unit;
 
+use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-use Doctrine\Common\Persistence\ObjectManager;
-
-abstract class FormHandlerTestCase extends \PHPUnit_Framework_TestCase
+abstract class FormHandlerTestCase extends \PHPUnit\Framework\TestCase
 {
+    const FORM_DATA = ['field' => 'value'];
+
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|FormInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|FormInterface
      */
     protected $form;
 
@@ -20,7 +21,7 @@ abstract class FormHandlerTestCase extends \PHPUnit_Framework_TestCase
     protected $request;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ObjectManager
+     * @var \PHPUnit\Framework\MockObject\MockObject|ObjectManager
      */
     protected $manager;
 
@@ -75,11 +76,12 @@ abstract class FormHandlerTestCase extends \PHPUnit_Framework_TestCase
             ->method('isValid')
             ->will($this->returnValue($isValid));
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod($method);
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->assertEquals($isProcessed, $this->handler->process($this->entity));
     }
@@ -114,11 +116,12 @@ abstract class FormHandlerTestCase extends \PHPUnit_Framework_TestCase
             ->method('setData')
             ->with($this->entity);
 
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod('POST');
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->form->expects($this->once())
             ->method('isValid')

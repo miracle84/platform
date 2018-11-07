@@ -3,8 +3,9 @@
 namespace Oro\Bundle\TagBundle\Form\Type;
 
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class TagType extends AbstractType
 {
@@ -15,7 +16,7 @@ class TagType extends AbstractType
     {
         $builder->add(
             'name',
-            'text',
+            TextType::class,
             [
                 'label'    => 'oro.tag.name.label',
                 'required' => true,
@@ -23,7 +24,7 @@ class TagType extends AbstractType
         )
             ->add(
                 'taxonomy',
-                'oro_taxonomy_select',
+                TaxonomySelectType::class,
                 [
                     'required' => false,
                     'label'    => 'oro.taxonomy.entity_label',
@@ -34,12 +35,12 @@ class TagType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
             [
                 'data_class' => 'Oro\Bundle\TagBundle\Entity\Tag',
-                'intention'  => 'tag',
+                'csrf_token_id' => 'tag',
             ]
         );
     }

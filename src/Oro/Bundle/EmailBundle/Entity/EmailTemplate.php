@@ -2,23 +2,19 @@
 
 namespace Oro\Bundle\EmailBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
-use JMS\Serializer\Annotation as JMS;
-
+use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Gedmo\Translatable\Translatable;
-
+use JMS\Serializer\Annotation as JMS;
+use Oro\Bundle\EmailBundle\Model\EmailTemplateInterface;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\UserBundle\Entity\User;
 use Symfony\Component\Validator\Constraints as Assert;
 
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
-use Oro\Bundle\EmailBundle\Model\EmailTemplateInterface;
-use Oro\Bundle\UserBundle\Entity\User;
-
 /**
- * EmailTemplate
+ * Represents localizable email template which is used for template email notifications sending.
  *
  * @ORM\Table(name="oro_email_template",
  *      uniqueConstraints={@ORM\UniqueConstraint(name="UQ_NAME", columns={"name", "entityName"})},
@@ -56,6 +52,9 @@ use Oro\Bundle\UserBundle\Entity\User;
  */
 class EmailTemplate implements EmailTemplateInterface, Translatable
 {
+    public const TYPE_HTML = 'html';
+    public const TYPE_TEXT = 'text';
+
     /**
      * @var integer
      *
@@ -166,7 +165,7 @@ class EmailTemplate implements EmailTemplateInterface, Translatable
      *     mappedBy="object",
      *     cascade={"persist", "remove"}
      * )
-     * @Assert\Valid(deep = true)
+     * @Assert\Valid()
      */
     protected $translations;
 
@@ -386,7 +385,7 @@ class EmailTemplate implements EmailTemplateInterface, Translatable
      *
      * @param boolean $isEditable
      *
-     * @return EmailTemplate
+     * @return $this
      */
     public function setIsEditable($isEditable)
     {

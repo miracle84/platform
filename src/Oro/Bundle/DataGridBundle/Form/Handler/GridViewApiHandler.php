@@ -3,21 +3,19 @@
 namespace Oro\Bundle\DataGridBundle\Form\Handler;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
-
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
-use Oro\Bundle\DataGridBundle\Entity\GridView;
+use Oro\Bundle\DataGridBundle\Entity\AbstractGridView;
 use Oro\Bundle\DataGridBundle\Entity\Manager\GridViewManager;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class GridViewApiHandler
 {
     /** @var FormInterface */
     protected $form;
 
-    /** @var Request */
-    protected $request;
+    /** @var RequestStack */
+    protected $requestStack;
 
     /** @var Registry */
     protected $registry;
@@ -30,39 +28,40 @@ class GridViewApiHandler
 
     /**
      * @param FormInterface         $form
-     * @param Request               $request
+     * @param RequestStack          $requestStack
      * @param Registry              $registry
      * @param GridViewManager       $gridViewManager
      * @param TokenStorageInterface $tokenStorage
      */
     public function __construct(
         FormInterface $form,
-        Request $request,
+        RequestStack $requestStack,
         Registry $registry,
         GridViewManager $gridViewManager,
         TokenStorageInterface $tokenStorage
     ) {
         $this->form            = $form;
-        $this->request         = $request;
+        $this->requestStack    = $requestStack;
         $this->registry        = $registry;
         $this->gridViewManager = $gridViewManager;
         $this->tokenStorage    = $tokenStorage;
     }
 
     /**
-     * @param GridView $entity
+     * @param AbstractGridView $entity
      *
      * @return boolean
      */
-    public function process(GridView $entity)
+    public function process(AbstractGridView $entity)
     {
         $entity->setFiltersData();
         $entity->setSortersData();
         $entity->setColumnsData();
 
         $this->form->setData($entity);
-        if (in_array($this->request->getMethod(), ['POST', 'PUT'])) {
-            $data = $this->request->request->all();
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $data = $request->request->all();
             unset($data['name']);
             if ($this->form->has('owner')) {
                 $data['owner'] = $entity->getOwner();
@@ -80,9 +79,9 @@ class GridViewApiHandler
     }
 
     /**
-     * @param GridView $entity
+     * @param AbstractGridView $entity
      */
-    protected function onSuccess(GridView $entity)
+    protected function onSuccess(AbstractGridView $entity)
     {
         $default = $this->form->get('is_default')->getData();
         $this->setDefaultGridView($entity, $default);
@@ -94,10 +93,10 @@ class GridViewApiHandler
     }
 
     /**
-     * @param GridView $gridView
-     * @param bool     $default
+     * @param AbstractGridView $gridView
+     * @param bool $default
      */
-    protected function setDefaultGridView(GridView $gridView, $default)
+    protected function setDefaultGridView(AbstractGridView $gridView, $default)
     {
         $user = $this->tokenStorage->getToken()->getUser();
         $this->gridViewManager->setDefaultGridView($user, $gridView, $default);
@@ -109,16 +108,16 @@ class GridViewApiHandler
      *       look in CollectionFiltersManager._onChangeFilterSelect()
      *       Added fix for dictionary filters also.
      *
-     * @param GridView $gridView
+     * @param AbstractGridView $gridView
      */
-    protected function fixFilters(GridView $gridView)
+    protected function fixFilters(AbstractGridView $gridView)
     {
         $filters = $gridView->getFiltersData();
         foreach ($filters as $name => $filter) {
             if (is_array($filter) && array_key_exists('type', $filter) && $filter['type'] == null) {
                 $filters[$name]['type'] = '';
             }
-            if (is_array($filter['value'])) {
+            if (is_array($filter) && is_array($filter['value'])) {
                 foreach ($filter['value'] as $k => $value) {
                     if (is_array($value)) {
                         $filters[$name]['value'][$k] = $value['value'];

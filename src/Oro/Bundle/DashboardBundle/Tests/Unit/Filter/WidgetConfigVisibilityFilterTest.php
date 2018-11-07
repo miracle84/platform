@@ -3,8 +3,9 @@
 namespace Oro\Bundle\DashboardBundle\Tests\Unit\Filter;
 
 use Oro\Bundle\DashboardBundle\Filter\WidgetConfigVisibilityFilter;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class WidgetConfigVisibilityFilterTest extends \PHPUnit_Framework_TestCase
+class WidgetConfigVisibilityFilterTest extends \PHPUnit\Framework\TestCase
 {
     /** @var WidgetConfigVisibilityFilter */
     protected $widgetConfigVisibilityFilter;
@@ -18,10 +19,8 @@ class WidgetConfigVisibilityFilterTest extends \PHPUnit_Framework_TestCase
                 return [$value === ['@true']];
             }));
 
-        $securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $securityFacade->expects($this->any())
+        $authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $authorizationChecker->expects($this->any())
             ->method('isGranted')
             ->will($this->returnCallback(function ($acl) {
                 return $acl === 'enabled_acl';
@@ -38,7 +37,7 @@ class WidgetConfigVisibilityFilterTest extends \PHPUnit_Framework_TestCase
             }));
 
         $this->widgetConfigVisibilityFilter = new WidgetConfigVisibilityFilter(
-            $securityFacade,
+            $authorizationChecker,
             $resolver,
             $featureChecker
         );

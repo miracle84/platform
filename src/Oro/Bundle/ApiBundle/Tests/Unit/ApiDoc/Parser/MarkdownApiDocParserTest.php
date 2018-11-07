@@ -2,32 +2,49 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\ApiDoc\Parser;
 
+use Oro\Bundle\ApiBundle\ApiDoc\Parser\MarkdownApiDocParser;
+use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
 use Symfony\Component\HttpKernel\Config\FileLocator;
 use Symfony\Component\Yaml\Yaml;
 
-use Oro\Bundle\ApiBundle\ApiDoc\Parser\MarkdownApiDocParser;
-
-class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
+class MarkdownApiDocParserTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @return MarkdownApiDocParser
      */
-    protected function loadDocument()
+    private function loadDocument()
     {
-        $inputPath = __DIR__ . '/Fixtures/apidoc.md';
+        $fixturesDir = __DIR__ . '/Fixtures';
 
-        $fileLocator = $this->getMockBuilder(FileLocator::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $fileLocator->expects($this->once())
+        $fileLocator = $this->createMock(FileLocator::class);
+        $fileLocator->expects(self::any())
             ->method('locate')
-            ->with('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/apidoc.md')
-            ->willReturn($inputPath);
+            ->willReturnCallback(function ($resource) use ($fixturesDir) {
+                return str_replace(
+                    '@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures',
+                    $fixturesDir,
+                    $resource
+                );
+            });
 
         $apiDocParser = new MarkdownApiDocParser($fileLocator);
-        $apiDocParser->parseDocumentationResource('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/apidoc.md');
+        self::assertTrue(
+            $apiDocParser->registerDocumentationResource('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/apidoc.md')
+        );
 
         return $apiDocParser;
+    }
+
+    public function testRegisterDocumentationResourceForUnsupportedFile()
+    {
+        $fileLocator = $this->createMock(FileLocator::class);
+        $fileLocator->expects(self::never())
+            ->method('locate');
+
+        $apiDocParser = new MarkdownApiDocParser($fileLocator);
+        self::assertFalse(
+            $apiDocParser->registerDocumentationResource('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/apidoc.doc')
+        );
     }
 
     public function testParse()
@@ -36,11 +53,27 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
 
         $expected = Yaml::parse(file_get_contents(__DIR__ . '/Fixtures/apidoc.yml'));
 
-        $this->assertAttributeEquals(
-            $expected,
-            'loadedData',
-            $apiDocParser
-        );
+        self::assertAttributeEquals($expected, 'loadedData', $apiDocParser);
+    }
+
+    public function testInheritDoc()
+    {
+        $apiDocParser = $this->loadDocument();
+        $apiDocParser->registerDocumentationResource('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/inheritdoc.md');
+
+        $expected = Yaml::parse(file_get_contents(__DIR__ . '/Fixtures/inheritdoc.yml'));
+
+        self::assertAttributeEquals($expected, 'loadedData', $apiDocParser);
+    }
+
+    public function testReplaceDescriptions()
+    {
+        $apiDocParser = $this->loadDocument();
+        $apiDocParser->registerDocumentationResource('@OroApiBundle/Tests/Unit/ApiDoc/Parser/Fixtures/replace.md');
+
+        $expected = Yaml::parse(file_get_contents(__DIR__ . '/Fixtures/replace.yml'));
+
+        self::assertAttributeEquals($expected, 'loadedData', $apiDocParser);
     }
 
     /**
@@ -50,7 +83,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
     {
         $apiDocParser = $this->loadDocument();
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
             $apiDocParser->getActionDocumentation($className, $actionName)
         );
@@ -61,29 +94,29 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
         return [
             'known action'                     => [
                 '<p>Description for GET_LIST action</p><p><strong>text in bold</strong></p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'get_list'
             ],
             'names should be case insensitive' => [
                 '<p>Description for GET_LIST action</p><p><strong>text in bold</strong></p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'GET_LIST'
             ],
             'unknown action'                   => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'unknown'
             ],
             'unknown actions group'            => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group',
+                Entity\Group::class,
                 'get'
             ],
             'unknown class'                    => [
                 null,
                 'Test\UnknownClass',
                 'get'
-            ],
+            ]
         ];
     }
 
@@ -94,7 +127,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
     {
         $apiDocParser = $this->loadDocument();
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
             $apiDocParser->getFieldDocumentation($className, $fieldName, $actionName)
         );
@@ -104,60 +137,60 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
     {
         return [
             'only common doc exists'                                               => [
-                '<p>Description for ID field</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                null,
+                Entity\Account::class,
                 'id',
                 'get'
             ],
             'only common doc exists (requested common doc)'                        => [
                 '<p>Description for ID field</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'id'
             ],
-            'common doc should be used'                                            => [
-                '<p>Description for NAME field</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+            'common doc should not be used'                                        => [
+                null,
+                Entity\Account::class,
                 'name',
                 'get'
             ],
-            'common doc should be used (requested common doc)'                     => [
+            'common doc should be returned if it requested directly'               => [
                 '<p>Description for NAME field</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'name'
             ],
             'action doc should be used'                                            => [
                 '<p>Description for NAME field for DELETE action</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'name',
                 'delete'
             ],
             'action doc should be used (the first action in #### create, update)'  => [
                 '<p>Description for NAME field for CREATE and UPDATE actions</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'name',
                 'create'
             ],
             'action doc should be used (the second action in #### create, update)' => [
                 '<p>Description for NAME field for CREATE and UPDATE actions</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'name',
                 'update'
             ],
             'names should be case insensitive'                                     => [
                 '<p>Description for NAME field for CREATE and UPDATE actions</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'NAME',
                 'CREATE'
             ],
             'unknown field'                                                        => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'unknown',
                 'get'
             ],
             'unknown fields group'                                                 => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group',
+                Entity\Group::class,
                 'name',
                 'get'
             ],
@@ -166,7 +199,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
                 'Test\UnknownClass',
                 'name',
                 'get'
-            ],
+            ]
         ];
     }
 
@@ -177,7 +210,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
     {
         $apiDocParser = $this->loadDocument();
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
             $apiDocParser->getFilterDocumentation($className, $filterName)
         );
@@ -188,29 +221,29 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
         return [
             'known filter'                     => [
                 'Description for NAME filter',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'name'
             ],
             'names should be case insensitive' => [
                 'Description for NAME filter',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'NAME'
             ],
             'unknown field'                    => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'unknown'
             ],
             'unknown filters group'            => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group',
+                Entity\Group::class,
                 'name'
             ],
             'unknown class'                    => [
                 null,
                 'Test\UnknownClass',
                 'name'
-            ],
+            ]
         ];
     }
 
@@ -221,7 +254,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
     {
         $apiDocParser = $this->loadDocument();
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
             $apiDocParser->getSubresourceDocumentation($className, $subresourceName, $actionName)
         );
@@ -232,25 +265,25 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
         return [
             'known sub-resource'               => [
                 '<p>Description for <em>contacts GET_SUBRESOURCE</em> sub-resource</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'contacts',
                 'get_subresource'
             ],
             'names should be case insensitive' => [
                 '<p>Description for <em>contacts GET_SUBRESOURCE</em> sub-resource</p>',
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'CONTACTS',
                 'GET_SUBRESOURCE'
             ],
             'unknown sub-resource'             => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Account',
+                Entity\Account::class,
                 'unknown',
                 'get_subresource'
             ],
             'unknown subresources group'       => [
                 null,
-                'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group',
+                Entity\Group::class,
                 'contacts',
                 'get_subresource'
             ],
@@ -259,7 +292,7 @@ class MarkdownApiDocParserTest extends \PHPUnit_Framework_TestCase
                 'Test\UnknownClass',
                 'contacts',
                 'get_subresource'
-            ],
+            ]
         ];
     }
 }

@@ -1,6 +1,6 @@
 {% extends 'OroUIBundle:Form:fields.html.twig' %}
 
-{% block genemu_jqueryselect2_widget %}
+{% block oro_select2_widget %}
     {% if configs.grid is defined and configs.grid.name is defined %}
         {% set url = path('oro_datagrid_index', {'gridName': configs.grid.name}) %}
     {% elseif configs.route_name is defined and configs.route_name %}
@@ -9,7 +9,7 @@
         {% set url = '' %}
     {% endif %}
     {% if configs.placeholder is defined %}
-        {% set configs = configs|merge({'placeholder': configs.placeholder|trans }) %}
+        {% set configs = configs|merge({'placeholder': configs.placeholder|trans|escape }) %}
     {% endif %}
     {% if configs.result_template_twig is defined and configs.result_template_twig %}
         {% set configs = configs|merge({'result_template': include(configs.result_template_twig) }) %}
@@ -40,9 +40,29 @@
     } }) }}
 {% endblock %}
 
-{% block genemu_jqueryselect2_javascript %}
-    {% block genemu_jqueryselect2_javascript_prototype %}{% endblock %}
+{% block oro_select2_javascript %}
+    {% block oro_select2_javascript_prototype %}{% endblock %}
 {% endblock %}
+
+{% block oro_select2_hidden_row %}
+    {{ block('form_row') }}
+{% endblock %}
+
+{% block form_javascript %}
+    {% spaceless %}
+        {% for child in form %}
+            {{ form_javascript(child) }}
+        {% endfor %}
+    {% endspaceless %}
+{% endblock form_javascript %}
+
+{% block form_stylesheet %}
+    {% spaceless %}
+        {% for child in form %}
+            {{ form_stylesheet(child) }}
+        {% endfor %}
+    {% endspaceless %}
+{% endblock form_stylesheet %}
 
 {% block oro_ticker_symbol_widget %}
     <script type="text/javascript">
@@ -184,7 +204,7 @@
             {%- else -%}
                 {{ label|trans({}, translation_domain) }}
             {%- endif -%}
-            <em>{% if required and not isRadioLabel %}*{% else %}&nbsp;{% endif %}</em>
+             <em>{% if required and not isRadioLabel %}*{% else %}&nbsp;{% endif %}</em>
         </label>
     {%- endif -%}
     {% endspaceless %}
@@ -220,7 +240,7 @@
             {% set dateValidation = dateValidation|merge({'NotBlank' : {'message': 'This value should not be blank.'}}) %}
         {% endif %}
 
-        {% set dateValidation = dateValidation|json_encode %}
+        {% set dateValidation = dateValidation|json_encode(constant('JSON_FORCE_OBJECT')) %}
     {% endif %}
 
     {% set options = {
@@ -275,7 +295,7 @@
             id: 'date_selector_' ~ id,
             name: 'date_selector_' ~ id,
             class: 'input-small datepicker-input ' ~ attrClass,
-            'data-validation': dateValidation|json_encode
+            'data-validation': dateValidation|json_encode(constant('JSON_FORCE_OBJECT'))
         },
         datePickerOptions: {
             altFormat: 'yy-mm-dd',
@@ -289,7 +309,7 @@
             id: 'time_selector_' ~ id,
             name: 'time_selector_' ~ id,
             class: 'input-small timepicker-input ' ~ attrClass,
-            'data-validation': timeValidation|json_encode
+            'data-validation': timeValidation|json_encode(constant('JSON_FORCE_OBJECT'))
         },
         timePickerOptions: {
         }
@@ -322,18 +342,24 @@
     {% endif %}
     <div
         data-content="{{ name }}"
-        data-validation-optional-group
-        {% if form.vars.attr['data-validation-optional-group-handler'] is defined %}
-            data-validation-optional-group-handler="{{ form.vars.attr['data-validation-optional-group-handler'] }}"
+        {% if widget.parent.vars.skip_optional_validation_group is not defined %}
+            data-validation-optional-group
+            {% if form.vars.attr['data-validation-optional-group-handler'] is defined %}
+                data-validation-optional-group-handler="{{ form.vars.attr['data-validation-optional-group-handler'] }}"
+            {% endif %}
         {% endif %}
     >
         <div class="row-oro oro-multiselect-holder{% if not allow_delete %} not-removable{% endif %}">
             {{ form_widget(form, {disabled: disabled}) }}
             {% if allow_delete %}
-            <button class="removeRow btn btn-action btn-link" type="button" data-related="{{ name }}">×</button>
+            <button class="removeRow btn btn-icon btn-square-light" type="button" data-related="{{ name }}">
+                <span class="fa-close"></span>
+            </button>
             {% endif %}
             {% if allow_add_after %}
-            <button class="addAfterRow btn btn-action btn-link" type="button" data-related="{{ name }}">+</button>
+            <button class="addAfterRow btn btn-icon btn-square-light" type="button" data-related="{{ name }}">
+                <span class="fa-plus"></span>
+            </button>
             {% endif %}
         </div>
     </div>
@@ -361,7 +387,7 @@
                 {% endif %}
             </div>
             {% if allow_add %}
-            <a class="btn add-list-item" href="javascript: void(0);"><i class="fa-plus"></i>{{ form.vars.add_label|default('oro.form.collection.add')|trans }}</a>
+            <a class="btn add-list-item" href="javascript: void(0);">{{ form.vars.add_label|default('oro.form.collection.add')|trans }}</a>
             {% endif %}
         </div>
         {% if handle_primary and (prototype is not defined or prototype.primary is defined) %}
@@ -437,7 +463,7 @@
 
     <div class="create-select-entity-container clearfix">
         <div id="{{ btnGroupId }}" class="buttons-container">
-            <a href="javascript:void(0)" class="entity-select-btn" title="{{ 'Choose'|trans }}"{% if disabled or read_only %} disabled="disabled"{% endif %}>
+            <a href="javascript:void(0)" class="entity-select-btn" title="{{ 'Choose'|trans }}"{% if disabled or (attr.readonly is defined and attr.readonly) %} disabled="disabled"{% endif %}>
                 <span
                     data-label="{{ 'Choose Existing'|trans }}"
                     data-alt-label-view="{{ 'Choose Another'|trans }}"
@@ -450,11 +476,11 @@
                 </span>
             </a>
 
-            <a href="javascript:void(0)" class="entity-create-btn" title="{{ 'Create New'|trans }}"{% if disabled or read_only %} disabled="disabled"{% endif %}>
+            <a href="javascript:void(0)" class="entity-create-btn" title="{{ 'Create New'|trans }}"{% if disabled or (attr.readonly is defined and attr.readonly) %} disabled="disabled"{% endif %}>
                 <span>{{ 'Create New'|trans }}</span>
             </a>
 
-            <a href="javascript:void(0)" class="entity-cancel-btn" title="{{ 'Cancel'|trans }}"{% if disabled or read_only %} disabled="disabled"{% endif %}>
+            <a href="javascript:void(0)" class="entity-cancel-btn" title="{{ 'Cancel'|trans }}"{% if disabled or (attr.readonly is defined and attr.readonly) %} disabled="disabled"{% endif %}>
                 <span>{{ 'Cancel'|trans }}</span>
             </a>
         </div>
@@ -545,7 +571,7 @@
 {% endblock %}
 
 {% block oro_entity_create_or_select_inline_widget %}
-    {% set isButtonsEnabled = not disabled and not read_only %}
+    {% set isButtonsEnabled = not disabled and (attr.readonly is not defined or not attr.readonly) %}
     <div id="{{ id }}-el"
             {% if configs.extra_config is not defined or not configs.extra_config %}
                 {% if form.vars.configs.async_dialogs|default(false) is sameas(true) %}
@@ -576,7 +602,7 @@
                     module: 'oroform/js/app/components/select-create-inline-type-' ~ asyncNameSegment|default('') ~ 'component',
                     options: {
                         inputSelector: '#'~id,
-                        entityLabel: label|trans,
+                        entityLabel: label|trans({}, translation_domain),
                         urlParts: urlParts,
                         existingEntityGridId: form.vars.existing_entity_grid_id|default('id'),
                         createEnabled: form.vars.create_enabled|default(false)
@@ -590,10 +616,14 @@
             {{ form_widget(form) }}
 
             {% if isButtonsEnabled %}
-                <button class="add-on btn entity-select-btn"><i class="fa-bars"></i></button>
+                <button class="add-on btn btn-icon btn-square-default entity-select-btn">
+                    <span class="fa-bars"></span>
+                </button>
 
                 {% if form.vars.create_enabled %}
-                    <button class="btn entity-create-btn"><i class="fa-plus"></i></button>
+                    <button class="btn btn-icon btn-square-default entity-create-btn">
+                        <span class="fa-plus"></span>
+                    </button>
                 {% endif %}
             {% endif %}
         </div>
@@ -605,7 +635,7 @@
 {% endblock %}
 
 {% block oro_link_type_widget %}
-    {% if isPath or resource_granted(acl) %} {# @todo after BAP-4696 implementation remove isPath from condition #}
+    {% if isPath or is_granted(acl) %} {# @todo after BAP-4696 implementation remove isPath from condition #}
         <a href="{{ isPath ? route : path(route, routeParameters) }}" class="{{ class is defined and class ? class : '' }}" style="display: block; margin-top: 5px;">
             {{ title|trans }}
         </a>
@@ -700,10 +730,9 @@
     {% import 'OroUIBundle::macros.html.twig' as UI %}
     {{ UI.renderJsTree(
         {
-            'module': form.vars.pageComponentModule,
-            'treeOptions': form.vars.treeOptions
-        },
-        ['expand', 'collapse']
+            'treeOptions': form.vars.treeOptions,
+            'disableActions': true
+        }
     ) }}
 
     {{ form_widget(form) }}

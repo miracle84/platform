@@ -3,17 +3,14 @@
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Form\Type;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Form\Extension\Core\Type\FormType;
-use Symfony\Component\Form\Extension\Validator\ValidatorExtension;
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\TypeTestCase;
-use Symfony\Component\Validator\Validation;
-
-use Oro\Bundle\ApiBundle\Form\Type\EntityCollectionType;
 use Oro\Bundle\ApiBundle\Form\Type\CollectionType;
+use Oro\Bundle\ApiBundle\Form\Type\EntityCollectionType;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\Extension\Validator\ValidatorExtension;
+use Symfony\Component\Form\Test\TypeTestCase;
+use Symfony\Component\Validator\Validation;
 
 class EntityCollectionTypeTest extends TypeTestCase
 {
@@ -23,25 +20,18 @@ class EntityCollectionTypeTest extends TypeTestCase
     protected function getExtensions()
     {
         return [
-            new ValidatorExtension(Validation::createValidator()),
-            new PreloadedExtension(
-                [
-                    'oro_api_collection' => new CollectionType(),
-                    'collection_entry'   => new CollectionEntryType()
-                ],
-                []
-            )
+            new ValidatorExtension(Validation::createValidator())
         ];
     }
 
     public function testShouldClearCollectionWhenRemoveAllItems()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|ArrayCollection $groups */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|ArrayCollection $groups */
         $groups = $this->getMockBuilder(ArrayCollection::class)
             ->setMethods(['clear'])
             ->getMock();
 
-        $groups->expects($this->once())
+        $groups->expects(self::once())
             ->method('clear');
 
         $entity = new User();
@@ -60,27 +50,21 @@ class EntityCollectionTypeTest extends TypeTestCase
         );
         $formBuilder->add(
             'groups',
-            new EntityCollectionType(),
+            EntityCollectionType::class,
             [
                 'entry_data_class' => Group::class,
-                'entry_type'       => 'collection_entry'
+                'entry_type'       => CollectionEntryType::class
             ]
         );
         $form = $formBuilder->getForm();
 
         $form->submit(['groups' => []]);
-        $this->assertTrue($form->isSynchronized());
-    }
-
-    public function testGetName()
-    {
-        $type = new EntityCollectionType();
-        $this->assertEquals('oro_api_entity_collection', $type->getName());
+        self::assertTrue($form->isSynchronized());
     }
 
     public function testGetParent()
     {
         $type = new EntityCollectionType();
-        $this->assertEquals('oro_api_collection', $type->getParent());
+        self::assertEquals(CollectionType::class, $type->getParent());
     }
 }

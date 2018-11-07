@@ -8,8 +8,9 @@
 namespace Oro\Bundle\EmailBundle\Mail;
 
 use \Zend\Mail\Exception\RuntimeException;
-use \Zend\Mail\Headers as BaseHeaders;
 use \Zend\Mail\Header\HeaderInterface;
+use \Zend\Mail\Headers as BaseHeaders;
+use Oro\Bundle\EmailBundle\Mail\Header\HeaderLoader;
 
 class Headers extends BaseHeaders
 {
@@ -82,5 +83,17 @@ class Headers extends BaseHeaders
     public function normalizeFieldName($fieldName)
     {
         return parent::normalizeFieldName($fieldName);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPluginClassLoader()
+    {
+        if ($this->pluginClassLoader === null) {
+            $this->pluginClassLoader = new HeaderLoader();
+        }
+
+        return $this->pluginClassLoader;
     }
 }

@@ -2,11 +2,11 @@
 
 namespace Oro\Bundle\ConfigBundle\DependencyInjection\SystemConfiguration;
 
-use Symfony\Component\Config\Definition\Processor;
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
-use Symfony\Component\Config\Definition\Exception\InvalidTypeException;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\Config\Definition\Exception\InvalidTypeException;
+use Symfony\Component\Config\Definition\Processor;
 
 class ProcessorDecorator
 {
@@ -245,6 +245,7 @@ class ProcessorDecorator
                 ->children()
                     ->scalarNode('data_type')->end()
                     ->scalarNode('type')->end()
+                    ->scalarNode('search_type')->end()
                     ->arrayNode('options')
                         ->prototype('variable')->end()
                     ->end()

@@ -5,18 +5,22 @@ namespace Oro\Bundle\ApiBundle\Filter;
 use Doctrine\Common\Collections\Criteria;
 
 /**
- * A base class for filters that can be used independently from other filters.
+ * The base class for filters that can be used independently of other filters.
  * Also this class can be used for some custom filters which cannot have a default value.
  */
 class StandaloneFilter implements FilterInterface
 {
-    const EQ = '=';
+    /** @var string "equal to" operator */
+    public const EQ = 'eq';
 
     /** @var string */
     protected $dataType;
 
     /** @var bool */
     protected $arrayAllowed = false;
+
+    /** @var bool */
+    protected $rangeAllowed = false;
 
     /** @var string */
     protected $description;
@@ -75,6 +79,28 @@ class StandaloneFilter implements FilterInterface
     public function setArrayAllowed($arrayAllowed)
     {
         $this->arrayAllowed = $arrayAllowed;
+    }
+
+    /**
+     * Gets a flag determines if a value can be a pair of "from" and "to" values.
+     *
+     * @param string|null $operator
+     *
+     * @return bool
+     */
+    public function isRangeAllowed($operator = null)
+    {
+        return $this->rangeAllowed;
+    }
+
+    /**
+     * Sets a flag determines if a value can be a pair of "from" and "to" values.
+     *
+     * @param bool $rangeAllowed
+     */
+    public function setRangeAllowed($rangeAllowed)
+    {
+        $this->rangeAllowed = $rangeAllowed;
     }
 
     /**

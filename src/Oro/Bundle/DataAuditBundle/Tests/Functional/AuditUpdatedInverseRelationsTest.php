@@ -3,29 +3,21 @@ namespace Oro\Bundle\DataAuditBundle\Tests\Functional;
 
 use Oro\Bundle\DataAuditBundle\Async\AuditChangedEntitiesInverseRelationsProcessor;
 use Oro\Bundle\DataAuditBundle\Entity\AuditField;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataChild;
-use Oro\Bundle\TestFrameworkBundle\Entity\TestAuditDataOwner;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataChild;
+use Oro\Bundle\DataAuditBundle\Tests\Functional\Environment\Entity\TestAuditDataOwner;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Oro\Component\MessageQueue\Transport\Null\NullSession;
 
+/**
+ * @dbIsolationPerTest
+ */
 class AuditUpdatedInverseRelationsTest extends WebTestCase
 {
     use AuditChangedEntitiesExtensionTrait;
 
     protected function setUp()
     {
-        parent::setUp();
-
-        $this->initClient([], [], true);
-        $this->startTransaction();
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
-        self::$loadedFixtures = [];
+        $this->initClient();
     }
 
     public function testShouldCreateAuditsForInsertedUpdatedAndDeletedEntities()

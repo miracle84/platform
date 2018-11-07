@@ -1,16 +1,15 @@
 <?php
 
-namespace Oro\Bundle\DatagridBundle\Tests\Unit\DependencyInjection\CompilerPass;
-
-use Symfony\Component\DependencyInjection\ContainerBuilder;
+namespace Oro\Bundle\DataGridBundle\Tests\Unit\DependencyInjection\CompilerPass;
 
 use Oro\Bundle\DataGridBundle\DependencyInjection\CompilerPass\InlineEditColumnOptionsGuesserPass;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * Class InlineEditColumnOptionsGuesserPassTest
  * @package Oro\Bundle\DatagridBundle\Tests\Unit\DependencyInjection\CompilerPass
  */
-class InlineEditColumnOptionsGuesserPassTest extends \PHPUnit_Framework_TestCase
+class InlineEditColumnOptionsGuesserPassTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var InlineEditColumnOptionsGuesserPass
@@ -18,7 +17,7 @@ class InlineEditColumnOptionsGuesserPassTest extends \PHPUnit_Framework_TestCase
     protected $compilerPass;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ContainerBuilder
+     * @var \PHPUnit\Framework\MockObject\MockObject|ContainerBuilder
      */
     protected $container;
 

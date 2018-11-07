@@ -1,24 +1,22 @@
 <?php
+
 namespace Oro\Bundle\OrganizationBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\OrganizationBundle\Form\Type\BusinessUnitType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 
-class BusinessUnitTypeTest extends \PHPUnit_Framework_TestCase
+class BusinessUnitTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var BusinessUnitType */
     protected $form;
 
     protected function setUp()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject $businessUnitManager */
         $businessUnitManager = $this->getMockBuilder('Oro\Bundle\OrganizationBundle\Entity\Manager\BusinessUnitManager')
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject $securityFacade */
-        $securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
         $businessUnitManager->expects($this->any())
             ->method('getBusinessUnitsTree')
@@ -28,12 +26,12 @@ class BusinessUnitTypeTest extends \PHPUnit_Framework_TestCase
             ->method('getBusinessUnitIds')
             ->will($this->returnValue([]));
 
-        $this->form = new BusinessUnitType($businessUnitManager, $securityFacade);
+        $this->form = new BusinessUnitType($businessUnitManager, $tokenAccessor);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $optionResolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $optionResolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $optionResolver->expects($this->once())
             ->method('setDefaults')
             ->with(
@@ -42,7 +40,7 @@ class BusinessUnitTypeTest extends \PHPUnit_Framework_TestCase
                     'ownership_disabled'      => true
                 ]
             );
-        $this->form->setDefaultOptions($optionResolver);
+        $this->form->configureOptions($optionResolver);
     }
 
     public function testBuildForm()
@@ -56,10 +54,5 @@ class BusinessUnitTypeTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnSelf());
 
         $this->form->buildForm($builder, array());
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_business_unit', $this->form->getName());
     }
 }

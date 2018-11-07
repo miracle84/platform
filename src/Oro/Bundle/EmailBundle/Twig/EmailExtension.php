@@ -2,74 +2,110 @@
 
 namespace Oro\Bundle\EmailBundle\Twig;
 
-use Doctrine\ORM\EntityManager;
-
-use Twig_Extension;
-use Twig_SimpleFunction;
-
-use Symfony\Component\Security\Core\Util\ClassUtils;
-
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\ORM\EntityRepository;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
 use Oro\Bundle\EmailBundle\Entity\EmailRecipient;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailAttachmentRepository;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailRecipientRepository;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailRepository;
 use Oro\Bundle\EmailBundle\Mailbox\MailboxProcessStorage;
 use Oro\Bundle\EmailBundle\Manager\EmailAttachmentManager;
 use Oro\Bundle\EmailBundle\Model\WebSocket\WebSocketSendProcessor;
+use Oro\Bundle\EmailBundle\Provider\RelatedEmailsProvider;
 use Oro\Bundle\EmailBundle\Tools\EmailAddressHelper;
 use Oro\Bundle\EmailBundle\Tools\EmailHolderHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Component\DependencyInjection\ServiceLink;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class EmailExtension extends Twig_Extension
+class EmailExtension extends \Twig_Extension
 {
     const NAME = 'oro_email';
 
-    /** @var EmailHolderHelper */
-    protected $emailHolderHelper;
-
-    /** @var EmailAddressHelper */
-    protected $emailAddressHelper;
-
-    /** @var EmailAttachmentManager */
-    protected $emailAttachmentManager;
-
-    /** @var EntityManager */
-    protected $em;
-
-    /**  @var MailboxProcessStorage */
-    private $mailboxProcessStorage;
-
-    /** @var SecurityFacade */
-    private $securityFacade;
-
-    /** @var ServiceLink */
-    protected $relatedEmailsProviderLink;
+    /** @var ContainerInterface */
+    protected $container;
 
     /**
-     * @param EmailHolderHelper      $emailHolderHelper
-     * @param EmailAddressHelper     $emailAddressHelper
-     * @param EmailAttachmentManager $emailAttachmentManager
-     * @param EntityManager          $em
-     * @param MailboxProcessStorage  $mailboxProcessStorage
-     * @param SecurityFacade         $securityFacade
-     * @param ServiceLink            $relatedEmailsProviderLink Link is used because of performance reasons
+     * @param ContainerInterface $container
      */
-    public function __construct(
-        EmailHolderHelper $emailHolderHelper,
-        EmailAddressHelper $emailAddressHelper,
-        EmailAttachmentManager $emailAttachmentManager,
-        EntityManager $em,
-        MailboxProcessStorage $mailboxProcessStorage,
-        SecurityFacade $securityFacade,
-        ServiceLink $relatedEmailsProviderLink
-    ) {
-        $this->emailHolderHelper = $emailHolderHelper;
-        $this->emailAddressHelper = $emailAddressHelper;
-        $this->emailAttachmentManager = $emailAttachmentManager;
-        $this->em = $em;
-        $this->mailboxProcessStorage = $mailboxProcessStorage;
-        $this->securityFacade = $securityFacade;
-        $this->relatedEmailsProviderLink = $relatedEmailsProviderLink;
+    public function __construct(ContainerInterface $container)
+    {
+        $this->container = $container;
+    }
+
+    /**
+     * @return EmailHolderHelper
+     */
+    protected function getEmailHolderHelper()
+    {
+        return $this->container->get('oro_email.email_holder_helper');
+    }
+
+    /**
+     * @return EmailAddressHelper
+     */
+    protected function getEmailAddressHelper()
+    {
+        return $this->container->get('oro_email.email.address.helper');
+    }
+
+    /**
+     * @return EmailAttachmentManager
+     */
+    protected function getEmailAttachmentManager()
+    {
+        return $this->container->get('oro_email.manager.email_attachment_manager');
+    }
+
+    /**
+     * @return ManagerRegistry
+     */
+    protected function getDoctrine()
+    {
+        return $this->container->get('doctrine');
+    }
+
+    /**
+     * @return MailboxProcessStorage
+     */
+    protected function getMailboxProcessStorage()
+    {
+        return $this->container->get('oro_email.mailbox.process_storage');
+    }
+
+    /**
+     * @return AuthorizationCheckerInterface
+     */
+    protected function getAuthorizationChecker()
+    {
+        return $this->container->get('security.authorization_checker');
+    }
+
+    /**
+     * @return TokenAccessorInterface
+     */
+    protected function getTokenAccessor()
+    {
+        return $this->container->get('oro_security.token_accessor');
+    }
+
+    /**
+     * @return RelatedEmailsProvider
+     */
+    protected function getRelatedEmailsProvider()
+    {
+        return $this->container->get('oro_email.related_emails.provider');
+    }
+
+    /**
+     * @return EntityRepository
+     */
+    protected function getRepository($entityClass)
+    {
+        return $this->getDoctrine()->getManagerForClass($entityClass)->getRepository($entityClass);
     }
 
     /**
@@ -78,15 +114,15 @@ class EmailExtension extends Twig_Extension
     public function getFunctions()
     {
         return [
-            new Twig_SimpleFunction('oro_get_email', [$this, 'getEmail']),
-            new Twig_SimpleFunction('oro_get_email_address_name', [$this, 'getEmailAddressName']),
-            new Twig_SimpleFunction('oro_get_email_address', [$this, 'getEmailAddress']),
-            new Twig_SimpleFunction('oro_get_email_thread_recipients', [$this, 'getEmailThreadRecipients']),
-            new Twig_SimpleFunction('oro_get_email_thread_attachments', [$this, 'getEmailThreadAttachments']),
-            new Twig_SimpleFunction('oro_can_attache', [$this, 'canReAttach']),
-            new Twig_SimpleFunction('oro_get_mailbox_process_label', [$this, 'getMailboxProcessLabel']),
-            new Twig_SimpleFunction('oro_get_email_clank_event', [$this, 'getEmailClankEvent']),
-            new Twig_SimpleFunction('oro_get_unread_emails_count', [$this, 'getUnreadEmailsCount'])
+            new \Twig_SimpleFunction('oro_get_email', [$this, 'getEmail']),
+            new \Twig_SimpleFunction('oro_get_email_address_name', [$this, 'getEmailAddressName']),
+            new \Twig_SimpleFunction('oro_get_email_address', [$this, 'getEmailAddress']),
+            new \Twig_SimpleFunction('oro_get_email_thread_recipients', [$this, 'getEmailThreadRecipients']),
+            new \Twig_SimpleFunction('oro_get_email_thread_attachments', [$this, 'getEmailThreadAttachments']),
+            new \Twig_SimpleFunction('oro_can_attache', [$this, 'canReAttach']),
+            new \Twig_SimpleFunction('oro_get_mailbox_process_label', [$this, 'getMailboxProcessLabel']),
+            new \Twig_SimpleFunction('oro_get_email_ws_event', [$this, 'getEmailWSChannel']),
+            new \Twig_SimpleFunction('oro_get_unread_emails_count', [$this, 'getUnreadEmailsCount'])
         ];
     }
 
@@ -98,9 +134,9 @@ class EmailExtension extends Twig_Extension
      */
     public function getEmail($object)
     {
-        $result = $this->emailHolderHelper->getEmail($object);
+        $result = $this->getEmailHolderHelper()->getEmail($object);
         if (!$result) {
-            $emails = $this->relatedEmailsProviderLink->getService()->getEmails($object);
+            $emails = $this->getRelatedEmailsProvider()->getEmails($object);
             $result = reset($emails);
         }
 
@@ -112,12 +148,14 @@ class EmailExtension extends Twig_Extension
      *
      * @param EmailThread $thread
      * @return EmailRecipient[]
+     * @deprecated since 2.3. Use EmailGridResultHelper::addEmailRecipients instead
      */
     public function getEmailThreadRecipients($thread)
     {
-        $result = $this->em->getRepository("OroEmailBundle:EmailRecipient")->getThreadUniqueRecipients($thread);
+        /** @var EmailRecipientRepository $repo */
+        $repo = $this->getRepository('OroEmailBundle:EmailRecipient');
 
-        return $result;
+        return $repo->getThreadUniqueRecipients($thread);
     }
 
     /**
@@ -128,9 +166,10 @@ class EmailExtension extends Twig_Extension
      */
     public function getEmailThreadAttachments($thread)
     {
-        $result = $this->em->getRepository("OroEmailBundle:EmailAttachment")->getThreadAttachments($thread);
+        /** @var EmailAttachmentRepository $repo */
+        $repo = $this->getRepository('OroEmailBundle:EmailAttachment');
 
-        return $result;
+        return $repo->getThreadAttachments($thread);
     }
 
     /**
@@ -141,11 +180,13 @@ class EmailExtension extends Twig_Extension
      */
     public function getEmailAddressName($email)
     {
-        $result = $this->emailAddressHelper->extractEmailAddressName($email);
+        $result = $this->getEmailAddressHelper()->extractEmailAddressName($email);
 
-        return null !== $result
-            ? $result
-            : '';
+        if (null === $result) {
+            $result = '';
+        }
+
+        return $result;
     }
 
     /**
@@ -156,11 +197,13 @@ class EmailExtension extends Twig_Extension
      */
     public function getEmailAddress($email)
     {
-        $result = $this->emailAddressHelper->extractPureEmailAddress($email);
+        $result = $this->getEmailAddressHelper()->extractPureEmailAddress($email);
 
-        return null !== $result
-            ? $result
-            : '';
+        if (null === $result) {
+            $result = '';
+        }
+
+        return $result;
     }
 
     /**
@@ -173,34 +216,32 @@ class EmailExtension extends Twig_Extension
      */
     public function canReAttach($emailAttachment, $targetEntity)
     {
-        if ($this->emailAttachmentManager
-                ->validateEmailAttachmentForTargetClass(
-                    $emailAttachment,
-                    ClassUtils::getRealClass($targetEntity)
-                )->count() > 0
-            || $this->emailAttachmentManager->isAttached($emailAttachment, $targetEntity)) {
-            return false;
-        } else {
-            return true;
-        }
+        $manager = $this->getEmailAttachmentManager();
+        $targetEntityClass = ClassUtils::getRealClass($targetEntity);
+
+        return
+            0 === $manager->validateEmailAttachmentForTargetClass($emailAttachment, $targetEntityClass)->count()
+            && !$manager->isAttached($emailAttachment, $targetEntity);
     }
 
     /**
-     * Return unique identificator for clank event. This identification
+     * Return unique identificator for websocket event. This identification
      * is used in notification widget to show message about new emails
      *
      * @return string
      */
-    public function getEmailClankEvent()
+    public function getEmailWSChannel()
     {
-        if (!$this->securityFacade->hasLoggedUser()) {
+        $tokenAccessor = $this->getTokenAccessor();
+        $currentUser = $tokenAccessor->getUser();
+        if (null === $currentUser) {
             return '';
         }
 
-        $currentOrganization = $this->securityFacade->getOrganization();
-        $currentUser         = $this->securityFacade->getLoggedUser();
-
-        return WebSocketSendProcessor::getUserTopic($currentUser, $currentOrganization);
+        return WebSocketSendProcessor::getUserTopic(
+            $currentUser,
+            $tokenAccessor->getOrganization()
+        );
     }
 
     /**
@@ -210,17 +251,18 @@ class EmailExtension extends Twig_Extension
      */
     public function getUnreadEmailsCount()
     {
-        if (!$this->securityFacade->hasLoggedUser() || !$this->securityFacade->isGranted('oro_email_email_user_view')) {
+        $tokenAccessor = $this->getTokenAccessor();
+        $currentUser = $tokenAccessor->getUser();
+        if (null === $currentUser || !$this->getAuthorizationChecker()->isGranted('oro_email_email_user_view')) {
             return [];
         }
 
-        $currentOrganization = $this->securityFacade->getOrganization();
-        $currentUser = $this->securityFacade->getLoggedUser();
-        $result = $this->em->getRepository("OroEmailBundle:Email")
-            ->getCountNewEmailsPerFolders($currentUser, $currentOrganization);
-        $total = $this->em->getRepository("OroEmailBundle:Email")
-            ->getCountNewEmails($currentUser, $currentOrganization);
-        $result[] = array('num' => $total, 'id' => 0);
+        $currentOrganization = $tokenAccessor->getOrganization();
+        /** @var EmailRepository $repo */
+        $repo = $this->getRepository('OroEmailBundle:Email');
+        $result = $repo->getCountNewEmailsPerFolders($currentUser, $currentOrganization);
+        $total = $repo->getCountNewEmails($currentUser, $currentOrganization);
+        $result[] = ['num' => $total, 'id' => 0];
 
         return $result;
     }
@@ -232,7 +274,7 @@ class EmailExtension extends Twig_Extension
      */
     public function getMailboxProcessLabel($type)
     {
-        return $this->mailboxProcessStorage->getProcess($type)->getLabel();
+        return $this->getMailboxProcessStorage()->getProcess($type)->getLabel();
     }
 
     /**

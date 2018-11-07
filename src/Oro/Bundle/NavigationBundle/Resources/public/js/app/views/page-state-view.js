@@ -1,16 +1,16 @@
-define([
-    'jquery',
-    'underscore',
-    'routing',
-    'orotranslation/js/translator',
-    'oroui/js/mediator',
-    'oroui/js/modal',
-    'oroui/js/app/views/base/view',
-    'base64'
-], function($, _, routing, __, mediator, Modal, BaseView, base64) {
+define(function(require) {
     'use strict';
 
     var PageStateView;
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var base64 = require('base64');
+    var routing = require('routing');
+    var __ = require('orotranslation/js/translator');
+    var mediator = require('oroui/js/mediator');
+    var Modal = require('oroui/js/modal');
+    var PageStateModel = require('oronavigation/js/app/models/page-state-model');
+    var BaseView = require('oroui/js/app/views/base/view');
 
     PageStateView = BaseView.extend({
         listen: {
@@ -20,6 +20,7 @@ define([
             'page:request mediator': 'onPageRequest',
             'page:update mediator': 'onPageUpdate',
             'page:afterChange mediator': 'afterPageChange',
+            'page:afterPagePartChange mediator': 'afterPageChange',
             'page:beforeRefresh mediator': 'beforePageRefresh',
             'openLink:before mediator': 'beforePageChange',
 
@@ -30,8 +31,16 @@ define([
         /**
          * @inheritDoc
          */
-        initialize: function() {
+        constructor: function PageStateView() {
+            PageStateView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
+        initialize: function(options) {
             var confirmModal;
+            this.model = new PageStateModel();
 
             this._initialState = null;
             this._resetChanges = false;
@@ -41,14 +50,13 @@ define([
                 content: __('Your local changes will be lost. Are you sure you want to refresh the page?'),
                 okText: __('OK, got it.'),
                 className: 'modal modal-primary',
-                okButtonClass: 'btn-primary btn-large',
                 cancelText: __('Cancel')
             });
             this.subview('confirmModal', confirmModal);
 
             $(window).on('beforeunload' + this.eventNamespace(), _.bind(this.onWindowUnload, this));
 
-            PageStateView.__super__.initialize.apply(this, arguments);
+            PageStateView.__super__.initialize.call(this, options);
         },
 
         /**
@@ -224,7 +232,7 @@ define([
                 checkIdRoute = pageStateRoutes.data('pagestate-checkid-route');
             }
 
-            var url = routing.generate(checkIdRoute, {'pageId': this._combinePageId()});
+            var url = routing.generate(checkIdRoute, {pageId: this._combinePageId()});
             $.get(url).done(function(data) {
                 var attributes;
                 attributes = {
@@ -345,8 +353,8 @@ define([
                     var selectedData = $item.inputWidget('data');
                     var itemData = {name: item.name, value: $item.val()};
 
-                    if (!_.isEmpty(selectedData) && $.isPlainObject(selectedData)) {
-                        itemData.selectedData = [selectedData];
+                    if (!_.isEmpty(selectedData)) {
+                        itemData.selectedData = selectedData;
                     }
 
                     data[index].push(itemData);
@@ -381,21 +389,21 @@ define([
                 $.each(el, function(i, input) {
                     var element = form.find('[name="' + input.name + '"]');
                     switch (element.prop('type')) {
-                    case 'checkbox':
-                        element.filter('[value="' +  input.value + '"]').prop('checked', true);
-                        break;
-                    case 'select-multiple':
-                        element
-                            .find('option').prop('selected', false).end()
-                            .find('option[value="' + input.value + '"]').prop('selected', true);
-                        break;
-                    default:
-                        if (input.selectedData) {
-                            element.data('selected-data', input.selectedData);
-                        }
-                        if (input.value !== element.val()) {
-                            element.val(input.value).trigger('change');
-                        }
+                        case 'checkbox':
+                            element.filter('[value="' + input.value + '"]').prop('checked', true);
+                            break;
+                        case 'select-multiple':
+                            element
+                                .find('option').prop('selected', false).end()
+                                .find('option[value="' + input.value + '"]').prop('selected', true);
+                            break;
+                        default:
+                            if (input.selectedData) {
+                                element.data('selected-data', input.selectedData);
+                            }
+                            if (input.value !== element.val()) {
+                                element.val(input.value).trigger('change');
+                            }
                     }
                 });
             });

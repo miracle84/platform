@@ -2,18 +2,16 @@
 
 namespace Oro\Bundle\PlatformBundle\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
-use Symfony\Component\HttpKernel\DependencyInjection\Extension;
-use Symfony\Component\DependencyInjection\Loader;
-
+use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
 use Oro\Component\Config\Loader\CumulativeConfigLoader;
 use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
 use Oro\Component\PhpUtils\ArrayUtil;
-
-use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
+use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\DependencyInjection\Loader;
+use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class OroPlatformExtension extends Extension implements PrependExtensionInterface
 {
@@ -147,5 +145,6 @@ class OroPlatformExtension extends Extension implements PrependExtensionInterfac
         $loader->load('services.yml');
         $loader->load('doctrine.yml');
         $loader->load('session.yml');
+        $loader->load('commands.yml');
     }
 }

@@ -2,19 +2,15 @@
 
 namespace Oro\Bundle\AddressBundle\Controller\Api\Rest;
 
-use Symfony\Component\HttpFoundation\Response;
-
-use FOS\RestBundle\Routing\ClassResourceInterface;
-use FOS\RestBundle\Util\Codes;
-use FOS\RestBundle\Controller\FOSRestController;
 use FOS\RestBundle\Controller\Annotations\NamePrefix;
 use FOS\RestBundle\Controller\Annotations\RouteResource;
-
+use FOS\RestBundle\Controller\FOSRestController;
+use FOS\RestBundle\Routing\ClassResourceInterface;
+use FOS\RestBundle\Util\Codes;
 use Nelmio\ApiDocBundle\Annotation\ApiDoc;
-
-use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-
 use Oro\Bundle\AddressBundle\Entity\AddressType;
+use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @RouteResource("addresstype")
@@ -29,7 +25,6 @@ class AddressTypeController extends FOSRestController implements ClassResourceIn
      *      description="Get all address types items",
      *      resource=true
      * )
-     * @AclAncestor("oro_address_dictionaries_read")
      * @return Response
      */
     public function cgetAction()
@@ -50,7 +45,6 @@ class AddressTypeController extends FOSRestController implements ClassResourceIn
      *      description="Get address type item",
      *      resource=true
      * )
-     * @AclAncestor("oro_address_dictionaries_read")
      * @return Response
      */
     public function getAction($name)

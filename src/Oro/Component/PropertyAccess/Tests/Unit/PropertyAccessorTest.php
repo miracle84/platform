@@ -2,13 +2,12 @@
 
 namespace Oro\Component\PropertyAccess\Tests\Unit;
 
-use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
-
 use Oro\Component\PropertyAccess\PropertyAccessor;
 use Oro\Component\PropertyAccess\Tests\Unit\Fixtures\TestClass;
 use Oro\Component\PropertyAccess\Tests\Unit\Fixtures\TestClassMagicCall;
 use Oro\Component\PropertyAccess\Tests\Unit\Fixtures\TestClassMagicGet;
 use Oro\Component\PropertyAccess\Tests\Unit\Fixtures\Ticket5775Object;
+use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
@@ -16,7 +15,7 @@ use Oro\Component\PropertyAccess\Tests\Unit\Fixtures\Ticket5775Object;
  * @SuppressWarnings(PHPMD.TooManyMethods)
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
-class PropertyAccessorTest extends \PHPUnit_Framework_TestCase
+class PropertyAccessorTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var PropertyAccessor

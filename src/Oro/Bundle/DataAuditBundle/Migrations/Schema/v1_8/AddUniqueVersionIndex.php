@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\DataAuditBundle\Migrations\Schema\v1_8;
 
-use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Connection;
-
+use Doctrine\DBAL\Platforms\PostgreSqlPlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Oro\Bundle\MigrationBundle\Migration\ConnectionAwareInterface;
 use Oro\Bundle\MigrationBundle\Migration\Migration;
-use Oro\Bundle\MigrationBundle\Migration\ParametrizedSqlMigrationQuery;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 
 class AddUniqueVersionIndex implements Migration, ConnectionAwareInterface
@@ -28,34 +27,99 @@ class AddUniqueVersionIndex implements Migration, ConnectionAwareInterface
      */
     public function up(Schema $schema, QueryBag $queries)
     {
-        $ids = $this->getDuplicates();
-        if ($ids) {
-            $queries->addPreQuery(
-                new ParametrizedSqlMigrationQuery(
-                    'DELETE FROM oro_audit WHERE id IN (:ids)',
-                    ['ids' => $ids],
-                    ['ids' => Connection::PARAM_STR_ARRAY]
-                )
-            );
-        }
+        $this->resolveDuplicates();
 
         $auditTable = $schema->getTable('oro_audit');
         $auditTable->addUniqueIndex(['object_id', 'object_class', 'version'], 'idx_oro_audit_version');
     }
 
-    /**
-     * @return string[]
-     */
-    protected function getDuplicates()
+    protected function resolveDuplicates()
     {
-        $sql = 'SELECT MAX(id) AS id FROM oro_audit GROUP BY object_id, object_class, version HAVING COUNT(*) > 1';
+        if ($this->connection->getDatabasePlatform() instanceof PostgreSqlPlatform) {
+            $this->resolveDuplicatesPostgres();
+        } else {
+            $this->resolveDuplicatesMysql();
+        }
+    }
 
-        $result = [];
-        $rows   = $this->connection->fetchAll($sql);
-        foreach ($rows as $row) {
-            $result[] = $row['id'];
+    private function resolveDuplicatesPostgres()
+    {
+        $this->connection->exec('CREATE TEMPORARY SEQUENCE seq_temp_version START 1');
+        
+        while (true) {
+            $rowsFound = $this->connection->executeQuery(
+                'SELECT COUNT(*)
+                    FROM oro_audit
+                    GROUP BY object_id, object_class, version 
+                    HAVING COUNT(*) > 1 LIMIT 1'
+            )
+                ->fetchColumn();
+
+            if (!$rowsFound) {
+                break;
+            }
+            $this->connection->exec(
+                <<<'EOD'
+                DO $$
+                    DECLARE
+                        r RECORD;
+                        seq_temp INTEGER;   
+                    BEGIN
+                        FOR r IN SELECT object_id, object_class, version
+                            FROM oro_audit
+                            GROUP BY object_id, object_class, version 
+                            HAVING COUNT(*) > 1 LIMIT 100
+                        LOOP
+                            seq_temp := (SELECT setval('seq_temp_version', 1));
+                            IF r.object_id IS NULL THEN                                
+                                UPDATE oro_audit SET version = nextval('seq_temp_version') - 1 
+                                WHERE object_id IS NULL AND 
+                                      object_class = r.object_class;
+                            ELSE
+                                UPDATE oro_audit SET version = nextval('seq_temp_version') - 1 
+                                WHERE object_id = r.object_id AND 
+                                      object_class = r.object_class;
+                            END IF;
+                        END LOOP;
+                END $$;
+EOD
+            );
         }
 
-        return $result;
+        $this->connection->exec('DROP SEQUENCE seq_temp_version');
+    }
+
+    private function resolveDuplicatesMysql()
+    {
+        while (true) {
+            $sql = 'SELECT object_id, object_class FROM oro_audit '.
+                'GROUP BY object_id, object_class, version HAVING COUNT(*) > 1 LIMIT 100';
+            $rows = $this->connection->fetchAll($sql);
+            if (!$rows) {
+                break;
+            }
+
+            foreach ($rows as $row) {
+                $sql = 'UPDATE oro_audit SET version = 0 '.
+                    'WHERE object_id = :object_id AND '.
+                    'object_class = :object_class;'.
+                    'SET @version = 0;'.
+                    'UPDATE oro_audit SET version = @version:=@version+1 '.
+                    'WHERE object_id = :object_id AND '.
+                    'object_class = :object_class;';
+
+                $this->connection->executeUpdate(
+                    $sql,
+                    [
+                        'object_id' => $row['object_id'],
+                        'object_class' => $row['object_class'],
+                    ],
+                    [
+                        'object_id' => 'integer',
+                        'object_class' => 'string',
+                    ]
+                );
+            }
+        }
     }
 }

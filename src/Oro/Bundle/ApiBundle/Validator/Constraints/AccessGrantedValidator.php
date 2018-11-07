@@ -2,23 +2,25 @@
 
 namespace Oro\Bundle\ApiBundle\Validator\Constraints;
 
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-
+/**
+ * The validator for AccessGranted constraint.
+ */
 class AccessGrantedValidator extends ConstraintValidator
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
     /**
-     * @param SecurityFacade $securityFacade
+     * @param AuthorizationCheckerInterface $authorizationChecker
      */
-    public function __construct(SecurityFacade $securityFacade)
+    public function __construct(AuthorizationCheckerInterface $authorizationChecker)
     {
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
     }
 
     /**
@@ -34,8 +36,11 @@ class AccessGrantedValidator extends ConstraintValidator
             return;
         }
 
-        if (!$this->securityFacade->isGranted('VIEW', $value)) {
-            $this->context->addViolation($constraint->message);
+        if (!$this->authorizationChecker->isGranted($constraint->permission, $value)) {
+            $this->context->addViolation(
+                $constraint->message,
+                ['{{ permission }}' => $constraint->permission]
+            );
         }
     }
 }

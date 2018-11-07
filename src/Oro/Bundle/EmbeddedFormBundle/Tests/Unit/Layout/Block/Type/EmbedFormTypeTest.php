@@ -2,20 +2,19 @@
 
 namespace Oro\Bundle\EmbeddedFormBundle\Tests\Unit\Layout\Block\Type;
 
+use Oro\Bundle\EmbeddedFormBundle\Layout\Block\Type\EmbedFormType;
+use Oro\Bundle\EmbeddedFormBundle\Tests\Unit\BlockTypeTestCase;
 use Oro\Component\Layout\Block\Type\ContainerType;
 use Oro\Component\Layout\Block\Type\Options;
 use Oro\Component\Layout\BlockBuilderInterface;
 
-use Oro\Bundle\EmbeddedFormBundle\Layout\Block\Type\EmbedFormType;
-use Oro\Bundle\EmbeddedFormBundle\Tests\Unit\BlockTypeTestCase;
-
-class FormTypeTest extends BlockTypeTestCase
+class EmbedFormTypeTest extends BlockTypeTestCase
 {
     public function testBuildBlock()
     {
         $formName = 'test_form';
 
-        /** @var BlockBuilderInterface|\PHPUnit_Framework_MockObject_MockObject $builder */
+        /** @var BlockBuilderInterface|\PHPUnit\Framework\MockObject\MockObject $builder */
         $builder = $this->createMock('Oro\Component\Layout\BlockBuilderInterface');
         $builder->expects($this->any())
             ->method('getId')
@@ -92,13 +91,6 @@ class FormTypeTest extends BlockTypeTestCase
         );
 
         $type->buildBlock($builder, new Options($options));
-    }
-
-    public function testGetName()
-    {
-        $type = $this->getBlockType(EmbedFormType::NAME);
-
-        $this->assertSame(EmbedFormType::NAME, $type->getName());
     }
 
     public function testGetParent()

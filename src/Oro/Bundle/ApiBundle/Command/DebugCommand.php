@@ -2,21 +2,23 @@
 
 namespace Oro\Bundle\ApiBundle\Command;
 
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableSeparator;
-
+use Oro\Bundle\ApiBundle\Processor\ActionProcessorBagInterface;
+use Oro\Bundle\ApiBundle\Processor\ApiContext;
+use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Component\ChainProcessor\ChainApplicableChecker;
 use Oro\Component\ChainProcessor\Context;
 use Oro\Component\ChainProcessor\Debug\TraceableProcessor;
 use Oro\Component\ChainProcessor\ProcessorBagInterface;
-use Oro\Bundle\ApiBundle\Processor\ActionProcessorBagInterface;
-use Oro\Bundle\ApiBundle\Processor\ApiContext;
-use Oro\Bundle\ApiBundle\Request\RequestType;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * The CLI command to show different kind of debug information about Data API.
+ */
 class DebugCommand extends AbstractDebugCommand
 {
     /**
@@ -32,6 +34,11 @@ class DebugCommand extends AbstractDebugCommand
                 InputArgument::OPTIONAL,
                 'Shows a list of processors for a specified action'
             )
+            ->addArgument(
+                'group',
+                InputArgument::OPTIONAL,
+                'Shows a list of processors for a specified action and from a specified group'
+            )
             ->addOption(
                 'attribute',
                 null,
@@ -41,6 +48,18 @@ class DebugCommand extends AbstractDebugCommand
                 . ' The name and value should be separated by the colon,'
                 . ' e.g.: <info>--attribute=collection:true</info> for scalar value'
                 . ' or <info>--attribute=extra:[definition,filters]</info> for array value'
+            )
+            ->addOption(
+                'processors',
+                null,
+                InputOption::VALUE_NONE,
+                'Shows a list of all processors'
+            )
+            ->addOption(
+                'processors-without-description',
+                null,
+                InputOption::VALUE_NONE,
+                'Shows a list of all processors without a description'
             );
         parent::configure();
     }
@@ -58,12 +77,33 @@ class DebugCommand extends AbstractDebugCommand
      */
     public function execute(InputInterface $input, OutputInterface $output)
     {
+        $showProcessors = $input->getOption('processors');
+        if ($showProcessors) {
+            $this->dumpAllProcessors($output, $this->getRequestType($input));
+
+            return;
+        }
+
+        $showProcessorsWithoutDescription = $input->getOption('processors-without-description');
+        if ($showProcessorsWithoutDescription) {
+            $this->dumpProcessorsWithoutDescription($output, $this->getRequestType($input));
+
+            return;
+        }
+
         $action = $input->getArgument('action');
         if (empty($action)) {
             $this->dumpActions($output);
-        } else {
-            $this->dumpProcessors($output, $action, $this->getRequestType($input), $input->getOption('attribute'));
+
+            return;
         }
+
+        $attributes = $input->getOption('attribute');
+        $group = $input->getArgument('group');
+        if ($group) {
+            $attributes[] = sprintf('group:%s', $group);
+        }
+        $this->dumpProcessors($output, $action, $this->getRequestType($input), $attributes);
     }
 
     /**
@@ -78,18 +118,55 @@ class DebugCommand extends AbstractDebugCommand
 
         $output->writeln('<info>All Actions:</info>');
         $table = new Table($output);
-        $table->setHeaders(['Action', 'Groups']);
+        $table->setHeaders(['Action', 'Groups', 'Details']);
 
         $i = 0;
+        $totalNumberOfProcessors = 0;
+        $allProcessorsIds = [];
         foreach ($processorBag->getActions() as $action) {
             if ($i > 0) {
                 $table->addRow(new TableSeparator());
             }
-            $table->addRow([$action, implode(PHP_EOL, $processorBag->getActionGroups($action))]);
+            $processorIds = $this->getProcessorIds($processorBag, $action);
+            $allProcessorsIds = array_merge($allProcessorsIds, $processorIds);
+            $numberOfProcessors = count($processorIds);
+            $totalNumberOfProcessors += $numberOfProcessors;
+            $table->addRow([
+                $action,
+                implode(PHP_EOL, $processorBag->getActionGroups($action)),
+                sprintf('Number of processors: %s', $numberOfProcessors)
+            ]);
             $i++;
+        }
+        $allProcessorsIds = array_unique($allProcessorsIds);
+
+        $container = $this->getContainer();
+        $allProcessorsIdsRegisteredInContainer = [];
+        foreach ($allProcessorsIds as $processorId) {
+            if ($container->has($processorId)) {
+                $allProcessorsIdsRegisteredInContainer[] = $processorId;
+            }
         }
 
         $table->render();
+
+        $output->writeln(
+            sprintf('<info>Total number of processors in the ProcessorBag:</info> %s', $totalNumberOfProcessors)
+        );
+        $output->writeln(
+            sprintf(
+                '<info>Total number of processor instances'
+                . ' (the same processor can be re-used in several actions or groups):</info> %s',
+                count($allProcessorsIds)
+            )
+        );
+        $output->writeln(
+            sprintf(
+                '<info>Total number of processors in DIC'
+                . ' (only processors that depend on other services are added to DIC):</info> %s',
+                count($allProcessorsIdsRegisteredInContainer)
+            )
+        );
 
         $output->writeln('<info>Public Actions:</info>');
         foreach ($actionProcessorBag->getActions() as $action) {
@@ -99,10 +176,106 @@ class DebugCommand extends AbstractDebugCommand
         $output->writeln('');
         $output->writeln(
             sprintf(
-                'To run show a list of processors for some action run <info>%s ACTION</info>',
+                'To show a list of processors for a specific action, run <info>%1$s ACTION</info>,'
+                . ' e.g. <info>%1$s get_list</info>',
                 $this->getName()
             )
         );
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param RequestType     $requestType
+     */
+    protected function dumpAllProcessors(OutputInterface $output, RequestType $requestType)
+    {
+        $output->writeln('The processors are displayed in alphabetical order.');
+
+        /** @var ProcessorBagInterface $processorBag */
+        $processorBag = $this->getContainer()->get('oro_api.processor_bag');
+
+        $table = new Table($output);
+        $table->setHeaders(['Processor', 'Actions', 'Is Service?']);
+
+        $context = new Context();
+        $context->set(ApiContext::REQUEST_TYPE, $requestType);
+
+        $applicableChecker = new ChainApplicableChecker();
+        $applicableChecker->addChecker(new Util\RequestTypeApplicableChecker());
+
+        $processorsMap = [];
+        $container = $this->getContainer();
+        $actions = $processorBag->getActions();
+        foreach ($actions as $action) {
+            $context->setAction($action);
+            $processors = $processorBag->getProcessors($context);
+            $processors->setApplicableChecker($applicableChecker);
+            foreach ($processors as $processor) {
+                if ($processor instanceof TraceableProcessor) {
+                    $processor = $processor->getProcessor();
+                }
+                $className = get_class($processor);
+                if (!isset($processorsMap[$className])) {
+                    $processorsMap[$className] = [[], false];
+                }
+                if (!in_array($action, $processorsMap[$className][0], true)) {
+                    $processorsMap[$className][0][] = $action;
+                }
+                if ($container->has($processors->getProcessorId())) {
+                    $processorsMap[$className][1][] = true;
+                }
+            }
+        }
+        ksort($processorsMap);
+        foreach ($processorsMap as $className => list($actionNames, $isService)) {
+            $isServiceStr = 'No';
+            if ($isService) {
+                $isServiceStr = 'Yes';
+            }
+            $table->addRow([$className, implode("\n", $actionNames), $isServiceStr]);
+        }
+
+        $table->render();
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param RequestType     $requestType
+     */
+    protected function dumpProcessorsWithoutDescription(OutputInterface $output, RequestType $requestType)
+    {
+        $output->writeln('The list of processors that do not have a description:');
+
+        /** @var ProcessorBagInterface $processorBag */
+        $processorBag = $this->getContainer()->get('oro_api.processor_bag');
+
+        $context = new Context();
+        $context->set(ApiContext::REQUEST_TYPE, $requestType);
+
+        $applicableChecker = new ChainApplicableChecker();
+        $applicableChecker->addChecker(new Util\RequestTypeApplicableChecker());
+
+        $processorClasses = [];
+        $actions = $processorBag->getActions();
+        foreach ($actions as $action) {
+            $context->setAction($action);
+            $processors = $processorBag->getProcessors($context);
+            $processors->setApplicableChecker($applicableChecker);
+            foreach ($processors as $processor) {
+                if ($processor instanceof TraceableProcessor) {
+                    $processor = $processor->getProcessor();
+                }
+                $processorClasses[] = get_class($processor);
+            }
+        }
+        $processorClasses = array_unique($processorClasses);
+        sort($processorClasses);
+        foreach ($processorClasses as $processorClass) {
+            $processorDescription = $this->getClassDocComment($processorClass);
+            if (empty($processorDescription)) {
+                $output->writeln(' - ' . $processorClass);
+            }
+        }
     }
 
     /**
@@ -251,5 +424,26 @@ class DebugCommand extends AbstractDebugCommand
                 $items
             )
         );
+    }
+
+    /**
+     * @param ProcessorBagInterface $processorBag
+     * @param string                $action
+     *
+     * @return string[]
+     */
+    protected function getProcessorIds(ProcessorBagInterface $processorBag, $action)
+    {
+        $context = new Context();
+        $context->setAction($action);
+        $processors = $processorBag->getProcessors($context);
+        $processors->setApplicableChecker(new ChainApplicableChecker());
+
+        $result = [];
+        foreach ($processors as $processor) {
+            $result[] = $processors->getProcessorId();
+        }
+
+        return array_unique($result);
     }
 }

@@ -3,7 +3,7 @@
 namespace Oro\Bundle\SecurityBundle\Owner\Metadata;
 
 /**
- * @see Oro\Bundle\SecurityBundle\Acl\AccessLevel
+ * Interface for ownership metadata
  */
 interface OwnershipMetadataInterface
 {
@@ -22,43 +22,25 @@ interface OwnershipMetadataInterface
     public function hasOwner();
 
     /**
-     * Indicates whether the entity owner has basic level
-     *
-     * @see Oro\Bundle\SecurityBundle\Acl\AccessLevel::BASIC_LEVEL
+     * Indicates whether the entity owner is an user
      *
      * @return bool
      */
-    public function isBasicLevelOwned();
+    public function isUserOwned();
 
     /**
-     * Indicates whether the entity owner has local level
-     *
-     * @see Oro\Bundle\SecurityBundle\Acl\AccessLevel::LOCAL_LEVEL
-     * and @see Oro\Bundle\SecurityBundle\Acl\AccessLevel::DEEP_LEVEL if true passed
-     *
-     * @param bool $deep false by default
+     * Indicates whether the entity owner is a business user
      *
      * @return bool
      */
-    public function isLocalLevelOwned($deep = false);
+    public function isBusinessUnitOwned();
 
     /**
-     * Indicates whether the entity owner has global level
-     *
-     * @see Oro\Bundle\SecurityBundle\Acl\AccessLevel::GLOBAL_LEVEL
+     * Indicates whether the entity owner is an organisation
      *
      * @return bool
      */
-    public function isGlobalLevelOwned();
-
-    /**
-     * Indicates whether the entity owner has system level
-     *
-     * @see Oro\Bundle\SecurityBundle\Acl\AccessLevel::SYSTEM_LEVEL
-     *
-     * @return bool
-     */
-    public function isSystemLevelOwned();
+    public function isOrganizationOwned();
 
     /**
      * Gets the name of the field is used to store the entity owner
@@ -77,10 +59,16 @@ interface OwnershipMetadataInterface
     /**
      * @return string
      */
-    public function getGlobalOwnerColumnName();
+    public function getOrganizationFieldName();
 
     /**
      * @return string
+     */
+    public function getOrganizationColumnName();
+
+    /**
+     * @return string
+     * @deprecated since 2.3, use getOrganizationFieldName instead
      */
     public function getGlobalOwnerFieldName();
 

@@ -5,13 +5,12 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Validator\Constraints;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Validator\Constraints\AttributeFamilyGroups;
 use Oro\Bundle\EntityConfigBundle\Validator\Constraints\AttributeFamilyGroupsValidator;
-
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class AttributeFamilyGroupsValidatorTest extends \PHPUnit_Framework_TestCase
+class AttributeFamilyGroupsValidatorTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ExecutionContextInterface|\PHPUnit_Framework_MockObject_MockObject
+     * @var ExecutionContextInterface|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $context;
 

@@ -3,14 +3,13 @@
 namespace Oro\Bundle\SearchBundle\Query;
 
 use Doctrine\Common\Collections\Expr\Expression;
-
 use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Result\Item;
 
 interface SearchQueryInterface
 {
     /**
-     * Returning the wrapped Query object. Should be used only for internal purposes.
+     * Returning the wrapped Query object. Should be used only at storage level.
      *
      * @return Query
      */
@@ -154,4 +153,21 @@ interface SearchQueryInterface
      * @return int
      */
     public function getMaxResults();
+
+    /**
+     * Add aggregating operation to a search query
+     *
+     * @param string $name Name of the aggregating
+     * @param string $field Fields that should be used to perform aggregating
+     * @param string $function Applied aggregating function
+     * @return SearchQueryInterface
+     */
+    public function addAggregate($name, $field, $function);
+
+    /**
+     * Return list of all applied aggregating operations
+     *
+     * @return array ['<name>' => ['field' => <field>, 'function' => '<function>']]
+     */
+    public function getAggregations();
 }

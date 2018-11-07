@@ -4,7 +4,6 @@ namespace Oro\Bundle\SecurityBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr;
-
 use Oro\Bundle\SecurityBundle\Entity\Permission;
 
 class PermissionRepository extends EntityRepository
@@ -41,7 +40,8 @@ class PermissionRepository extends EntityRepository
             ->setParameter('class', $class);
 
         if ($ids) {
-            $queryBuilder->andWhere($queryBuilder->expr()->in('p.id', $ids));
+            $queryBuilder->andWhere($queryBuilder->expr()->in('p.id', ':permissionsIds'))
+                ->setParameter('permissionsIds', $ids);
         }
 
         return $queryBuilder->getQuery()->getResult();

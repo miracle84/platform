@@ -2,13 +2,14 @@
 
 namespace Oro\Bundle\ReportBundle\Form\Type;
 
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormEvents;
-use Symfony\Component\Form\FormEvent;
 use Oro\Bundle\QueryDesignerBundle\Form\Type\AbstractQueryDesignerType;
-use Oro\Bundle\ReportBundle\Entity\Report;
+use Oro\Bundle\ReportBundle\Form\EventListener\DateGroupingFormSubscriber;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class ReportType extends AbstractQueryDesignerType
 {
@@ -18,21 +19,21 @@ class ReportType extends AbstractQueryDesignerType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('name', 'text', array('required' => true))
-            ->add('entity', 'oro_report_entity_choice', array('required' => true))
+            ->add('name', TextType::class, array('required' => true))
+            ->add('entity', ReportEntityChoiceType::class, array('required' => true))
             ->add(
                 'type',
-                'entity',
+                EntityType::class,
                 array(
                     'class'       => 'OroReportBundle:ReportType',
-                    'property'    => 'label',
+                    'choice_label'    => 'label',
                     'required'    => true,
-                    'empty_value' => 'oro.report.form.choose_report_type'
+                    'placeholder' => 'oro.report.form.choose_report_type'
                 )
             )
             ->add(
                 'hasChart',
-                'checkbox',
+                CheckboxType::class,
                 array(
                     'mapped'   => false,
                     'required' => false,
@@ -40,25 +41,28 @@ class ReportType extends AbstractQueryDesignerType
             )
             ->add(
                 'chartOptions',
-                'oro_report_chart',
+                ReportChartType::class,
                 array('required' => true)
             )
-            ->add('description', 'textarea', array('required' => false));
+            ->add('description', TextareaType::class, array('required' => false));
 
         parent::buildForm($builder, $options);
+        $builder->addEventSubscriber(new DateGroupingFormSubscriber());
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
+        parent::configureOptions($resolver);
+
         $options = array_merge(
             $this->getDefaultOptions(),
             array(
                 'data_class'         => 'Oro\Bundle\ReportBundle\Entity\Report',
-                'intention'          => 'report',
-                'cascade_validation' => true
+                'csrf_token_id'      => 'report',
+                'query_type'         => 'report',
             )
         );
 

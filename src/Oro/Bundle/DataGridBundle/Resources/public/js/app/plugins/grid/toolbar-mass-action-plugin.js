@@ -10,9 +10,10 @@ define(function(require) {
 
     var config = require('module').config();
     config = _.extend({
-        icon: 'ellipsis-horizontal',
+        icon: 'ellipsis-h',
         wrapperClassName: 'toolbar-mass-actions',
-        label: __('oro.datagrid.mass_action.title')
+        label: __('oro.datagrid.mass_action.title'),
+        attributes: {'data-placement': 'bottom-end'}
     }, config);
 
     ToolbarMassActionPlugin = BasePlugin.extend({

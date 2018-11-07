@@ -2,7 +2,7 @@
 {% import 'OroDataGridBundle::macros.html.twig' as dataGrid %}
 {% import 'OroUIBundle::macros.html.twig' as UI %}
 
-{% oro_title_set({params : {"%label%": entity.label }}) %}
+{% oro_title_set({params : {"%role%": entity.label }}) %}
 
 {% set gridName = 'role-view-users-grid' %}
 
@@ -19,7 +19,7 @@
 {% block navButtonContainer %}
     {% block navButtons %}
         {% placeholder view_navButtons with {entity: entity} %}
-        {% if entity.id is defined and resource_granted('DELETE', entity) %}
+        {% if entity.id is defined and is_granted('DELETE', entity) %}
             {{ UI.deleteButton({
                 'dataUrl': path('oro_api_delete_role', {'id': entity.id}),
                 'dataRedirect': path('oro_user_role_index'),
@@ -38,7 +38,6 @@
     {% set dataBlocks = [
         {
             'title': 'General'|trans,
-            'class': 'active',
             'subblocks': [
                 {'data' : [
                     UI.renderProperty('oro.user.role.role.label'|trans, entity.label)
@@ -49,21 +48,28 @@
 
     {% set additionalBlock %}
         {% if (entity.organization is defined) %}
-            {{ UI.renderHtmlProperty('oro.user.role.organization.label'|trans, entity.organization) }}
+            {{ UI.renderProperty('oro.user.role.organization.label'|trans, entity.organization) }}
         {% endif %}
-        {{ UI.renderHtmlProperty('oro.user.role.extend_description.label'|trans, entity.extendDescription) }}
+        {{ UI.renderSwitchableHtmlProperty('oro.user.role.extend_description.label'|trans, entity.extendDescription) }}
     {% endset %}
 
     {% set rolePermissionsGrid %}
+        {% set entityTabPanelId = 'entity-tab-panel-'|uniqid %}
+        {% set tabsOptions = tabsOptions|merge({
+            controlTabPanel: entityTabPanelId
+        }) %}
+
         <div {{ UI.renderPageComponentAttributes({
             module: 'orouser/js/components/role/entity-category-tabs-component',
             options: tabsOptions
         }) }}></div>
-        {{ dataGrid.renderGrid('role-permission-grid', {role: entity}, { cssClass: 'inner-permissions-grid', themeOptions: {readonly: true} }) }}
-        <div {{ UI.renderPageComponentAttributes({
-            module: 'orouser/js/components/role/capability-set-component',
-            options: capabilitySetOptions
-        }) }}></div>
+        <div id="{{ entityTabPanelId }}" class="tab-content" role="tabpanel">
+            {{ dataGrid.renderGrid('role-permission-grid', {role: entity}, { cssClass: 'inner-permissions-grid', themeOptions: {readonly: true} }) }}
+            <div {{ UI.renderPageComponentAttributes({
+                module: 'orouser/js/components/role/capability-set-component',
+                options: capabilitySetOptions
+            }) }}></div>
+        </div>
     {% endset %}
 
     {% set dataBlocks = dataBlocks|merge([{

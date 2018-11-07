@@ -1,16 +1,34 @@
 # OroMessageQueue Bundle
 
+*Note:* This article is published in the Oro documentation library.
+
+OroMessageQueueBundle incorporates the OroMessageQueue component into OroPlatform and thereby provides message queue processing capabilities for all application components.
+
 ## Table of Contents
 
  - [Overview](#overview)
  - [Usage](#usage)
+ - [consumer options](#consumer-options)
  - [Supervisord](#supervisord)
+ - [Name prefix the for Message Queue](#name-prefix-for-the-message-queue)
  - [Internals](#internals)
    - [Structure](#structure)
    - [Flow](#flow)
    - [Custom transport](#custom-transport)
    - [Key Classes](#key-classes)
  - [Unit and Functional tests](#unit-and-functional-tests)
+ - [Stale Jobs](#stale-jobs)
+ - [Consumer heartbeat](#consumer-heartbeat)
+ - [Resetting Symfony Container in consumer](Resources/doc/container_in_consumer.md)
+ - [Security Context in consumer](Resources/doc/secutity_context.md)
+ - [Buffering Messages](Resources/doc/buffering_messages.md)
+* [Logging, Error Handling and Debugging](./Resources/doc/logging.md)
+
+    * [Logs, Output and Verbosity](./Resources/doc/logging.md#logs-output-and-verbosity)
+    * [Consumer Heartbeat](./Resources/doc/logging.md#consumer-heartbeat)
+    * [Consumer Interruption](./Resources/doc/logging.md#consumer-interruption)
+    * [Errors and Crashes](./Resources/doc/logging.md#errors-and-crashes)
+    * [Profiling](./Resources/doc/logging.md#profiling)
 
 ## Overview
 
@@ -28,7 +46,7 @@ a web gui where you can monitor jobs status and interrupt jobs.
 First, you have to configure a transport layer and set one to be default. For the config settings
 
 ```yaml
-# app/config/config.yml
+# config/config.yml
 
 oro_message_queue:
     transport:
@@ -39,10 +57,10 @@ oro_message_queue:
 
 we can configure one of the supported transports via parameters:
 
-###DBAL transport 
+### DBAL transport 
 
 ```yaml
-# app/config/parameters.yml
+# config/parameters.yml
 
     message_queue_transport: DBAL
     message_queue_transport_config: ~
@@ -96,21 +114,49 @@ oro_channel.async.change_integration_status_processor:
 Now you can start consuming messages:
 
 ```bash
-./app/console oro:message-queue:consume
+./bin/console oro:message-queue:consume
 ```
 
 _**Note**: Add -vvv to find out what is going while you are consuming messages. There is a lot of valuable debug info there._
 
+### Consumer options
+
+* `--message-limit=MESSAGE-LIMIT`                Consume n messages and exit
+* `--time-limit=TIME-LIMIT`                      Consume messages during this time
+* `--memory-limit=MEMORY-LIMIT`                  Consume messages until process reaches this memory limit in MB
+
+The `--memory-limit` option is recommended for the normal consumer usage. If the option is set a consumer checks
+the used memory amount after each message processing and terminates if it is exceeded. For example if a consumer
+was run:
+
+```bash
+./bin/console oro:message-queue:consume --memory-limit=700
+``` 
+
+then:
+
+* The consumer processing a message
+* The consumer checks the used memory amount
+* If it exceeds the option value (i.e. 705 MB or 780Mb or 1300 Mb) the consumer terminates (and Supervisord re-runs it)
+* Otherwise it continues message processing.
+ 
+We recommend to always set this option to the value 2-3 times less than php memory limit. It will help to avoid php memory 
+limit error during message processing.
+
+We recommend to set the `--time-limit` option to 5-10 minutes if using the `DBAL` transport to avoid database connection issues 
+
 ### Supervisord
 
-As you read before you must keep running `oro:message-queue:consume` command and to do this best
-we advise you to delegate this responsibility to [Supervisord](http://supervisord.org/).
-With next program configuration supervisord keeps running four simultaneous instances of
-`oro:message-queue:consume` command and cares about relaunch if instance has dead by any reason.
+As you read before consumers can normally interrupt the message procession by many reasons.
+In the all cases above the interrupted consumer should be re-run. So you must keep running 
+`oro:message-queue:consume` command and to do this best we advise you to delegate this responsibility 
+to [Supervisord](http://supervisord.org/). With next program configuration supervisord keeps running 
+four simultaneous instances of `oro:message-queue:consume` command and cares about relaunch if instance 
+has dead by any reason. Pay attention that the [program name](http://supervisord.org/configuration.html#program-x-section-settings) defined in the `[program:oro_message_consumer]` must be unique from any other instances deployed on the same supervisord server even if they are for staging purposes only. As an example, set the following programs `[program:prod_oro_message_consumer]` and `[program:dev_oro_message_consumer]`.
 
 ```ini
 [program:oro_message_consumer]
-command=/path/to/app/console --env=prod --no-debug oro:message-queue:consume
+command=/path/to/bin/console --env=prod --no-debug oro:message-queue:consume
 process_name=%(program_name)s_%(process_num)02d
 numprocs=4
 autostart=true
@@ -119,6 +165,24 @@ startsecs=0
 user=apache
 redirect_stderr=true
 ```
+
+### Name prefix for the Message Queue
+
+To use several independent Message Queues on single RabbitMQ instance, configure a name prefix for the Message Queue. For example:
+
+```yaml
+# config/config.yml
+
+oro_message_queue:
+    ...
+    client:
+        prefix: mq_oro_platform_test
+        router_destination: queue_name
+        default_destination: queue_name
+```
+
+In `router_destsination` and `default_destionation`, put the names of the queue specific to your environment.
+In the *prefix* option, provide a string that should be prepended to the queue name.
 
 ## Internals
 
@@ -132,7 +196,7 @@ The component is split into several layers:
 * **Consumption** - the layer provides tools to simplify consumption of messages. It provides a cli command, a queue consumer, message processor and ways to extend it.
 * **Client** - provides a high level abstraction. It provides easy to use abstraction for producing and processing messages. It also reduces a need to configure a broker.
 
-![Component structure](./Resources/doc/component_structure_diagram.png "The Oro MessageQueue component structure")
+![Component structure](./Resources/doc/images/component_structure_diagram.png "The Oro MessageQueue component structure")
 
 ### Flow
 
@@ -141,11 +205,11 @@ It takes the message and search for real recipients who is interested in such a 
 Then, It sends a copy of a message for all of them.
 Each target message processor takes its copy of the message and process it.
 
-![Message flow](./Resources/doc/message_flow_diagram.png "The message flow")
+![Message flow](./Resources/doc/images/message_flow_diagram.png "The message flow")
 
 The message itself has headers and body and they change this way while traveling through the system:
 
-![Message structure](./Resources/doc/message_structure_diagram.png "The message structure")
+![Message structure](./Resources/doc/images/message_structure_diagram.png "The message structure")
 
 ### Custom transport
 
@@ -172,7 +236,7 @@ Also, in case if you need custom logic for manage sent messages, you can use [Or
 Before you start to use traits in functional tests, you need to register `oro_message_queue.test.message_collector` service for `test` environment.
 
 ```yaml
-# app/config/config_test.yml
+# config/config_test.yml
 
 services:
     oro_message_queue.test.message_collector:
@@ -254,7 +318,7 @@ namespace Acme\Bundle\AcmeBundle\Tests\Unit;
 use Acme\Bundle\AcmeBundle\SomeClass;
 use Oro\Bundle\MessageQueueBundle\Test\Unit\MessageQueueExtension;
 
-class SomeTest extends \PHPUnit_Framework_TestCase
+class SomeTest extends \PHPUnit\Framework\TestCase
 {
     use MessageQueueExtension;
 
@@ -268,3 +332,33 @@ class SomeTest extends \PHPUnit_Framework_TestCase
     }
 }
 ```
+
+## Stale Jobs
+
+It is not possible to create two unique jobs with the same name. That's why if one unique job 
+is not able to finish its work, it can block another job. 
+
+To avoid this situation, you can set maximum time for the unique job execution. If the job is still running longer than that, it is 
+possible to create new copy of the unique job (with the same name). The old job is marked as "stale" in this case. 
+See [Stale Jobs](../../Component/MessageQueue/README.md#stale-jobs) for more details.
+
+You can configure the time_before_stale parameter in config.yml file, providing time in seconds:
+ 
+```yaml
+oro_message_queue:
+    time_before_stale:
+        default: 1800
+        jobs:
+            bundle_name.processor_name.entity_name.user: 3600
+            bundle_name.processor_name.entity_name: 2000
+            bundle_name.processor_name: -1
+```
+The parser first searches for job by its full name. If the job is not found by the full name, the parser attempts to match
+the longest part of the job name (reading from the left).
+
+In the example above:
+* **bundle_name.processor_name.entity_name.user** will be *staled* after **3600** seconds
+* **bundle_name.processor_name.entity_name.organisation** will be *staled* after **2000** seconds
+* **bundle_name.processor_name.other_name.some_job** will **never** be *staled*.
+* **bundle_name.other_processor.other_name.some_job** will be *staled* after **1800** seconds
+* **processor_name.entity_name.user** will be *staled* after **1800** seconds

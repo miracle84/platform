@@ -3,18 +3,24 @@
 namespace Oro\Bundle\ApiBundle\Processor\GetMetadata\Loader;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadataFactory as MetadataFactory;
 use Oro\Bundle\ApiBundle\Request\DataType;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Bundle\ApiBundle\Util\EntityIdHelper;
 
+/**
+ * The metadata loader for manageable entities.
+ */
 class EntityMetadataLoader
 {
     /** @var DoctrineHelper */
     protected $doctrineHelper;
+
+    /** @var EntityIdHelper */
+    protected $entityIdHelper;
 
     /** @var MetadataFactory */
     protected $metadataFactory;
@@ -33,6 +39,7 @@ class EntityMetadataLoader
 
     /**
      * @param DoctrineHelper                         $doctrineHelper
+     * @param EntityIdHelper                         $entityIdHelper
      * @param MetadataFactory                        $metadataFactory
      * @param ObjectMetadataFactory                  $objectMetadataFactory
      * @param EntityMetadataFactory                  $entityMetadataFactory
@@ -41,6 +48,7 @@ class EntityMetadataLoader
      */
     public function __construct(
         DoctrineHelper $doctrineHelper,
+        EntityIdHelper $entityIdHelper,
         MetadataFactory $metadataFactory,
         ObjectMetadataFactory $objectMetadataFactory,
         EntityMetadataFactory $entityMetadataFactory,
@@ -48,6 +56,7 @@ class EntityMetadataLoader
         EntityNestedAssociationMetadataFactory $nestedAssociationMetadataFactory
     ) {
         $this->doctrineHelper = $doctrineHelper;
+        $this->entityIdHelper = $entityIdHelper;
         $this->metadataFactory = $metadataFactory;
         $this->objectMetadataFactory = $objectMetadataFactory;
         $this->entityMetadataFactory = $entityMetadataFactory;
@@ -131,7 +140,15 @@ class EntityMetadataLoader
     protected function createEntityMetadata(ClassMetadata $classMetadata, EntityDefinitionConfig $config)
     {
         $entityMetadata = $this->metadataFactory->createEntityMetadata($classMetadata);
-        if ($config->hasFields()) {
+        $configuredIdFieldNames = $config->getIdentifierFieldNames();
+        if (!empty($configuredIdFieldNames)) {
+            if ($entityMetadata->hasIdentifierGenerator()
+                && !$this->entityIdHelper->isEntityIdentifierEqual($entityMetadata->getIdentifierFieldNames(), $config)
+            ) {
+                $entityMetadata->setHasIdentifierGenerator(false);
+            }
+            $entityMetadata->setIdentifierFieldNames($configuredIdFieldNames);
+        } else {
             $idFieldNames = $entityMetadata->getIdentifierFieldNames();
             if (!empty($idFieldNames)) {
                 $normalizedIdFieldNames = [];
@@ -168,7 +185,7 @@ class EntityMetadataLoader
             $fieldName = $allowedFields[$propertyPath];
             $field = $config->getField($fieldName);
             if ($field->isMetaProperty()) {
-                $this->entityMetadataFactory->createAndAddMetaPropertyMetadata(
+                $metadata = $this->entityMetadataFactory->createAndAddMetaPropertyMetadata(
                     $entityMetadata,
                     $classMetadata,
                     $fieldName,
@@ -176,13 +193,16 @@ class EntityMetadataLoader
                     $targetAction
                 );
             } else {
-                $this->entityMetadataFactory->createAndAddFieldMetadata(
+                $metadata = $this->entityMetadataFactory->createAndAddFieldMetadata(
                     $entityMetadata,
                     $classMetadata,
                     $fieldName,
                     $field,
                     $targetAction
                 );
+            }
+            if ($field->hasDirection()) {
+                $metadata->setDirection($field->isInput(), $field->isOutput());
             }
         }
     }
@@ -207,13 +227,17 @@ class EntityMetadataLoader
                 continue;
             }
             $associationName = $allowedFields[$propertyPath];
-            $this->entityMetadataFactory->createAndAddAssociationMetadata(
+            $field = $config->getField($associationName);
+            $metadata = $this->entityMetadataFactory->createAndAddAssociationMetadata(
                 $entityMetadata,
                 $classMetadata,
                 $associationName,
-                $config->getField($associationName),
+                $field,
                 $targetAction
             );
+            if ($field->hasDirection()) {
+                $metadata->setDirection($field->isInput(), $field->isOutput());
+            }
         }
     }
 
@@ -223,6 +247,8 @@ class EntityMetadataLoader
      * @param EntityDefinitionConfig $config
      * @param bool                   $withExcludedProperties
      * @param string                 $targetAction
+     *
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     protected function loadEntityPropertiesMetadata(
         EntityMetadata $entityMetadata,
@@ -237,14 +263,12 @@ class EntityMetadataLoader
             if (!$withExcludedProperties && $field->isExcluded()) {
                 continue;
             }
+            $metadata = null;
             if (!$field->isMetaProperty()) {
                 $dataType = $field->getDataType();
-                if ($dataType
-                    && !$entityMetadata->hasField($fieldName)
-                    && !$entityMetadata->hasAssociation($fieldName)
-                ) {
-                    if (DataType::isNestedObject($dataType)) {
-                        $this->nestedObjectMetadataFactory->createAndAddNestedObjectMetadata(
+                if (!$entityMetadata->hasField($fieldName) && !$entityMetadata->hasAssociation($fieldName)) {
+                    if ($dataType && DataType::isNestedObject($dataType)) {
+                        $metadata = $this->nestedObjectMetadataFactory->createAndAddNestedObjectMetadata(
                             $entityMetadata,
                             $classMetadata,
                             $config,
@@ -254,8 +278,8 @@ class EntityMetadataLoader
                             $withExcludedProperties,
                             $targetAction
                         );
-                    } elseif (DataType::isNestedAssociation($dataType)) {
-                        $this->nestedAssociationMetadataFactory->createAndAddNestedAssociationMetadata(
+                    } elseif ($dataType && DataType::isNestedAssociation($dataType)) {
+                        $metadata = $this->nestedAssociationMetadataFactory->createAndAddNestedAssociationMetadata(
                             $entityMetadata,
                             $classMetadata,
                             $entityClass,
@@ -265,15 +289,16 @@ class EntityMetadataLoader
                             $targetAction
                         );
                     } elseif ($field->getTargetClass()) {
-                        $this->objectMetadataFactory->createAndAddAssociationMetadata(
+                        $metadata = $this->objectMetadataFactory->createAndAddAssociationMetadata(
                             $entityMetadata,
                             $entityClass,
+                            $config,
                             $fieldName,
                             $field,
                             $targetAction
                         );
-                    } else {
-                        $this->objectMetadataFactory->createAndAddFieldMetadata(
+                    } elseif ($dataType) {
+                        $metadata = $this->objectMetadataFactory->createAndAddFieldMetadata(
                             $entityMetadata,
                             $entityClass,
                             $fieldName,
@@ -283,13 +308,16 @@ class EntityMetadataLoader
                     }
                 }
             } elseif (!$entityMetadata->hasMetaProperty($fieldName)) {
-                $this->objectMetadataFactory->createAndAddMetaPropertyMetadata(
+                $metadata = $this->objectMetadataFactory->createAndAddMetaPropertyMetadata(
                     $entityMetadata,
                     $entityClass,
                     $fieldName,
                     $field,
                     $targetAction
                 );
+            }
+            if (null !== $metadata && $field->hasDirection()) {
+                $metadata->setDirection($field->isInput(), $field->isOutput());
             }
         }
     }

@@ -20,7 +20,7 @@ define([
         tagName: 'div',
 
         attributes: {
-            'class': 'list-item map-item'
+            'class': 'map-item'
         },
 
         confirmRemoveComponent: deleteConfirmation,
@@ -39,30 +39,42 @@ define([
         },
 
         defaultMapping: {
-            'namePrefix': 'prefix',
-            'nameSuffix': 'suffix',
-            'firstName': 'first_name',
-            'middleName': 'middle_name',
-            'lastName': 'last_name',
-            'organization': 'organization',
-            'street': 'street',
-            'street2': 'street2',
-            'city': 'city',
-            'country': 'country',
-            'countryIso2': 'country_iso2',
-            'countryIso3': 'country_iso3',
-            'postalCode': 'postal_code',
-            'region': 'region',
-            'regionText': 'region',
-            'regionCode': 'region_code'
+            namePrefix: 'prefix',
+            nameSuffix: 'suffix',
+            firstName: 'first_name',
+            middleName: 'middle_name',
+            lastName: 'last_name',
+            organization: 'organization',
+            street: 'street',
+            street2: 'street2',
+            city: 'city',
+            country: 'country',
+            countryIso2: 'country_iso2',
+            countryIso3: 'country_iso3',
+            postalCode: 'postal_code',
+            region: 'region',
+            regionText: 'region',
+            regionCode: 'region_code',
+            phone: 'phone'
         },
 
         options: {
             map: {},
-            'allowToRemovePrimary': false,
-            'confirmRemove': false
+            allowToRemovePrimary: false,
+            confirmRemove: false,
+            addressDeleteUrl: null
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function AddressView() {
+            AddressView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             this.mapping = _.extend({}, this.defaultMapping, this.options.map || {});
@@ -108,7 +120,10 @@ define([
             if (this.model.get('primary') && !this.options.allowToRemovePrimary) {
                 mediator.execute('showErrorMessage', __('Primary address can not be removed'));
             } else {
-                this.confirmClose(_.bind(this.model.destroy, this.model, {wait: true}));
+                this.confirmClose(_.bind(this.model.destroy, this.model, {
+                    url: this.options.addressDeleteUrl,
+                    wait: true
+                }));
             }
         },
 
@@ -127,6 +142,7 @@ define([
             var data = this.model.toJSON();
             var mappedData = this.prepareData(data);
             data.formatted_address = addressFormatter.format(mappedData, null, '\n');
+            data.searchable_string = this.model.getSearchableString();
             this.$el.append(this.template(data));
             if (this.model.get('primary')) {
                 this.activate();

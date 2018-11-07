@@ -4,9 +4,7 @@ namespace Oro\Bundle\EntityConfigBundle\Layout\Block\Type;
 
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
-use Oro\Bundle\EntityConfigBundle\Layout\AttributeGroupRenderRegistry;
-use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
-
+use Oro\Bundle\EntityConfigBundle\Layout\AttributeRenderRegistry;
 use Oro\Component\Layout\Block\OptionsResolver\OptionsResolver;
 use Oro\Component\Layout\Block\Type\AbstractContainerType;
 use Oro\Component\Layout\Block\Type\Options;
@@ -15,26 +13,22 @@ use Oro\Component\Layout\BlockInterface;
 use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\Util\BlockUtils;
 
+/**
+ * Block type for showing rest attributes group.
+ */
 class AttributeGroupRestType extends AbstractContainerType
 {
     const NAME = 'attribute_group_rest';
 
-    /** @var LocalizationHelper */
-    protected $localizationHelper;
-
-    /** @var AttributeGroupRenderRegistry */
-    protected $attributeGroupRenderRegistry;
+    /** @var AttributeRenderRegistry */
+    protected $attributeRenderRegistry;
 
     /**
-     * @param AttributeGroupRenderRegistry $attributeGroupRenderRegistry
-     * @param LocalizationHelper           $localizationHelper
+     * @param AttributeRenderRegistry $attributeRenderRegistry
      */
-    public function __construct(
-        AttributeGroupRenderRegistry $attributeGroupRenderRegistry,
-        LocalizationHelper $localizationHelper
-    ) {
-        $this->attributeGroupRenderRegistry = $attributeGroupRenderRegistry;
-        $this->localizationHelper = $localizationHelper;
+    public function __construct(AttributeRenderRegistry $attributeRenderRegistry)
+    {
+        $this->attributeRenderRegistry = $attributeRenderRegistry;
     }
 
     /**
@@ -50,7 +44,7 @@ class AttributeGroupRestType extends AbstractContainerType
         $layoutManipulator = $builder->getLayoutManipulator();
 
         /** @var AttributeGroup[] $groups */
-        $groups = $this->attributeGroupRenderRegistry->getNotRenderedGroups($attributeFamily);
+        $groups = $this->attributeRenderRegistry->getNotRenderedGroups($attributeFamily);
         $blockId = $builder->getId();
         foreach ($groups as $group) {
             $layoutManipulator->add(
@@ -81,29 +75,6 @@ class AttributeGroupRestType extends AbstractContainerType
     public function buildView(BlockView $view, BlockInterface $block, Options $options)
     {
         BlockUtils::setViewVarsFromOptions($view, $options, ['options']);
-
-        $view->vars['tabsOptions'] = $this->getTabsOptions($options['attribute_family']);
-    }
-
-    /**
-     * @param AttributeFamily $attributeFamily
-     *
-     * @return array
-     */
-    private function getTabsOptions(AttributeFamily $attributeFamily)
-    {
-        $groups = $this->attributeGroupRenderRegistry->getNotRenderedGroups($attributeFamily);
-        $tabListOptions = array_map(
-            function (AttributeGroup $group) {
-                return [
-                    'id' => $group->getCode(),
-                    'label' => (string)$this->localizationHelper->getLocalizedValue($group->getLabels())
-                ];
-            },
-            $groups->toArray()
-        );
-
-        return array_values($tabListOptions);
     }
 
     /**

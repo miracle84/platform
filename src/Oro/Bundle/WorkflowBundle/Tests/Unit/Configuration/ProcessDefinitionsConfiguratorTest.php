@@ -5,38 +5,35 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Configuration;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
-
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\WorkflowBundle\Configuration\ProcessConfigurationBuilder;
 use Oro\Bundle\WorkflowBundle\Configuration\ProcessDefinitionsConfigurator;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition;
-
 use Oro\Component\Testing\Unit\EntityTrait;
+use Psr\Log\LoggerInterface;
 
-class ProcessDefinitionsConfiguratorTest extends \PHPUnit_Framework_TestCase
+class ProcessDefinitionsConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
-    /** @var ProcessConfigurationBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ProcessConfigurationBuilder|\PHPUnit\Framework\MockObject\MockObject */
     private $configurationBuilder;
 
-    /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
     private $managerRegistry;
 
-    /** @var string|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var string|\PHPUnit\Framework\MockObject\MockObject */
     private $definitionClass;
 
     /** @var ProcessDefinitionsConfigurator */
     private $processDefinitionsConfigurator;
 
-    /** @var ObjectRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ObjectRepository|\PHPUnit\Framework\MockObject\MockObject */
     private $repository;
 
-    /** @var ObjectManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ObjectManager|\PHPUnit\Framework\MockObject\MockObject */
     private $objectManager;
 
-    /** @var LoggerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $logger;
 
     protected function setUp()

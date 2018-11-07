@@ -2,23 +2,25 @@
 
 namespace Oro\Bundle\UserBundle\Form\Handler;
 
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\UserBundle\Entity\UserManager;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 abstract class AbstractUserHandler
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var UserManager
@@ -27,16 +29,16 @@ abstract class AbstractUserHandler
 
     /**
      * @param FormInterface $form
-     * @param Request       $request
+     * @param RequestStack  $requestStack
      * @param UserManager   $manager
      */
     public function __construct(
         FormInterface $form,
-        Request $request,
+        RequestStack $requestStack,
         UserManager $manager
     ) {
         $this->form    = $form;
-        $this->request = $request;
+        $this->requestStack = $requestStack;
         $this->manager = $manager;
     }
 
@@ -50,8 +52,9 @@ abstract class AbstractUserHandler
     {
         $this->form->setData($user);
 
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
 
             if ($this->form->isValid()) {
                 $this->onSuccess($user);

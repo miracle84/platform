@@ -4,20 +4,18 @@ namespace Oro\Bundle\SecurityBundle\Tests\Unit\Configuration;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\Validator\ConstraintViolation;
-use Symfony\Component\Validator\ConstraintViolationList;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\SecurityBundle\Configuration\PermissionConfigurationBuilder;
 use Oro\Bundle\SecurityBundle\Entity\Permission;
 use Oro\Bundle\SecurityBundle\Entity\PermissionEntity;
+use Symfony\Component\Validator\ConstraintViolation;
+use Symfony\Component\Validator\ConstraintViolationList;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class PermissionConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
+class PermissionConfigurationBuilderTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ValidatorInterface
+     * @var \PHPUnit\Framework\MockObject\MockObject|ValidatorInterface
      */
     protected $validator;
 
@@ -28,12 +26,12 @@ class PermissionConfigurationBuilderTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        /** @var \PHPUnit_Framework_MockObject_MockObject|EntityRepository $repository */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|EntityRepository $repository */
         $repository = $this->getMockBuilder('Doctrine\ORM\EntityRepository')
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper $doctrineHelper */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper $doctrineHelper */
         $doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
             ->disableOriginalConstructor()
             ->getMock();

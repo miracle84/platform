@@ -3,7 +3,7 @@
 namespace Oro\Component\ChainProcessor;
 
 /**
- * Provides an interface of an execution context.
+ * Represents an execution context for processors.
  */
 interface ContextInterface extends \ArrayAccess
 {

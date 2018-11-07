@@ -7,7 +7,7 @@ use Oro\Bundle\WorkflowBundle\Entity\ProcessTrigger;
 use Oro\Bundle\WorkflowBundle\Model\ProcessData;
 use Oro\Bundle\WorkflowBundle\Model\ProcessLogger;
 
-class ProcessLoggerTest extends \PHPUnit_Framework_TestCase
+class ProcessLoggerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @param bool $hasLogger
@@ -77,5 +77,19 @@ class ProcessLoggerTest extends \PHPUnit_Framework_TestCase
             'with logger and without cron' => array('hasLogger' => true),
             'without logger'               => array('hasLogger' => false),
         );
+    }
+
+    public function testNotEnabled()
+    {
+        $doctrineHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\ORM\DoctrineHelper')
+            ->disableOriginalConstructor()
+            ->getMock();
+        $logger = $this->createMock('Psr\Log\LoggerInterface');
+        $logger->expects($this->never())->method('debug');
+        $processLogger = new ProcessLogger($doctrineHelper, null);
+        $processLogger->setEnabled(false);
+        $trigger = new ProcessTrigger();
+        $data = new ProcessData();
+        $processLogger->debug('message', $trigger, $data);
     }
 }

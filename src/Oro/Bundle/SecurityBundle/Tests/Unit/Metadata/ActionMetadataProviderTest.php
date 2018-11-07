@@ -2,21 +2,20 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Metadata;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
+use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
 use Oro\Bundle\SecurityBundle\Metadata\ActionMetadata;
 use Oro\Bundle\SecurityBundle\Metadata\ActionMetadataProvider;
-use Oro\Bundle\SecurityBundle\Annotation\Acl as AclAnnotation;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class ActionMetadataProviderTest extends \PHPUnit_Framework_TestCase
+class ActionMetadataProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $cache;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $annotationProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
     /** @var ActionMetadataProvider */

@@ -17,65 +17,26 @@
     {{ parent() }}
     <div class="pull-left">
         {% if entity.enabled %}
-            <div class="badge badge-enabled status-enabled">
+            <div class="badge badge-pill badge-enabled status-enabled">
                 <i class="icon-status-enabled fa-circle"></i>{{ 'oro.integration.integration.enabled.active.label'|trans }}</div>
         {% else %}
-            <div class="badge badge-disabled status-disabled">
+            <div class="badge badge-pill badge-disabled status-disabled">
                 <i class="icon-status-disabled fa-circle"></i>{{ 'oro.integration.integration.enabled.inactive.label'|trans }}</div>
         {% endif %}
     </div>
 {% endblock breadcrumbs %}
 
 {% block navButtons %}
-    {% set enableDelete = oro_integration_is_delete_enabled(entity.getEditMode) %}
-    {% if entity.id and resource_granted('DELETE', entity) and enableDelete %}
-        {{ UI.deleteButton({
-            'dataUrl': path('oro_api_delete_integration', {'id': entity.id}),
-            'dataRedirect': path('oro_integration_index'),
-            'aCss': 'no-hash remove-button',
-            'id': 'btn-remove-channel',
-            'dataId': entity.id,
-            'entity_label':   'oro.integration.integration.entity_label'|trans,
-            'dataMessage':    'oro.integration.delete_sync_integration.content'|trans,
-            'successMessage': 'oro.integration.delete_sync_integration.success'|trans
-        }) }}
-        {{ UI.buttonSeparator() }}
-    {% endif %}
-
     {{ UI.cancelButton(path('oro_integration_index')) }}
 
     {% if entity.id %}
-        {% set switchEnabled = oro_integration_is_switch_enabled(entity.getEditMode) %}
-        {% if switchEnabled %}
-            {% import 'OroUIBundle::macros.html.twig' as UI %}
-            {% if entity.enabled %}
-                {{ UI.ajaxButton({
-                'aCss':  'btn-danger',
-                'iCss':  'fa-close',
-                'label': 'oro.integration.deactivate'|trans,
-                'title': 'oro.integration.deactivate'|trans,
-                'dataId': entity.id,
-                'dataUrl': path('oro_api_deactivate_integration', {'id': entity.id}),
-                'dataRedirect': path('oro_integration_update', {'id': entity.id, '_enableContentProviders': 'mainMenu'}),
-                'errorMessage': 'oro.integration.deactivate.fail.message'
-                }) }}
-            {% else %}
-                {{ UI.ajaxButton({
-                'aCss':  'btn-success',
-                'iCss':  'fa-check',
-                'label': 'oro.integration.activate'|trans,
-                'title': 'oro.integration.activate'|trans,
-                'dataId': entity.id,
-                'dataUrl': path('oro_api_activate_integration', {'id': entity.id}),
-                'dataRedirect': path('oro_integration_update', {'id': entity.id, '_enableContentProviders': 'mainMenu'}),
-                'errorMessage': 'oro.integration.activate.fail.message'
-                }) }}
-            {% endif %}
-            {{ UI.buttonSeparator() }}
-        {% endif %}
-
         {% if entity.enabled %}
-        <div class="btn-group">
+        <div class="btn-group" {{ UI.renderPageComponentAttributes({
+            view: 'orointegration/js/app/views/integration-sync-view',
+            options: {
+                integrationName: entity.name
+            }
+        }) }}>
             {% set buttonsHtml %}
                 {% placeholder oro_integration_sync_button with {'entity': entity} %}
                 {% placeholder oro_integration_force_sync_button with {'entity': entity} %}
@@ -90,12 +51,12 @@
             'route': 'oro_integration_index',
             'params': {'_enableContentProviders': 'mainMenu'}
         }) %}
-        {% if resource_granted('oro_integration_create') %}
+        {% if is_granted('oro_integration_create') %}
             {% set html = html ~ UI.saveAndNewButton({
                 'route': 'oro_integration_create'
             }) %}
         {% endif %}
-        {% if form.vars.value.id or resource_granted('oro_integration_update') %}
+        {% if form.vars.value.id or is_granted('oro_integration_update') %}
             {% set html = html ~ UI.saveAndStayButton({
                 'route': 'oro_integration_update',
                 'params': {'id': '$id', '_enableContentProviders': 'mainMenu'}
@@ -176,51 +137,4 @@
         'dataBlocks': dataBlocks,
     } %}
     {{ parent() }}
-    <script type="text/javascript">
-        require(['jquery', 'orotranslation/js/translator', 'routing', 'oroui/js/messenger', 'oroui/js/mediator', 'oroui/js/modal'],
-        function ($, __, routing, messenger, mediator, Modal) {
-            $(function () {
-                var scheduleSync = function (url) {
-                    mediator.execute('showLoading');
-
-                    $.ajax(url, {
-                        success: function (res) {
-                            messenger.notificationMessage('success', res.message);
-                        },
-                        error: function () {
-                            messenger.notificationMessage('error', __('oro.integration.error'));
-                        },
-                        dataType: 'json'
-                    }).always(function () {
-                        mediator.execute('hideLoading');
-                    });
-                };
-
-                $('.schedule-button').click(function (e) {
-                    e.preventDefault();
-                    var url = $(this).data('url');
-
-                    if ($(this).data('force')) {
-                        var confirmation = new Modal({
-                            title: __('oro.integration.force_sync.title'),
-                            okText: __('oro.integration.force_sync.ok'),
-                            cancelText: __("oro.integration.force_sync.cancel"),
-                            content: __('oro.integration.force_sync.message', {'integration_name': {{ entity.name|json_encode|raw }} }),
-                            className: 'modal oro-modal-danger',
-                            okButtonClass: 'btn-danger',
-                            handleClose: true
-                        });
-
-                        confirmation.on('ok', function () {
-                            scheduleSync(url);
-                        });
-
-                        confirmation.open();
-                    } else {
-                        scheduleSync(url);
-                    }
-                });
-            });
-        });
-    </script>
 {% endblock content_data %}

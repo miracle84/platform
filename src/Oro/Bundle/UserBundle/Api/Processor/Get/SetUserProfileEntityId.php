@@ -3,15 +3,14 @@
 
 namespace Oro\Bundle\UserBundle\Api\Processor\Get;
 
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
 use Oro\Bundle\UserBundle\Entity\AbstractUser;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 /**
- * Adds an identifier of the current logged in user to the Context.
+ * Adds an identifier of the current logged in user to the context.
  */
 class SetUserProfileEntityId implements ProcessorInterface
 {

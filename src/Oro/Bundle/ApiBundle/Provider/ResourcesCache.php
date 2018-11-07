@@ -3,20 +3,23 @@
 namespace Oro\Bundle\ApiBundle\Provider;
 
 use Doctrine\Common\Cache\CacheProvider;
-
 use Oro\Bundle\ApiBundle\Request\ApiResource;
 use Oro\Bundle\ApiBundle\Request\ApiResourceSubresources;
 use Oro\Bundle\ApiBundle\Request\RequestType;
 
+/**
+ * Provides access to Data API resources and sub-resources related cache.
+ */
 class ResourcesCache
 {
-    const RESOURCES_KEY_PREFIX            = 'resources_';
-    const SUBRESOURCE_KEY_PREFIX          = 'subresource_';
-    const ACCESSIBLE_RESOURCES_KEY_PREFIX = 'accessible_';
-    const EXCLUDED_ACTIONS_KEY_PREFIX     = 'excluded_actions_';
+    private const RESOURCES_KEY_PREFIX            = 'resources_';
+    private const SUBRESOURCE_KEY_PREFIX          = 'subresource_';
+    private const ACCESSIBLE_RESOURCES_KEY_PREFIX = 'accessible_';
+    private const RESOURCES_WITHOUT_ID_KEY_PREFIX = 'resources_wid_';
+    private const EXCLUDED_ACTIONS_KEY_PREFIX     = 'excluded_actions_';
 
     /** @var CacheProvider */
-    protected $cache;
+    private $cache;
 
     /**
      * @param CacheProvider $cache
@@ -34,15 +37,17 @@ class ResourcesCache
      *
      * @return array|null [entity class => accessible flag] or NULL if the list is not cached yet
      */
-    public function getAccessibleResources($version, RequestType $requestType)
+    public function getAccessibleResources(string $version, RequestType $requestType): ?array
     {
         $resources = $this->cache->fetch(
             self::ACCESSIBLE_RESOURCES_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType)
         );
 
-        return false !== $resources
-            ? $resources
-            : null;
+        if (false === $resources) {
+            return null;
+        }
+
+        return $resources;
     }
 
     /**
@@ -53,15 +58,17 @@ class ResourcesCache
      *
      * @return array|null [entity class => [action, ...]] or NULL if the list is not cached yet
      */
-    public function getExcludedActions($version, RequestType $requestType)
+    public function getExcludedActions(string $version, RequestType $requestType): ?array
     {
         $excludedActions = $this->cache->fetch(
             self::EXCLUDED_ACTIONS_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType)
         );
 
-        return false !== $excludedActions
-            ? $excludedActions
-            : null;
+        if (false === $excludedActions) {
+            return null;
+        }
+
+        return $excludedActions;
     }
 
     /**
@@ -72,11 +79,12 @@ class ResourcesCache
      *
      * @return ApiResource[]|null The list of Data API resources or NULL if it is not cached yet
      */
-    public function getResources($version, RequestType $requestType)
+    public function getResources(string $version, RequestType $requestType): ?array
     {
         $resources = $this->cache->fetch(
             self::RESOURCES_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType)
         );
+
         if (false === $resources) {
             return null;
         }
@@ -98,11 +106,15 @@ class ResourcesCache
      *
      * @return ApiResourceSubresources|null The list of sub-resources or NULL if it is not cached yet
      */
-    public function getSubresources($entityClass, $version, RequestType $requestType)
-    {
+    public function getSubresources(
+        string $entityClass,
+        string $version,
+        RequestType $requestType
+    ): ?ApiResourceSubresources {
         $cachedData = $this->cache->fetch(
             self::SUBRESOURCE_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType) . $entityClass
         );
+
         if (false === $cachedData) {
             return null;
         }
@@ -111,34 +123,70 @@ class ResourcesCache
     }
 
     /**
+     * Fetches a list of entity classes for API resources that do not have an identifier.
+     *
+     * @param string      $version     The Data API version
+     * @param RequestType $requestType The request type, for example "rest", "soap", etc.
+     *
+     * @return string[] The list of class names or NULL if it is not cached yet
+     */
+    public function getResourcesWithoutIdentifier(string $version, RequestType $requestType): ?array
+    {
+        $resources = $this->cache->fetch(
+            self::RESOURCES_WITHOUT_ID_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType)
+        );
+
+        if (false === $resources) {
+            return null;
+        }
+
+        return $resources;
+    }
+
+    /**
      * Puts Data API resources into the cache.
      *
      * @param string        $version             The Data API version
      * @param RequestType   $requestType         The request type, for example "rest", "soap", etc.
      * @param ApiResource[] $resources           The list of Data API resources
-     * @param string[]      $accessibleResources The list of resources accessible through Data API
+     * @param array         $accessibleResources The resources accessible through Data API
+     * @param array         $excludedActions     The actions excluded from Data API
      */
-    public function saveResources($version, RequestType $requestType, array $resources, array $accessibleResources)
-    {
+    public function saveResources(
+        string $version,
+        RequestType $requestType,
+        array $resources,
+        array $accessibleResources,
+        array $excludedActions
+    ): void {
         $allResources = [];
-        $excludedActionsData = [];
-        $accessibleResourcesData = array_fill_keys($accessibleResources, true);
         foreach ($resources as $resource) {
             $entityClass = $resource->getEntityClass();
             $allResources[$entityClass] = $this->serializeApiResource($resource);
-            if (!isset($accessibleResourcesData[$entityClass])) {
-                $accessibleResourcesData[$entityClass] = false;
-            }
-            $excludedActions = $resource->getExcludedActions();
-            if (!empty($excludedActions)) {
-                $excludedActionsData[$entityClass] = $excludedActions;
-            }
         }
 
         $keyIndex = $this->getCacheKeyIndex($version, $requestType);
         $this->cache->save(self::RESOURCES_KEY_PREFIX . $keyIndex, $allResources);
-        $this->cache->save(self::ACCESSIBLE_RESOURCES_KEY_PREFIX . $keyIndex, $accessibleResourcesData);
-        $this->cache->save(self::EXCLUDED_ACTIONS_KEY_PREFIX . $keyIndex, $excludedActionsData);
+        $this->cache->save(self::ACCESSIBLE_RESOURCES_KEY_PREFIX . $keyIndex, $accessibleResources);
+        $this->cache->save(self::EXCLUDED_ACTIONS_KEY_PREFIX . $keyIndex, $excludedActions);
+    }
+
+    /**
+     * Puts Data API resources that do not have an identifier into the cache.
+     *
+     * @param string        $version             The Data API version
+     * @param RequestType   $requestType         The request type, for example "rest", "soap", etc.
+     * @param string[]      $resourcesWithoutId  The list of resources without identifier
+     */
+    public function saveResourcesWithoutIdentifier(
+        string $version,
+        RequestType $requestType,
+        array $resourcesWithoutId
+    ): void {
+        $this->cache->save(
+            self::RESOURCES_WITHOUT_ID_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType),
+            $resourcesWithoutId
+        );
     }
 
     /**
@@ -148,7 +196,7 @@ class ResourcesCache
      * @param RequestType               $requestType  The request type, for example "rest", "soap", etc.
      * @param ApiResourceSubresources[] $subresources The list of sub-resources
      */
-    public function saveSubresources($version, RequestType $requestType, array $subresources)
+    public function saveSubresources(string $version, RequestType $requestType, array $subresources): void
     {
         $keyIndex = self::SUBRESOURCE_KEY_PREFIX . $this->getCacheKeyIndex($version, $requestType);
         foreach ($subresources as $entitySubresources) {
@@ -162,7 +210,7 @@ class ResourcesCache
     /**
      * Deletes all Data API resources from the cache.
      */
-    public function clear()
+    public function clear(): void
     {
         $this->cache->deleteAll();
     }
@@ -173,7 +221,7 @@ class ResourcesCache
      *
      * @return string
      */
-    protected function getCacheKeyIndex($version, RequestType $requestType)
+    private function getCacheKeyIndex(string $version, RequestType $requestType): string
     {
         return $version . (string)$requestType;
     }
@@ -184,7 +232,7 @@ class ResourcesCache
      *
      * @return ApiResource
      */
-    protected function unserializeApiResource($entityClass, array $cachedData)
+    private function unserializeApiResource(string $entityClass, array $cachedData): ApiResource
     {
         $resource = new ApiResource($entityClass);
         $resource->setExcludedActions($cachedData[0]);
@@ -197,7 +245,7 @@ class ResourcesCache
      *
      * @return array
      */
-    protected function serializeApiResource(ApiResource $resource)
+    private function serializeApiResource(ApiResource $resource): array
     {
         return [
             $resource->getExcludedActions()
@@ -210,8 +258,10 @@ class ResourcesCache
      *
      * @return ApiResourceSubresources
      */
-    protected function unserializeApiResourceSubresources($entityClass, array $cachedData)
-    {
+    private function unserializeApiResourceSubresources(
+        string $entityClass,
+        array $cachedData
+    ): ApiResourceSubresources {
         $resource = new ApiResourceSubresources($entityClass);
         foreach ($cachedData[0] as $associationName => $serializedSubresource) {
             $subresource = $resource->addSubresource($associationName);
@@ -229,7 +279,7 @@ class ResourcesCache
      *
      * @return array
      */
-    protected function serializeApiResourceSubresources(ApiResourceSubresources $entitySubresources)
+    private function serializeApiResourceSubresources(ApiResourceSubresources $entitySubresources): array
     {
         $serializedSubresources = [];
         $subresources = $entitySubresources->getSubresources();

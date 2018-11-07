@@ -242,13 +242,13 @@ define([
             var series = this.allSeries[index];
             var $prev = $(options.element).find('.flotr-grid-label').last();
             var distX = options.width - options.marginX * 0.8;
-            var distY = !$prev[0] ? options.marginY :
-                $prev.position().top + $prev.outerHeight(true) + options.fontSize * 1.2;
+            var distY = !$prev[0] ? options.marginY
+                : $prev.position().top + $prev.outerHeight(true) + options.fontSize * 1.2;
             var style = {
-                    size: options.fontSize * 1.2,
-                    color: options.fontColor,
-                    weight: 1.5
-                };
+                size: options.fontSize * 1.2,
+                color: options.fontColor,
+                weight: 1.5
+            };
             options.htmlText = true;
             style.textAlign = 'left';
             style.textBaseline = 'top';
@@ -256,7 +256,7 @@ define([
 
             var html = [];
             var divStyle =
-                    style.textBaseline + ':' + (distY - style.size)  + 'px;' +
+                    style.textBaseline + ':' + (distY - style.size) + 'px;' +
                     style.textAlign + ':' + (distX + 10) + 'px;';
 
             html.push('<div style="', divStyle, '" class="flotr-grid-label funnel-label">', series.label, '</div>');
@@ -325,5 +325,4 @@ define([
             return this._total;
         }
     });
-
 });

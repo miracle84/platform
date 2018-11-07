@@ -3,21 +3,22 @@
 namespace Oro\Bundle\EmailBundle\Form\Handler;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
+use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
 
 class EmailTemplateHandler
 {
+    use RequestHandlerTrait;
+
     /** @var FormInterface */
     protected $form;
 
-    /** @var Request */
-    protected $request;
+    /** @var RequestStack */
+    protected $requestStack;
 
     /** @var ObjectManager */
     protected $manager;
@@ -30,18 +31,18 @@ class EmailTemplateHandler
 
     /**
      * @param FormInterface       $form
-     * @param Request             $request
+     * @param RequestStack        $requestStack
      * @param ObjectManager       $manager
      * @param TranslatorInterface $translator
      */
     public function __construct(
         FormInterface $form,
-        Request $request,
+        RequestStack $requestStack,
         ObjectManager $manager,
         TranslatorInterface $translator
     ) {
         $this->form       = $form;
-        $this->request    = $request;
+        $this->requestStack = $requestStack;
         $this->manager    = $manager;
         $this->translator = $translator;
     }
@@ -64,7 +65,8 @@ class EmailTemplateHandler
 
         $this->form->setData($entity);
 
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
             // deny to modify system templates
             if ($entity->getIsSystem() && !$entity->getIsEditable()) {
                 $this->form->addError(
@@ -74,7 +76,7 @@ class EmailTemplateHandler
                 return false;
             }
 
-            $this->form->submit($this->request);
+            $this->submitPostPutRequest($this->form, $request);
 
             if ($this->form->isValid()) {
                 // mark an email template creating by an user as editable

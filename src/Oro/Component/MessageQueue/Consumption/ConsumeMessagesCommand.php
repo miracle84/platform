@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Consumption;
 
 use Oro\Component\MessageQueue\Consumption\Extension\LoggerExtension;
@@ -16,22 +17,6 @@ class ConsumeMessagesCommand extends Command implements ContainerAwareInterface
     use LimitsExtensionsCommandTrait;
 
     /**
-     * @var QueueConsumer
-     */
-    protected $consumer;
-
-    /**
-     * ConsumeMessagesCommand constructor.
-     * @param QueueConsumer $consumer
-     */
-    public function __construct(QueueConsumer $consumer)
-    {
-        parent::__construct('oro:message-queue:transport:consume');
-        
-        $this->consumer = $consumer;
-    }
-
-    /**
      * {@inheritdoc}
      */
     protected function configure()
@@ -44,8 +29,7 @@ class ConsumeMessagesCommand extends Command implements ContainerAwareInterface
                 'To use this broker you have to explicitly set a queue to consume from '.
                 'and a message processor service')
             ->addArgument('queue', InputArgument::REQUIRED, 'Queues to consume from')
-            ->addArgument('processor-service', InputArgument::REQUIRED, 'A message processor service')
-        ;
+            ->addArgument('processor-service', InputArgument::REQUIRED, 'A message processor service');
     }
 
     /**
@@ -54,27 +38,74 @@ class ConsumeMessagesCommand extends Command implements ContainerAwareInterface
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $queueName = $input->getArgument('queue');
+        $messageProcessor = $this->getMessageProcessor($input->getArgument('processor-service'));
+        $consumer = $this->getConsumer();
 
-        /** @var MessageProcessorInterface $messageProcessor */
-        $messageProcessor = $this->container->get($input->getArgument('processor-service'));
-        if (!$messageProcessor instanceof  MessageProcessorInterface) {
+        $extensions = $this->getLimitsExtensions($input, $output);
+        array_unshift($extensions, $this->getLoggerExtension($input, $output));
+
+        $consumer->bind($queueName, $messageProcessor);
+        $this->consume($consumer, $this->getConsumerExtension($extensions));
+    }
+
+    /**
+     * @param QueueConsumer      $consumer
+     * @param ExtensionInterface $extension
+     */
+    protected function consume(QueueConsumer $consumer, ExtensionInterface $extension)
+    {
+        try {
+            $consumer->consume($extension);
+        } finally {
+            $consumer->getConnection()->close();
+        }
+    }
+
+    /**
+     * @param array $extensions
+     *
+     * @return ExtensionInterface
+     */
+    protected function getConsumerExtension(array $extensions)
+    {
+        return new ChainExtension($extensions);
+    }
+
+    /**
+     * @param InputInterface  $input
+     * @param OutputInterface $output
+     *
+     * @return ExtensionInterface
+     */
+    protected function getLoggerExtension(InputInterface $input, OutputInterface $output)
+    {
+        return new LoggerExtension(new ConsoleLogger($output));
+    }
+
+    /**
+     * @param string $processorServiceId
+     *
+     * @return MessageProcessorInterface
+     */
+    private function getMessageProcessor($processorServiceId)
+    {
+        $processor = $this->container->get($processorServiceId);
+        if (!$processor instanceof MessageProcessorInterface) {
             throw new \LogicException(sprintf(
                 'Invalid message processor service given. It must be an instance of %s but %s',
                 MessageProcessorInterface::class,
-                get_class($messageProcessor)
+                get_class($processor)
             ));
         }
 
-        $extensions = $this->getLimitsExtensions($input, $output);
-        array_unshift($extensions, new LoggerExtension(new ConsoleLogger($output)));
+        return $processor;
+    }
 
-        $runtimeExtensions = new ChainExtension($extensions);
-
-        try {
-            $this->consumer->bind($queueName, $messageProcessor);
-            $this->consumer->consume($runtimeExtensions);
-        } finally {
-            $this->consumer->getConnection()->close();
-        }
+    /**
+     * @return QueueConsumer
+     */
+    private function getConsumer()
+    {
+        return $this->container->get('oro_message_queue.consumption.queue_consumer');
     }
 }

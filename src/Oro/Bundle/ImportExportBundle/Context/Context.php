@@ -1,10 +1,20 @@
 <?php
 
-
 namespace Oro\Bundle\ImportExportBundle\Context;
 
-class Context implements ContextInterface
+/**
+ * Provides the ability to save and manage parameters
+ */
+class Context implements ContextInterface, BatchContextInterface
 {
+    const OPTION_FILE_PATH = 'filePath';
+    const OPTION_DELIMITER = 'delimiter';
+    const OPTION_ENCLOSURE = 'enclosure';
+    const OPTION_ESCAPE = 'escape';
+    const OPTION_FIRST_LINE_IS_HEADER = 'firstLineIsHeader';
+    const OPTION_HEADER = 'header';
+    const OPTION_BATCH_SIZE = 'batch_size';
+
     /**
      * @var array
      */
@@ -24,6 +34,11 @@ class Context implements ContextInterface
      * @var array
      */
     private $errors = array();
+
+    /**
+     * @var array
+     */
+    private $postponedRows = array();
 
     /**
      * Constructor
@@ -64,6 +79,36 @@ class Context implements ContextInterface
     /**
      * {@inheritdoc}
      */
+    public function addPostponedRow(array $row)
+    {
+        $this->postponedRows[] = $row;
+
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function addPostponedRows(array $rows)
+    {
+        foreach ($rows as $row) {
+            $this->addPostponedRow($row);
+        }
+
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getPostponedRows()
+    {
+        return $this->postponedRows;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getFailureExceptions()
     {
         return array_map(
@@ -93,7 +138,10 @@ class Context implements ContextInterface
      */
     public function incrementReadCount($incrementBy = 1)
     {
-        $this->setValue('read_count', (int)$this->getValue('read_count') + $incrementBy);
+        $incrementedRead = $this->getOption('incremented_read', true);
+        if ($incrementedRead) {
+            $this->setValue('read_count', (int)$this->getValue('read_count') + $incrementBy);
+        }
     }
 
     /**
@@ -256,5 +304,21 @@ class Context implements ContextInterface
         if ($this->hasOption($name)) {
             unset($this->configuration[$name]);
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getBatchSize()
+    {
+        return $this->getValue(self::OPTION_BATCH_SIZE);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getBatchNumber()
+    {
+        return $this->getValue('batch_number');
     }
 }

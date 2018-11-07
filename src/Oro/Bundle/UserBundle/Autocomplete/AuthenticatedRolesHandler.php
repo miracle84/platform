@@ -3,7 +3,6 @@
 namespace Oro\Bundle\UserBundle\Autocomplete;
 
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\FormBundle\Autocomplete\SearchHandler;
 use Oro\Bundle\UserBundle\Entity\User;
 
@@ -17,7 +16,8 @@ class AuthenticatedRolesHandler extends SearchHandler
         $entityIds = explode(',', $query);
 
         $queryBuilder = $this->getBasicQueryBuilder();
-        $queryBuilder->andWhere($queryBuilder->expr()->in('r.id', $entityIds));
+        $queryBuilder->andWhere($queryBuilder->expr()->in('r.id', ':entityIds'))
+            ->setParameter('entityIds', $entityIds);
 
         return $queryBuilder->getQuery()->getResult();
     }

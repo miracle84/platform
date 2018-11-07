@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\UserBundle\Dashboard;
 
+use Oro\Bundle\DashboardBundle\Model\WidgetOptionBag;
+use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProviderInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
-use Oro\Bundle\DashboardBundle\Model\WidgetOptionBag;
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\SecurityBundle\Owner\OwnerTreeProviderInterface;
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
 
 class OwnerHelper
 {
@@ -198,7 +197,7 @@ class OwnerHelper
             ->createQueryBuilder('u')
             ->select('DISTINCT(u.id)')
             ->join('u.roles', 'r');
-        QueryUtils::applyOptimizedIn($qb, 'r.id', $roleIds);
+        QueryBuilderUtil::applyOptimizedIn($qb, 'r.id', $roleIds);
 
         $result = array_map('current', $qb->getQuery()->getResult());
         if (empty($result)) {

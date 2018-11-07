@@ -2,13 +2,18 @@
 
 namespace Oro\Bundle\ImportExportBundle\Converter;
 
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
-use Oro\Bundle\ImportExportBundle\Utils\ArrayUtil;
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\ImportExportBundle\Event\Events;
 use Oro\Bundle\ImportExportBundle\Event\FormatConversionEvent;
 use Oro\Bundle\ImportExportBundle\Exception\LogicException;
+use Oro\Bundle\ImportExportBundle\Utils\ArrayUtil;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * Abstract data converter to export/import format.
+ * Converts exportedRecord to the format expected by its destination.
+ * Converts importedRecord to the format which is used to deserialize the entity from the array.
+ */
 abstract class AbstractTableDataConverter extends DefaultDataConverter
 {
     const BACKEND_TO_FRONTEND = 'backend_to_frontend';
@@ -25,6 +30,12 @@ abstract class AbstractTableDataConverter extends DefaultDataConverter
 
     /** @var array */
     protected $headerConversionRules;
+
+    /** @var ConfigManager */
+    protected $configManager;
+
+    /** @var bool */
+    protected $translateUsingLocale = true;
 
     /**
      * {@inheritDoc}
@@ -89,6 +100,32 @@ abstract class AbstractTableDataConverter extends DefaultDataConverter
     }
 
     /**
+     * @param ConfigManager $configManager
+     *
+     * @return $this
+     */
+    public function setConfigManager(ConfigManager $configManager)
+    {
+        $this->configManager = $configManager;
+
+        return $this;
+    }
+
+    /**
+     * Set the variable to FALSE if you want to use default translation
+     *
+     * @param bool $translateUsingLocale
+     *
+     * @return $this
+     */
+    public function setTranslateUsingLocale($translateUsingLocale)
+    {
+        $this->translateUsingLocale = $translateUsingLocale;
+
+        return $this;
+    }
+
+    /**
      * @param string $eventName
      * @param array $record
      * @param array $result
@@ -108,18 +145,32 @@ abstract class AbstractTableDataConverter extends DefaultDataConverter
     /**
      * @param array $header
      * @param array $data
+     * @throws LogicException
+     */
+    protected function validateColumns(array $header, array $data)
+    {
+        $dataDiff = array_diff(array_keys($data), $header);
+        // if data contains keys that are not in header, refresh header and check again
+        if ($dataDiff) {
+            $header = $this->getRefreshedBackendHeader();
+            $dataDiff = array_diff(array_keys($data), $header);
+            if ($dataDiff) {
+                throw new LogicException(
+                    sprintf('Backend header doesn\'t contain fields: %s', implode(', ', $dataDiff))
+                );
+            }
+        }
+    }
+
+    /**
+     * @param array $header
+     * @param array $data
      * @return array
      * @throws LogicException
      */
     protected function fillEmptyColumns(array $header, array $data)
     {
-        $dataDiff = array_diff(array_keys($data), $header);
-        // if data contains keys that are not in header
-        if ($dataDiff) {
-            throw new LogicException(
-                sprintf('Backend header doesn\'t contain fields: %s', implode(', ', $dataDiff))
-            );
-        }
+        $this->validateColumns($header, $data);
 
         $result = array();
         foreach ($header as $headerKey) {
@@ -157,6 +208,15 @@ abstract class AbstractTableDataConverter extends DefaultDataConverter
                 return true;
             }
         );
+    }
+
+    /**
+     * @return array
+     */
+    protected function getRefreshedBackendHeader()
+    {
+        $this->backendHeader = null;
+        return $this->receiveBackendHeader();
     }
 
     /**

@@ -3,13 +3,12 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Provider;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
 use Oro\Bundle\WorkflowBundle\Provider\WorkflowExclusionProvider;
 use Oro\Bundle\WorkflowBundle\Provider\WorkflowVirtualRelationProvider;
 
-class WorkflowExclusionProviderTest extends \PHPUnit_Framework_TestCase
+class WorkflowExclusionProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ClassMetadata|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ClassMetadata|\PHPUnit\Framework\MockObject\MockObject */
     protected $metadata;
 
     /** @var WorkflowExclusionProvider */

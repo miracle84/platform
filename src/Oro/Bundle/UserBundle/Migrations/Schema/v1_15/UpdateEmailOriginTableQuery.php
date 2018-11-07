@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\UserBundle\Migrations\Schema\v1_15;
 
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\EntityBundle\ORM\DatabaseDriverInterface;
 use Oro\Bundle\MigrationBundle\Migration\ArrayLogger;
 use Oro\Bundle\MigrationBundle\Migration\ParametrizedMigrationQuery;
+use Psr\Log\LoggerInterface;
 
 class UpdateEmailOriginTableQuery extends ParametrizedMigrationQuery
 {
@@ -37,7 +36,6 @@ class UpdateEmailOriginTableQuery extends ParametrizedMigrationQuery
      */
     protected function doExecute(LoggerInterface $logger, $dryRun = false)
     {
-
         $dbDriver = $this->connection->getDriver()->getName();
         switch ($dbDriver) {
             case DatabaseDriverInterface::DRIVER_POSTGRESQL:

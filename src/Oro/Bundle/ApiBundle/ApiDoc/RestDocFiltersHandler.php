@@ -3,8 +3,6 @@
 namespace Oro\Bundle\ApiBundle\ApiDoc;
 
 use Nelmio\ApiDocBundle\Annotation\ApiDoc;
-
-use Oro\Component\PhpUtils\ReflectionUtil;
 use Oro\Bundle\ApiBundle\Filter\FieldAwareFilterInterface;
 use Oro\Bundle\ApiBundle\Filter\FilterCollection;
 use Oro\Bundle\ApiBundle\Filter\NamedValueFilterInterface;
@@ -15,22 +13,33 @@ use Oro\Bundle\ApiBundle\Request\DataType;
 use Oro\Bundle\ApiBundle\Request\ValueNormalizer;
 use Oro\Bundle\ApiBundle\Util\ValueNormalizerUtil;
 
+/**
+ * Adds filters to ApiDoc annotation.
+ */
 class RestDocFiltersHandler
 {
     /** @var RestDocViewDetector */
-    protected $docViewDetector;
+    private $docViewDetector;
 
     /** @var ValueNormalizer */
-    protected $valueNormalizer;
+    private $valueNormalizer;
+
+    /** @var ApiDocDataTypeConverter */
+    private $dataTypeConverter;
 
     /**
-     * @param RestDocViewDetector $docViewDetector
-     * @param ValueNormalizer     $valueNormalizer
+     * @param RestDocViewDetector     $docViewDetector
+     * @param ValueNormalizer         $valueNormalizer
+     * @param ApiDocDataTypeConverter $dataTypeConverter
      */
-    public function __construct(RestDocViewDetector $docViewDetector, ValueNormalizer $valueNormalizer)
-    {
+    public function __construct(
+        RestDocViewDetector $docViewDetector,
+        ValueNormalizer $valueNormalizer,
+        ApiDocDataTypeConverter $dataTypeConverter
+    ) {
         $this->docViewDetector = $docViewDetector;
         $this->valueNormalizer = $valueNormalizer;
+        $this->dataTypeConverter = $dataTypeConverter;
     }
 
     /**
@@ -51,7 +60,7 @@ class RestDocFiltersHandler
      * @param FilterCollection $filters
      * @param EntityMetadata   $metadata
      */
-    protected function addFilters(ApiDoc $annotation, FilterCollection $filters, EntityMetadata $metadata)
+    private function addFilters(ApiDoc $annotation, FilterCollection $filters, EntityMetadata $metadata)
     {
         foreach ($filters as $key => $filter) {
             if ($filter instanceof StandaloneFilter) {
@@ -66,15 +75,12 @@ class RestDocFiltersHandler
     /**
      * @param ApiDoc $annotation
      */
-    protected function sortFilters(ApiDoc $annotation)
+    private function sortFilters(ApiDoc $annotation)
     {
         $filters = $annotation->getFilters();
         if (!empty($filters)) {
             ksort($filters);
-            // unfortunately there is no other way to update filters except to use the reflection
-            $filtersProperty = ReflectionUtil::getProperty(new \ReflectionClass($annotation), 'filters');
-            $filtersProperty->setAccessible(true);
-            $filtersProperty->setValue($annotation, $filters);
+            ApiDocAnnotationUtil::setFilters($annotation, $filters);
         }
     }
 
@@ -84,23 +90,25 @@ class RestDocFiltersHandler
      *
      * @return array
      */
-    protected function getFilterOptions(StandaloneFilter $filter, EntityMetadata $metadata)
+    private function getFilterOptions(StandaloneFilter $filter, EntityMetadata $metadata)
     {
         $dataType = $filter->getDataType();
         $isArrayAllowed = $filter->isArrayAllowed();
+        $isRangeAllowed = $filter->isRangeAllowed();
         $options = [
             'description' => $this->getFilterDescription($filter->getDescription()),
             'requirement' => $this->valueNormalizer->getRequirement(
                 $dataType,
                 $this->docViewDetector->getRequestType(),
-                $isArrayAllowed
+                $isArrayAllowed,
+                $isRangeAllowed
             )
         ];
         if ($filter instanceof FieldAwareFilterInterface) {
-            $options['type'] = $this->getFilterType($dataType, $isArrayAllowed);
+            $options['type'] = $this->getFilterType($dataType, $isArrayAllowed, $isRangeAllowed);
         }
-        $operators = $filter->getSupportedOperators();
-        if (!empty($operators) && !(count($operators) === 1 && $operators[0] === StandaloneFilter::EQ)) {
+        $operators = $this->getFilterOperators($filter);
+        if (!empty($operators)) {
             $options['operators'] = implode(',', $operators);
         }
         if ($filter instanceof StandaloneFilterWithDefaultValue) {
@@ -129,24 +137,31 @@ class RestDocFiltersHandler
      *
      * @return string
      */
-    protected function getFilterDescription($description)
+    private function getFilterDescription($description)
     {
-        return null !== $description
-            ? $description
-            : '';
+        return $description ?? '';
     }
 
     /**
      * @param string $dataType
      * @param bool   $isArrayAllowed
+     * @param bool   $isRangeAllowed
      *
      * @return string
      */
-    protected function getFilterType($dataType, $isArrayAllowed)
+    private function getFilterType($dataType, $isArrayAllowed, $isRangeAllowed)
     {
-        return $isArrayAllowed
-            ? sprintf('%1$s or array of %1$s', $dataType)
-            : $dataType;
+        $dataType = $this->dataTypeConverter->convertDataType($dataType);
+
+        $result = '%1$s';
+        if ($isArrayAllowed) {
+            $result .= ' or array';
+        }
+        if ($isRangeAllowed) {
+            $result .= ' or range';
+        }
+
+        return sprintf($result, $dataType);
     }
 
     /**
@@ -154,7 +169,7 @@ class RestDocFiltersHandler
      *
      * @return string[]
      */
-    protected function getFilterTargetEntityTypes($targetClassNames)
+    private function getFilterTargetEntityTypes($targetClassNames)
     {
         $targetEntityTypes = [];
         foreach ($targetClassNames as $targetClassName) {
@@ -172,7 +187,7 @@ class RestDocFiltersHandler
      *
      * @return string|null
      */
-    protected function getEntityType($entityClass)
+    private function getEntityType($entityClass)
     {
         return ValueNormalizerUtil::convertToEntityType(
             $this->valueNormalizer,
@@ -180,5 +195,23 @@ class RestDocFiltersHandler
             $this->docViewDetector->getRequestType(),
             false
         );
+    }
+
+    /**
+     * @param StandaloneFilter $filter
+     *
+     * @return string[]
+     */
+    private function getFilterOperators(StandaloneFilter $filter)
+    {
+        $operators = $filter->getSupportedOperators();
+        if (empty($operators)) {
+            return $operators;
+        }
+        if (count($operators) === 1 && $operators[0] === StandaloneFilter::EQ) {
+            return [];
+        }
+
+        return $operators;
     }
 }

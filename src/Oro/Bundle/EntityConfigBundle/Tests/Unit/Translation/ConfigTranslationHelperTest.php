@@ -2,20 +2,19 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Translation;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\EntityConfigBundle\Translation\ConfigTranslationHelper;
 use Oro\Bundle\TranslationBundle\Entity\Translation;
 use Oro\Bundle\TranslationBundle\Manager\TranslationManager;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class ConfigTranslationHelperTest extends \PHPUnit_Framework_TestCase
+class ConfigTranslationHelperTest extends \PHPUnit\Framework\TestCase
 {
     const LOCALE = 'en';
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TranslationManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TranslationManager */
     protected $translationManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|TranslatorInterface */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|TranslatorInterface */
     protected $translator;
 
     /** @var ConfigTranslationHelper */

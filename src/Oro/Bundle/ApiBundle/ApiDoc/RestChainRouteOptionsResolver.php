@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\ApiBundle\ApiDoc;
 
-use Symfony\Component\Routing\Route;
-
 use Oro\Component\Routing\Resolver\RouteCollectionAccessor;
 use Oro\Component\Routing\Resolver\RouteOptionsResolverInterface;
+use Symfony\Component\Routing\Route;
 
 class RestChainRouteOptionsResolver implements RouteOptionsResolverInterface
 {
@@ -33,13 +32,12 @@ class RestChainRouteOptionsResolver implements RouteOptionsResolverInterface
         }
 
         $view = $this->docViewDetector->getView();
-        if (empty($view)) {
+        if (!$view) {
             return;
         }
 
-        foreach ($this->resolvers as $item) {
-            /** @var RouteOptionsResolverInterface $resolver */
-            list($resolver, $resolverView) = $item;
+        /** @var RouteOptionsResolverInterface $resolver */
+        foreach ($this->resolvers as list($resolver, $resolverView)) {
             if (null === $resolverView || $resolverView === $view) {
                 $resolver->resolve($route, $routes);
             }

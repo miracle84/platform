@@ -13,7 +13,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class DependentJobMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testShouldReturnSubscribedTopicNames()
     {
@@ -33,7 +33,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[DependentJobMessageProcessor] Got invalid message. body: "{"key":"value"}"')
+            ->with('Got invalid message')
         ;
 
         $message = new NullMessage();
@@ -61,7 +61,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[DependentJobMessageProcessor] Job was not found. id: "12345"')
+            ->with('Job was not found. id: "12345"')
         ;
 
         $message = new NullMessage();
@@ -93,7 +93,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[DependentJobMessageProcessor] Expected root job but got child. id: "12345"')
+            ->with('Expected root job but got child. id: "12345"')
         ;
 
         $message = new NullMessage();
@@ -164,7 +164,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[DependentJobMessageProcessor] Got invalid dependent job data. job: "123", dependentJob: "[]"')
+            ->with('Got invalid dependent job data. job: "123", dependentJob: "[]"')
         ;
 
         $message = new NullMessage();
@@ -207,7 +207,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[DependentJobMessageProcessor] Got invalid dependent job data. '.
+            ->with('Got invalid dependent job data. '.
              'job: "123", dependentJob: "{"topic":"topic-name"}"')
         ;
 
@@ -316,8 +316,49 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('priority', $expectedMessage->getPriority());
     }
 
+    public function testShouldPublishDependentMessageWithAdditionalProperties()
+    {
+        $job = new Job();
+        $job->setId(123);
+        $job->setData([
+            'dependentJobs' => [
+                ['topic' => 'topic-name', 'message' => 'message']
+            ]
+        ]);
+        $job->setProperties(['key' => 'value']);
+
+        $jobStorage = $this->createJobStorageMock();
+        $jobStorage->expects($this->once())
+            ->method('findJobById')
+            ->with(12345)
+            ->will($this->returnValue($job));
+
+        $expectedMessage = null;
+        $producer = $this->createMessageProducerMock();
+        $producer->expects($this->once())
+            ->method('send')
+            ->with('topic-name', $this->isInstanceOf(Message::class))
+            ->will($this->returnCallback(function ($topic, Message $message) use (&$expectedMessage) {
+                $expectedMessage = $message;
+            }));
+
+        $logger = $this->createLoggerMock();
+
+        $message = new NullMessage();
+        $message->setBody(json_encode(['jobId' => 12345]));
+
+        $processor = new DependentJobMessageProcessor($jobStorage, $producer, $logger);
+
+        $result = $processor->process($message, $this->createSessionMock());
+
+        $this->assertEquals(MessageProcessorInterface::ACK, $result);
+
+        $this->assertEquals('message', $expectedMessage->getBody());
+        $this->assertEquals(['key' => 'value'], $expectedMessage->getProperties());
+    }
+
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -325,7 +366,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobStorage
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobStorage
      */
     private function createJobStorageMock()
     {
@@ -333,7 +374,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|MessageProducerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|MessageProducerInterface
      */
     private function createMessageProducerMock()
     {
@@ -341,7 +382,7 @@ class DependentJobMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {

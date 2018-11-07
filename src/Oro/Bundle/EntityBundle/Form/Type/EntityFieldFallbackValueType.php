@@ -2,6 +2,10 @@
 
 namespace Oro\Bundle\EntityBundle\Form\Type;
 
+use Oro\Bundle\EntityBundle\Entity\EntityFieldFallbackValue;
+use Oro\Bundle\EntityBundle\Exception\Fallback\FallbackFieldConfigurationMissingException;
+use Oro\Bundle\EntityBundle\Fallback\EntityFallbackResolver;
+use Oro\Bundle\EntityBundle\Form\DataTransformer\EntityFieldFallbackTransformer;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -13,10 +17,6 @@ use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-
-use Oro\Bundle\EntityBundle\Entity\EntityFieldFallbackValue;
-use Oro\Bundle\EntityBundle\Fallback\EntityFallbackResolver;
-use Oro\Bundle\EntityBundle\Form\DataTransformer\EntityFieldFallbackTransformer;
 
 class EntityFieldFallbackValueType extends AbstractType
 {
@@ -139,7 +139,11 @@ class EntityFieldFallbackValueType extends AbstractType
         }
 
         // if no system configuration, try to get type from parent object field name fallback configuration
-        $type = $this->fallbackResolver->getType($form->getParent()->getData(), $form->getConfig()->getName());
+        try {
+            $type = $this->fallbackResolver->getType($form->getParent()->getData(), $form->getConfig()->getName());
+        } catch (FallbackFieldConfigurationMissingException $e) {
+            return ChoiceType::class;
+        }
 
         switch ($type) {
             case EntityFallbackResolver::TYPE_BOOLEAN:
@@ -233,7 +237,7 @@ class EntityFieldFallbackValueType extends AbstractType
                 continue;
             }
 
-            $choices[$fallbackId] = $this->fallbackResolver->getFallbackLabel($fallbackId);
+            $choices[$this->fallbackResolver->getFallbackLabel($fallbackId)] = $fallbackId;
         }
         $fallbackOptions['choices'] = $choices;
 

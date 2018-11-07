@@ -4,7 +4,6 @@ namespace Oro\Bundle\NoteBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\ActivityBundle\EntityConfig\ActivityScope;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
 
@@ -63,7 +62,8 @@ class NoteRepository extends EntityRepository
         $relationFieldName = ExtendHelper::buildAssociationName($entityClassName, ActivityScope::ASSOCIATION_KIND);
         $queryBuilder = $this->createQueryBuilder('note')
             ->innerJoin(sprintf('note.%s', $relationFieldName), 'e');
-        $queryBuilder->where($queryBuilder->expr()->in('e.id', $ids));
+        $queryBuilder->where($queryBuilder->expr()->in('e.id', ':notedEntitiesIds'))
+            ->setParameter('notedEntitiesIds', $ids);
 
         return $queryBuilder;
     }

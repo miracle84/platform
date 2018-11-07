@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Bundle\SearchBundle\Tests\Functional\EventListener;
 
 use Oro\Bundle\MessageQueueBundle\Test\Functional\MessageQueueAssertTrait;
@@ -9,7 +10,7 @@ use Symfony\Bridge\Doctrine\RegistryInterface;
 
 /**
  * @group search
- * @dbIsolation
+ * @dbIsolationPerTest
  */
 class IndexListenerTest extends WebTestCase
 {
@@ -20,14 +21,6 @@ class IndexListenerTest extends WebTestCase
         parent::setUp();
 
         $this->initClient();
-        $this->startTransaction();
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
     }
 
     public function testShouldCreateSearchIndexForEntityIfItWasCreated()
@@ -40,15 +33,10 @@ class IndexListenerTest extends WebTestCase
         $em->persist($item);
         $em->flush();
 
-        self::assertMessageSent(
-            Topics::INDEX_ENTITIES,
-            [
-                [
-                    'class' => Item::class,
-                    'id' => $item->getId(),
-                ]
-            ]
-        );
+        self::assertMessageSent(Topics::INDEX_ENTITIES, [
+            'class' => Item::class,
+            'entityIds' => [$item->getId() => $item->getId()],
+        ]);
     }
 
     public function testShouldUpdateSearchIndexForEntityIfItWasUpdated()
@@ -64,15 +52,10 @@ class IndexListenerTest extends WebTestCase
         $item->stringValue = 'value';
         $em->flush();
 
-        self::assertMessageSent(
-            Topics::INDEX_ENTITIES,
-            [
-                [
-                    'class' => Item::class,
-                    'id' => $item->getId(),
-                ]
-            ]
-        );
+        self::assertMessageSent(Topics::INDEX_ENTITIES, [
+            'class' => Item::class,
+            'entityIds' => [$item->getId() => $item->getId()],
+        ]);
     }
 
     public function testShouldDeleteSearchIndexForEntityIfItWasDeleted()
@@ -92,15 +75,10 @@ class IndexListenerTest extends WebTestCase
         $em->remove($item);
         $em->flush();
 
-        self::assertMessageSent(
-            Topics::INDEX_ENTITIES,
-            [
-                [
-                    'class' => Item::class,
-                    'id' => $itemId,
-                ]
-            ]
-        );
+        self::assertMessageSent(Topics::INDEX_ENTITIES, [
+            'class' => Item::class,
+            'entityIds' => [$itemId => $itemId],
+        ]);
     }
 
     /**

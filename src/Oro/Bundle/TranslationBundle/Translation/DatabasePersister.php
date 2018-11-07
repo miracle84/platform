@@ -7,7 +7,6 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\MySqlPlatform;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\TranslationBundle\Entity\Language;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationKeyRepository;
 use Oro\Bundle\TranslationBundle\Entity\Repository\TranslationRepository;
@@ -79,7 +78,7 @@ class DatabasePersister
                         );
                     } else {
                         $sqlData[] = sprintf(
-                            '(%d, %d, %s, %s)',
+                            '(%d, %d, %s, %d)',
                             $translationKeys[$domain][$key],
                             $language->getId(),
                             $connection->quote($value),
@@ -103,6 +102,8 @@ class DatabasePersister
 
         // update timestamp in case when persist succeed
         $this->translationManager->invalidateCache($locale);
+        // Invalidate other caches
+        $this->translationManager->clear();
     }
 
     /**

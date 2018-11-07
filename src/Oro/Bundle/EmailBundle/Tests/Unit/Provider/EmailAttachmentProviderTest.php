@@ -3,36 +3,35 @@
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Provider;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\AttachmentBundle\Provider\AttachmentProvider;
 use Oro\Bundle\EmailBundle\Entity\Provider\EmailThreadProvider;
 use Oro\Bundle\EmailBundle\Provider\EmailAttachmentProvider;
 use Oro\Bundle\EmailBundle\Tools\EmailAttachmentTransformer;
 
-class EmailAttachmentProviderTest extends \PHPUnit_Framework_TestCase
+class EmailAttachmentProviderTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var EmailThreadProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailThreadProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $emailThreadProvider;
 
     /**
-     * @var EntityManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var EntityManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $em;
 
     /**
-     * @var AttachmentProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttachmentProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $attachmentProvider;
 
     /**
-     * @var EmailAttachmentTransformer|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailAttachmentTransformer|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $emailAttachmentTransformer;
 
     /**
-     * @var EmailAttachmentProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var EmailAttachmentProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $emailAttachmentProvider;
 

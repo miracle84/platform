@@ -3,7 +3,6 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Model\Tools;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowStep;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowTransitionRecord;
@@ -13,15 +12,14 @@ use Oro\Bundle\WorkflowBundle\Model\Tools\WorkflowStepHelper;
 use Oro\Bundle\WorkflowBundle\Model\Transition;
 use Oro\Bundle\WorkflowBundle\Model\TransitionManager;
 use Oro\Bundle\WorkflowBundle\Model\Workflow;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
-class WorkflowStepHelperTest extends \PHPUnit_Framework_TestCase
+class WorkflowStepHelperTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /** @var array */
-    static protected $steps;
+    protected static $steps;
 
     /**
      * @dataProvider getStepsAfterDataProvider
@@ -99,7 +97,7 @@ class WorkflowStepHelperTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|Workflow
+     * @return \PHPUnit\Framework\MockObject\MockObject|Workflow
      */
     protected function getWorkflowMock()
     {
@@ -132,18 +130,16 @@ class WorkflowStepHelperTest extends \PHPUnit_Framework_TestCase
     /**
      * @param string $name
      * @param Step $stepTo
-     * @return Transition
+     * @return Transition|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getTransition($name, Step $stepTo)
     {
-        return $this->getEntity(
-            Transition::class,
-            [
-                'name' => $name,
-                'label' => $name . 'Label',
-                'stepTo' => $stepTo
-            ]
-        );
+        $transition = $this->createMock(Transition::class);
+        $transition->expects($this->any())->method('getName')->willReturn($name);
+        $transition->expects($this->any())->method('getLabel')->willReturn($name . 'Label');
+        $transition->expects($this->any())->method('getStepTo')->willReturn($stepTo);
+
+        return $transition;
     }
 
     /**

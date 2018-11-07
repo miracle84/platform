@@ -13,22 +13,20 @@ trait MessageQueueExtension
     /**
      * Removes all sent messages.
      *
-     * @before
+     * @afterInitClient
      */
     public function setUpMessageCollector()
     {
-        self::getMessageCollector()
-            ->clear();
+        $this->clearMessageCollector();
     }
 
     /**
      * Removes all sent messages.
      *
-     * @after
+     * After triggered after client removed
      */
-    public function tearDownMessageCollector()
+    public function tearDown()
     {
-        self::getMessageCollector()
-            ->clear();
+        $this->clearMessageCollector();
     }
 }

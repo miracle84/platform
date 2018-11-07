@@ -2,22 +2,25 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Functional;
 
+use Oro\Bundle\ApiBundle\Form\FormExtensionSwitcherInterface;
+use Oro\Bundle\ApiBundle\Form\FormHelper;
 use Oro\Bundle\ApiBundle\Form\Guesser\MetadataTypeGuesser;
+use Oro\Bundle\ApiBundle\Form\Type\BooleanType;
 use Oro\Bundle\ApiBundle\Metadata\EntityMetadata;
 use Oro\Bundle\ApiBundle\Metadata\FieldMetadata;
 use Oro\Bundle\ApiBundle\Metadata\MetadataAccessorInterface;
-use Symfony\Component\Form\FormInterface;
-
-use Oro\Bundle\ApiBundle\Form\FormExtensionSwitcherInterface;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormInterface;
 
 class FormTest extends WebTestCase
 {
-    const TEST_CLASS = 'Oro\Bundle\ApiBundle\Tests\Functional\TestObject';
-
     protected function setUp()
     {
-        $this->initClient([]);
+        $this->initClient();
     }
 
     protected function tearDown()
@@ -34,11 +37,11 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
 
-        $this->assertSame(123, $object->getId());
-        $this->assertSame('test', $object->getTitle());
+        self::assertSame(123, $object->getId());
+        self::assertSame('test', $object->getTitle());
     }
 
     public function testApiForm()
@@ -50,11 +53,77 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
 
-        $this->assertSame(123, $object->getId());
-        $this->assertSame('test', $object->getTitle());
+        self::assertSame(123, $object->getId());
+        self::assertSame('test', $object->getTitle());
+    }
+
+    public function testDefaultFormWithFormTypeThatDoesNotExistInApi()
+    {
+        $form = $this->getRootForm(['csrf_protection' => false]);
+        $form->add('title', HiddenType::class);
+        $object = new TestObject();
+        $form->setData($object);
+
+        $form->submit(['title' => 'test']);
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
+
+        self::assertSame('test', $object->getTitle());
+    }
+
+    // @codingStandardsIgnoreStart
+    /**
+     * @expectedException \Symfony\Component\Form\Exception\InvalidArgumentException
+     * @expectedExceptionMessage The form type "Symfony\Component\Form\Extension\Core\Type\HiddenType" is not configured to be used in Data API.
+     */
+    // @codingStandardsIgnoreEnd
+    public function testApiFormWithFormTypeThatDoesNotExistInApi()
+    {
+        $this->switchToApiFormExtension();
+
+        $form = $this->getRootForm();
+        $form->add('title', HiddenType::class);
+    }
+
+    public function testApiFormWithApiSpecificFormType()
+    {
+        $this->switchToApiFormExtension();
+
+        // test API boolean form type, TRUE value
+        $form = $this->getRootForm();
+        $form->add('title', TextType::class);
+        $form->add('enabled', BooleanType::class);
+        $object = new TestObject();
+        $form->setData($object);
+        $form->submit(['title' => 'test', 'enabled' => 'yes']);
+        self::assertTrue($form->isSubmitted(), 'isSubmitted, TRUE');
+        self::assertTrue($form->isValid(), 'isValid, TRUE');
+        self::assertTrue($object->isEnabled(), 'value, TRUE');
+
+        // test API boolean form type, FALSE value
+        $form = $this->getRootForm();
+        $form->add('title', TextType::class);
+        $form->add('enabled', BooleanType::class);
+        $object = new TestObject();
+        $form->setData($object);
+        $form->submit(['title' => 'test', 'enabled' => 'no']);
+        self::assertTrue($form->isSubmitted(), 'isSubmitted, FALSE');
+        self::assertTrue($form->isValid(), 'isValid, FALSE');
+        self::assertFalse($object->isEnabled(), 'value, FALSE');
+
+        // test API boolean form type, NULL value
+        $form = $this->getRootForm();
+        $form->add('title', TextType::class);
+        $form->add('enabled', BooleanType::class);
+        $object = new TestObject();
+        $form->setData($object);
+        $form->submit(['title' => 'test', 'enabled' => null]);
+        self::assertTrue($form->isSubmitted(), 'isSubmitted, NULL');
+        self::assertTrue($form->isValid(), 'isValid, NULL');
+        self::assertNull($object->isEnabled(), 'value, NULL');
     }
 
     public function testDefaultFormValidation()
@@ -64,8 +133,8 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => '']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertFalse($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertFalse($form->isValid(), 'isValid');
     }
 
     public function testApiFormValidation()
@@ -77,8 +146,8 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => '']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertFalse($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertFalse($form->isValid(), 'isValid');
     }
 
     public function testValidationConstraintFromAllGroups()
@@ -90,8 +159,8 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test', 'description' => '12']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
     }
 
     public function testValidationConstraintFromApiGroup()
@@ -103,8 +172,8 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test', 'description' => '1234']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertFalse($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertFalse($form->isValid(), 'isValid');
     }
 
     public function testValidationConstraintFromUiGroup()
@@ -116,8 +185,8 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test', 'description' => '1234']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
     }
 
     /**
@@ -142,11 +211,11 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['id' => 123, 'title' => 'test']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
 
-        $this->assertSame(123, $object->getId());
-        $this->assertSame('test', $object->getTitle());
+        self::assertSame(123, $object->getId());
+        self::assertSame('test', $object->getTitle());
     }
 
     public function testApiFormWithGuessedTypesAndPropertyPath()
@@ -165,11 +234,11 @@ class FormTest extends WebTestCase
         $form->setData($object);
 
         $form->submit(['code' => 123, 'title' => 'test']);
-        $this->assertTrue($form->isSubmitted(), 'isSubmitted');
-        $this->assertTrue($form->isValid(), 'isValid');
+        self::assertTrue($form->isSubmitted(), 'isSubmitted');
+        self::assertTrue($form->isValid(), 'isValid');
 
-        $this->assertSame(123, $object->getId());
-        $this->assertSame('test', $object->getTitle());
+        self::assertSame(123, $object->getId());
+        self::assertSame('test', $object->getTitle());
     }
 
     protected function switchToDefaultFormExtension()
@@ -204,9 +273,9 @@ class FormTest extends WebTestCase
     protected function getForm(array $options = [])
     {
         $form = $this->getRootForm($options);
-        $form->add('id', 'integer');
-        $form->add('title', 'text');
-        $form->add('description', 'text');
+        $form->add('id', IntegerType::class);
+        $form->add('title', TextType::class);
+        $form->add('description', TextType::class);
 
         return $form;
     }
@@ -232,9 +301,11 @@ class FormTest extends WebTestCase
      */
     protected function getRootForm(array $options = [])
     {
-        $options['data_class'] = self::TEST_CLASS;
-        $options['extra_fields_message'] = 'This form should not contain extra fields: "{{ extra_fields }}"';
-        $form = $this->getContainer()->get('form.factory')->create($this->getType(), null, $options);
+        if (!isset($options['data_class'])) {
+            $options['data_class'] = TestObject::class;
+        }
+        $options['extra_fields_message'] = FormHelper::EXTRA_FIELDS_MESSAGE;
+        $form = $this->getContainer()->get('form.factory')->create(FormType::class, null, $options);
 
         return $form;
     }
@@ -245,7 +316,7 @@ class FormTest extends WebTestCase
     protected function getEntityMetadata()
     {
         $metadata = new EntityMetadata();
-        $metadata->setClassName(self::TEST_CLASS);
+        $metadata->setClassName(TestObject::class);
         $metadata->setIdentifierFieldNames(['id']);
         $idField = new FieldMetadata();
         $idField->setName('id');
@@ -259,17 +330,5 @@ class FormTest extends WebTestCase
         $metadata->addField($titleField);
 
         return $metadata;
-    }
-
-    /**
-     * Provide backward compatibility between Symfony versions < 2.8 and 2.8+
-     *
-     * @return string
-     */
-    public function getType()
-    {
-        return method_exists('Symfony\Component\Form\AbstractType', 'getBlockPrefix')
-            ? 'Symfony\Component\Form\Extension\Core\Type\FormType'
-            : 'form';
     }
 }

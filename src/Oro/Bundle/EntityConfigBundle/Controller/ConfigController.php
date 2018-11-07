@@ -3,32 +3,29 @@
 namespace Oro\Bundle\EntityConfigBundle\Controller;
 
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\BatchBundle\ORM\Query\QueryCountCalculator;
+use Oro\Bundle\EntityBundle\Provider\EntityFieldProvider;
+use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
+use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
+use Oro\Bundle\EntityConfigBundle\Form\Type\ConfigType;
+use Oro\Bundle\EntityConfigBundle\Helper\EntityConfigProviderHelper;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\EntityConfigBundle\Tools\ConfigHelper;
+use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\SecurityBundle\Annotation\Acl;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
-use Oro\Bundle\SecurityBundle\Annotation\Acl;
-use Oro\Bundle\BatchBundle\ORM\Query\QueryCountCalculator;
-use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
-use Oro\Bundle\EntityBundle\Provider\EntityFieldProvider;
-use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
-use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigContainer;
-use Oro\Bundle\EntityConfigBundle\Tools\ConfigHelper;
-use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
-use Oro\Bundle\EntityConfigBundle\Helper\EntityConfigProviderHelper;
-
 /**
  * EntityConfig controller.
  * @Route("/entity/config")
- * TODO: Discuss ACL impl., currently management of configurable entities can be on or off only
+ * BAP-17635 Discuss ACL impl., currently management of configurable entities can be on or off only
  * @Acl(
  *      id="oro_entityconfig_manage",
  *      label="oro.entity_config.action.manage",
@@ -88,28 +85,28 @@ class ConfigController extends Controller
      * )
      * @Template()
      *
+     * @param Request $request
      * @param string $id
      *
      * @return array|RedirectResponse
      */
-    public function updateAction($id)
+    public function updateAction(Request $request, $id)
     {
         $entity  = $this->getConfigManager()
             ->getEntityManager()
             ->getRepository('Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel')
             ->find($id);
-        $request = $this->getRequest();
 
         $form = $this->createForm(
-            'oro_entity_config_type',
+            ConfigType::class,
             null,
             ['config_model' => $entity]
         );
 
         if ($request->getMethod() == 'POST') {
-            $form->submit($request);
+            $form->handleRequest($request);
 
-            if ($form->isValid()) {
+            if ($form->isSubmitted() && $form->isValid()) {
                 //persist data inside the form
                 $this->get('session')->getFlashBag()->add(
                     'success',
@@ -156,7 +153,7 @@ class ConfigController extends Controller
         $extendConfigProvider = $this->get('oro_entity_config.provider.extend');
 
         list(, $entityName) = ConfigHelper::getModuleAndEntityNames($entity->getClassName());
-        list ($layoutActions, $requireJsModules) = $this->getConfigProviderHelper()->getLayoutParams($entity);
+        list($layoutActions, $requireJsModules) = $this->getConfigProviderHelper()->getLayoutParams($entity);
 
         return [
             'entity'        => $entity,
@@ -171,7 +168,6 @@ class ConfigController extends Controller
     }
 
     /**
-     * TODO: Check if this method ever used
      * Lists Entity fields
      * @Route("/fields/{id}", name="oro_entityconfig_fields", requirements={"id"="\d+"}, defaults={"id"=0})
      * @Template()
@@ -187,7 +183,7 @@ class ConfigController extends Controller
             ->getRepository('Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel')
             ->find($id);
 
-        list ($layoutActions, $requireJsModules) = $this->getConfigProviderHelper()->getLayoutParams($entity);
+        list($layoutActions, $requireJsModules) = $this->getConfigProviderHelper()->getLayoutParams($entity);
 
         return [
             'buttonConfig' => $layoutActions,

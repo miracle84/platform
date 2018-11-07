@@ -4,11 +4,9 @@ namespace Oro\Bundle\EmailBundle\Async;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Bundle\BatchBundle\ORM\Query\BufferedQueryResultIterator;
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
-
 use Oro\Bundle\MessageQueueBundle\Entity\Job;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
@@ -142,14 +140,14 @@ class PurgeEmailAttachmentsMessageProcessor implements MessageProcessorInterface
     /**
      * @param int $size
      *
-     * @return BufferedQueryResultIterator
+     * @return BufferedIdentityQueryResultIterator
      */
     private function getEmailAttachments($size)
     {
         $qb = $this->createEmailAttachmentQb($size);
         $em = $this->getEntityManager();
 
-        $emailAttachments = (new BufferedQueryResultIterator($qb))
+        $emailAttachments = (new BufferedIdentityQueryResultIterator($qb))
             ->setPageCallback(
                 function () use ($em) {
                     $em->flush();

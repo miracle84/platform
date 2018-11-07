@@ -3,12 +3,11 @@
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\ApiBundle\Exception\RuntimeException;
+use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Component\ChainProcessor\ContextInterface;
 use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Component\EntitySerializer\EntitySerializer;
-use Oro\Bundle\ApiBundle\Exception\RuntimeException;
-use Oro\Bundle\ApiBundle\Processor\Context;
 
 /**
  * Loads entity using the EntitySerializer component.
@@ -47,7 +46,7 @@ class LoadEntityByEntitySerializer implements ProcessorInterface
 
         $config = $context->getConfig();
         if (null === $config) {
-            // an entity configuration does not exist
+            // only configured API resources are supported
             return;
         }
 

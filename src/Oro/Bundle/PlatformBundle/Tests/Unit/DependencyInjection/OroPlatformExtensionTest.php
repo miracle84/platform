@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\PlatformBundle\Tests\Unit\DependencyInjection;
 
+use Oro\Bundle\PlatformBundle\DependencyInjection\OroPlatformExtension;
+use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Yaml\Parser;
 
-use Oro\Component\DependencyInjection\ExtendedContainerBuilder;
-use Oro\Bundle\PlatformBundle\DependencyInjection\OroPlatformExtension;
-
-class OroCronExtensionTest extends \PHPUnit_Framework_TestCase
+class OroPlatformExtensionTest extends \PHPUnit\Framework\TestCase
 {
     public function testLoad()
     {
@@ -49,7 +48,7 @@ class OroCronExtensionTest extends \PHPUnit_Framework_TestCase
                         'pattern' => '^/',
                         'provider' => 'chain_provider',
                         'organization-form-login' => [
-                            'csrf_provider' => 'form.csrf_provider',
+                            'csrf_token_generator' => 'security.csrf.token_manager',
                             'check_path' => 'oro_user_security_check',
                             'login_path' => 'oro_user_security_login',
                         ],

@@ -2,18 +2,23 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\ConfigExpression;
 
-use Symfony\Component\Security\Core\Util\ClassUtils;
-use Symfony\Component\PropertyAccess\PropertyPath;
-
-use Oro\Component\ConfigExpression\ContextAccessor;
+use Doctrine\Common\Persistence\ManagerRegistry;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\ConfigExpression\AclGranted;
+use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class AclGrantedTest extends \PHPUnit_Framework_TestCase
+class AclGrantedTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $doctrine;
 
     /** @var AclGranted */
@@ -21,24 +26,32 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->doctrine       = $this->getMockBuilder('Doctrine\Common\Persistence\ManagerRegistry')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->doctrine = $this->createMock(ManagerRegistry::class);
 
-        $this->condition = new AclGranted($this->securityFacade, $this->doctrine);
+        $this->condition = new AclGranted(
+            $this->authorizationChecker,
+            $this->tokenAccessor,
+            $this->doctrine
+        );
         $this->condition->setContextAccessor(new ContextAccessor());
     }
 
     public function testEvaluateByAclAnnotationId()
     {
-        $options        = ['acme_product_view'];
-        $context        = [];
+        $options = ['acme_product_view'];
+        $context = [];
         $expectedResult = true;
 
-        $this->setupSecurityFacade($options[0], null, $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], null)
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -46,11 +59,18 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateByObjectIdentityDescriptor()
     {
-        $options        = ['VIEW', 'entity:Acme/DemoBundle/Entity/AcmeEntity'];
-        $context        = [];
+        $options = ['VIEW', 'entity:Acme/DemoBundle/Entity/AcmeEntity'];
+        $context = [];
         $expectedResult = true;
 
-        $this->setupSecurityFacade($options[0], $options[1], $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], $options[1])
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -58,8 +78,8 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateForNotEntityObject()
     {
-        $options        = ['VIEW', new \stdClass()];
-        $context        = [];
+        $options = ['VIEW', new \stdClass()];
+        $context = [];
         $expectedResult = true;
 
         $this->doctrine->expects($this->once())
@@ -67,7 +87,14 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
             ->with(ClassUtils::getRealClass($options[1]))
             ->will($this->returnValue(null));
 
-        $this->setupSecurityFacade($options[0], $this->identicalTo($options[1]), $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], $this->identicalTo($options[1]))
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -75,11 +102,11 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateForExistingEntity()
     {
-        $options        = ['VIEW', new \stdClass()];
-        $context        = [];
+        $options = ['VIEW', new \stdClass()];
+        $context = [];
         $expectedResult = true;
 
-        $em  = $this->getMockBuilder('Doctrine\ORM\EntityManager')
+        $em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
             ->getMock();
         $uow = $this->getMockBuilder('\Doctrine\ORM\UnitOfWork')
@@ -102,7 +129,14 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
             ->with(ClassUtils::getRealClass($options[1]))
             ->will($this->returnValue($em));
 
-        $this->setupSecurityFacade($options[0], $this->identicalTo($options[1]), $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], $this->identicalTo($options[1]))
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -110,11 +144,11 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateForNewEntity()
     {
-        $options        = ['VIEW', new \stdClass()];
-        $context        = [];
+        $options = ['VIEW', new \stdClass()];
+        $context = [];
         $expectedResult = true;
 
-        $em  = $this->getMockBuilder('Doctrine\ORM\EntityManager')
+        $em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
             ->getMock();
         $uow = $this->getMockBuilder('\Doctrine\ORM\UnitOfWork')
@@ -135,7 +169,14 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
             ->with(ClassUtils::getRealClass($options[1]))
             ->will($this->returnValue($em));
 
-        $this->setupSecurityFacade($options[0], 'entity:' . ClassUtils::getRealClass($options[1]), $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], 'entity:' . ClassUtils::getRealClass($options[1]))
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -143,11 +184,11 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateForEntityWhichIsNotInUowYet()
     {
-        $options        = ['VIEW', new \stdClass()];
-        $context        = [];
+        $options = ['VIEW', new \stdClass()];
+        $context = [];
         $expectedResult = true;
 
-        $em  = $this->getMockBuilder('Doctrine\ORM\EntityManager')
+        $em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
             ->getMock();
         $uow = $this->getMockBuilder('\Doctrine\ORM\UnitOfWork')
@@ -170,7 +211,14 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
             ->with(ClassUtils::getRealClass($options[1]))
             ->will($this->returnValue($em));
 
-        $this->setupSecurityFacade($options[0], 'entity:' . ClassUtils::getRealClass($options[1]), $expectedResult);
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(new \stdClass()));
+
+        $this->authorizationChecker->expects($this->once())
+            ->method('isGranted')
+            ->with($options[0], 'entity:' . ClassUtils::getRealClass($options[1]))
+            ->will($this->returnValue($expectedResult));
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertEquals($expectedResult, $this->condition->evaluate($context));
@@ -178,37 +226,18 @@ class AclGrantedTest extends \PHPUnit_Framework_TestCase
 
     public function testEvaluateHasNoUser()
     {
-        $options        = ['acme_product_view'];
-        $context        = [];
+        $options = ['acme_product_view'];
+        $context = [];
 
-        $this->securityFacade->expects($this->once())
-            ->method('hasLoggedUser')
-            ->with()
-            ->will($this->returnValue(false));
+        $this->tokenAccessor->expects($this->once())
+            ->method('getToken')
+            ->will($this->returnValue(null));
 
-        $this->securityFacade->expects($this->never())
+        $this->authorizationChecker->expects($this->never())
             ->method('isGranted');
 
         $this->assertSame($this->condition, $this->condition->initialize($options));
         $this->assertFalse($this->condition->evaluate($context));
-    }
-
-    /**
-     * @param string|string[] $attributes
-     * @param mixed $object
-     * @param bool $expectedResult
-     */
-    protected function setupSecurityFacade($attributes, $object, $expectedResult)
-    {
-        $this->securityFacade->expects($this->once())
-            ->method('hasLoggedUser')
-            ->with()
-            ->will($this->returnValue(true));
-
-        $this->securityFacade->expects($this->once())
-            ->method('isGranted')
-            ->with($attributes, $object)
-            ->will($this->returnValue($expectedResult));
     }
 
     /**

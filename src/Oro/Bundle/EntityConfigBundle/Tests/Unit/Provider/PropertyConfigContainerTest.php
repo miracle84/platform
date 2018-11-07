@@ -9,7 +9,7 @@ use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigContainer;
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  */
-class PropertyConfigContainerTest extends \PHPUnit_Framework_TestCase
+class PropertyConfigContainerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var PropertyConfigContainer */
     protected $configContainer;
@@ -122,6 +122,53 @@ class PropertyConfigContainerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expectedValues, $result);
         // test that a result is cached locally
         $this->assertEquals($expectedValues, $this->configContainer->getFormItems($type, $fieldType));
+    }
+
+    /**
+     * Cache should independently maintain data for different fieldTypes and all items.
+     */
+    public function testGetFormItemsCache()
+    {
+        $this->configContainer->setConfig(['field' => $this->getItemsForFormItemsTest()]);
+        $result = $this->configContainer->getFormItems(PropertyConfigContainer::TYPE_FIELD, 'string');
+
+        $expectedStringTypeResult = [
+            'item1' => [
+                'form'    => [
+                    'type' => 'SomeForm',
+                ],
+                'options' => [
+                    'allowed_type' => ['string']
+                ],
+            ],
+            'item2' => [
+                'form' => [
+                    'type' => 'SomeForm',
+                ],
+            ],
+        ];
+
+        $this->assertEquals($expectedStringTypeResult, $result);
+
+        $result = $this->configContainer->getFormItems(PropertyConfigContainer::TYPE_FIELD);
+
+        $expectedNoTypeResult = [
+            'item1' => [
+                'form'    => [
+                    'type' => 'SomeForm',
+                ],
+                'options' => [
+                    'allowed_type' => ['string']
+                ],
+            ],
+            'item2' => [
+                'form' => [
+                    'type' => 'SomeForm',
+                ],
+            ],
+        ];
+
+        $this->assertEquals($expectedNoTypeResult, $result);
     }
 
     /**
@@ -846,6 +893,28 @@ class PropertyConfigContainerTest extends \PHPUnit_Framework_TestCase
                     'field' => $this->getItemsForFormItemsTest()
                 ],
                 [
+                    'item2' => [
+                        'form' => [
+                            'type' => 'SomeForm',
+                        ],
+                    ],
+                ]
+            ],
+            'entity config1'                           => [
+                PropertyConfigContainer::TYPE_ENTITY,
+                null,
+                [
+                    'entity' => $this->getItemsForFormItemsTest()
+                ],
+                [
+                    'item1' => [
+                        'form'    => [
+                            'type' => 'SomeForm',
+                        ],
+                        'options' => [
+                            'allowed_type' => ['string']
+                        ],
+                    ],
                     'item2' => [
                         'form' => [
                             'type' => 'SomeForm',

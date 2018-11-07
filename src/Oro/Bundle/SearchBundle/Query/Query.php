@@ -2,14 +2,12 @@
 
 namespace Oro\Bundle\SearchBundle\Query;
 
-use Doctrine\Common\Persistence\ObjectManager;
-
-use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Exception\ExpressionSyntaxError;
+use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 
 /**
- * @TODO: In platform 2.0 this class should be extended from the Doctrine\Common\Collections\Criteria.
- *        We should refactor this class only from platform v2.0 because it will break backward compatibility.
+ * Encapsulates query to search engine using SQL based format
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class Query
@@ -24,6 +22,7 @@ class Query
     const KEYWORD_OR          = 'or';
     const KEYWORD_OFFSET      = 'offset';
     const KEYWORD_MAX_RESULTS = 'max_results';
+    const KEYWORD_AGGREGATE   = 'aggregate';
     const KEYWORD_ORDER_BY    = 'order_by';
     const KEYWORD_AS          = 'as';
 
@@ -41,6 +40,7 @@ class Query
     const OPERATOR_EXISTS              = 'exists';
     const OPERATOR_NOT_EXISTS          = 'notexists';
     const OPERATOR_LIKE                = 'like';
+    const OPERATOR_NOT_LIKE            = 'notlike';
 
     const TYPE_TEXT     = 'text';
     const TYPE_INTEGER  = 'integer';
@@ -49,6 +49,12 @@ class Query
 
     const INFINITY = 10000000;
     const FINITY   = 0.000001;
+
+    const AGGREGATE_FUNCTION_COUNT = 'count';
+    const AGGREGATE_FUNCTION_SUM   = 'sum';
+    const AGGREGATE_FUNCTION_MAX   = 'max';
+    const AGGREGATE_FUNCTION_MIN   = 'min';
+    const AGGREGATE_FUNCTION_AVG   = 'avg';
 
     const DELIMITER = ' ';
 
@@ -70,8 +76,9 @@ class Query
     /** @var Criteria */
     protected $criteria;
 
-    /**
-     */
+    /** @var array */
+    protected $aggregations = [];
+
     public function __construct()
     {
         $this->maxResults = 0;
@@ -166,7 +173,9 @@ class Query
     }
 
     /**
-     * {@inheritdoc}
+     * @param string|string[] $fieldNames
+     * @param string|null $enforcedFieldType
+     * @return $this
      */
     public function addSelect($fieldNames, $enforcedFieldType = null)
     {
@@ -182,7 +191,8 @@ class Query
     }
 
     /**
-     * {@inheritdoc}
+     * @param string|string[] $entities
+     * @return $this
      */
     public function from($entities)
     {
@@ -233,6 +243,7 @@ class Query
      * Add "WHERE" parameter
      *
      * @deprecated Since 1.8 use criteria to add conditions
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      *
      * @param string $keyWord
      * @param string $fieldName
@@ -250,6 +261,9 @@ class Query
         switch ($condition) {
             case self::OPERATOR_LIKE:
                 $expr = $expr->like($fieldName, $fieldValue);
+                break;
+            case self::OPERATOR_NOT_LIKE:
+                $expr = $expr->notLike($fieldName, $fieldValue);
                 break;
             case self::OPERATOR_CONTAINS:
                 $expr = $expr->contains($fieldName, $fieldValue);
@@ -311,7 +325,7 @@ class Query
     }
 
     /**
-     * Get entities to select from
+     * Get entity aliases to select from
      *
      * @return array
      */
@@ -478,11 +492,21 @@ class Query
      */
     public static function clearString($inputString)
     {
+        /**
+         * Replace all not not supported characters with whitespaces to support both MyISAM and InnoDB
+         *
+         * /[^\p{L}\d\s]/u <- returns all characters that are not:
+         * p{L} <- letter in any unicode language
+         * \d <- digit
+         * \s <- whitespace
+         *
+         * /[\s]{2,}/ <-- returns all multi-spaces
+         */
         $string = trim(
             preg_replace(
-                '/ +/',
+                '/[\s]{2,}/',
                 self::DELIMITER,
-                preg_replace('/[^\w:*@.]/u', self::DELIMITER, $inputString)
+                preg_replace('/[^\p{L}\d\s]/u', self::DELIMITER, $inputString)
             )
         );
 
@@ -570,7 +594,7 @@ class Query
         $result  = [];
 
         foreach ($this->select as $select) {
-            list ($fieldType, $fieldName) = Criteria::explodeFieldTypeName($select);
+            list($fieldType, $fieldName) = Criteria::explodeFieldTypeName($select);
             if (isset($aliases[$fieldName])) {
                 $resultName = $aliases[$fieldName];
             } elseif (isset($aliases[$select])) {
@@ -585,6 +609,27 @@ class Query
         return $result;
     }
 
+    /**
+     * @param string $name
+     * @param string $field
+     * @param string $function
+     *
+     * @return $this
+     */
+    public function addAggregate($name, $field, $function)
+    {
+        $this->aggregations[$name] = ['field' => $field, 'function' => $function];
+
+        return $this;
+    }
+
+    /**
+     * @return array ['<name>' => ['field' => <field>, 'function' => '<function>']]
+     */
+    public function getAggregations()
+    {
+        return $this->aggregations;
+    }
 
     /**
      * @param      $fieldName
@@ -731,5 +776,10 @@ class Query
         }
 
         return $field;
+    }
+
+    public function __clone()
+    {
+        $this->criteria = clone $this->criteria;
     }
 }

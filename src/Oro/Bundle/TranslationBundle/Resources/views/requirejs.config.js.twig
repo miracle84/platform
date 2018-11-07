@@ -1,22 +1,19 @@
 require({
-    shim: {
-        'oro/translations': {
-            deps: ['orotranslation/js/translator', 'translator'],
-            init: function(__) {
-                return __;
-            }
-        }
-    },
     map: {
         '*': {
-            'orotranslation/js/translator': 'oro/translations'
+            'orotranslation/js/translator': 'orotranslation/js/translation-loader'
         },
-        'oro/translations': {
+        'orotranslation/js/translation-loader': {
             'orotranslation/js/translator': 'orotranslation/js/translator'
         }
     },
     paths: {
-        'oro/translations': '{{ url('oro_translation_jstranslation')[0:-3] }}'
+        'orotranslation/js/translation-loader': 'orotranslation/js/translation-loader',
+        {% if app.debug and oro_translation_debug_js_translations() %}
+            'oro/translations': '{{ path('oro_translation_jstranslation')|raw }}'
+        {% else %}
+            'oro/translations': '{{ asset(asset_path('oro_translation_jstranslation'), 'translations')|raw }}'
+        {% endif %}
     },
     config: {
         'orotranslation/js/translator': {

@@ -4,18 +4,15 @@ namespace Oro\Bundle\OrganizationBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
-
-use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-
-use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
-
 use Oro\Bundle\NotificationBundle\Entity\NotificationEmailInterface;
 use Oro\Bundle\OrganizationBundle\Model\ExtendOrganization;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 /**
- * Organization
+ * Organization represents a real enterprise, business, firm, company or another organization, to which the users belong
  *
  * @ORM\Table(name="oro_organization")
  * @ORM\Entity(repositoryClass="Oro\Bundle\OrganizationBundle\Entity\Repository\OrganizationRepository")
@@ -31,7 +28,7 @@ use Oro\Bundle\OrganizationBundle\Model\ExtendOrganization;
  *              "category"="account_management"
  *          },
  *          "form"={
- *              "form_type"="oro_organization_select"
+ *              "form_type"="Oro\Bundle\OrganizationBundle\Form\Type\OrganizationSelectType"
  *          },
  *          "dataaudit"={
  *              "auditable"=true
@@ -85,7 +82,7 @@ class Organization extends ExtendOrganization implements
     protected $description;
 
     /**
-     * @var ArrayCollection
+     * @var ArrayCollection|BusinessUnit[]
      *
      * @ORM\OneToMany(
      *     targetEntity="Oro\Bundle\OrganizationBundle\Entity\BusinessUnit",
@@ -97,7 +94,7 @@ class Organization extends ExtendOrganization implements
     protected $businessUnits;
 
     /**
-     * @var ArrayCollection
+     * @var ArrayCollection|User[]
      *
      * @ORM\ManyToMany(targetEntity="Oro\Bundle\UserBundle\Entity\User", mappedBy="organizations")
      * @ORM\JoinTable(name="oro_user_organization")
@@ -282,7 +279,7 @@ class Organization extends ExtendOrganization implements
     }
 
     /**
-     * @return ArrayCollection
+     * @return ArrayCollection|BusinessUnit[]
      */
     public function getBusinessUnits()
     {
@@ -404,18 +401,10 @@ class Organization extends ExtendOrganization implements
     }
 
     /**
-     * @param ArrayCollection $users
-     * @deprecated since 1.6
-     */
-    public function setUsers(ArrayCollection $users)
-    {
-        $this->users = $users;
-    }
-
-    /**
      * Add User to Organization
      *
      * @param User $user
+     * @return $this
      */
     public function addUser(User $user)
     {
@@ -423,12 +412,15 @@ class Organization extends ExtendOrganization implements
             $this->getUsers()->add($user);
             $user->addOrganization($this);
         }
+
+        return $this;
     }
 
     /**
      * Delete User from Organization
      *
      * @param User $user
+     * @return $this
      */
     public function removeUser(User $user)
     {
@@ -436,6 +428,8 @@ class Organization extends ExtendOrganization implements
             $this->getUsers()->removeElement($user);
             $user->removeOrganization($this);
         }
+
+        return $this;
     }
 
     /**
@@ -450,7 +444,7 @@ class Organization extends ExtendOrganization implements
     }
 
     /**
-     * @return ArrayCollection
+     * @return ArrayCollection|User[]
      */
     public function getUsers()
     {

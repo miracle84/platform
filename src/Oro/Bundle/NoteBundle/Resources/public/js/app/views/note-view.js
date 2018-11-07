@@ -12,7 +12,7 @@ define([
 
     NoteView = BaseView.extend({
         options: {
-            'template': null
+            template: null
         },
 
         attributes: {
@@ -29,6 +29,16 @@ define([
             'change model': '_onModelChanged'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function NoteView() {
+            NoteView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             this.collapsed = false;
@@ -36,6 +46,13 @@ define([
             if (this.options.template) {
                 this.template = _.template($(this.options.template).html());
             }
+        },
+
+        render: function() {
+            NoteView.__super__.render.apply(this, arguments);
+            this._onRender();
+
+            return this;
         },
 
         getTemplateData: function() {
@@ -47,10 +64,10 @@ define([
             data.createdBy_url = null;
             data.updatedBy_url = null;
             if (data.createdBy_id && data.createdBy_viewable) {
-                data.createdBy_url = routing.generate('oro_user_view', {'id': data.createdBy_id});
+                data.createdBy_url = routing.generate('oro_user_view', {id: data.createdBy_id});
             }
             if (data.updatedBy_id && data.updatedBy_viewable) {
-                data.updatedBy_url = routing.generate('oro_user_view', {'id': data.updatedBy_id});
+                data.updatedBy_url = routing.generate('oro_user_view', {id: data.updatedBy_id});
             }
             data.message = _.escape(data.message);
             data.brief_message = data.message.replace(new RegExp('\r?\n', 'g'), ' ');
@@ -77,17 +94,19 @@ define([
             this.toggle();
         },
 
+        _onRender: function() {
+            this.$('.accordion-toggle').toggleClass('collapsed', this.collapsed);
+            this.$('.collapse').toggleClass('in', !this.collapsed);
+        },
+
         /**
          * Collapses/expands view elements
          *
          * @param {boolean=} collapse
          */
         toggle: function(collapse) {
-            if (_.isUndefined(collapse)) {
-                collapse = !this.isCollapsed();
-            }
-            this.$('.accordion-toggle').toggleClass('collapsed', collapse);
-            this.$('.collapse').toggleClass('in', !collapse);
+            this.collapsed = !_.isUndefined(collapse) ? collapse : !this.collapsed;
+            this._onRender();
         },
 
         isCollapsed: function() {

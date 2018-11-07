@@ -3,7 +3,6 @@
 namespace Oro\Bundle\SecurityBundle\Owner;
 
 use Doctrine\Common\Cache\CacheProvider;
-
 use Oro\Bundle\EntityBundle\Tools\DatabaseChecker;
 
 abstract class AbstractOwnerTreeProvider implements OwnerTreeProviderInterface
@@ -16,9 +15,6 @@ abstract class AbstractOwnerTreeProvider implements OwnerTreeProviderInterface
     /** @var CacheProvider */
     private $cache;
 
-    /** @var OwnerTreeInterface */
-    private $tree;
-
     /**
      * @param DatabaseChecker $databaseChecker
      * @param CacheProvider   $cache
@@ -30,16 +26,16 @@ abstract class AbstractOwnerTreeProvider implements OwnerTreeProviderInterface
     }
 
     /**
-     * @param OwnerTreeInterface $tree
+     * @param OwnerTreeBuilderInterface $tree
      */
-    abstract protected function fillTree(OwnerTreeInterface $tree);
+    abstract protected function fillTree(OwnerTreeBuilderInterface $tree);
 
     /**
-     * Returns empty instance of OwnerTree object
+     * Returns empty instance of the owner tree builder
      *
-     * @return OwnerTreeInterface
+     * @return OwnerTreeBuilderInterface
      */
-    protected function createTreeObject()
+    protected function createTreeBuilder()
     {
         return new OwnerTree();
     }
@@ -57,7 +53,7 @@ abstract class AbstractOwnerTreeProvider implements OwnerTreeProviderInterface
      */
     public function warmUpCache()
     {
-        $this->ensureTreeLoaded();
+        $this->cache->save(self::CACHE_KEY, $this->loadTree());
     }
 
     /**
@@ -65,44 +61,27 @@ abstract class AbstractOwnerTreeProvider implements OwnerTreeProviderInterface
      */
     public function getTree()
     {
-        $this->ensureTreeLoaded();
+        $tree = $this->cache->fetch(self::CACHE_KEY);
+        if (!$tree) {
+            $tree = $this->loadTree();
+            $this->cache->save(self::CACHE_KEY, $tree);
+        }
 
-        return $this->tree;
+        return $tree;
     }
 
     /**
-     * Makes sure that tree data are loaded and cached
-     */
-    protected function ensureTreeLoaded()
-    {
-        if (null !== $this->tree) {
-            // the tree is already loaded
-            return;
-        }
-
-        if (null === $this->cache) {
-            $this->tree = $this->loadTree();
-        } else {
-            $this->tree = $this->cache->fetch(self::CACHE_KEY);
-            if (!$this->tree) {
-                $this->tree = $this->loadTree();
-                $this->cache->save(self::CACHE_KEY, $this->tree);
-            }
-        }
-    }
-
-    /**
-     * Loads tree data and save them in cache
+     * Loads tree data
      *
      * @return OwnerTreeInterface
      */
     protected function loadTree()
     {
-        $tree = $this->createTreeObject();
+        $treeBuilder = $this->createTreeBuilder();
         if ($this->databaseChecker->checkDatabase()) {
-            $this->fillTree($tree);
+            $this->fillTree($treeBuilder);
         }
 
-        return $tree;
+        return $treeBuilder->getTree();
     }
 }

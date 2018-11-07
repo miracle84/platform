@@ -3,24 +3,27 @@
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Manager;
 
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
+use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
+use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
+use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroupRelation;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Entity\Repository\FieldConfigModelRepository;
-use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
-use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
-use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroupRelation;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeFamilyRepository;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeGroupRelationRepository;
-use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeGroupRepository;
+use Oro\Bundle\EntityConfigBundle\Entity\Repository\FieldConfigModelRepository;
+use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\TranslationBundle\Translation\Translator;
 use Oro\Component\Testing\Unit\EntityTrait;
 
-class AttributeManagerTest extends \PHPUnit_Framework_TestCase
+/**
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
+class AttributeManagerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
@@ -28,17 +31,17 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
     const ATTRIBUTE_FIELD_NAME = 'attribute_field_name';
 
     /**
-     * @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
     /**
-     * @var DoctrineHelper|\PHPUnit_Framework_MockObject_MockObject
+     * @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $doctrineHelper;
 
     /**
-     * @var Translator|\PHPUnit_Framework_MockObject_MockObject
+     * @var Translator|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $translator;
 
@@ -79,7 +82,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return FieldConfigModelRepository|\PHPUnit_Framework_MockObject_MockObject
+     * @return FieldConfigModelRepository|\PHPUnit\Framework\MockObject\MockObject
      */
     private function expectsGetFieldConfigModelRepository()
     {
@@ -95,7 +98,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
         return $repository;
     }
     /**
-     * @return AttributeFamilyRepository|\PHPUnit_Framework_MockObject_MockObject
+     * @return AttributeFamilyRepository|\PHPUnit\Framework\MockObject\MockObject
      */
     private function expectsGetAttributeFamilyRepository()
     {
@@ -284,7 +287,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
         $attributeFieldName = 'attributeFieldName';
         $entityClassName = 'entityClassName';
 
-        /** @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject */
+        /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
         $extendConfigProvider = $this->getMockBuilder(ConfigProvider::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -319,7 +322,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
             ->with('label')
             ->willReturn($attributeLabel);
 
-        /** @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject */
+        /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
         $entityConfigProvider = $this->getMockBuilder(ConfigProvider::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -367,7 +370,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
             ->with('label')
             ->willReturn($attributeLabel);
 
-        /** @var ConfigProvider|\PHPUnit_Framework_MockObject_MockObject */
+        /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
         $entityConfigProvider = $this->getMockBuilder(ConfigProvider::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -438,7 +441,7 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return AttributeGroupRelationRepository|\PHPUnit_Framework_MockObject_MockObject
+     * @return AttributeGroupRelationRepository|\PHPUnit\Framework\MockObject\MockObject
      */
     private function expectsGetAttributeGroupRelationRepository()
     {
@@ -568,5 +571,44 @@ class AttributeManagerTest extends \PHPUnit_Framework_TestCase
     private function createAttributeGroupRelation($attributeId)
     {
         return $this->getEntity(AttributeGroupRelation::class, ['entityConfigFieldId' => $attributeId]);
+    }
+
+    public function testIsActive()
+    {
+        $config = $this->createMock(ConfigInterface::class);
+        $config
+            ->expects($this->exactly(2))
+            ->method('in')
+            ->with('state', [ExtendScope::STATE_ACTIVE, ExtendScope::STATE_UPDATE])
+            ->willReturn(true);
+
+        $attributeFieldName = 'attributeFieldName';
+        $entityClassName = 'entityClassName';
+
+        /** @var ConfigProvider|\PHPUnit\Framework\MockObject\MockObject */
+        $extendConfigProvider = $this->getMockBuilder(ConfigProvider::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $extendConfigProvider->expects($this->exactly(2))
+            ->method('getConfig')
+            ->with($entityClassName, $attributeFieldName)
+            ->willReturn($config);
+
+        $this->configManager
+            ->expects($this->once())
+            ->method('getProvider')
+            ->with('extend')
+            ->willReturn($extendConfigProvider);
+
+        /** @var FieldConfigModel $attribute */
+        $attribute = $this->getEntity(FieldConfigModel::class, [
+            'fieldName' => $attributeFieldName,
+            'entity' => $this->getEntity(EntityConfigModel::class, ['className' => $entityClassName])
+        ]);
+
+        $this->assertEquals(true, $this->manager->isActive($attribute));
+        // Check that configManager::getProvider() called once
+        $this->assertEquals(true, $this->manager->isActive($attribute));
     }
 }

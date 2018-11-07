@@ -28,6 +28,19 @@ define([
             empty_selection: 'Please, select items to perform mass action.'
         },
 
+        /** @property {String} */
+        token: '',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function MassAction() {
+            MassAction.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             MassAction.__super__.initialize.apply(this, arguments);
 
@@ -81,6 +94,8 @@ define([
 
             params[stateKey] = collection.stateHashValue();
             params = collection.processFiltersParams(params, null, 'filters');
+
+            params.token = this.token;
 
             return params;
         },

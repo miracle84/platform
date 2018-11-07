@@ -3,14 +3,9 @@
 namespace Oro\Bundle\BatchBundle\Tests\Functional\Command;
 
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Yaml\Yaml;
 
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class CleanupCommandTest extends WebTestCase
 {
     protected function setUp()
@@ -50,7 +45,7 @@ class CleanupCommandTest extends WebTestCase
     {
         return [
             'should show help'                             => [
-                '$expectedContent' => "Usage:\n  oro:cron:batch:cleanup [options]",
+                '$expectedContent' => 'Usage: oro:cron:batch:cleanup [options]',
                 '$params'          => ['--help']
             ],
             'should show no records found'                 => [
@@ -58,7 +53,7 @@ class CleanupCommandTest extends WebTestCase
                 '$params'          => ['-i' => '1 year']
             ],
             'should show success output and records count' => [
-                '$expectedContent' => "Batch jobs will be deleted: 6" . PHP_EOL . "Batch job history cleanup complete",
+                '$expectedContent' => 'Batch jobs will be deleted: 6 Batch job history cleanup complete',
                 '$params'          => ['-i' => '2 weeks']
             ]
         ];
@@ -73,7 +68,8 @@ class CleanupCommandTest extends WebTestCase
     protected function getEntityFieldAsArray($repositoryName, $field)
     {
         /** @var QueryBuilder $qb */
-        $qb = $this->getContainer()->get('doctrine')
+        $qb = $this->getContainer()->get('akeneo_batch.job_repository')
+            ->getJobManager()
             ->getRepository($repositoryName)
             ->createQueryBuilder('i');
 

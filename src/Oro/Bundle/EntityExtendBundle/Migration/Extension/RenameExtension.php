@@ -4,7 +4,6 @@ namespace Oro\Bundle\EntityExtendBundle\Migration\Extension;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\Table;
-
 use Oro\Bundle\EntityExtendBundle\Migration\ExtendOptionsManager;
 use Oro\Bundle\MigrationBundle\Migration\Extension\RenameExtension as BaseRenameExtension;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
@@ -39,7 +38,7 @@ class RenameExtension extends BaseRenameExtension
                 }
             } else {
                 // handle field name
-                list ($tableName, $columnName) = explode('!', $name, 2);
+                list($tableName, $columnName) = explode('!', $name, 2);
 
                 // replace table name in combined field name column
                 if ($tableName === $oldTableName) {

@@ -3,16 +3,17 @@
 namespace Oro\Bundle\TagBundle\Entity\Repository;
 
 use Doctrine\Common\Collections\Criteria;
-use Doctrine\Common\Util\ClassUtils;
-use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Bundle\TagBundle\Entity\Tag;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\TagBundle\Helper\TaggableHelper;
+use Oro\Bundle\TagBundle\Entity\Tag;
 use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
+/**
+ * Doctrine repository for Tag entity
+ */
 class TagRepository extends EntityRepository
 {
     /**
@@ -46,7 +47,7 @@ class TagRepository extends EntityRepository
                 Join::WITH,
                 't.taxonomy  = tx.id'
             )
-            ->orderBy('t.name', $direction)
+            ->orderBy('t.name', QueryBuilderUtil::getSortOrder($direction))
             ->setParameter('entityIds', $entityIds)
             ->setParameter('entityClassName', $entityClassName)
             ->setParameter('owner', $owner);
@@ -113,7 +114,7 @@ class TagRepository extends EntityRepository
             ->setParameter('entityId', $entityId);
 
         if (!empty($tags)) {
-            $builder->andWhere($builder->expr()->in('t.tag', $tags));
+            $builder->andWhere($builder->expr()->in('t.tag', ':tags'))->setParameter('tags', $tags);
         }
 
         if (null !== $owner) {
@@ -137,25 +138,6 @@ class TagRepository extends EntityRepository
             ->getDeleteTaggingQueryBuilder($entityClassName)
             ->getQuery()
             ->getResult();
-    }
-
-    /**
-     * Returns tags with taggings loaded by resource
-     *
-     * @param object       $resource
-     * @param int|null     $createdBy
-     * @param bool         $all
-     * @param Organization $organization
-     *
-     * @return array
-     *
-     * @deprecated Use {@see getTags} instead
-     */
-    public function getTagging($resource, $createdBy = null, $all = false, Organization $organization = null)
-    {
-        $recordId = TaggableHelper::getEntityId($resource);
-
-        return $this->getTags(ClassUtils::getClass($resource), $recordId, $createdBy, $all, $organization);
     }
 
     /**

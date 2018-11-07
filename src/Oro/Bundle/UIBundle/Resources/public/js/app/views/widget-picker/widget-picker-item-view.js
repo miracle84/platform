@@ -7,11 +7,11 @@ define(function(require) {
     WidgetPickerItemView = BaseView.extend({
         template: require('tpl!oroui/templates/widget-picker/widget-picker-item-view.html'),
         tagName: 'div',
-        className: 'widget-picker-container',
+        className: 'widget-picker__item',
 
         events: {
-            'click .widget-picker-collapse': '_toggleWidget',
-            'click .widget-picker-add-btn': '_onClickAddWidget'
+            'click [data-role="description-toggler"]': '_toggleWidget',
+            'click [data-role="add-action"]': '_onClickAddWidget'
         },
 
         listen: {
@@ -21,16 +21,23 @@ define(function(require) {
             'unblock_add_btn': '_unblockAddBtn'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function WidgetPickerItemView() {
+            WidgetPickerItemView.__super__.constructor.apply(this, arguments);
+        },
+
         _blockAddBtn: function() {
-            this.$('.widget-picker-add-btn').addClass('disabled');
+            this.$('[data-role="add-action"]').addClass('disabled');
         },
 
         _unblockAddBtn: function() {
-            this.$('.widget-picker-add-btn').removeClass('disabled');
+            this.$('[data-role="add-action"]').removeClass('disabled');
         },
 
         _addLoadingClassToBtnWrapper: function() {
-            this.$el.addClass('loading-widget-content');
+            this.$el.addClass('loading');
         },
 
         setFilterModel: function(filterModel) {
@@ -39,11 +46,11 @@ define(function(require) {
         },
 
         _changeAddedCount: function() {
-            this.$el.removeClass('loading-widget-content');
-            if (this.model.get('added') === 1) {
-                this.$('.added').removeClass('hidden');
+            this.$el.removeClass('loading');
+            if (this.model.get('added') !== 0) {
+                this.$('[data-role="added-badge"]').removeClass('hide');
             }
-            this.$('.added > span').text('(' + this.model.get('added') + ')');
+            this.$('[data-role="added-count"]').text('(' + this.model.get('added') + ')');
         },
 
         /**
@@ -63,8 +70,8 @@ define(function(require) {
          */
         _toggleWidget: function(e) {
             e.preventDefault();
-            this.$('.widget-picker-collapse').toggleClass('collapsed-state');
-            this.$('.widget-picker-description').fadeToggle();
+            this.$('[data-role="description-toggler"]').toggleClass('collapsed');
+            this.$('[data-role="description"]').slideToggle();
         }
     });
 

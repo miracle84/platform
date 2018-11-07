@@ -2,21 +2,25 @@
 
 namespace Oro\Bundle\NavigationBundle\Tests\Unit\Menu\Helper;
 
-use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
+use Oro\Bundle\LocaleBundle\Model\FallbackType;
 use Oro\Bundle\NavigationBundle\Menu\Helper\MenuUpdateHelper;
 use Oro\Bundle\NavigationBundle\Tests\Unit\Entity\Stub\MenuUpdateStub;
+use Oro\Bundle\TranslationBundle\Entity\Language;
+use Oro\Component\Testing\Unit\EntityTrait;
+use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class MenuUpdateHelperTest extends \PHPUnit_Framework_TestCase
+class MenuUpdateHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    use EntityTrait;
+
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LocalizationHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $localizationHelper;
 
     /** @var MenuUpdateHelper */
@@ -41,16 +45,15 @@ class MenuUpdateHelperTest extends \PHPUnit_Framework_TestCase
             ->expects($this->exactly(3))
             ->method('trans')
             ->will($this->returnValueMap([
-                ['test.title', [], null, null, 'Test Title'],
-                ['test.title', [], null, 'en', 'Test Title'],
+                ['test.title', [], null, 'en', 'EN Test Title'],
                 ['test.title', [], null, 'de', 'DE Test Title'],
             ]));
 
         $enLocalization = new Localization();
-        $enLocalization->setLanguageCode('en');
+        $enLocalization->setLanguage($this->getEntity(Language::class, ['code' => 'en']));
 
         $deLocalization = new Localization();
-        $deLocalization->setLanguageCode('de');
+        $deLocalization->setLanguage($this->getEntity(Language::class, ['code' => 'de']));
 
         $this->localizationHelper
             ->expects($this->once())
@@ -66,8 +69,13 @@ class MenuUpdateHelperTest extends \PHPUnit_Framework_TestCase
         $deFallbackValue->setLocalization($deLocalization);
         $deFallbackValue->setString('DE Test Title');
 
+        $enFallbackValue = new LocalizedFallbackValue();
+        $enFallbackValue->setLocalization($enLocalization);
+        $enFallbackValue->setFallback(FallbackType::SYSTEM);
+
         $result = new MenuUpdateStub();
-        $result->setDefaultTitle('Test Title');
+        $result->setDefaultTitle('EN Test Title');
+        $result->addTitle($enFallbackValue);
         $result->addTitle($deFallbackValue);
 
         $this->assertEquals($result, $update);

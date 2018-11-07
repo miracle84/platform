@@ -2,20 +2,14 @@
 
 namespace Oro\Bundle\UIBundle\EventListener;
 
+use Oro\Bundle\UIBundle\ContentProvider\ContentProviderInterface;
+use Oro\Bundle\UIBundle\ContentProvider\ContentProviderManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
-use Oro\Bundle\UIBundle\ContentProvider\ContentProviderInterface;
-use Oro\Bundle\UIBundle\ContentProvider\ContentProviderManager;
-
 class ContentProviderListener
 {
-    /**
-     * @var ContentProviderManager
-     */
-    private $contentProviderManager = false;
-
     /** @var ContainerInterface */
     private $container;
 
@@ -36,19 +30,19 @@ class ContentProviderListener
             $request = $event->getRequest();
             $contentProvidersToEnable = $request->get('_enableContentProviders');
             $displayContentProviders = $request->get('_displayContentProviders');
-
             if ($contentProvidersToEnable || $displayContentProviders) {
+                $contentProviderManager = $this->getContentProviderManager();
                 if ($contentProvidersToEnable) {
                     foreach (explode(',', $contentProvidersToEnable) as $name) {
-                        $this->getContentProviderManager()->enableContentProvider($name);
+                        $contentProviderManager->enableContentProvider($name);
                     }
                 }
-
                 if ($displayContentProviders) {
                     $displayContentProviders = explode(',', $displayContentProviders);
-                    /** @var ContentProviderInterface $provider */
-                    foreach ($this->getContentProviderManager()->getContentProviders() as $provider) {
-                        if (!in_array($provider->getName(), $displayContentProviders)) {
+                    /** @var ContentProviderInterface[] $providers */
+                    $providers = $contentProviderManager->getContentProviders();
+                    foreach ($providers as $provider) {
+                        if (!in_array($provider->getName(), $displayContentProviders, true)) {
                             $provider->setEnabled(false);
                         }
                     }
@@ -62,10 +56,6 @@ class ContentProviderListener
      */
     protected function getContentProviderManager()
     {
-        if ($this->contentProviderManager === false) {
-            $this->contentProviderManager = $this->container->get('oro_ui.content_provider.manager');
-        }
-
-        return $this->contentProviderManager;
+        return $this->container->get('oro_ui.content_provider.manager');
     }
 }

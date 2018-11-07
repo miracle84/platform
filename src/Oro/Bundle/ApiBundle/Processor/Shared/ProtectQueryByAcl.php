@@ -2,15 +2,17 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\ApiBundle\Processor\Context;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
 use Oro\Bundle\SecurityBundle\Metadata\AclAnnotationProvider;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Add ACL restrictions to the Criteria object.
+ * Add ACL restrictions to ORM query.
  */
 class ProtectQueryByAcl implements ProcessorInterface
 {
@@ -51,14 +53,9 @@ class ProtectQueryByAcl implements ProcessorInterface
     {
         /** @var Context $context */
 
-        if ($context->hasQuery()) {
-            // a query is already built
-            return;
-        }
-
-        $criteria = $context->getCriteria();
-        if (null === $criteria) {
-            // the criteria object does not exist
+        $query = $context->getQuery();
+        if (!($query instanceof QueryBuilder || $query instanceof Query)) {
+            // ACL helper supports only QueryBuilder or Query
             return;
         }
 
@@ -68,26 +65,39 @@ class ProtectQueryByAcl implements ProcessorInterface
             return;
         }
 
-        $config = $context->getConfig();
-
         $permission = null;
-        if (!$config || !$config->hasAclResource()) {
-            $permission = $this->permission;
-        } else {
+        $config = $context->getConfig();
+        if (null !== $config && $config->hasAclResource()) {
             $aclResource = $config->getAclResource();
             if ($aclResource) {
-                $aclAnnotation = $this->aclAnnotationProvider->findAnnotationById($aclResource);
-                if ($aclAnnotation
-                    && $aclAnnotation->getType() === 'entity'
-                    && $aclAnnotation->getClass() === $entityClass
-                ) {
-                    $permission = $aclAnnotation->getPermission();
-                }
+                $permission = $this->getEntityPermissionByAclResource($aclResource, $entityClass);
             }
+        } else {
+            $permission = $this->permission;
+        }
+        if ($permission) {
+            $context->setQuery($this->aclHelper->apply($query, $permission));
+        }
+    }
+
+    /**
+     * @param string $aclResource
+     * @param string $entityClass
+     *
+     * @return string|null
+     */
+    private function getEntityPermissionByAclResource($aclResource, $entityClass)
+    {
+        $permission = null;
+
+        $aclAnnotation = $this->aclAnnotationProvider->findAnnotationById($aclResource);
+        if ($aclAnnotation
+            && $aclAnnotation->getType() === 'entity'
+            && $aclAnnotation->getClass() === $entityClass
+        ) {
+            $permission = $aclAnnotation->getPermission();
         }
 
-        if ($permission) {
-            $this->aclHelper->applyAclToCriteria($entityClass, $criteria, $permission);
-        }
+        return $permission;
     }
 }

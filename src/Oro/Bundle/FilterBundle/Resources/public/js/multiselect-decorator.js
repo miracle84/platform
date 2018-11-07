@@ -26,13 +26,9 @@ define([
         element: null,
 
         /**
-         * Default multiselect widget parameters
-         *
          * @property {Object}
          */
-        parameters: {
-            height: 'auto'
-        },
+        multiselectFilterParameters: {},
 
         /**
          * @property {Boolean}
@@ -58,13 +54,17 @@ define([
             // initialize multiselect widget
             this.multiselect(options.parameters);
 
-            // initialize multiselect filter
             if (this.contextSearch) {
-                this.multiselectfilter({
+                var multiselectFilterDefaults = {
                     label: '',
                     placeholder: '',
                     autoReset: true
-                });
+                };
+
+                // initialize multiselect filter
+                this.multiselectfilter(
+                    _.extend(multiselectFilterDefaults, this.multiselectFilterParameters)
+                );
             }
         },
 
@@ -109,12 +109,24 @@ define([
             widget.find('ul li label').removeClass('ui-corner-all');
         },
 
+        onBeforeOpenDropdown: function() {
+            this._setDropdownDesign();
+        },
+
         /**
          * Action performed on dropdown open
          */
         onOpenDropdown: function() {
-            this._setDropdownDesign();
             this.getWidget().find('input[type="search"]').focus();
+        },
+
+        /**
+         * Action on multiselect widget refresh
+         */
+        onRefresh: function() {
+            var widget = this.getWidget();
+            widget.find('.ui-multiselect-checkboxes').addClass('fixed-li');
+            widget.inputWidget('seekAndCreate');
         },
 
         /**
@@ -167,8 +179,8 @@ define([
          * @param functionName
          * @return {Object}
          */
-        multiselect: function(functionName) {
-            return this.element.multiselect(functionName);
+        multiselect: function(parameters) {
+            return this.element.multiselect(parameters);
         },
 
         /**

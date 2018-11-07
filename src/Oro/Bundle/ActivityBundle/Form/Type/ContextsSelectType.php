@@ -4,7 +4,12 @@ namespace Oro\Bundle\ActivityBundle\Form\Type;
 
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
+use Oro\Bundle\ActivityBundle\Form\DataTransformer\ContextsToViewTransformer;
+use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
+use Oro\Bundle\FormBundle\Form\Type\Select2HiddenType;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -12,13 +17,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\ActivityBundle\Event\PrepareContextTitleEvent;
-use Oro\Bundle\ActivityBundle\Form\DataTransformer\ContextsToViewTransformer;
-use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 
 class ContextsSelectType extends AbstractType
 {
@@ -33,37 +32,37 @@ class ContextsSelectType extends AbstractType
     /** @var TranslatorInterface */
     protected $translator;
 
-    /* @var TokenStorageInterface */
-    protected $tokenStorage;
-
     /** @var EventDispatcherInterface */
     protected $dispatcher;
 
     /** @var EntityNameResolver */
     protected $entityNameResolver;
 
+    /** @var FeatureChecker */
+    protected $featureChecker;
+
     /**
      * @param EntityManager            $entityManager
      * @param ConfigManager            $configManager
      * @param TranslatorInterface      $translator
-     * @param TokenStorageInterface    $securityTokenStorage
      * @param EventDispatcherInterface $dispatcher
      * @param EntityNameResolver       $entityNameResolver
+     * @param FeatureChecker           $featureChecker
      */
     public function __construct(
         EntityManager $entityManager,
         ConfigManager $configManager,
         TranslatorInterface $translator,
-        TokenStorageInterface $securityTokenStorage,
         EventDispatcherInterface $dispatcher,
-        EntityNameResolver $entityNameResolver
+        EntityNameResolver $entityNameResolver,
+        FeatureChecker $featureChecker
     ) {
         $this->entityManager      = $entityManager;
         $this->configManager      = $configManager;
         $this->translator         = $translator;
-        $this->tokenStorage       = $securityTokenStorage;
         $this->dispatcher         = $dispatcher;
         $this->entityNameResolver = $entityNameResolver;
+        $this->featureChecker     = $featureChecker;
     }
 
     /**
@@ -74,9 +73,9 @@ class ContextsSelectType extends AbstractType
         $builder->resetViewTransformers();
         $contextsToViewTransformer = new ContextsToViewTransformer(
             $this->entityManager,
-            $this->tokenStorage,
             $options['collectionModel']
         );
+        $contextsToViewTransformer->setSeparator($options['configs']['separator']);
         $builder->addViewTransformer($contextsToViewTransformer);
     }
 
@@ -85,15 +84,16 @@ class ContextsSelectType extends AbstractType
      */
     public function buildView(FormView $view, FormInterface $form, array $options)
     {
-        $view->vars['attr']['data-selected-data'] = $this->getSelectedData($form);
+        $view->vars['attr']['data-selected-data'] = $this->getSelectedData($form, $options['configs']['separator']);
     }
 
     /**
      * @param FormInterface $form
+     * @param string $separator
      *
      * @return string
      */
-    protected function getSelectedData(FormInterface $form)
+    protected function getSelectedData(FormInterface $form, $separator)
     {
         $targetEntities = $form->getData();
         if (!$targetEntities) {
@@ -101,13 +101,8 @@ class ContextsSelectType extends AbstractType
         }
 
         $result = [];
-        $user   = $this->tokenStorage->getToken()->getUser();
         foreach ($targetEntities as $target) {
-            // Exclude current user
             $targetClass = ClassUtils::getClass($target);
-            if (ClassUtils::getClass($user) === $targetClass && $user->getId() === $target->getId()) {
-                continue;
-            }
 
             $title = $this->entityNameResolver->getName($target);
             if ($label = $this->getClassLabel($targetClass)) {
@@ -123,7 +118,7 @@ class ContextsSelectType extends AbstractType
             $result[] = json_encode($this->getResult($item['title'], $target));
         }
 
-        return implode(';', $result);
+        return implode($separator, $result);
     }
 
     /**
@@ -134,15 +129,18 @@ class ContextsSelectType extends AbstractType
      */
     protected function getResult($text, $object)
     {
+        $entityClass = ClassUtils::getClass($object);
+
         return [
             'text' => $text,
+            'hidden' => !$this->featureChecker->isResourceEnabled($entityClass, 'entities'),
             /**
              * Selected Value Id should additionally encoded because it should be used as string key
              * to compare with value
              */
             'id'   => json_encode(
                 [
-                    'entityClass' => ClassUtils::getClass($object),
+                    'entityClass' => $entityClass,
                     'entityId'    => $object->getId(),
                 ]
             )
@@ -174,7 +172,7 @@ class ContextsSelectType extends AbstractType
             'placeholder'        => 'oro.activity.contexts.placeholder',
             'allowClear'         => true,
             'multiple'           => true,
-            'separator'          => ';',
+            'separator'          => ContextsToViewTransformer::SEPARATOR,
             'forceSelectedData'  => true,
             'minimumInputLength' => 0,
         ];
@@ -198,7 +196,7 @@ class ContextsSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_hidden';
+        return Select2HiddenType::class;
     }
 
     /**

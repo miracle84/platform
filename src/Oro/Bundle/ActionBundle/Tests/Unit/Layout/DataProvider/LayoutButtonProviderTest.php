@@ -8,18 +8,18 @@ use Oro\Bundle\ActionBundle\Provider\ButtonProvider;
 use Oro\Bundle\ActionBundle\Provider\ButtonSearchContextProvider;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 
-class LayoutButtonProviderTest extends \PHPUnit_Framework_TestCase
+class LayoutButtonProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ButtonProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ButtonProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $buttonProvider;
 
-    /** @var ButtonSearchContext|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ButtonSearchContext|\PHPUnit\Framework\MockObject\MockObject */
     protected $buttonSearchContext;
 
-    /** @var DoctrineHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var DoctrineHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $doctrineHelper;
 
-    /** @var ButtonSearchContextProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ButtonSearchContextProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $contextProvider;
 
     /** @var LayoutButtonProvider */
@@ -38,8 +38,7 @@ class LayoutButtonProviderTest extends \PHPUnit_Framework_TestCase
             ->setMethods(null)
             ->getMock();
 
-        $this->buttonProvider = $this->getMockBuilder(ButtonProvider::class)
-            ->getMock();
+        $this->buttonProvider = $this->createMock(ButtonProvider::class);
 
         $this->contextProvider = $this->getMockBuilder(ButtonSearchContextProvider::class)
             ->disableOriginalConstructor()

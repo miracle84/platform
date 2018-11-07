@@ -2,12 +2,14 @@
 
 namespace Oro\Bundle\ApiBundle\Form\Type;
 
+use Oro\Bundle\ApiBundle\Form\DataTransformer\BooleanToStringTransformer;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-use Oro\Bundle\ApiBundle\Form\DataTransformer\BooleanToStringTransformer;
-
+/**
+ * The form type for boolean fields.
+ */
 class BooleanType extends AbstractType
 {
     /**
@@ -24,21 +26,5 @@ class BooleanType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(['compound' => false]);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getName()
-    {
-        return $this->getBlockPrefix();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'oro_api_boolean';
     }
 }

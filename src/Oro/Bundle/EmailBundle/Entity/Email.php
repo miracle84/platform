@@ -2,16 +2,13 @@
 
 namespace Oro\Bundle\EmailBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as JMS;
-
-use Symfony\Component\HttpFoundation\AcceptHeader;
-
+use Oro\Bundle\EmailBundle\Model\ExtendEmail;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
-use Oro\Bundle\EmailBundle\Model\ExtendEmail;
+use Symfony\Component\HttpFoundation\AcceptHeader;
 
 /**
  * Email
@@ -96,7 +93,7 @@ class Email extends ExtendEmail
     /**
      * @var string
      *
-     * @ORM\Column(name="from_name", type="string", length=255)
+     * @ORM\Column(name="from_name", type="string", length=320)
      * @JMS\Type("string")
      */
     protected $fromName;

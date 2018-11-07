@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ActivityListBundle\Tests\Unit\Placeholder;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
 use Oro\Bundle\ActivityBundle\EntityConfig\ActivityScope;
 use Oro\Bundle\ActivityListBundle\Placeholder\PlaceholderFilter;
 use Oro\Bundle\ActivityListBundle\Provider\ActivityListChainProvider;
@@ -16,24 +15,24 @@ use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\UIBundle\Event\BeforeGroupingChainWidgetEvent;
 
-class PlaceholderFilterTest extends \PHPUnit_Framework_TestCase
+class PlaceholderFilterTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ActivityListChainProvider */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ActivityListChainProvider */
     protected $activityListProvider;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ManagerRegistry */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ManagerRegistry */
     protected $doctrine;
 
     /** @var PlaceholderFilter */
     protected $filter;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|ConfigManager */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|ConfigManager */
     protected $configManager;
 
     /** @var array */
     protected $entities = [];
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper */
+    /** @var \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper */
     protected $doctrineHelper;
 
     public function setUp()

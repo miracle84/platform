@@ -2,16 +2,18 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Form\Handler;
 
+use Doctrine\Common\Persistence\ManagerRegistry;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigHelper;
-use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Validator\FieldNameValidationHelper;
-
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Session\Session;
 
+/**
+ * Handle remove and unremove of extend fields
+ */
 class RemoveRestoreConfigFieldHandler
 {
     /** @var ConfigManager */
@@ -26,22 +28,28 @@ class RemoveRestoreConfigFieldHandler
     /** @var Session */
     private $session;
 
+    /** @var ManagerRegistry */
+    private $registry;
+
     /**
      * @param ConfigManager $configManager
      * @param FieldNameValidationHelper $validationHelper
      * @param ConfigHelper $configHelper
      * @param Session $session
+     * @param ManagerRegistry $registry
      */
     public function __construct(
         ConfigManager $configManager,
         FieldNameValidationHelper $validationHelper,
         ConfigHelper $configHelper,
-        Session $session
+        Session $session,
+        ManagerRegistry $registry
     ) {
         $this->configManager = $configManager;
         $this->validationHelper = $validationHelper;
         $this->configHelper = $configHelper;
         $this->session = $session;
+        $this->registry = $registry;
     }
 
     /**
@@ -51,23 +59,24 @@ class RemoveRestoreConfigFieldHandler
      */
     public function handleRemove(FieldConfigModel $field, $successMessage)
     {
-        $fields = $this->configHelper->filterEntityConfigByField(
-            $field,
-            'extend',
-            function (ConfigInterface $config) {
-                return in_array(
-                    $config->get('state'),
-                    [ExtendScope::STATE_ACTIVE, ExtendScope::STATE_UPDATE]
-                );
+        $validationMessages = $this->validationHelper->getRemoveFieldValidationErrors($field);
+
+        if ($validationMessages) {
+            foreach ($validationMessages as $message) {
+                $this->session->getFlashBag()->add('error', $message);
             }
-        );
+
+            return new JsonResponse(
+                [
+                    'message' => implode('. ', $validationMessages),
+                    'successful' => false
+                ],
+                JsonResponse::HTTP_OK
+            );
+        }
 
         $entityConfig = $this->configHelper->getEntityConfigByField($field, 'extend');
-        if (!count($fields)) {
-            $entityConfig->set('upgradeable', false);
-        } else {
-            $entityConfig->set('upgradeable', true);
-        }
+        $entityConfig->set('upgradeable', true);
 
         $fieldConfig = $this->configHelper->getFieldConfig($field, 'extend');
         $fieldConfig->set('state', ExtendScope::STATE_DELETE);
@@ -90,6 +99,8 @@ class RemoveRestoreConfigFieldHandler
     public function handleRestore(FieldConfigModel $field, $errorMessage, $successMessage)
     {
         if (!$this->validationHelper->canFieldBeRestored($field)) {
+            $this->session->getFlashBag()->add('error', $errorMessage);
+
             return new JsonResponse(
                 [
                     'message'    => $errorMessage,
@@ -99,18 +110,22 @@ class RemoveRestoreConfigFieldHandler
             );
         }
 
-        // TODO: property_exists works only for regular fields, not for relations and option sets. Need better approach
-        $isFieldExist = class_exists($field->getEntity()->getClassName())
-            && property_exists(
-                $field->getEntity()->getClassName(),
-                $field->getFieldName()
-            );
+        $entityClass = $field->getEntity()->getClassName();
+
+        $isFieldExist = false;
+        if (class_exists($entityClass) && ($em = $this->registry->getManagerForClass($entityClass))) {
+            $metadata = $em->getClassMetadata($entityClass);
+
+            $fieldName = $field->getFieldName();
+            $isFieldExist = $metadata->hasField($fieldName) || $metadata->hasAssociation($fieldName);
+        }
 
         $fieldConfig = $this->configHelper->getFieldConfig($field, 'extend');
         $fieldConfig->set(
             'state',
             $isFieldExist ? ExtendScope::STATE_RESTORE : ExtendScope::STATE_NEW
         );
+        $fieldConfig->set('is_deleted', false);
 
         $entityConfig = $this->configHelper->getEntityConfigByField($field, 'extend');
         $entityConfig->set('upgradeable', true);

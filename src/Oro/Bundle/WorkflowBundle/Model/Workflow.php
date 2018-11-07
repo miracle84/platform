@@ -2,14 +2,11 @@
 
 namespace Oro\Bundle\WorkflowBundle\Model;
 
-use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Doctrine\Common\Collections\Collection;
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\ActionBundle\Model\AttributeManager as BaseAttributeManager;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-
 use Oro\Bundle\WorkflowBundle\Acl\AclManager;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowItemRepository;
@@ -17,8 +14,8 @@ use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowTransitionRecord;
 use Oro\Bundle\WorkflowBundle\Exception\ForbiddenTransitionException;
-use Oro\Bundle\WorkflowBundle\Exception\UnknownStepException;
 use Oro\Bundle\WorkflowBundle\Exception\InvalidTransitionException;
+use Oro\Bundle\WorkflowBundle\Exception\UnknownStepException;
 use Oro\Bundle\WorkflowBundle\Exception\WorkflowException;
 use Oro\Bundle\WorkflowBundle\Restriction\RestrictionManager;
 
@@ -58,6 +55,11 @@ class Workflow
     protected $transitionManager;
 
     /**
+     * @var VariableManager
+     */
+    protected $variableManager;
+
+    /**
      * @var Collection
      */
     protected $errors;
@@ -73,12 +75,18 @@ class Workflow
     protected $restrictions;
 
     /**
+     * @var Collection
+     */
+    protected $variables;
+
+    /**
      * @param DoctrineHelper $doctrineHelper
      * @param AclManager $aclManager
      * @param RestrictionManager $restrictionManager
      * @param StepManager|null $stepManager
      * @param BaseAttributeManager|null $attributeManager
      * @param TransitionManager|null $transitionManager
+     * @param VariableManager|null $variableManager
      */
     public function __construct(
         DoctrineHelper $doctrineHelper,
@@ -86,7 +94,8 @@ class Workflow
         RestrictionManager $restrictionManager,
         StepManager $stepManager = null,
         BaseAttributeManager $attributeManager = null,
-        TransitionManager $transitionManager = null
+        TransitionManager $transitionManager = null,
+        VariableManager $variableManager = null
     ) {
         $this->doctrineHelper = $doctrineHelper;
         $this->aclManager = $aclManager;
@@ -94,6 +103,7 @@ class Workflow
         $this->stepManager = $stepManager ? $stepManager : new StepManager();
         $this->attributeManager = $attributeManager ? $attributeManager : new BaseAttributeManager();
         $this->transitionManager = $transitionManager ? $transitionManager : new TransitionManager();
+        $this->variableManager = $variableManager ? $variableManager : new VariableManager();
     }
 
     /**
@@ -146,6 +156,14 @@ class Workflow
     public function getTransitionManager()
     {
         return $this->transitionManager;
+    }
+
+    /**
+     * @return VariableManager
+     */
+    public function getVariableManager()
+    {
+        return $this->variableManager;
     }
 
     /**
@@ -339,6 +357,13 @@ class Workflow
             ->setFieldsMapping($this->getAttributesMapping())
             ->add($data);
         $workflowItem->setDefinition($this->getDefinition());
+
+        // populate WorkflowData with variables
+        if ($variables = $this->getVariables()) {
+            foreach ($variables as $name => $variable) {
+                $workflowItem->getData()->set($name, $variable->getValue());
+            }
+        }
 
         return $workflowItem;
     }
@@ -554,6 +579,32 @@ class Workflow
     public function getInitDatagrids()
     {
         return $this->getConfigurationOption(WorkflowConfiguration::NODE_INIT_DATAGRIDS, []);
+    }
+
+    /**
+     * Returns an array of variables. The class has an internal cache. Calling the method
+     * with $refresh parameter true will ignore cache, and assemble variables again
+     *
+     * @param bool $refresh
+     *
+     * @return Collection|Variable[]
+     */
+    public function getVariables($refresh = false)
+    {
+        if ($refresh || !$this->variables) {
+            $manager = $this->getVariableManager();
+            $definition = $this->getDefinition();
+
+            $assembler = $manager->getVariableAssembler();
+            if (null !== $assembler) {
+                $this->variables = $assembler->assemble(
+                    $this,
+                    $definition->getConfiguration()
+                );
+            }
+        }
+
+        return $this->variables;
     }
 
     /**

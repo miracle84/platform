@@ -1,21 +1,20 @@
 <?php
 
-namespace Oro\Bundle\organizationBundle\Tests\Unit\Form\Type;
+namespace Oro\Bundle\OrganizationBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\OrganizationBundle\Form\Type\OrganizationType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 
-class OrganizationTypeTest extends \PHPUnit_Framework_TestCase
+class OrganizationTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var OrganizationType */
     protected $formType;
 
     protected function setUp()
     {
-        $securityContext = $this->getMockBuilder('Symfony\Component\Security\Core\SecurityContext')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
-        $this->formType = new OrganizationType($securityContext);
+        $this->formType = new OrganizationType($tokenAccessor);
     }
 
     /**
@@ -54,10 +53,5 @@ class OrganizationTypeTest extends \PHPUnit_Framework_TestCase
                 ]
             ]
         ];
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_organization', $this->formType->getName());
     }
 }

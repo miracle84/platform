@@ -5,42 +5,32 @@ namespace Oro\Bundle\EmailBundle\EventListener\Datagrid;
 use Doctrine\ORM\Query\Expr\GroupBy;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
-use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
-use Oro\Bundle\DataGridBundle\Entity\GridView;
-use Oro\Bundle\DataGridBundle\Entity\Manager\GridViewManager;
-use Oro\Bundle\DataGridBundle\Event\BuildAfter;
-use Oro\Bundle\DataGridBundle\Event\OrmResultBeforeQuery;
-use Oro\Bundle\EmailBundle\Datagrid\EmailQueryFactory;
-use Oro\Bundle\FeatureToggleBundle\Checker\FeatureCheckerHolderTrait;
-use Oro\Bundle\FeatureToggleBundle\Checker\FeatureToggleableInterface;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
+use Oro\Bundle\DataGridBundle\Datasource\ResultRecord;
+use Oro\Bundle\DataGridBundle\Event\BuildAfter;
+use Oro\Bundle\DataGridBundle\Event\OrmResultAfter;
+use Oro\Bundle\DataGridBundle\Event\OrmResultBeforeQuery;
+use Oro\Bundle\DataGridBundle\Provider\State\DatagridStateProviderInterface;
+use Oro\Bundle\EmailBundle\Datagrid\EmailGridResultHelper;
+use Oro\Bundle\EmailBundle\Datagrid\EmailQueryFactory;
 
-class EmailGridListener implements FeatureToggleableInterface
+/**
+ * The grid listener that adds dynamic changes to email grids.
+ */
+class EmailGridListener
 {
-    use FeatureCheckerHolderTrait;
-
-    /**
-     * @var EmailQueryFactory
-     */
+    /** @var EmailQueryFactory */
     protected $factory;
 
-    /**
-     * @var SecurityFacade
-     */
-    protected $securityFacade;
+    /** @var DatagridStateProviderInterface */
+    private $filtersStateProvider;
 
-    /**
-     * @var GridViewManager
-     */
-    protected $gridViewManager;
-
-    /**
-     * @var ConfigManager
-     */
+    /** @var ConfigManager */
     protected $configManager;
+
+    /** @var EmailGridResultHelper */
+    protected $resultHelper;
 
     /**
      * Stores join's root and alias if joins for filters are added - ['eu' => ['alias1']]
@@ -51,20 +41,20 @@ class EmailGridListener implements FeatureToggleableInterface
 
     /**
      * @param EmailQueryFactory $factory
-     * @param SecurityFacade $securityFacade
-     * @param GridViewManager $gridViewManager
+     * @param DatagridStateProviderInterface $filtersStateProvider
      * @param ConfigManager $configManager
+     * @param EmailGridResultHelper $resultHelper
      */
     public function __construct(
         EmailQueryFactory $factory,
-        SecurityFacade $securityFacade,
-        GridViewManager $gridViewManager,
-        ConfigManager $configManager
+        DatagridStateProviderInterface $filtersStateProvider,
+        ConfigManager $configManager,
+        EmailGridResultHelper $resultHelper
     ) {
         $this->factory = $factory;
-        $this->securityFacade = $securityFacade;
-        $this->gridViewManager = $gridViewManager;
+        $this->filtersStateProvider = $filtersStateProvider;
         $this->configManager = $configManager;
+        $this->resultHelper = $resultHelper;
     }
 
     /**
@@ -72,10 +62,6 @@ class EmailGridListener implements FeatureToggleableInterface
      */
     public function onResultBeforeQuery(OrmResultBeforeQuery $event)
     {
-        if (!$this->isFeaturesEnabled()) {
-            return;
-        }
-
         $qb = $event->getQueryBuilder();
         if ($this->filterJoins) {
             $this->removeJoinByRootAndAliases($qb, $this->filterJoins);
@@ -90,19 +76,33 @@ class EmailGridListener implements FeatureToggleableInterface
      */
     public function onBuildAfter(BuildAfter $event)
     {
-        if (!$this->isFeaturesEnabled()) {
-            return;
-        }
+        $datagrid = $event->getDatagrid();
 
         /** @var OrmDatasource $ormDataSource */
-        $ormDataSource = $event->getDatagrid()->getDatasource();
+        $ormDataSource = $datagrid->getDatasource();
         $queryBuilder  = $ormDataSource->getQueryBuilder();
         $countQb       = $ormDataSource->getCountQb();
-        $parameters    = $event->getDatagrid()->getParameters();
+        $parameters    = $datagrid->getParameters();
 
-        $this->factory->applyAcl($queryBuilder);
-        if ($countQb) {
-            $this->factory->applyAcl($countQb);
+        $isThreadGroupingEnabled = $this->configManager->get('oro_email.threads_grouping');
+
+        $this->factory->addEmailsCount($queryBuilder, $isThreadGroupingEnabled);
+        $filtersState = $this->filtersStateProvider->getState($datagrid->getConfig(), $parameters);
+
+        if ($isThreadGroupingEnabled) {
+            $this->factory->applyAclThreadsGrouping(
+                $queryBuilder,
+                $datagrid,
+                $filtersState
+            );
+            if ($countQb) {
+                $this->factory->applyAclThreadsGrouping($countQb, $datagrid, $filtersState);
+            }
+        } else {
+            $this->factory->applyAcl($queryBuilder);
+            if ($countQb) {
+                $this->factory->applyAcl($countQb);
+            }
         }
 
         if ($parameters->has('emailIds')) {
@@ -110,40 +110,43 @@ class EmailGridListener implements FeatureToggleableInterface
             if (!is_array($emailIds)) {
                 $emailIds = explode(',', $emailIds);
             }
-            $queryBuilder->andWhere($queryBuilder->expr()->in('e.id', $emailIds));
+            $queryBuilder->andWhere($queryBuilder->expr()->in('e.id', ':emailIds'))
+                ->setParameter('emailIds', $emailIds);
         }
 
-        if ($this->configManager->get('oro_email.threads_grouping')) {
-            $queryBuilder->andWhere('e.head = :enabled')->setParameter('enabled', true);
-            $countQb->andWhere('e.head = :enabled')->setParameter('enabled', true);
+        if ($filtersState) {
+            $this->prepareQueryToFilter($filtersState, $queryBuilder, $countQb);
         }
+    }
 
-        $this->prepareQueryToFilter($parameters, $queryBuilder, $countQb);
+    /**
+     * @param OrmResultAfter $event
+     */
+    public function onResultAfter(OrmResultAfter $event)
+    {
+        /** @var ResultRecord[] $records */
+        $records = $event->getRecords();
+        $this->resultHelper->addEmailDirections($records);
+        $this->resultHelper->addEmailMailboxNames($records);
+        $this->resultHelper->addEmailRecipients($records);
     }
 
     /**
      * Add joins and group by for query just if filter used. For performance optimization - BAP-10674
      *
-     * @param ParameterBag $parameters
+     * @param array $filtersState
      * @param QueryBuilder $queryBuilder
      * @param QueryBuilder $countQb
      */
-    protected function prepareQueryToFilter($parameters, QueryBuilder $queryBuilder, QueryBuilder $countQb = null)
+    protected function prepareQueryToFilter($filtersState, QueryBuilder $queryBuilder, QueryBuilder $countQb = null)
     {
-        $filters = $parameters->get('_filter');
-        if (!$filters || !is_array($filters)) {
-            $filters = $this->getGridViewFiltersData();
-        }
-        if (!$filters) {
-            return;
-        }
         $this->filterJoins = [];
         $groupByFilters = ['cc', 'bcc', 'to', 'folders', 'folder', 'mailbox'];
 
         // As now optimizer could not automatically remove joins for these filters
         // (they do not affect number of rows)
         // adding group by statement
-        if (array_intersect_key($filters, array_flip($groupByFilters))) {
+        if (array_intersect_key($filtersState, array_flip($groupByFilters))) {
             // CountQb doesn't need group by statement cos it already added in grid config
             $queryBuilder->addGroupBy('eu.id');
         }
@@ -155,7 +158,7 @@ class EmailGridListener implements FeatureToggleableInterface
         $rParams  = [];
         // Add join for each filter which is based on e.recipients table
         foreach ($rFilters as $rKey => $rFilter) {
-            if (array_key_exists($rKey, $filters)) {
+            if (array_key_exists($rKey, $filtersState)) {
                 $queryBuilder->leftJoin('e.recipients', $rFilter[0], $rFilter[1], $rFilter[2]);
                 $countQb->leftJoin('e.recipients', $rFilter[0], $rFilter[1], $rFilter[2]);
                 $rParams = array_merge($rParams, $rFilter[3]);
@@ -167,29 +170,10 @@ class EmailGridListener implements FeatureToggleableInterface
             $countQb->setParameter($rParam, $rParamValue);
         }
         $fFilters = ['folder', 'folders', 'mailbox'];
-        if (array_intersect_key($filters, array_flip($fFilters))) {
+        if (array_intersect_key($filtersState, array_flip($fFilters))) {
             $queryBuilder->leftJoin('eu.folders', 'f');
             $this->filterJoins['eu'][] = 'f';
         }
-    }
-
-    /**
-     * @return array
-     */
-    protected function getGridViewFiltersData()
-    {
-        $filters = [];
-        $user = $this->securityFacade->getLoggedUser();
-        if (!$user) {
-            return $filters;
-        }
-        /** @var GridView|null $gridView */
-        $gridView = $this->gridViewManager->getDefaultView($user, 'user-email-grid');
-        if (!$gridView) {
-            return $filters;
-        }
-
-        return $gridView->getFiltersData();
     }
 
     /**
@@ -202,9 +186,9 @@ class EmailGridListener implements FeatureToggleableInterface
         $groupByParts = $qb->getDQLPart('groupBy');
         $qb->resetDQLPart('groupBy');
         /** @var GroupBy $groupByPart */
-        foreach ($groupByParts as $i => $groupByPart) {
+        foreach ($groupByParts as $groupByPart) {
             $newGroupByPart = [];
-            foreach ($groupByPart->getParts() as $j => $val) {
+            foreach ($groupByPart->getParts() as $val) {
                 if ($val !== $part) {
                     $newGroupByPart[] = $val;
                 }
@@ -221,7 +205,7 @@ class EmailGridListener implements FeatureToggleableInterface
      */
     protected function removeJoinByRootAndAliases(QueryBuilder $qb, array $rootAndAliases)
     {
-        $joins    = $qb->getDQLPart('join');
+        $joins = $qb->getDQLPart('join');
 
         /** @var Join $join */
         foreach ($joins as $root => $rJoins) {

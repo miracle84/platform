@@ -3,14 +3,11 @@
 namespace Oro\Bundle\SoapBundle\Tests\EventListener;
 
 use Gedmo\Translatable\TranslatableListener;
-
+use Oro\Bundle\SoapBundle\EventListener\LocaleListener;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 
-use Oro\Bundle\SoapBundle\EventListener\LocaleListener;
-
-class LocaleListenerTest extends \PHPUnit_Framework_TestCase
+class LocaleListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var LocaleListener */
     protected $listener;

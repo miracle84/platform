@@ -4,7 +4,6 @@ namespace Oro\Bundle\EntityBundle\Provider;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
@@ -92,11 +91,11 @@ class EnumVirtualFieldProvider implements VirtualFieldProviderInterface
             if (!$this->extendConfigProvider->hasConfig($className, $associationName)) {
                 continue;
             }
-            $extendFieldConfig = $this->extendConfigProvider->getConfig($className, $associationName);
             /** @var FieldConfigId $fieldConfigId */
-            $fieldConfigId = $extendFieldConfig->getId();
-            $fieldType     = $fieldConfigId->getFieldType();
+            $fieldConfigId = $this->extendConfigProvider->getId($className, $associationName);
+            $fieldType = $fieldConfigId->getFieldType();
             if ($fieldType === 'enum') {
+                $extendFieldConfig = $this->extendConfigProvider->getConfig($className, $associationName);
                 $this->virtualFields[$className][$associationName] = [
                     'query' => [
                         'select' => [

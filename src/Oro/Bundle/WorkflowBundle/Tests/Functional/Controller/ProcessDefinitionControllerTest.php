@@ -2,15 +2,10 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Functional\Controller;
 
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadProcessEntities;
 use Symfony\Component\HttpFoundation\Response;
 
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-use Oro\Bundle\WorkflowBundle\Tests\Functional\DataFixtures\LoadProcessEntities;
-
-/**
- * @dbIsolation
- */
 class ProcessDefinitionControllerTest extends WebTestCase
 {
     protected function setUp()

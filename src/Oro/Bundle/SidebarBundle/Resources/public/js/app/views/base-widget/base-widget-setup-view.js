@@ -11,10 +11,17 @@ define(function(require) {
         tagName: 'form',
 
         listen: {
-            'ok': 'onOk'
+            ok: 'onOk'
         },
 
         validation: {},
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseSetupView() {
+            BaseSetupView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc

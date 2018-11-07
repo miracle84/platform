@@ -3,16 +3,17 @@
 namespace Oro\Bundle\EntityConfigBundle\Manager;
 
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Entity\Repository\FieldConfigModelRepository;
-use Oro\Bundle\EntityConfigBundle\Exception\LogicException;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroupRelation;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeFamilyRepository;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeGroupRelationRepository;
 use Oro\Bundle\EntityConfigBundle\Entity\Repository\AttributeGroupRepository;
+use Oro\Bundle\EntityConfigBundle\Entity\Repository\FieldConfigModelRepository;
+use Oro\Bundle\EntityConfigBundle\Exception\LogicException;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Symfony\Component\Translation\TranslatorInterface;
 
@@ -32,6 +33,11 @@ class AttributeManager
      * @var TranslatorInterface
      */
     private $translator;
+
+    /**
+     * @var ConfigProvider
+     */
+    private $extendConfigProvider;
 
     /**
      * @param ConfigManager $configManager
@@ -140,11 +146,32 @@ class AttributeManager
      */
     public function isSystem(FieldConfigModel $attribute)
     {
-        $extendConfigProvider = $this->configManager->getProvider('extend');
-
-        return $extendConfigProvider
+        return $this->getExtendConfigProvider()
             ->getConfig($attribute->getEntity()->getClassName(), $attribute->getFieldName())
             ->is('owner', ExtendScope::OWNER_SYSTEM);
+    }
+
+    /**
+     * @return ConfigProvider
+     */
+    private function getExtendConfigProvider()
+    {
+        if (!$this->extendConfigProvider) {
+            $this->extendConfigProvider = $this->configManager->getProvider('extend');
+        }
+
+        return $this->extendConfigProvider;
+    }
+
+    /**
+     * @param FieldConfigModel $attribute
+     * @return bool
+     */
+    public function isActive(FieldConfigModel $attribute)
+    {
+        return $this->getExtendConfigProvider()
+            ->getConfig($attribute->getEntity()->getClassName(), $attribute->getFieldName())
+            ->in('state', [ExtendScope::STATE_ACTIVE, ExtendScope::STATE_UPDATE]);
     }
 
     /**
@@ -263,5 +290,23 @@ class AttributeManager
                 'Cannot use config database when a db schema is not synced.'
             );
         }
+    }
+
+    /**
+     * @param AttributeFamily $attributeFamily
+     * @param $attributeName
+     * @return null|FieldConfigModel
+     */
+    public function getAttributeByFamilyAndName(AttributeFamily $attributeFamily, $attributeName)
+    {
+        $attributes = $this->getAttributesByFamily($attributeFamily);
+
+        foreach ($attributes as $attribute) {
+            if ($attribute->getFieldName() === $attributeName) {
+                return $attribute;
+            }
+        }
+
+        return null;
     }
 }

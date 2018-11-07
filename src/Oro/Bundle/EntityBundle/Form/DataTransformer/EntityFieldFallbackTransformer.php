@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\EntityBundle\Form\DataTransformer;
 
-use Symfony\Component\Form\DataTransformerInterface;
-
 use Oro\Bundle\EntityBundle\Entity\EntityFieldFallbackValue;
+use Symfony\Component\Form\DataTransformerInterface;
 
 class EntityFieldFallbackTransformer implements DataTransformerInterface
 {
@@ -13,14 +12,6 @@ class EntityFieldFallbackTransformer implements DataTransformerInterface
      */
     public function transform($value)
     {
-        if (!$value instanceof EntityFieldFallbackValue) {
-            return $value;
-        }
-
-        if (is_null($value->getFallback())) {
-            return $value->setScalarValue($value->getOwnValue());
-        }
-
         return $value;
     }
 

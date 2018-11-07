@@ -5,15 +5,14 @@ namespace Oro\Bundle\ApiBundle\Processor\Config\GetConfig;
 use Oro\Bundle\ApiBundle\Config\ConfigExtensionRegistry;
 use Oro\Bundle\ApiBundle\Config\ConfigLoaderFactory;
 use Oro\Bundle\ApiBundle\Config\DescriptionsConfigExtra;
+use Oro\Bundle\ApiBundle\Config\EntityConfigMerger;
 use Oro\Bundle\ApiBundle\Config\FiltersConfigExtra;
 use Oro\Bundle\ApiBundle\Processor\Config\ConfigContext;
 use Oro\Bundle\ApiBundle\Processor\Config\Shared\LoadFromConfigBag as BaseLoadFromConfigBag;
 use Oro\Bundle\ApiBundle\Processor\Config\Shared\MergeConfig\MergeActionConfigHelper;
-use Oro\Bundle\ApiBundle\Processor\Config\Shared\MergeConfig\MergeEntityConfigHelper;
 use Oro\Bundle\ApiBundle\Processor\Config\Shared\MergeConfig\MergeParentResourceHelper;
 use Oro\Bundle\ApiBundle\Processor\Config\Shared\MergeConfig\MergeSubresourceConfigHelper;
-use Oro\Bundle\ApiBundle\Provider\ConfigBag;
-use Oro\Bundle\ApiBundle\Provider\ResourceHierarchyProvider;
+use Oro\Bundle\ApiBundle\Provider\ConfigBagRegistry;
 use Oro\Bundle\ApiBundle\Provider\ResourcesProvider;
 use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
@@ -23,8 +22,8 @@ use Oro\Bundle\ApiBundle\Util\ConfigUtil;
  */
 class LoadFromConfigBag extends BaseLoadFromConfigBag
 {
-    /** @var ConfigBag */
-    private $configBag;
+    /** @var ConfigBagRegistry */
+    private $configBagRegistry;
 
     /** @var ResourcesProvider */
     private $resourcesProvider;
@@ -47,32 +46,25 @@ class LoadFromConfigBag extends BaseLoadFromConfigBag
     /**
      * @param ConfigExtensionRegistry      $configExtensionRegistry
      * @param ConfigLoaderFactory          $configLoaderFactory
-     * @param ResourceHierarchyProvider    $resourceHierarchyProvider
-     * @param ConfigBag                    $configBag
+     * @param ConfigBagRegistry            $configBagRegistry
      * @param ResourcesProvider            $resourcesProvider
+     * @param EntityConfigMerger           $entityConfigMerger
      * @param MergeParentResourceHelper    $mergeParentResourceHelper
-     * @param MergeEntityConfigHelper      $mergeEntityConfigHelper
      * @param MergeActionConfigHelper      $mergeActionConfigHelper
      * @param MergeSubresourceConfigHelper $mergeSubresourceConfigHelper
      */
     public function __construct(
         ConfigExtensionRegistry $configExtensionRegistry,
         ConfigLoaderFactory $configLoaderFactory,
-        ResourceHierarchyProvider $resourceHierarchyProvider,
-        ConfigBag $configBag,
+        ConfigBagRegistry $configBagRegistry,
         ResourcesProvider $resourcesProvider,
+        EntityConfigMerger $entityConfigMerger,
         MergeParentResourceHelper $mergeParentResourceHelper,
-        MergeEntityConfigHelper $mergeEntityConfigHelper,
         MergeActionConfigHelper $mergeActionConfigHelper,
         MergeSubresourceConfigHelper $mergeSubresourceConfigHelper
     ) {
-        parent::__construct(
-            $configExtensionRegistry,
-            $configLoaderFactory,
-            $resourceHierarchyProvider,
-            $mergeEntityConfigHelper
-        );
-        $this->configBag = $configBag;
+        parent::__construct($configExtensionRegistry, $configLoaderFactory, $entityConfigMerger);
+        $this->configBagRegistry = $configBagRegistry;
         $this->resourcesProvider = $resourcesProvider;
         $this->mergeParentResourceHelper = $mergeParentResourceHelper;
         $this->mergeActionConfigHelper = $mergeActionConfigHelper;
@@ -94,11 +86,10 @@ class LoadFromConfigBag extends BaseLoadFromConfigBag
             $this->entityClass = null;
             $this->parentResourceClass = null;
         }
-        if (null !== $config) {
-            $this->saveConfig($context, $config);
-            if (null !== $parentResourceClass) {
-                $this->mergeParentResourceHelper->mergeParentResourceConfig($context, $parentResourceClass);
-            }
+
+        $this->saveConfig($context, $config);
+        if (null !== $parentResourceClass) {
+            $this->mergeParentResourceHelper->mergeParentResourceConfig($context, $parentResourceClass);
         }
     }
 
@@ -157,6 +148,6 @@ class LoadFromConfigBag extends BaseLoadFromConfigBag
             return false;
         }
 
-        return $this->configBag->getConfig($entityClass, $version);
+        return $this->configBagRegistry->getConfigBag($requestType)->getConfig($entityClass, $version);
     }
 }

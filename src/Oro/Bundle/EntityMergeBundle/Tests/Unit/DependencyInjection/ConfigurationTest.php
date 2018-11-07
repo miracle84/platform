@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\EntityMergeBundle\Tests\Unit\DependencyInjection;
 
+use Oro\Bundle\EntityMergeBundle\DependencyInjection\Configuration;
 use Symfony\Component\Config\Definition\Processor;
 
-use Oro\Bundle\EntityMergeBundle\DependencyInjection\Configuration;
-
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+class ConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     public function testGetConfigTreeBuilder()
     {

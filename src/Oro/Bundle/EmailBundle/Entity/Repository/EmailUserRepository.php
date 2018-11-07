@@ -4,14 +4,17 @@ namespace Oro\Bundle\EmailBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
+use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
 use Oro\Bundle\EmailBundle\Model\FolderType;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
 
+/**
+ * Doctrine repository for EmailUser entity
+ */
 class EmailUserRepository extends EntityRepository
 {
     /**
@@ -65,7 +68,7 @@ class EmailUserRepository extends EntityRepository
             ->setParameter('active', true);
 
         if ($folderTypes) {
-            $qb->andWhere($qb->expr()->in('f.type', $folderTypes));
+            $qb->andWhere($qb->expr()->in('f.type', ':folderTypes'))->setParameter('folderTypes', $folderTypes);
         }
 
         if ($isSeen !== null) {
@@ -110,6 +113,26 @@ class EmailUserRepository extends EntityRepository
         }
 
         return $ids;
+    }
+
+    /**
+     * @param EmailOrigin $origin
+     * @return array
+     */
+    public function getIdsFromOrigin(EmailOrigin $origin)
+    {
+        $qb = $this->createQueryBuilder('eu');
+
+        $result = $qb->resetDQLPart('select')
+            ->select('eu.id')
+            ->where(
+                $qb->expr()->eq('eu.origin', ':originId')
+            )
+            ->setParameter('originId', $origin->getId())
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_column($result, 'id');
     }
 
     /**
@@ -229,7 +252,8 @@ class EmailUserRepository extends EntityRepository
         $queryBuilder->join('e.thread', 't');
         $this->applyOwnerFilter($queryBuilder, $user);
         $this->applyHeadFilter($queryBuilder, false);
-        $queryBuilder->andWhere($queryBuilder->expr()->in('t.id', $threadIds));
+        $queryBuilder->andWhere($queryBuilder->expr()->in('t.id', ':threadIds'))
+            ->setParameter('threadIds', $threadIds);
 
         return $queryBuilder;
     }
@@ -246,9 +270,8 @@ class EmailUserRepository extends EntityRepository
         $queryBuilder = $this->createQueryBuilder('eu');
         $queryBuilder
             ->leftJoin('eu.folders', 'folders')
-            ->andWhere($queryBuilder->expr()->in('folders', ':folder'))
-            ->setParameter('folder', $folder->getId())
-            ->groupBy('eu');
+            ->andWhere($queryBuilder->expr()->eq('folders', ':folder'))
+            ->setParameter('folder', $folder->getId());
         if ($offset) {
             $queryBuilder->setFirstResult($offset);
         }
@@ -350,7 +373,8 @@ class EmailUserRepository extends EntityRepository
     protected function applyIdFilter(QueryBuilder $queryBuilder, $ids)
     {
         if ($ids) {
-            $queryBuilder->andWhere($queryBuilder->expr()->in('eu.id', $ids));
+            $queryBuilder->andWhere($queryBuilder->expr()->in('eu.id', ':includeIds'))
+                ->setParameter('includeIds', $ids);
         }
 
         return $this;
@@ -365,7 +389,8 @@ class EmailUserRepository extends EntityRepository
     protected function applyExcludeIdFilter(QueryBuilder $queryBuilder, $ids)
     {
         if ($ids) {
-            $queryBuilder->andWhere($queryBuilder->expr()->notIn('eu.id', $ids));
+            $queryBuilder->andWhere($queryBuilder->expr()->notIn('eu.id', ':excludeIds'))
+                ->setParameter('excludeIds', $ids);
         }
 
         return $this;

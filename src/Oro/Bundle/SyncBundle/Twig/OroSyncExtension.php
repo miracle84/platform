@@ -2,33 +2,51 @@
 
 namespace Oro\Bundle\SyncBundle\Twig;
 
-use Oro\Bundle\SyncBundle\Wamp\TopicPublisher;
+use Oro\Bundle\SyncBundle\Client\ConnectionChecker;
+use Oro\Bundle\SyncBundle\Content\TagGeneratorInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * Adds TWIG functions for interaction with websocket server
+ */
 class OroSyncExtension extends \Twig_Extension
 {
-    /**
-     * @var TopicPublisher
-     */
-    protected $publisher;
+    /** @var ContainerInterface */
+    protected $container;
 
     /**
-     * @param TopicPublisher $publisher
+     * @param ContainerInterface $container
      */
-    public function __construct(TopicPublisher $publisher)
+    public function __construct(ContainerInterface $container)
     {
-        $this->publisher = $publisher;
+        $this->container = $container;
     }
 
     /**
-     * Returns a list of functions to add to the existing list.
-     *
-     * @return array An array of functions
+     * @return TagGeneratorInterface
+     */
+    protected function getTagGenerator()
+    {
+        return $this->container->get('oro_sync.content.tag_generator');
+    }
+
+    /**
+     * @return ConnectionChecker
+     */
+    protected function getConnectionChecker()
+    {
+        return $this->container->get('oro_sync.client.connection_checker');
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function getFunctions()
     {
-        return array(
-            new \Twig_SimpleFunction('check_ws', array($this, 'checkWsConnected')),
-        );
+        return [
+            new \Twig_SimpleFunction('check_ws', [$this, 'checkWsConnected']),
+            new \Twig_SimpleFunction('oro_sync_get_content_tags', [$this, 'generate'])
+        ];
     }
 
     /**
@@ -38,7 +56,20 @@ class OroSyncExtension extends \Twig_Extension
      */
     public function checkWsConnected()
     {
-        return $this->publisher->check();
+        return $this->getConnectionChecker()->checkConnection();
+    }
+
+    /**
+     * @param mixed $data
+     * @param bool  $includeCollectionTag
+     * @param bool  $processNestedData
+     *
+     * @return array
+     */
+    public function generate($data, $includeCollectionTag = false, $processNestedData = true)
+    {
+        // enforce plain array should returns
+        return array_values($this->getTagGenerator()->generate($data, $includeCollectionTag, $processNestedData));
     }
 
     /**

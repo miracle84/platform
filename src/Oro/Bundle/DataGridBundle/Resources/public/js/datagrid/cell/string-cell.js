@@ -22,6 +22,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function StringCell() {
+            StringCell.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         render: function() {
             var render = StringCell.__super__.render.apply(this, arguments);
 
@@ -34,7 +41,7 @@ define([
          * @inheritDoc
          */
         enterEditMode: function() {
-            if (this.column.get('editable')) {
+            if (this.isEditableColumn()) {
                 StringCell.__super__.enterEditMode.apply(this, arguments);
             }
         },
@@ -43,7 +50,7 @@ define([
          * @inheritDoc
          */
         exitEditMode: function() {
-            if (!this.column.get('editable')) {
+            if (!this.isEditableColumn()) {
                 StringCell.__super__.exitEditMode.apply(this, arguments);
             }
         }

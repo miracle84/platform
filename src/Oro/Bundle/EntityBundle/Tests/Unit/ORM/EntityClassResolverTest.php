@@ -3,10 +3,9 @@
 namespace Oro\Bundle\EntityBundle\Tests\Unit\ORM;
 
 use Doctrine\ORM\ORMException;
-
 use Oro\Bundle\EntityBundle\ORM\EntityClassResolver;
 
-class EntityClassResolverTest extends \PHPUnit_Framework_TestCase
+class EntityClassResolverTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EntityClassResolver
@@ -14,7 +13,7 @@ class EntityClassResolverTest extends \PHPUnit_Framework_TestCase
     private $resolver;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     private $doctrine;
 
@@ -88,8 +87,12 @@ class EntityClassResolverTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnValue($config));
 
         $this->doctrine->expects($this->exactly(2))
-            ->method('getManagers')
-            ->will($this->returnValue(array('default' => $em)));
+            ->method('getManagerNames')
+            ->will($this->returnValue(['default' => 'service.default']));
+        $this->doctrine->expects($this->exactly(2))
+            ->method('getManager')
+            ->with('default')
+            ->will($this->returnValue($em));
 
         $this->assertTrue($this->resolver->isKnownEntityClassNamespace('Acme\Bundle\SomeBundle\Entity'));
         $this->assertFalse($this->resolver->isKnownEntityClassNamespace('Acme\Bundle\AnotherBundle\Entity'));

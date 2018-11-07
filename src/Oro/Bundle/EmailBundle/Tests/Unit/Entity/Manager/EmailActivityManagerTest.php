@@ -2,26 +2,17 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Entity\Manager;
 
-use Doctrine\ORM\Event\OnFlushEventArgs;
-use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\Event\PostFlushEventArgs;
-
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailRecipient;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailActivityManager;
 use Oro\Bundle\EmailBundle\Tests\Unit\Entity\TestFixtures\EmailAddress;
 use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestUser;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
+use Oro\Component\DependencyInjection\ServiceLink;
 
 /**
- * Class EmailActivityManagerTest
- * @package Oro\Bundle\EmailBundle\Tests\Unit\Entity\Manager
- *
  * @SuppressWarnings(PHPMD.TooManyMethods)
  */
-class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
+class EmailActivityManagerTest extends \PHPUnit\Framework\TestCase
 {
     protected $owners;
 
@@ -61,15 +52,9 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->serviceLink = $this
-            ->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->serviceLink = $this->createMock(ServiceLink::class);
 
-        $this->entityOwnerAccessorLink = $this
-            ->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->entityOwnerAccessorLink = $this->createMock(ServiceLink::class);
 
         $this->em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
@@ -120,7 +105,7 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $repository->expects($this->exactly($methods['repository,findByThread']['amountCall']))
+        $repository->expects($this->exactly($methods['repository.findByThread']['amountCall']))
             ->method('findByThread')
             ->withAnyParameters()
             ->will($this->returnValue([$email2]));
@@ -177,7 +162,7 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
      * @param integer $id
      * @param integer $thread
 
-     * @return Email|\PHPUnit_Framework_MockObject_MockObject
+     * @return Email|\PHPUnit\Framework\MockObject\MockObject
      */
     protected function getEmailEntity($id = null, $thread = null)
     {
@@ -250,7 +235,7 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
                 'createQueue' => 0
             ],
             'methods' => [
-                'repository,findByThread' => [
+                'repository.findByThread' => [
                     'amountCall' => 0
                 ],
                 'entityManager.getRepository' => [
@@ -282,11 +267,11 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
                 'em.flush' => [
                     'amountCall' => 1
                 ],
-                'repository,findByThread' => [
-                    'amountCall' => 2
+                'repository.findByThread' => [
+                    'amountCall' => 1
                 ],
                 'entityManager.getRepository' => [
-                    'amountCall' => 2
+                    'amountCall' => 1
                 ],
                 'getTargetEntities' => [
                     'amountCall' => 3,
@@ -314,7 +299,7 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
                 'em.flush' => [
                     'amountCall' => 1
                 ],
-                'repository,findByThread' => [
+                'repository.findByThread' => [
                     'amountCall' => 0
                 ],
                 'entityManager.getRepository' =>[
@@ -346,14 +331,14 @@ class EmailActivityManagerTest extends \PHPUnit_Framework_TestCase
                 'em.flush' => [
                     'amountCall' => 1
                 ],
-                'repository,findByThread' => [
-                    'amountCall' => 2
+                'repository.findByThread' => [
+                    'amountCall' => 0
                 ],
                 'entityManager.getRepository' => [
-                    'amountCall' => 2
+                    'amountCall' => 0
                 ],
                 'getTargetEntities' => [
-                    'amountCall' => 4,
+                    'amountCall' => 3,
                     'return' => []
                 ],
                 'getEmailReferences' => [

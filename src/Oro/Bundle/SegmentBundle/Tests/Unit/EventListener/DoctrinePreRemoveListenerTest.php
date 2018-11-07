@@ -2,20 +2,22 @@
 
 namespace Oro\Bundle\SegmentBundle\Tests\Unit\EventListener;
 
+use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
-
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
+use Oro\Bundle\SegmentBundle\Entity\Repository\SegmentSnapshotRepository;
 use Oro\Bundle\SegmentBundle\EventListener\DoctrinePreRemoveListener;
 use Oro\Bundle\SegmentBundle\Tests\Unit\Fixtures\StubEntity;
 
-class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
+class DoctrinePreRemoveListenerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $entityManager;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     /** @var DoctrinePreRemoveListener */
@@ -23,17 +25,12 @@ class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->entityManager = $this->getMockBuilder('Doctrine\ORM\EntityManager')
+        $this->entityManager = $this->getMockBuilder(EntityManager::class)
             ->disableOriginalConstructor()->getMock();
-        $this->configManager = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
+        $this->configManager = $this->getMockBuilder(ConfigManager::class)
             ->disableOriginalConstructor()->getMock();
 
         $this->listener = new DoctrinePreRemoveListener($this->configManager);
-    }
-
-    protected function tearDown()
-    {
-        unset($this->configManager, $this->listener, $this->entityManager);
     }
 
     /**
@@ -70,7 +67,7 @@ class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
      *
      * @param array $entities
      */
-    public function testPostFlush($entities)
+    public function testPostFlushSegmentBundlePresent($entities)
     {
         $this->mockMetadata(count($entities));
         $this->configManager->expects($this->exactly(count($entities)))
@@ -82,7 +79,13 @@ class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
             $this->listener->preRemove($args);
         }
 
-        $repository = $this->getMockBuilder('Oro\Bundle\SegmentBundle\Entity\Repository\SegmentSnapshotRepository')
+        $configuration = new Configuration();
+        $configuration->addEntityNamespace('OroSegmentBundle', 'OroSegmentBundleNamespace');
+        $this->entityManager->expects($this->once())
+            ->method('getConfiguration')
+            ->willReturn($configuration);
+
+        $repository = $this->getMockBuilder(SegmentSnapshotRepository::class)
             ->disableOriginalConstructor()->getMock();
         $repository->expects($this->once())
             ->method('massRemoveByEntities')
@@ -91,6 +94,36 @@ class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
         $this->entityManager->expects($this->once())
             ->method('getRepository')
             ->will($this->returnValue($repository));
+
+        $args = new PostFlushEventArgs($this->entityManager);
+        $this->listener->postFlush($args);
+    }
+
+    /**
+     * @dataProvider postFlushProvider
+     *
+     * @param array $entities
+     */
+    public function testPostFlushSegmentBundleNotPresent($entities)
+    {
+        $this->mockMetadata(count($entities));
+        $this->configManager->expects($this->exactly(count($entities)))
+            ->method('hasConfig')
+            ->will($this->returnValue(true));
+
+        foreach ($entities as $entity) {
+            $args = new LifecycleEventArgs($entity['entity'], $this->entityManager);
+            $this->listener->preRemove($args);
+        }
+
+        $configuration = new Configuration();
+        $configuration->addEntityNamespace('SomeBundle', 'SomeBundleNamespace');
+        $this->entityManager->expects($this->once())
+            ->method('getConfiguration')
+            ->willReturn($configuration);
+
+        $this->entityManager->expects($this->never())
+            ->method('getRepository');
 
         $args = new PostFlushEventArgs($this->entityManager);
         $this->listener->postFlush($args);
@@ -128,7 +161,7 @@ class DoctrinePreRemoveListenerTest extends \PHPUnit_Framework_TestCase
 
     protected function mockMetadata($callCount)
     {
-        $metadata = $this->getMockBuilder('Doctrine\ORM\Mapping\ClassMetadata')
+        $metadata = $this->getMockBuilder(ClassMetadata::class)
             ->disableOriginalConstructor()
             ->setMethods(array('getIdentifierValues'))
             ->getMock();

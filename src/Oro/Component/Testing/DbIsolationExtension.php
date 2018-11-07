@@ -2,7 +2,9 @@
 namespace Oro\Component\Testing;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Event\ConnectionEventArgs;
 use Doctrine\ORM\EntityManagerInterface;
+use Oro\Component\Testing\Doctrine\Events;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 use Symfony\Bundle\FrameworkBundle\Client;
 
@@ -13,7 +15,12 @@ trait DbIsolationExtension
      */
     protected static $dbIsolationConnections = [];
 
-    protected function startTransaction()
+    /**
+     * @param bool $nestTransactionsWithSavepoints
+     *
+     * @internal
+     */
+    protected function startTransaction($nestTransactionsWithSavepoints = false)
     {
         if (false == $this->getClient() instanceof Client) {
             throw new \LogicException('The client must be instance of Client');
@@ -25,20 +32,33 @@ trait DbIsolationExtension
         /** @var RegistryInterface $registry */
         $registry = $this->getClient()->getContainer()->get('doctrine');
         foreach ($registry->getManagers() as $name => $em) {
-            if ($em instanceof  EntityManagerInterface) {
+            if ($em instanceof EntityManagerInterface) {
                 $em->clear();
-                $em->getConnection()->beginTransaction();
+                $connection = $em->getConnection();
+                if ($connection->getNestTransactionsWithSavepoints() !== $nestTransactionsWithSavepoints) {
+                    $connection->setNestTransactionsWithSavepoints($nestTransactionsWithSavepoints);
+                }
+                $connection->beginTransaction();
 
-                self::$dbIsolationConnections[$name.'_'.uniqid()] = $em->getConnection();
+                self::$dbIsolationConnections[$name.uniqid('connection', true)] = $connection;
             }
         }
     }
 
+    /**
+     * @internal
+     */
     protected static function rollbackTransaction()
     {
         foreach (self::$dbIsolationConnections as $name => $connection) {
+            $rolledBack = false;
             while ($connection->isConnected() && $connection->isTransactionActive()) {
                 $connection->rollBack();
+                $rolledBack = true;
+            }
+            if ($rolledBack) {
+                $args = new ConnectionEventArgs($connection);
+                $connection->getEventManager()->dispatchEvent(Events::ON_AFTER_TEST_TRANSACTION_ROLLBACK, $args);
             }
         }
 

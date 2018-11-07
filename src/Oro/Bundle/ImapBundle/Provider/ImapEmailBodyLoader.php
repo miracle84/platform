@@ -3,22 +3,24 @@
 namespace Oro\Bundle\ImapBundle\Provider;
 
 use Doctrine\ORM\EntityManager;
-
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\EmailBundle\Builder\EmailBodyBuilder;
+use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
-use Oro\Bundle\EmailBundle\Provider\EmailBodyLoaderInterface;
-use Oro\Bundle\EmailBundle\Entity\Email;
-use Oro\Bundle\EmailBundle\Builder\EmailBodyBuilder;
 use Oro\Bundle\EmailBundle\Exception\EmailBodyNotFoundException;
-use Oro\Bundle\ImapBundle\Connector\ImapConnectorFactory;
+use Oro\Bundle\EmailBundle\Provider\EmailBodyLoaderInterface;
 use Oro\Bundle\ImapBundle\Connector\ImapConfig;
+use Oro\Bundle\ImapBundle\Connector\ImapConnectorFactory;
+use Oro\Bundle\ImapBundle\Entity\ImapEmail;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailGoogleOauth2Manager;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailManager;
-use Oro\Bundle\ImapBundle\Entity\ImapEmail;
-use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\SecurityBundle\Encoder\SymmetricCrypterInterface;
 
+/**
+ * This class provides ability to load email body
+ */
 class ImapEmailBodyLoader implements EmailBodyLoaderInterface
 {
     /**
@@ -26,7 +28,7 @@ class ImapEmailBodyLoader implements EmailBodyLoaderInterface
      */
     protected $connectorFactory;
 
-    /** @var Mcrypt */
+    /** @var SymmetricCrypterInterface */
     protected $encryptor;
 
     /** @var ImapEmailGoogleOauth2Manager */
@@ -37,13 +39,13 @@ class ImapEmailBodyLoader implements EmailBodyLoaderInterface
 
     /**
      * @param ImapConnectorFactory $connectorFactory
-     * @param Mcrypt $encryptor
+     * @param SymmetricCrypterInterface $encryptor
      * @param ImapEmailGoogleOauth2Manager $imapEmailGoogleOauth2Manager
      * @param ConfigManager $configManager
      */
     public function __construct(
         ImapConnectorFactory $connectorFactory,
-        Mcrypt $encryptor,
+        SymmetricCrypterInterface $encryptor,
         ImapEmailGoogleOauth2Manager $imapEmailGoogleOauth2Manager,
         ConfigManager $configManager
     ) {

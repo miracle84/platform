@@ -2,9 +2,8 @@
 
 namespace Oro\Component\Layout\Extension\Theme\PathProvider;
 
-use Oro\Component\Layout\ContextInterface;
 use Oro\Component\Layout\ContextAwareInterface;
-
+use Oro\Component\Layout\ContextInterface;
 use Oro\Component\Layout\Extension\Theme\Model\Theme;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeManager;
 
@@ -57,6 +56,17 @@ class ThemePathProvider implements PathProviderInterface, ContextAwareInterface
             if ($routeName) {
                 foreach ($themePaths as $path) {
                     $existingPaths[] = implode(self::DELIMITER, [$path, $routeName]);
+                }
+            }
+
+            $pageTemplate = $this->context->getOr('page_template');
+            if ($pageTemplate) {
+                $theme = $this->themeManager->getTheme($themeName);
+                if ($theme->getPageTemplate($this->context->getOr('page_template'), $routeName)) {
+                    foreach ($themePaths as $path) {
+                        $existingPaths[] =
+                            implode(self::DELIMITER, [$path, $routeName, 'page_template', $pageTemplate]);
+                    }
                 }
             }
         }

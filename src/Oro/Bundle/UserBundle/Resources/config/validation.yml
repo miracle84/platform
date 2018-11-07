@@ -1,7 +1,7 @@
 Oro\Bundle\UserBundle\Entity\User:
     constraints:
         - Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity: username
-        - Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity: email
+        - Oro\Bundle\UserBundle\Validator\Constraints\UniqueUserEmail: ~
         - Oro\Bundle\UserBundle\Validator\Constraints\UserAuthenticationFieldsConstraint: ~
     properties:
         username:
@@ -17,8 +17,9 @@ Oro\Bundle\UserBundle\Entity\User:
             - Email:        ~
         plainPassword:
             - NotBlank:
-                groups:     [Registration]
-            - Oro\Bundle\UserBundle\Validator\Constraints\PasswordComplexity: ~
+                groups:     [Registration, ResetPassword]
+            - Oro\Bundle\UserBundle\Validator\Constraints\PasswordComplexity:
+                groups:     [Registration, ResetPassword, Default]
         enabled:
             - NotNull:      ~
         roles:
@@ -39,6 +40,8 @@ Oro\Bundle\UserBundle\Entity\User:
             - LessThanOrEqual:
                 value: now UTC
                 message: This value cannot be in the future.
+        emails:
+            - Valid: ~
 
 Oro\Bundle\UserBundle\Entity\Role:
     constraints:
@@ -48,6 +51,8 @@ Oro\Bundle\UserBundle\Entity\Role:
             - NotBlank:     ~
             - Length:
                 max:        30
+        users:
+            - Oro\Bundle\UserBundle\Validator\Constraints\UserWithoutRole: ~
 
 Oro\Bundle\UserBundle\Entity\Group:
     constraints:

@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\FilterBundle\Form\Type\Filter;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class ManyToManyFilterType extends AbstractType
 {
@@ -26,12 +25,12 @@ class ManyToManyFilterType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
             'operator_choices' => [
-                FilterUtility::TYPE_EMPTY     => $this->translator->trans('oro.filter.form.label_type_empty'),
-                FilterUtility::TYPE_NOT_EMPTY => $this->translator->trans('oro.filter.form.label_type_not_empty'),
+                $this->translator->trans('oro.filter.form.label_type_empty') => FilterUtility::TYPE_EMPTY,
+                $this->translator->trans('oro.filter.form.label_type_not_empty') => FilterUtility::TYPE_NOT_EMPTY,
             ],
         ]);
     }
@@ -41,7 +40,7 @@ class ManyToManyFilterType extends AbstractType
      */
     public function getParent()
     {
-        return ChoiceFilterType::NAME;
+        return ChoiceFilterType::class;
     }
 
     /**

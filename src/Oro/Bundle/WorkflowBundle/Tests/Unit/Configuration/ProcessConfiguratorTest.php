@@ -4,26 +4,24 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Configuration;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectRepository;
-
-use Psr\Log\AbstractLogger;
-
 use Oro\Bundle\WorkflowBundle\Configuration\ProcessConfigurationProvider;
+use Oro\Bundle\WorkflowBundle\Configuration\ProcessConfigurator;
 use Oro\Bundle\WorkflowBundle\Configuration\ProcessDefinitionsConfigurator;
 use Oro\Bundle\WorkflowBundle\Configuration\ProcessTriggersConfigurator;
-use Oro\Bundle\WorkflowBundle\Configuration\ProcessConfigurator;
 use Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition;
+use Psr\Log\AbstractLogger;
 
-class ProcessConfiguratorTest extends \PHPUnit_Framework_TestCase
+class ProcessConfiguratorTest extends \PHPUnit\Framework\TestCase
 {
     const CLASS_NAME = 'Oro\Bundle\WorkflowBundle\Entity\ProcessDefinition';
 
-    /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $managerRegistry;
 
-    /** @var ProcessDefinitionsConfigurator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ProcessDefinitionsConfigurator|\PHPUnit\Framework\MockObject\MockObject */
     protected $definitionsConfigurator;
 
-    /** @var ProcessTriggersConfigurator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ProcessTriggersConfigurator|\PHPUnit\Framework\MockObject\MockObject */
     protected $triggersConfigurator;
 
     /** @var ProcessConfigurator */
@@ -127,7 +125,7 @@ class ProcessConfiguratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @param string $entityClass
-     * @return ObjectRepository|\PHPUnit_Framework_MockObject_MockObject
+     * @return ObjectRepository|\PHPUnit\Framework\MockObject\MockObject
      */
     private function assertObjectManagerCalledForRepository($entityClass)
     {

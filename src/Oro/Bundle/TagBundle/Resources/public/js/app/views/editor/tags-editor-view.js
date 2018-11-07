@@ -1,4 +1,3 @@
-/** @lends TagsEditorView */
 define(function(require) {
     'use strict';
 
@@ -8,7 +7,7 @@ define(function(require) {
      *
      * ### Column configuration samples:
      * ``` yml
-     * datagrid:
+     * datagrids:
      *   {grid-uid}:
      *     inline_editing:
      *       enable: true
@@ -21,22 +20,21 @@ define(function(require) {
      *           editor:
      *             # view: orotag/js/app/views/editor/tags-editor-view
      *             view_options:
-     *                 permissions:
-     *                     oro_tag_create: true
-     *                     oro_tag_unassign_global: true
+     *               permissions:
+     *                 oro_tag_create: true
      *           save_api_accessor:
-     *               # usual save api configuration
-     *               route: 'oro_api_post_taggable'
-     *               http_method: 'POST'
-     *               default_route_parameters:
-     *                   entity: <entity-url-safe-class-name>
-     *               route_parameters_rename_map:
-     *                   id: entityId
+     *             # usual save api configuration
+     *             route: 'oro_api_post_taggable'
+     *             http_method: 'POST'
+     *             default_route_parameters:
+     *               entity: <entity-url-safe-class-name>
+     *             route_parameters_rename_map:
+     *               id: entityId
      *           autocomplete_api_accessor:
-     *               # usual configuration for tags view
-     *               class: 'oroui/js/tools/search-api-accessor'
-     *               search_handler_name: 'tags'
-     *               label_field_name: 'name'
+     *             # usual configuration for tags view
+     *             class: 'oroui/js/tools/search-api-accessor'
+     *             search_handler_name: 'tags'
+     *             label_field_name: 'name'
      *           validation_rules:
      *             NotBlank: true
      * ```
@@ -45,10 +43,12 @@ define(function(require) {
      *
      * Column option name                                  | Description
      * :---------------------------------------------------|:-----------
-     * inline_editing.editor.validation_rules | Optional. Validation rules. See [documentation](https://goo.gl/j9dj4Y)
-     * inline_editing.editor.permissions      | Permissions
-     * inline_editing.editor.permissions.oro_tag_create | Allows user to create new tag
-     * inline_editing.editor.permissions.oro_tag_unassign_global | Allows user to edit tags assigned by all users
+     * inline_editing.validation_rules | Optional. Validation rules. See [documentation](../../../../FormBundle/Resources/doc/reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * inline_editing.editor.view_options.permissions      | Permissions
+     * inline_editing.editor.view_options.permissions.oro_tag_create | Allows user to create new tag
+     * inline_editing.autocomplete_api_accessor            | Required. Specifies available choices
+     * inline_editing.autocomplete_api_accessor.class | One of the [list of search APIs](../reference/search-apis.md)
+     * inline_editing.save_api_accessor                    | Optional. Sets accessor module, route, parameters etc.
      *
      * ### Constructor parameters
      *
@@ -57,7 +57,9 @@ define(function(require) {
      * @param {Object} options.model - Current row model
      * @param {string} options.fieldName - Field name to edit in model
      * @param {string} options.permissions - Permissions object
-     * @param {Object} options.validationRules - Validation rules. See [documentation here](https://goo.gl/j9dj4Y)
+     * @param {Object} options.validationRules - Validation rules. See [documentation here](../../../../FormBundle/Resources/doc/reference/js_validation.md#conformity-server-side-validations-to-client-once)
+     * @param {Object} options.autocomplete_api_accessor - Autocomplete API specification.
+     *                                      Please see [list of search API's](../reference/search-apis.md)
      *
      * @augments [AbstractRelationEditorView](../../../../FormBundle/Resources/doc/editor/abstract-relation-editor-view.md)
      * @exports TagsEditorView
@@ -81,6 +83,16 @@ define(function(require) {
             'change:visibility': 'autoSize'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function TagsEditorView() {
+            TagsEditorView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             TagsEditorView.__super__.initialize.apply(this, arguments);
             this.listenTo(this.autocompleteApiAccessor, 'cache:clear', this.onCacheClear);
@@ -88,20 +100,13 @@ define(function(require) {
         },
 
         getInitialResultItem: function() {
-            var _this = this;
             return this.getModelValue().map(function(item) {
-                return _this.applyPermissionsToTag({
+                return {
                     id: item.id,
                     label: item.name,
                     owner: item.owner
-                });
+                };
             });
-        },
-
-        applyPermissionsToTag: function(tag) {
-            var isOwner = tag.owner === void 0 ? true : tag.owner;
-            tag.locked = this.permissions.oro_tag_unassign_global ? false : !isOwner;
-            return tag;
         },
 
         autoSize: function() {
@@ -128,19 +133,19 @@ define(function(require) {
                     return _.escape(item.label);
                 },
                 formatResult: function(item) {
-                    return _.escape(item.label) + (item.isNew ?
-                            (' <span class="select2__result-entry-info">(' +
-                            __('oro.tag.inline_editing.new_tag') + ')</span>') :
-                            '');
+                    return _.escape(item.label) + (item.isNew
+                        ? (' <span class="select2__result-entry-info">(' +
+                        __('oro.tag.inline_editing.new_tag') + ')</span>')
+                        : '');
                 },
                 formatNoMatches: function() {
                     // no matches appears in following two cases only
                     // we use this message not for its original mission
-                    return _this.isLoading ?
-                        __('oro.tag.inline_editing.loading') :
-                        (_this.isCurrentTagSelected() ?
-                                __('oro.tag.inline_editing.existing_tag') :
-                                __('oro.tag.inline_editing.no_matches')
+                    return _this.isLoading
+                        ? __('oro.tag.inline_editing.loading')
+                        : (_this.isCurrentTagSelected()
+                            ? __('oro.tag.inline_editing.existing_tag')
+                            : __('oro.tag.inline_editing.no_matches')
                         );
                 },
                 initSelection: function(element, callback) {

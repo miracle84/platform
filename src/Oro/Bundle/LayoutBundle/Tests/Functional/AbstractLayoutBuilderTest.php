@@ -2,27 +2,45 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Functional;
 
-use Oro\Component\Layout\BlockView;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
 use Oro\Component\Config\CumulativeResourceInfo;
 use Oro\Component\Config\CumulativeResourceManager;
 use Oro\Component\Config\Loader\FolderContentCumulativeLoader;
+use Oro\Component\Layout\BlockView;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeFactory;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeManager;
 use Oro\Component\Layout\Layout;
 use Oro\Component\Layout\LayoutContext;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 abstract class AbstractLayoutBuilderTest extends WebTestCase
 {
+    /**
+     * @var ThemeManager
+     */
+    private $oldThemeManager;
+
     /**
      * {@inheritdoc}
      */
     protected function setUp()
     {
         $this->initClient();
+        $this->oldThemeManager = $this->getContainer()->get('oro_layout.theme_manager');
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function tearDown()
+    {
+        $container = $this->getContainer();
+        // Revert overridden service
+        $container->set('oro_layout.theme_manager', $this->oldThemeManager);
+
+        // Clear caches that are changed in getLayout()
+        $container->get('oro_layout.cache.block_view_cache')->reset();
+        $container->get('oro_layout.theme_extension.resource_provider.cache')->deleteAll();
     }
 
     /**

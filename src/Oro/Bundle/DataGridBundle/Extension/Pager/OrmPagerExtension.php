@@ -3,9 +3,10 @@
 namespace Oro\Bundle\DataGridBundle\Extension\Pager;
 
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
 use Oro\Bundle\DataGridBundle\Extension\Mode\ModeExtension;
+use Oro\Bundle\DataGridBundle\Extension\Pager\Orm\Pager;
 use Oro\Bundle\DataGridBundle\Extension\Toolbar\ToolbarExtension;
 
 /**
@@ -13,13 +14,17 @@ use Oro\Bundle\DataGridBundle\Extension\Toolbar\ToolbarExtension;
  */
 class OrmPagerExtension extends AbstractPagerExtension
 {
+    /** @var Pager */
+    protected $pager;
+
     /**
      * {@inheritDoc}
      */
     public function isApplicable(DatagridConfiguration $config)
     {
         return
-            $config->isOrmDatasource()
+            parent::isApplicable($config)
+            && $config->isOrmDatasource()
             && !$this->getOr(PagerInterface::DISABLED_PARAM, false)
             && !$config->offsetGetByPath(ToolbarExtension::TOOLBAR_PAGINATION_HIDE_OPTION_PATH, false);
     }
@@ -34,6 +39,7 @@ class OrmPagerExtension extends AbstractPagerExtension
             $this->pager->setCountQb($datasource->getCountQb(), $datasource->getCountQueryHints());
         }
         $this->pager->setQueryBuilder($datasource->getQueryBuilder());
+        $this->pager->setCountQueryHints($datasource->getCountQueryHints());
         $this->pager->setSkipAclCheck($config->isDatasourceSkipAclApply());
         $this->pager->setAclPermission($config->getDatasourceAclApplyPermission());
         $this->pager->setSkipCountWalker(

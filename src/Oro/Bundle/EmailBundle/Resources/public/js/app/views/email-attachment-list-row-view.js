@@ -16,7 +16,14 @@ define(function(require) {
         },
 
         listen: {
-            'change:visible model':         'visibilityChange'
+            'change:visible model': 'visibilityChange'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailAttachmentListRowView() {
+            EmailAttachmentListRowView.__super__.constructor.apply(this, arguments);
         },
 
         render: function() {
@@ -25,13 +32,13 @@ define(function(require) {
             this.$el.attr('data-type', this.model.get('type'));
             this.$el.find('[data-toggle="popover"]').popover({
                 html: true,
-                delay: {show: 300, hide: 100} //delay for image loading
+                delay: {show: 300, hide: 100} // delay for image loading
             });
         },
 
         getTemplateFunction: function() {
             if (!this.template) {
-                this.template = $('#email-attachment-list-row-view').html();
+                this.template = require('tpl!oroemail/templates/email-attachment/email-attachment-list-row-view.html');
             }
 
             return EmailAttachmentListRowView.__super__.getTemplateFunction.call(this);
@@ -46,7 +53,7 @@ define(function(require) {
                 data.fileSize = numeral(data.fileSize).format('b');
             }
             if ('modified' in data) {
-                data.modified = datetime.formatDateTime(data.modified);
+                data.modified = datetime.formatDateTime(data.modified.date);
             }
             return data;
         },

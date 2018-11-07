@@ -4,17 +4,26 @@ define(function(require) {
     var EmailNotificationCollection;
     var EmailNotificationModel = require('./email-notification-model');
     var RoutingCollection = require('oroui/js/app/models/base/routing-collection');
+    var error = require('oroui/js/error');
 
     /**
      * @export oroemail/js/app/models/email-notification-collection
      */
     EmailNotificationCollection = RoutingCollection.extend({
         model: EmailNotificationModel,
+
         routeDefaults: {
             routeName: 'oro_email_last',
             routeQueryParameterNames: ['limit', 'folderId'],
             limit: 10,
             folderId: 0
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailNotificationCollection() {
+            EmailNotificationCollection.__super__.constructor.apply(this, arguments);
         },
 
         setRouteParams: function(params) {
@@ -27,7 +36,7 @@ define(function(require) {
         markAllAsRead: function() {
             for (var i in this.models) {
                 if (this.models.hasOwnProperty(i)) {
-                    this.models[i].set({'seen': 1});
+                    this.models[i].set({seen: 1});
                 }
             }
             this.unreadEmailsCount = 0;
@@ -48,7 +57,7 @@ define(function(require) {
             return EmailNotificationCollection.__super__.parse.call(this, response, q);
         },
 
-        //TODO: remove after server side gets work correctly
+        // TODO: remove after server side gets work correctly
         checkServerResponse: function(response) {
             var length = response.emails.length;
             var count = Number(response.count);
@@ -58,7 +67,7 @@ define(function(require) {
             } else {
                 response.emails.forEach(function(element, index) {
                     if (element.seen && index < count || !element.seen && index >= count) {
-                        window.console.error('Wrong server response', response);
+                        error.showErrorInConsole(response);
                     }
                 });
             }

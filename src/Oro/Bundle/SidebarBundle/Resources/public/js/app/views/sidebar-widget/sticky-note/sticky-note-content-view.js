@@ -7,9 +7,19 @@ define(function(require) {
 
     StickyNoteContentView = BaseView.extend({
         listen: {
-            'change': 'render'
+            'change model': 'render'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function StickyNoteContentView() {
+            StickyNoteContentView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         render: function() {
             var settings = this.model.get('settings') || {};
             var content = _.escape(String(settings.content)).replace(/\r?\n/g, '<br/>');

@@ -36,6 +36,18 @@ invalid_exclusion_policy:
     expected: []
     error: 'The value "invalid" is not allowed for path "entity.exclusion_policy". Permissible values: "all", "none"'
 
+documentation_resource:
+    config:
+        documentation_resource: test.md
+    expected:
+        documentation_resource: [test.md]
+
+empty_documentation_resource:
+    config:
+        documentation_resource: ''
+    expected: []
+    error: 'The path "entity.documentation_resource.0" cannot contain an empty value, but got "".'
+
 empty_order_by:
     config:
         order_by: []
@@ -62,6 +74,12 @@ empty_identifier_field_names:
     config:
         identifier_field_names: []
     expected: []
+
+empty_identifier_field_name:
+    config:
+        identifier_field_names: ['']
+    expected: []
+    error: 'The path "entity.identifier_field_names.0" cannot contain an empty value, but got "".'
 
 invalid_identifier_field_names:
     config:
@@ -215,6 +233,7 @@ invalid_value_for_disable_meta_properties:
 all_attributes:
     config:
         exclusion_policy: all
+        documentation_resource: [test.md]
         order_by:
             id: DESC
         max_results: 50
@@ -225,6 +244,7 @@ all_attributes:
         post_serialize: [class, method]
     expected:
         exclusion_policy: all
+        documentation_resource: [test.md]
         order_by:
             id: DESC
         max_results: 50
@@ -336,24 +356,13 @@ invalid_field_collapse:
     expected: []
     error: 'Invalid type for path "entity.fields.field1.collapse". Expected boolean, but got integer.'
 
-field_data_transformer:
+data_transformer_should_not_be_supported:
     config:
         fields:
             field1:
-                data_transformer: ~
-            field2:
-                data_transformer: ""
-            field3:
-                data_transformer: []
-            field4:
-                data_transformer: [service1, [class, method]]
-    expected:
-        fields:
-            field1: []
-            field2: []
-            field3: []
-            field4:
-                data_transformer: [service1, [class, method]]
+                data_transformer: 'test_data_transformer'
+    expected: []
+    error: 'Unrecognized option "data_transformer" under "entity.fields.field1"'
 
 field_description:
     config:
@@ -626,9 +635,9 @@ entity_empty_form_type:
 
 entity_form_type:
     config:
-        form_type: integer
+        form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
     expected:
-        form_type: integer
+        form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
 
 entity_null_form_options:
     config:
@@ -640,13 +649,36 @@ entity_empty_form_options:
         form_options: []
     expected: []
 
+entity_empty_form_event_subscriber:
+    config:
+        form_event_subscriber: []
+    expected: []
+
+entity_one_form_event_subscriber:
+    config:
+        form_event_subscriber: subscriber1
+    expected:
+        form_event_subscriber: [subscriber1]
+
+entity_several_form_event_subscriber:
+    config:
+        form_event_subscriber: [subscriber1, subscriber2]
+    expected:
+        form_event_subscriber: [subscriber1, subscriber2]
+
+entity_invalid_form_event_subscriber:
+    config:
+        form_event_subscriber: ~
+    expected: []
+    error: 'Invalid configuration for path "entity.form_event_subscriber": The value must be a string or an array.'
+
 entity_form:
     config:
-        form_type: integer
+        form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
         form_options:
             option1: value1
     expected:
-        form_type: integer
+        form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
         form_options:
             option1: value1
 
@@ -678,15 +710,15 @@ field_form:
             field2:
                 form_type: ""
             field3:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
             field4:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
                 form_options: ~
             field5:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
                 form_options: []
             field6:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
                 form_options:
                     option1: value1
     expected:
@@ -694,13 +726,13 @@ field_form:
             field1: []
             field2: []
             field3:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
             field4:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
             field5:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
             field6:
-                form_type: integer
+                form_type: Symfony\Component\Form\Extension\Core\Type\IntegerType
                 form_options:
                     option1: value1
 

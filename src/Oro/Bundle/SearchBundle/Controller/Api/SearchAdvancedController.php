@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\SearchBundle\Controller\Api;
 
-use Nelmio\ApiDocBundle\Annotation\ApiDoc;
-
+use FOS\RestBundle\Controller\Annotations\NamePrefix;
+use FOS\RestBundle\Controller\Annotations\RouteResource;
 use FOS\RestBundle\Controller\FOSRestController;
 use FOS\RestBundle\View\View;
-use FOS\RestBundle\Controller\Annotations\RouteResource;
-use FOS\RestBundle\Controller\Annotations\NamePrefix;
-
+use Nelmio\ApiDocBundle\Annotation\ApiDoc;
 use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @RouteResource("search_advanced")
@@ -30,6 +30,10 @@ class SearchAdvancedController extends FOSRestController
      *   and, or: Used to combine multiple clauses, allowing you to refine your search.
      *
      * Syntax: and(or) field_type field_name operator value
+     *
+     *   aggregate: Allows to builds extra aggregating operations
+     *
+     * Syntax: field_type field_name grouping_function grouping_name
      *
      *   offset: Allow to set offset of first result.
      *
@@ -66,6 +70,18 @@ class SearchAdvancedController extends FOSRestController
      *
      *  replace spaces with _ underscore for fulltext search
      *
+     * Aggregating functions:
+     *
+     *  count
+     *
+     *  sum
+     *
+     *  avg
+     *
+     *  min
+     *
+     *  max
+     *
      * Examples:
      *
      *  select (name, price) from demo_products
@@ -82,6 +98,8 @@ class SearchAdvancedController extends FOSRestController
      *
      *  integer count !in (1, 3, 5)
      *
+     *  from demo_products aggregate integer price sum price_sum
+     *
      * @ApiDoc(
      *  description="Get advanced search result.",
      *  resource=true,
@@ -90,13 +108,15 @@ class SearchAdvancedController extends FOSRestController
      *  }
      * )
      * @AclAncestor("oro_search")
+     * @param Request $request
+     * @return Response
      */
-    public function getAction()
+    public function getAction(Request $request)
     {
         $view = new View();
 
         $result = $this->get('oro_search.index')->advancedSearch(
-            $this->getRequest()->get('query')
+            $request->get('query')
         );
 
         $dispatcher = $this->container->get('event_dispatcher');

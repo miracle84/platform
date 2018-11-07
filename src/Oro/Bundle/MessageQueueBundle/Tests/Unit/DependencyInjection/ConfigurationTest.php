@@ -1,4 +1,5 @@
 <?php
+
 namespace Oro\Bundle\MessageQueueBundle\Tests\Unit\DependencyInjection;
 
 use Oro\Bundle\MessageQueueBundle\DependencyInjection\Configuration;
@@ -11,7 +12,10 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
 
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+/**
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ */
+class ConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     use ClassExtensionTrait;
 
@@ -95,7 +99,11 @@ class ConfigurationTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals([
             'transport' => [
                 'null' => [],
-            ]
+            ],
+            'persistent_services' => [],
+            'persistent_processors' => [],
+            'security_agnostic_topics' => [],
+            'security_agnostic_processors' => []
         ], $config);
     }
 
@@ -121,7 +129,11 @@ class ConfigurationTest extends \PHPUnit_Framework_TestCase
                 'default' => ['alias' => 'foo'],
                 'null' => [],
                 'foo' => ['foo_param' => 'aParam'],
-            ]
+            ],
+            'persistent_services' => [],
+            'persistent_processors' => [],
+            'security_agnostic_topics' => [],
+            'security_agnostic_processors' => []
         ], $config);
     }
 
@@ -140,6 +152,8 @@ class ConfigurationTest extends \PHPUnit_Framework_TestCase
             ]
         ]]);
 
+        $pidDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'oro-message-queue';
+
         $this->assertEquals([
             'transport' => [
                 'default' => [
@@ -148,10 +162,15 @@ class ConfigurationTest extends \PHPUnit_Framework_TestCase
                 'dbal' => [
                     'connection' => 'default',
                     'table' => 'oro_message_queue',
-                    'orphan_time' => 300,
+                    'pid_file_dir' => $pidDir,
                     'polling_interval' => 1000,
-                ],
-            ]
+                    'consumer_process_pattern' => ':consume'
+                ]
+            ],
+            'persistent_services' => [],
+            'persistent_processors' => [],
+            'security_agnostic_topics' => [],
+            'security_agnostic_processors' => []
         ], $config);
     }
 
@@ -177,8 +196,13 @@ class ConfigurationTest extends \PHPUnit_Framework_TestCase
                 'router_destination' => 'default',
                 'default_destination' => 'default',
                 'traceable_producer' => false,
-                'redelivered_delay_time' => 10
+                'redelivered_delay_time' => 10,
+                'default_topic' => 'default'
             ],
+            'persistent_services' => [],
+            'persistent_processors' => [],
+            'security_agnostic_topics' => [],
+            'security_agnostic_processors' => []
         ], $config);
     }
 

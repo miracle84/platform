@@ -3,7 +3,6 @@
 namespace Oro\Bundle\IntegrationBundle\Manager;
 
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 
 class DeleteManager
@@ -12,7 +11,7 @@ class DeleteManager
     protected $em;
 
     /** @var DeleteProviderInterface[] */
-    protected $deleteProviders;
+    protected $deleteProviders = [];
 
     /**
      * @param EntityManager $em

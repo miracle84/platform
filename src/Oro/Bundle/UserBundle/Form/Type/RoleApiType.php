@@ -2,10 +2,11 @@
 
 namespace Oro\Bundle\UserBundle\Form\Type;
 
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-use Symfony\Component\Form\FormBuilderInterface;
-
+use Oro\Bundle\FormBundle\Form\Type\EntityIdentifierType;
 use Oro\Bundle\SoapBundle\Form\EventListener\PatchSubscriber;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class RoleApiType extends AclRoleType
 {
@@ -20,7 +21,7 @@ class RoleApiType extends AclRoleType
     {
         $builder->add(
             'label',
-            'text',
+            TextType::class,
             array(
                 'required' => true,
                 'label' => 'oro.user.role.label.label'
@@ -29,7 +30,7 @@ class RoleApiType extends AclRoleType
 
         $builder->add(
             'appendUsers',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             array(
                 'class'    => 'OroUserBundle:User',
                 'required' => false,
@@ -40,7 +41,7 @@ class RoleApiType extends AclRoleType
 
         $builder->add(
             'removeUsers',
-            'oro_entity_identifier',
+            EntityIdentifierType::class,
             array(
                 'class'    => 'OroUserBundle:User',
                 'required' => false,
@@ -62,9 +63,9 @@ class RoleApiType extends AclRoleType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
-        parent::setDefaultOptions($resolver);
+        parent::configureOptions($resolver);
 
         $resolver->setDefaults(['csrf_protection' => false]);
     }

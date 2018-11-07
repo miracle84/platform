@@ -4,26 +4,28 @@ namespace Oro\Bundle\CommentBundle\Tests\Unit\Form\Handler;
 
 use Oro\Bundle\CommentBundle\Entity\Comment;
 use Oro\Bundle\CommentBundle\Form\Handler\CommentApiHandler;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class CommentApiHandlerTest extends \PHPUnit_Framework_TestCase
+class CommentApiHandlerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $form;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var Request
      */
     protected $request;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $om;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
@@ -40,14 +42,16 @@ class CommentApiHandlerTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->form = $this->createMock('Symfony\Component\Form\Test\FormInterface');
-        $this->request = $this->createMock('Symfony\Component\HttpFoundation\Request');
+        $this->request = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
         $this->om = $this->createMock('Doctrine\Common\Persistence\ObjectManager');
         $this->configManager = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()
             ->getMock();
         $this->comment = new Comment();
 
-        $this->handler = new CommentApiHandler($this->form, $this->request, $this->om, $this->configManager);
+        $this->handler = new CommentApiHandler($this->form, $requestStack, $this->om, $this->configManager);
     }
 
     /**
@@ -64,9 +68,7 @@ class CommentApiHandlerTest extends \PHPUnit_Framework_TestCase
         if ($valid && $callsCount) {
             $persistCallsCount = 1;
         }
-        $this->request->expects($this->once())
-            ->method('getMethod')
-            ->will($this->returnValue($type));
+        $this->request->setMethod($type);
 
         $this->form->expects($this->exactly($callsCount))
             ->method('submit');

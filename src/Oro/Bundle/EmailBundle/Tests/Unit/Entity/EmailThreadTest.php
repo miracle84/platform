@@ -2,17 +2,16 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Entity;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 
 /**
  * Class EmailThreadTest
  *
  * @package Oro\Bundle\EmailBundle\Tests\Unit\Entity
  */
-class EmailThreadTest extends \PHPUnit_Framework_TestCase
+class EmailThreadTest extends \PHPUnit\Framework\TestCase
 {
     public function testEmailsGetterAndSetter()
     {

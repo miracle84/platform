@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Create;
 
-use Doctrine\Common\Util\ClassUtils;
-
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Oro\Bundle\ApiBundle\Model\Error;
 use Oro\Bundle\ApiBundle\Processor\SingleItemContext;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
- * Saves new ORM entity to the database and save its identifier into the Context.
+ * Saves new ORM entity to the database and save its identifier into the context.
  */
 class SaveEntity implements ProcessorInterface
 {
@@ -44,17 +44,28 @@ class SaveEntity implements ProcessorInterface
             return;
         }
 
-        $em->persist($entity);
-        $em->flush();
+        $metadata = $context->getMetadata();
+        if (null === $metadata) {
+            // the metadata does not exist
+            return;
+        }
 
-        // save entity id into the Context
-        $metadata = $em->getClassMetadata(ClassUtils::getClass($entity));
-        $id = $metadata->getIdentifierValues($entity);
-        if (!empty($id)) {
-            if (1 === count($id)) {
-                $id = reset($id);
+        $em->persist($entity);
+        try {
+            $em->flush();
+        } catch (UniqueConstraintViolationException $e) {
+            $context->addError(
+                Error::createConflictValidationError('The entity already exists')
+                    ->setInnerException($e)
+            );
+        }
+
+        // save entity id into the context
+        if (!$context->hasErrors()) {
+            $id = $metadata->getIdentifierValue($entity);
+            if (null !== $id) {
+                $context->setId($id);
             }
-            $context->setId($id);
         }
     }
 }

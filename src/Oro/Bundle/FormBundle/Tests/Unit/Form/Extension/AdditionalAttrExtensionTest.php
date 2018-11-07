@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\FormBundle\Tests\Unit\Form\Extension;
 
+use Oro\Bundle\FormBundle\Form\Extension\AdditionalAttrExtension;
 use Symfony\Component\Form\FormView;
 
-use Oro\Bundle\FormBundle\Form\Extension\AdditionalAttrExtension;
-
-class AdditionalAttrExtensionTest extends \PHPUnit_Framework_TestCase
+class AdditionalAttrExtensionTest extends \PHPUnit\Framework\TestCase
 {
     const ID = 'test_id';
     /**
@@ -19,13 +18,13 @@ class AdditionalAttrExtensionTest extends \PHPUnit_Framework_TestCase
         $this->extension = new AdditionalAttrExtension();
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $resolver->expects($this->once())->method('setDefaults')
             ->with(['random_id' => true]);
 
-        $this->extension->setDefaultOptions($resolver);
+        $this->extension->configureOptions($resolver);
     }
 
     /**

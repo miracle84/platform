@@ -159,9 +159,13 @@ define([
         if (service) {
             service.unsubscribe.apply(service, args);
         } else {
-            cleaner = !callback ?
-                function(args) { return channel === args[0]; } :
-                function(args) { return channel === args[0] && callback === args[1]; };
+            cleaner = !callback
+                ? function(args) {
+                    return channel === args[0];
+                }
+                : function(args) {
+                    return channel === args[0] && callback === args[1];
+                };
             subscriptions = _.reject(subscriptions, cleaner);
         }
     };

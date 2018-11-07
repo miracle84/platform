@@ -5,7 +5,7 @@ namespace Oro\Bundle\NavigationBundle\Tests\Unit\Twig;
 use Oro\Bundle\NavigationBundle\Event\ResponseHashnavListener;
 use Oro\Bundle\NavigationBundle\Twig\HashNavExtension;
 
-class HashNavExtensionTest extends \PHPUnit_Framework_TestCase
+class HashNavExtensionTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var \Oro\Bundle\NavigationBundle\Twig\HashNavExtension
@@ -50,14 +50,6 @@ class HashNavExtensionTest extends \PHPUnit_Framework_TestCase
         $this->extension->onKernelRequest($event);
 
         $this->assertTrue($this->extension->checkIsHashNavigation());
-    }
-
-    public function testGetFunctions()
-    {
-        $functions = $this->extension->getFunctions();
-        $this->assertTrue(is_array($functions));
-        $this->assertTrue(array_key_exists('oro_is_hash_navigation', $functions));
-        $this->assertTrue(array_key_exists('oro_hash_navigation_header', $functions));
     }
 
     public function testGetHashNavigationHeaderConst()

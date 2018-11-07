@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Layput\DataProvider;
 
+use Oro\Bundle\TranslationBundle\Layout\DataProvider\TranslatorProvider;
 use Symfony\Component\Translation\TranslatorInterface;
 
-use Oro\Bundle\TranslationBundle\Layout\DataProvider\TranslatorProvider;
-
-class TranslatorProviderTest extends \PHPUnit_Framework_TestCase
+class TranslatorProviderTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var  TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var  TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
     /** @var TranslatorProvider */

@@ -1,6 +1,6 @@
 <?php
 
-namespace Oro\Bundle\EntityConfigBundle\Tests\Functional;
+namespace Oro\Bundle\EntityConfigBundle\Tests\Functional\Controller;
 
 use Doctrine\ORM\EntityManager;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
@@ -10,8 +10,9 @@ use Oro\Bundle\TestFrameworkBundle\Entity\TestActivityTarget;
 use Oro\Bundle\UIBundle\Route\Router;
 
 /**
- * @dbIsolation
  * @group dist
+ *
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
 class AttributeControllerTest extends AbstractConfigControllerTest
 {
@@ -52,17 +53,17 @@ class AttributeControllerTest extends AbstractConfigControllerTest
      */
     public function testCreateSimple($fieldType)
     {
-        $form = $this->processFirstStep($fieldType);
+        $form = $this->processFirstStep($fieldType, 'name' . $fieldType);
 
         $this->finishAttributeCreation($form);
     }
 
-
     /**
      * @param string $fieldType
+     * @param string $name
      * @return \Symfony\Component\DomCrawler\Form
      */
-    private function processFirstStep($fieldType)
+    private function processFirstStep($fieldType, $name)
     {
         $crawler = $this->client->request(
             'GET',
@@ -72,7 +73,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
         $continueButton = $crawler->selectButton('Continue');
 
         $form = $continueButton->form();
-        $form['oro_entity_extend_field_type[fieldName]'] = 'name' . strtolower($fieldType);
+        $form['oro_entity_extend_field_type[fieldName]'] = $name;
         $form['oro_entity_extend_field_type[type]'] = $fieldType;
         $this->client->followRedirects(true);
 
@@ -105,7 +106,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateFile()
     {
-        $form = $this->processFirstStep('file');
+        $form = $this->processFirstStep('file', 'file');
 
         $form['oro_entity_config_type[attachment][maxsize]'] = 1000000;
 
@@ -114,7 +115,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateImage()
     {
-        $form = $this->processFirstStep('image');
+        $form = $this->processFirstStep('image', 'image');
 
         $form['oro_entity_config_type[attachment][maxsize]'] = 1000000;
         $form['oro_entity_config_type[attachment][width]'] = 100;
@@ -125,7 +126,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateEnum()
     {
-        $form = $this->processFirstStep('enum');
+        $form = $this->processFirstStep('enum', 'enum');
 
         $formValues = $form->getPhpValues();
         $formValues['oro_entity_config_type']['enum']['enum_options'] = [
@@ -135,13 +136,15 @@ class AttributeControllerTest extends AbstractConfigControllerTest
             ]
         ];
 
+        $this->arrayHasKey('is_visible', $formValues['oro_entity_config_type']['datagrid']);
+        $this->assertNotEquals(3, $formValues['oro_entity_config_type']['datagrid']['is_visible']);
         $this->client->request($form->getMethod(), $form->getUri(), $formValues);
         $this->assertResponse();
     }
 
     public function testCreateMultiEnum()
     {
-        $form = $this->processFirstStep('multiEnum');
+        $form = $this->processFirstStep('multiEnum', 'multiEnum');
 
         $formValues = $form->getPhpValues();
         $formValues['oro_entity_config_type']['enum']['enum_options'] = [
@@ -157,7 +160,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateOneToManyRelation()
     {
-        $form = $this->processFirstStep('oneToMany');
+        $form = $this->processFirstStep('oneToMany', 'oneToMany');
 
         $this->createSelectOneToMany($form);
 
@@ -166,7 +169,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateManyToOneRelation()
     {
-        $form = $this->processFirstStep('manyToOne');
+        $form = $this->processFirstStep('manyToOne', 'manyToOne');
 
         $this->createSelectManyToOne($form);
 
@@ -175,7 +178,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
 
     public function testCreateManyToManyRelation()
     {
-        $form = $this->processFirstStep('manyToMany');
+        $form = $this->processFirstStep('manyToMany', 'manyToMany');
 
         $this->createSelectOneToMany($form);
 
@@ -220,7 +223,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
      */
     public function testUpdate()
     {
-        $fieldConfigModel = $this->getFieldByName('namefile');
+        $fieldConfigModel = $this->getFieldByName('file');
 
         $crawler = $this->client->request(
             'GET',
@@ -242,7 +245,7 @@ class AttributeControllerTest extends AbstractConfigControllerTest
         $this->assertHtmlResponseStatusCodeEquals($result, 200);
         $this->assertContains('Attribute was successfully saved', $result->getContent());
 
-        $fieldConfig = $this->getFieldConfigByName('namefile', 'entity');
+        $fieldConfig = $this->getFieldConfigByName('file', 'entity');
 
         $translator = $this->getContainer()->get('translator');
 
@@ -254,15 +257,62 @@ class AttributeControllerTest extends AbstractConfigControllerTest
      */
     public function testDelete()
     {
-        $fieldConfigModel = $this->getFieldByName('namefile');
+        $fieldConfigModel = $this->getFieldByName('file');
 
         $this->client->request(
             'GET',
             $this->getUrl('oro_attribute_remove', ['id' => $fieldConfigModel->getId()])
         );
 
-        $fieldConfig = $this->getFieldConfigByName('namefile', 'extend');
+        $fieldConfig = $this->getFieldConfigByName('file', 'extend');
 
         $this->assertEquals($fieldConfig->get('state'), 'Deleted');
+    }
+
+    public function testRequiredProperties()
+    {
+        $form = $this->processFirstStep('string', 'newString');
+
+        $formValues = $form->getPhpValues();
+        $formValues['input_action'] = 'save_and_stay';
+
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $formValues);
+        $this->assertResponse();
+
+        $requiredProperties = [
+            [
+                'scope' => 'datagrid',
+                'code' => 'show_filter',
+            ],
+            [
+                'scope' => 'dataaudit',
+                'code' => 'auditable',
+            ],
+            [
+                'scope' => 'importexport',
+                'code' => 'identity',
+            ],
+            [
+                'scope' => 'attribute',
+                'code' => 'searchable',
+            ],
+            [
+                'scope' => 'attribute',
+                'code' => 'filterable',
+            ],
+            [
+                'scope' => 'attribute',
+                'code' => 'sortable',
+            ],
+        ];
+
+        foreach ($requiredProperties as $requiredProperty) {
+            $filter = sprintf(
+                "//div[contains(@class,'control-group-choice')]//*[@name='oro_entity_config_type[%s][%s]']",
+                $requiredProperty['scope'],
+                $requiredProperty['code']
+            );
+            $this->assertEquals(1, $crawler->filterXPath($filter)->count(), $requiredProperty['code']);
+        }
     }
 }

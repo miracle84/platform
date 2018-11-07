@@ -2,12 +2,13 @@ define(function(require) {
     'use strict';
 
     var DictionaryFilter;
+    var template = require('tpl!orofilter/templates/filter/dictionary-filter.html');
+    var fieldTemplate = require('tpl!orofilter/templates/filter/select-field.html');
     var $ = require('jquery');
     var routing = require('routing');
     var _ = require('underscore');
     var __ = require('orotranslation/js/translator');
     var ChoiceFilter = require('oro/filter/choice-filter');
-    var messenger = require('oroui/js/messenger');
     var tools = require('oroui/js/tools');
     require('jquery.select2');
 
@@ -19,6 +20,7 @@ define(function(require) {
      * @extends oro.filter.ChoiceFilter
      */
     DictionaryFilter = ChoiceFilter.extend({
+        /* eslint-disable quote-props */
         /**
          * select2 will apply to element with this selector
          */
@@ -29,6 +31,7 @@ define(function(require) {
          *
          * @property
          */
+        template: template,
         templateSelector: '#dictionary-filter-template',
 
         /**
@@ -36,6 +39,7 @@ define(function(require) {
          *
          * @property
          */
+        fieldTemplate: fieldTemplate,
         fieldTemplateSelector: '#select-field-template',
 
         /**
@@ -56,7 +60,7 @@ define(function(require) {
 
         filterParams: null,
 
-        class: null,
+        'class': null,
 
         select2ConfigData: null,
 
@@ -82,7 +86,18 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function DictionaryFilter() {
+            DictionaryFilter.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
+            // Each filter should have own copy,
+            // otherwise 2 filters on same page will show same values
+            this.selectedData = {};
+
             if (this.filterParams) {
                 this.dictionaryClass = this.filterParams.class.replace(/\\/g, '_');
             } else {
@@ -105,7 +120,7 @@ define(function(require) {
             if (data) {
                 this.previousData = data;
             }
-            select2element.inputWidget('data',  null);
+            select2element.inputWidget('data', null);
         },
 
         /**
@@ -126,7 +141,12 @@ define(function(require) {
          */
         loadValuesById: function(successEventName) {
             var self = this;
+
             if (this.select2ConfigData === null) {
+                var $container = self.$(self.elementSelector).parent();
+
+                $container.addClass('loading');
+
                 $.ajax({
                     url: routing.generate(
                         self.dictionaryValueRoute,
@@ -135,13 +155,12 @@ define(function(require) {
                         }
                     ),
                     data: {
-                        'keys': this.value.value
+                        keys: this.value.value
                     },
                     success: function(response) {
+                        $container.removeClass('loading');
+
                         self.trigger(successEventName, response);
-                    },
-                    error: function(jqXHR) {
-                        messenger.showErrorMessage(__('Sorry, an unexpected error has occurred.'), jqXHR.responseJSON);
                     }
                 });
             } else {
@@ -230,11 +249,11 @@ define(function(require) {
                 selectedChoiceLabel: selectedChoiceLabel,
                 selectedChoice: value.type,
                 choices: this.choices,
-                name: this.name
+                name: this.name,
+                renderMode: this.renderMode
             }));
 
             this._appendFilter($filter);
-            this._refreshWidth();
         },
 
         /**
@@ -255,20 +274,20 @@ define(function(require) {
                     self.applyValue();
                 });
             }
-            select2element.inputWidget('data',  values);
-
+            select2element.inputWidget('data', values);
             this._criteriaRenderd = true;
+
+            this._alignCriteria();
         },
 
         /**
          * Return config for select2
          */
         getSelect2Config: function() {
-            var config =  {
+            var config = {
                 multiple: true,
                 containerCssClass: 'dictionary-filter',
                 dropdownAutoWidth: true,
-                escapeMarkup: function(markup) { return markup; }, // let our custom formatter work
                 minimumInputLength: 0,
                 placeholder: __('Choose values')
             };
@@ -299,6 +318,10 @@ define(function(require) {
                 config.data = {
                     results: this.select2ConfigData
                 };
+
+                if (config.data.results.length > 100) {
+                    config.minimumInputLength = 2;
+                }
             }
 
             if (this.templateTheme === '') {
@@ -320,8 +343,8 @@ define(function(require) {
 
                 if (item) {
                     values.push({
-                        'id': item.id,
-                        'text': item.text
+                        id: item.id,
+                        text: item.text
                     });
                 }
             }, this);
@@ -343,7 +366,7 @@ define(function(require) {
          */
         _getParts: function() {
             var value = _.extend({}, this.emptyValue, this.getValue());
-            var dictionaryPartTemplate = this._getTemplate(this.fieldTemplateSelector);
+            var dictionaryPartTemplate = this._getTemplate('fieldTemplate');
             var parts = [];
             var selectedPartLabel = this._getSelectedChoiceLabel('choices', this.value);
             // add date parts only if embed template used
@@ -395,20 +418,16 @@ define(function(require) {
             }
 
             var data = this.$(this.elementSelector).inputWidget('data');
-            _.each(value.value, function(id) {
-                if (this.selectedData[id]) {
+            _.each(data, function(elem) {
+                if (!('id' in elem)) {
                     return;
                 }
 
-                var item = _.find(data, function(item) {
-                    return item.id === id;
-                });
-
-                if (!item) {
+                if (this.selectedData[elem.id]) {
                     return;
                 }
 
-                this.selectedData[item.id] = item;
+                this.selectedData[elem.id] = elem;
             }, this);
         },
 
@@ -454,18 +473,6 @@ define(function(require) {
         },
 
         /**
-         * Update width of filter
-         */
-        _refreshWidth: function() {
-            var valueFrame = this.$('.value-field-frame');
-            // update left and right margins of value field frame
-            var leftWidth = this.$('.choice-filter .dropdown-toggle').outerWidth();
-            var rightWidth = this.$('.filter-update').outerWidth();
-            valueFrame.css('margin-left', leftWidth);
-            valueFrame.css('padding-right', rightWidth);
-        },
-
-        /**
          * @inheritDoc
          */
         _getCriteriaHint: function() {
@@ -485,20 +492,15 @@ define(function(require) {
                 return this.placeholder;
             }
 
-            var data = this.$(this.elementSelector).inputWidget('data');
-            if (!data || !data.length) {
-                data = this.previousData.length ? this.previousData : this.initialData;
-            }
-
             if (this.valueIsLoaded(value.value)) {
                 var self = this;
 
-                var hintRawValue = _.isObject(_.first(value.value)) ?
-                    _.map(value.value, _.property('text')) :
-                    _.chain(value.value)
+                var hintRawValue = _.isObject(_.first(value.value))
+                    ? _.map(value.value, _.property('text'))
+                    : _.chain(value.value)
                         .map(function(id) {
-                            var item =  _.find(self.selectedData, function(item) {
-                                return item.id === id;
+                            var item = _.find(self.selectedData, function(item) {
+                                return item.id.toString() === id.toString();
                             });
 
                             return item ? item.text : item;

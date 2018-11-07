@@ -2,74 +2,59 @@
 
 namespace Oro\Bundle\ImportExportBundle\Tests\Unit\Strategy\Import;
 
+use Oro\Bundle\EntityBundle\Helper\FieldHelper;
+use Oro\Bundle\EntityConfigBundle\Config\Config;
+use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\ImportExportBundle\Converter\ConfigurableTableDataConverter;
 use Oro\Bundle\ImportExportBundle\Strategy\Import\ImportStrategyHelper;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
+use Symfony\Component\Validator\ConstraintViolationList;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
+class ImportStrategyHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $managerRegistry;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject | ValidatorInterface */
     protected $validator;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject | TranslatorInterface */
     protected $translator;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject | FieldHelper */
     protected $fieldHelper;
 
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject | ConfigProvider  */
     protected $extendConfigProvider;
 
-    /**
-     * @var ImportStrategyHelper
-     */
-    protected $helper;
-
-    /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
-     */
+    /** @var \PHPUnit\Framework\MockObject\MockObject | ConfigurableTableDataConverter */
     protected $configurableDataConverter;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject | AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject | TokenAccessorInterface */
+    protected $tokenAccessor;
+
+    /** @var ImportStrategyHelper */
+    protected $helper;
 
     protected function setUp()
     {
         $this->managerRegistry = $this->getMockBuilder('Doctrine\Common\Persistence\ManagerRegistry')
             ->disableOriginalConstructor()
             ->getMock();
-
-        $this->validator = $this->getMockBuilder('Symfony\Component\Validator\ValidatorInterface')
-            ->getMock();
-
-        $this->translator = $this->getMockBuilder('Symfony\Component\Translation\TranslatorInterface')
-            ->getMock();
-
-        $this->fieldHelper = $this->getMockBuilder('Oro\Bundle\EntityBundle\Helper\FieldHelper')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->extendConfigProvider = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->configurableDataConverter = $this
-            ->getMockBuilder('Oro\Bundle\ImportExportBundle\Converter\ConfigurableTableDataConverter')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->securityFacade = $this
-            ->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->validator = $this->createMock(ValidatorInterface::class);
+        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->fieldHelper = $this->createMock(FieldHelper::class);
+        $this->extendConfigProvider = $this->createMock(ConfigProvider::class);
+        $this->configurableDataConverter = $this->createMock(ConfigurableTableDataConverter::class);
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
 
         $this->helper = new ImportStrategyHelper(
             $this->managerRegistry,
@@ -77,7 +62,8 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
             $this->translator,
             $this->fieldHelper,
             $this->configurableDataConverter,
-            $this->securityFacade
+            $this->authorizationChecker,
+            $this->tokenAccessor
         );
 
         $this->helper->setConfigProvider($this->extendConfigProvider);
@@ -100,20 +86,28 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
      * @expectedException \Oro\Bundle\ImportExportBundle\Exception\LogicException
      * @expectedExceptionMessage Can't find entity manager for stdClass
      */
-    public function testImportEntityEntityManagerException()
+    public function testGetEntityManagerWithException()
     {
-        $basicEntity = new \stdClass();
-        $importedEntity = new \stdClass();
-        $excludedProperties = array();
-
         $this->managerRegistry->expects($this->once())
             ->method('getManagerForClass')
-            ->with(get_class($basicEntity));
+            ->with('stdClass')
+            ->willReturn(null);
 
-        $this->helper->importEntity($basicEntity, $importedEntity, $excludedProperties);
+        $this->helper->getEntityManager('stdClass');
     }
 
-    public function testImportEntity()
+    public function testGetLoggedUser()
+    {
+        $loggedUser = new User();
+
+        $this->tokenAccessor->expects($this->once())
+            ->method('getUser')
+            ->willReturn($loggedUser);
+
+        $this->assertSame($loggedUser, $this->helper->getLoggedUser());
+    }
+
+    public function testImportNonConfigurableEntity()
     {
         $basicEntity = new \stdClass();
         $importedEntity = new \stdClass();
@@ -122,12 +116,11 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
         $importedEntity->excludedField = 'excluded';
         $excludedProperties = ['excludedField'];
 
-        $metadata = $this->getMockBuilder('\Doctrine\ORM\Mapping\ClassMetadata')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $metadata = $this->createMock('\Doctrine\ORM\Mapping\ClassMetadata');
         $metadata->expects($this->once())
             ->method('getFieldNames')
             ->will($this->returnValue(['fieldOne', 'excludedField']));
+
         $metadata->expects($this->once())
             ->method('getAssociationNames')
             ->will($this->returnValue(['fieldTwo', 'fieldThree']));
@@ -138,6 +131,7 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
                 [$importedEntity, 'fieldOne', $importedEntity->fieldOne],
                 [$importedEntity, 'fieldTwo', $importedEntity->fieldTwo],
             ]));
+
         $this->fieldHelper->expects($this->exactly(3))
             ->method('setObjectValue')
             ->withConsecutive(
@@ -145,9 +139,11 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
                 [$basicEntity, 'fieldTwo', $importedEntity->fieldTwo]
             );
 
-        $entityManager = $this->getMockBuilder('Doctrine\ORM\EntityManager')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->extendConfigProvider
+            ->method('hasConfig')
+            ->willReturn(false);
+
+        $entityManager = $this->createMock('Doctrine\ORM\EntityManager');
         $entityManager->expects($this->once())
             ->method('getClassMetadata')
             ->with(get_class($basicEntity))
@@ -161,13 +157,72 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
         $this->helper->importEntity($basicEntity, $importedEntity, $excludedProperties);
     }
 
+    public function testImportConfigurableEntity()
+    {
+        $basicEntity = new \stdClass();
+        $importedEntity = new \stdClass();
+        $importedEntity->fieldOne = 'one';
+        $importedEntity->fieldTwo = 'two';
+        $importedEntity->excludedField = 'excluded';
+        $importedEntity->deletedField = 'deleted';
+        $excludedProperties = ['excludedField'];
+
+        $this->fieldHelper->expects($this->once())
+            ->method('getFields')
+            ->with('stdClass', true)
+            ->willReturn(
+                $this->convertFieldNamesToFieldConfigs(
+                    [
+                        'fieldOne',
+                        'fieldTwo',
+                        'fieldThree',
+                        'excludedField',
+                        'deletedField',
+                    ]
+                )
+            );
+
+        $this->fieldHelper->expects($this->any())
+            ->method('getObjectValue')
+            ->will($this->returnValueMap([
+                [$importedEntity, 'fieldOne', $importedEntity->fieldOne],
+                [$importedEntity, 'fieldTwo', $importedEntity->fieldTwo],
+            ]));
+
+        $this->fieldHelper->expects($this->exactly(3))
+            ->method('setObjectValue')
+            ->withConsecutive(
+                [$basicEntity, 'fieldOne', $importedEntity->fieldOne],
+                [$basicEntity, 'fieldTwo', $importedEntity->fieldTwo]
+            );
+
+        $this->extendConfigProvider
+            ->method('hasConfig')
+            ->willReturn(true);
+
+        $this->extendConfigProvider
+            ->method('getConfig')
+            ->willReturnCallback(function ($className, $fieldName) use ($importedEntity) {
+                $configField = $this->createMock(Config::class);
+                $configField
+                    ->method('is')
+                    ->with('is_deleted')
+                    ->willReturn($fieldName === 'deletedField');
+
+                return $configField;
+            });
+
+        $this->helper->importEntity($basicEntity, $importedEntity, $excludedProperties);
+    }
+
     public function testValidateEntityNoErrors()
     {
         $entity = new \stdClass();
 
         $this->validator->expects($this->once())
             ->method('validate')
-            ->with($entity);
+            ->with($entity)
+            ->willReturn(new ConstraintViolationList());
 
         $this->assertNull($this->helper->validateEntity($entity));
     }
@@ -253,5 +308,17 @@ class ImportStrategyHelperTest extends \PHPUnit_Framework_TestCase
             array(null),
             array('tst')
         );
+    }
+
+    /**
+     * @param array $fieldNames
+     *
+     * @return array
+     */
+    private function convertFieldNamesToFieldConfigs(array $fieldNames)
+    {
+        return array_map(function ($fieldName) {
+            return [ 'name' => $fieldName ];
+        }, $fieldNames);
     }
 }

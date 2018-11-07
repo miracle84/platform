@@ -11,9 +11,21 @@ define(function(require) {
     var layout = require('oroui/js/layout');
     var AbstractWidget = require('oroui/js/widget/abstract-widget');
     var StateModel = require('orowindows/js/dialog/state/model');
+    var LoadingBarView = require('oroui/js/app/views/loading-bar-view');
     var DialogManager = require('orowindows/js/widget/dialog-manager');
     var dialogManager = new DialogManager();
     require('jquery.dialog.extended');
+
+    var config = _.extend({
+        type: 'dialog',
+        dialogOptions: null,
+        stateEnabled: true,
+        incrementalPosition: true,
+        preventModelRemoval: false,
+        messengerContainerClass: '',
+        mobileLoadingBar: true,
+        desktopLoadingBar: false
+    }, require('module').config());
 
     /**
      * @export  oro/dialog-widget
@@ -21,13 +33,7 @@ define(function(require) {
      * @extends oroui.widget.AbstractWidget
      */
     DialogWidget = AbstractWidget.extend({
-        options: _.extend({}, AbstractWidget.prototype.options, {
-            type: 'dialog',
-            dialogOptions: null,
-            stateEnabled: true,
-            incrementalPosition: true,
-            preventModelRemoval: false
-        }),
+        options: _.extend({}, AbstractWidget.prototype.options, config),
 
         // Windows manager global variables
         windowsPerRow: 10,
@@ -48,13 +54,30 @@ define(function(require) {
         _isEmbedded: false,
 
         events: {
-            'content:changed': 'resetDialogPosition'
+            'content:changed': 'resetDialogPosition',
+            'shown.bs.collapse': 'resetDialogPosition',
+            'hidden.bs.collapse': 'resetDialogPosition'
         },
 
         listen: {
             'widgetRender': 'onWidgetRender',
             'widgetReady': 'onContentUpdated',
-            'page:request mediator': 'onPageChange'
+            'page:request mediator': 'onPageChange',
+            'layout:reposition mediator': 'resetDialogPosition'
+        },
+
+        $messengerContainer: null,
+
+        /**
+         * @property {Object}
+         */
+        loadingBar: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DialogWidget() {
+            DialogWidget.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -69,7 +92,7 @@ define(function(require) {
             _.defaults(dialogOptions, {
                 title: options.title,
                 limitTo: '#container',
-                minWidth: 375,
+                minWidth: 320,
                 minHeight: 150
             });
             if (tools.isMobile()) {
@@ -77,8 +100,12 @@ define(function(require) {
                 options.dialogOptions.limitTo = 'body';
             }
 
-            // it's possible to track state only for not modal dialogs
-            options.stateEnabled = options.stateEnabled && !dialogOptions.modal;
+            if (dialogOptions.modal) {
+                // it's possible to track state and minimize only for not modal dialogs
+                options.stateEnabled = false;
+                dialogOptions.allowMinimize = false;
+            }
+
             if (options.stateEnabled) {
                 this._initModel();
             }
@@ -94,6 +121,23 @@ define(function(require) {
         onWidgetRender: function(content) {
             this._initAdjustHeight(content);
             this._setMaxSize();
+            this._addMessengerContainer();
+            this._initLoadingBar();
+        },
+
+        /**
+         * Add temporary container for messages into dialog window
+         * @private
+         */
+        _addMessengerContainer: function() {
+            var containerClass = this.options.messengerContainerClass;
+            var $title = this.widget.dialog('instance').uiDialogTitlebar;
+
+            if (containerClass && !$title.find('.' + containerClass).length) {
+                this.$messengerContainer = $('<div/>').appendTo($title)
+                    .addClass(containerClass)
+                    .attr('data-role', 'messenger-temporary-container');
+            }
         },
 
         setTitle: function(title) {
@@ -115,6 +159,20 @@ define(function(require) {
                 }
             } else {
                 this.model = new StateModel();
+            }
+        },
+
+        /**
+         * Create loading bar under titlebar
+         * @private
+         */
+        _initLoadingBar: function() {
+            if ((this.options.mobileLoadingBar && tools.isMobile()) ||
+                (this.options.desktopLoadingBar && !tools.isMobile())) {
+                this.subview('LoadingBarView', new LoadingBarView({
+                    container: this.widget.dialog('instance').uiDialogTitlebar,
+                    ajaxLoading: true
+                }));
             }
         },
 
@@ -141,12 +199,18 @@ define(function(require) {
             if (this.disposed) {
                 return;
             }
+
+            if (this.$messengerContainer) {
+                this.$messengerContainer.trigger('remove').remove();
+            }
+
+            $(window).off(this.eventNamespace());
             dialogManager.remove(this);
             if (this.model && !this.options.preventModelRemoval) {
                 this.model.destroy({
-                    errorOutput: function(event, xhr) {
-                        // Suppress error if it's 404 response and not debug mode
-                        return xhr.status !== 404 || tools.debug;
+                    errorHandlerMessage: function(event, xhr) {
+                        // Suppress error if it's 404 response
+                        return xhr.status !== 404;
                     }
                 });
             }
@@ -179,7 +243,15 @@ define(function(require) {
          * Handles content load event and sets focus on first form input
          */
         onContentUpdated: function() {
+            this._fixScrollableHeight();
+            this.focusContent();
+        },
+
+        focusContent: function() {
             this.$('form:first').focusFirstInput();
+            if (!$.contains(this.el, document.activeElement)) {
+                this.widget.closest('.ui-dialog').trigger('focus');
+            }
         },
 
         /**
@@ -266,7 +338,8 @@ define(function(require) {
 
         getActionsElement: function() {
             if (!this.actionsEl) {
-                this.actionsEl = $('<div class="pull-right"/>').appendTo(
+                var className = _.isRTL() ? 'pull-left' : 'pull-right';
+                this.actionsEl = $('<div />', {'class': className}).appendTo(
                     $('<div class="form-actions widget-actions"/>').appendTo(
                         this.widget.dialog('actionsContainer')
                     )
@@ -347,9 +420,9 @@ define(function(require) {
             if (scrollableContent.length) {
                 scrollableContent.css('overflow', 'auto');
                 this.widget.on(resizeEvents, _.bind(this._fixScrollableHeight, this));
-                this._fixScrollableHeight();
             }
         },
+
         _setMaxSize: function() {
             this.widget.off('.set-max-size-events');
             this.widget.on('dialogresizestart.set-max-size-events', _.bind(function() {
@@ -390,6 +463,10 @@ define(function(require) {
          * Resets dialog position to default
          */
         resetDialogPosition: function() {
+            if (!this.widget) {
+                // widget is not initialized -- where's nothing to position yet
+                return;
+            }
             if (this.options.position) {
                 this.setPosition(_.extend(this.options.position, {
                     of: '#container',
@@ -433,10 +510,31 @@ define(function(require) {
             }
             var containerEl = $(this.options.dialogOptions.limitTo || document.body)[0];
             var dialog = this.widget.closest('.ui-dialog');
+
+            var initialDialogPosition = dialog.css('position');
+            var initialScrollTop = $(window).scrollTop();
+            if (tools.isIOS() && initialDialogPosition === 'fixed') {
+                // Manipulating with position to fix stupid iOS bug,
+                // when orientation is changed
+                $('html, body').scrollTop(0);
+                dialog.css({
+                    position: 'absolute'
+                });
+            }
+
             this.internalSetDialogPosition(position, leftShift, topShift);
             this.leftAndWidthAdjustments(dialog, containerEl);
             this.topAndHeightAdjustments(dialog, containerEl);
             this.widget.trigger('dialogreposition');
+
+            if (tools.isIOS() && initialDialogPosition === 'fixed') {
+                // Manipulating with position to fix stupid iOS bug,
+                // when orientation is changed
+                dialog.css({
+                    position: initialDialogPosition
+                });
+                $('html, body').scrollTop(initialScrollTop);
+            }
         },
 
         leftAndWidthAdjustments: function(dialog, containerEl) {
@@ -460,11 +558,22 @@ define(function(require) {
                 if (minWidth > containerEl.clientWidth - left) {
                     dialog.css('min-width', containerEl.clientWidth - left);
                 }
+            } else {
+                if (this.getState() !== 'maximized' &&
+                    (!this.widgetIsResizable() && !this.options.dialogOptions.autoResize)) {
+                    dialog.css('width', this.options.dialogOptions.width);
+                }
             }
         },
 
         topAndHeightAdjustments: function(dialog, containerEl) {
             // containerEl.offsetTop will only work if offsetParent is document.body
+
+            // Set auto height for dialog before calc
+            if (this.getState() !== 'maximized' && !this.widgetIsResizable()) {
+                dialog.css('height', 'auto');
+            }
+
             var top = parseFloat(dialog.css('top')) - containerEl.offsetTop;
             var height = parseFloat(dialog.css('height'));
             var minHeight = parseFloat(dialog.css('min-height'));
@@ -530,7 +639,7 @@ define(function(require) {
             });
             this.widget.on('dialogstatechange', function(event, data) {
                 if (data.state !== data.oldState) {
-                    mediator.trigger('widget_dialog:stateChange', self);
+                    mediator.trigger('widget_dialog:stateChange', self, data);
                 }
             });
             this.widget.on({
@@ -558,6 +667,10 @@ define(function(require) {
             this.forEachComponent(function(component) {
                 component.trigger('parentResizeStop', event, this);
             });
+        },
+
+        widgetIsResizable: function() {
+            return this.options.dialogOptions.resizable;
         }
     });
 

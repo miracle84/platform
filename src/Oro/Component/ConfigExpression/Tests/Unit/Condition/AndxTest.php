@@ -3,10 +3,9 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Component\ConfigExpression\Condition;
 
-class AndxTest extends \PHPUnit_Framework_TestCase
+class AndxTest extends \PHPUnit\Framework\TestCase
 {
     /** @var Condition\Andx */
     protected $condition;

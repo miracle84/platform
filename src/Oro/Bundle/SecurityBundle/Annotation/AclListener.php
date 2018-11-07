@@ -7,31 +7,26 @@ use Oro\Bundle\SecurityBundle\DependencyInjection\OroSecurityExtension;
 use Oro\Bundle\SecurityBundle\Metadata\AclAnnotationProvider;
 use Oro\Bundle\SecurityBundle\Metadata\ActionMetadataProvider;
 use Oro\Component\Config\Dumper\ConfigMetadataDumperInterface;
-use Oro\Component\Config\Dumper\CumulativeConfigMetadataDumper;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 
 class AclListener
 {
-    /** @var AclAnnotationProvider */
-    protected $cacheProvider;
+    /** @var ConfigMetadataDumperInterface */
+    private $dumper;
 
-    /** @var CumulativeConfigMetadataDumper */
-    protected $dumper;
+    /** @var ContainerInterface */
+    private $container;
 
     /**
-     * @param AclAnnotationProvider $cacheProvider
-     * @param ActionMetadataProvider $actionProvider
      * @param ConfigMetadataDumperInterface $dumper
+     * @param ContainerInterface            $container
      */
-    public function __construct(
-        AclAnnotationProvider $cacheProvider,
-        ActionMetadataProvider $actionProvider,
-        ConfigMetadataDumperInterface $dumper
-    ) {
-        $this->cacheProvider = $cacheProvider;
-        $this->actionMetadataProvider = $actionProvider;
+    public function __construct(ConfigMetadataDumperInterface $dumper, ContainerInterface $container)
+    {
         $this->dumper = $dumper;
+        $this->container = $container;
     }
 
     /**
@@ -39,21 +34,32 @@ class AclListener
      */
     public function onKernelRequest(GetResponseEvent $event)
     {
-        if (!$event->isMasterRequest()) {
-            return;
-        }
+        if ($event->isMasterRequest() && !$this->dumper->isFresh()) {
+            $this->getAclAnnotationProvider()->warmUpCache();
+            $this->getActionMetadataProvider()->warmUpCache();
 
-        if (!$this->dumper->isFresh()) {
-            $this->cacheProvider->warmUpCache();
-            $this->actionMetadataProvider->warmUpCache();
-
-            $tempAclContainer = new ContainerBuilder();
+            $container = new ContainerBuilder();
             $loader = AclAnnotationLoader::getAclAnnotationResourceLoader();
-            $loader->registerResources($tempAclContainer);
+            $loader->registerResources($container);
             $loader = OroSecurityExtension::getAclConfigLoader();
-            $loader->registerResources($tempAclContainer);
-
-            $this->dumper->dump($tempAclContainer);
+            $loader->registerResources($container);
+            $this->dumper->dump($container);
         }
+    }
+
+    /**
+     * @return AclAnnotationProvider
+     */
+    private function getAclAnnotationProvider()
+    {
+        return $this->container->get('oro_security.acl.annotation_provider');
+    }
+
+    /**
+     * @return ActionMetadataProvider
+     */
+    private function getActionMetadataProvider()
+    {
+        return $this->container->get('oro_security.action_metadata_provider');
     }
 }

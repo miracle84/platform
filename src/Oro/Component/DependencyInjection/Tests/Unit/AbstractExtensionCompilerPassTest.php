@@ -7,16 +7,16 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-abstract class AbstractExtensionCompilerPassTest extends \PHPUnit_Framework_TestCase
+abstract class AbstractExtensionCompilerPassTest extends \PHPUnit\Framework\TestCase
 {
     const TAGGED_SERVICE_1 = 'test.tagged.service.first';
     const TAGGED_SERVICE_2 = 'test.tagged.service.second';
     const TAGGED_SERVICE_3 = 'test.tagged.service.third';
 
-    /** @var ContainerBuilder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ContainerBuilder|\PHPUnit\Framework\MockObject\MockObject */
     protected $containerBuilder;
 
-    /** @var Definition|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Definition|\PHPUnit\Framework\MockObject\MockObject */
     protected $serviceDefinition;
 
     /**
@@ -46,7 +46,7 @@ abstract class AbstractExtensionCompilerPassTest extends \PHPUnit_Framework_Test
      */
     abstract protected function getTagName();
 
-    public function testProcessWithoutListenerDefinition()
+    public function testProcessWithoutDefinition()
     {
         $this->containerBuilder->expects($this->once())
             ->method('hasDefinition')
@@ -74,7 +74,7 @@ abstract class AbstractExtensionCompilerPassTest extends \PHPUnit_Framework_Test
         }
     }
 
-    protected function assertConteinerBuilderCalled()
+    protected function assertContainerBuilderCalled()
     {
         $this->containerBuilder->expects($this->once())
             ->method('hasDefinition')

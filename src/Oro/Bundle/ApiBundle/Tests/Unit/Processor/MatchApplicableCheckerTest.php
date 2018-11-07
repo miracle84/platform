@@ -2,38 +2,39 @@
 
 namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor;
 
+use Oro\Bundle\ApiBundle\Processor\MatchApplicableChecker;
+use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity;
 use Oro\Component\ChainProcessor\ChainApplicableChecker;
 use Oro\Component\ChainProcessor\Context;
 use Oro\Component\ChainProcessor\ProcessorFactoryInterface;
 use Oro\Component\ChainProcessor\ProcessorIterator;
 use Oro\Component\ChainProcessor\Tests\Unit\ProcessorMock;
-use Oro\Bundle\ApiBundle\Processor\MatchApplicableChecker;
 
-class MatchApplicableCheckerTest extends \PHPUnit_Framework_TestCase
+class MatchApplicableCheckerTest extends \PHPUnit\Framework\TestCase
 {
     public function testMatchByInstanceOf()
     {
         $context = new Context();
         $context->setAction('action1');
-        $context->set('class', 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User');
+        $context->set('class', Entity\User::class);
 
         $processors = [
             [
-                'processor'  => 'processor1',
-                'attributes' => []
+                'processor1',
+                []
             ],
             [
-                'processor'  => 'processor2',
-                'attributes' => ['class' => 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\User']
+                'processor2',
+                ['class' => Entity\User::class]
             ],
             [
-                'processor'  => 'processor3',
-                'attributes' => ['class' => 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\UserInterface']
+                'processor3',
+                ['class' => Entity\UserInterface::class]
             ],
             [
-                'processor'  => 'processor3',
-                'attributes' => ['class' => 'Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Role']
-            ],
+                'processor3',
+                ['class' => Entity\Role::class]
+            ]
         ];
 
         $iterator = new ProcessorIterator(
@@ -47,7 +48,7 @@ class MatchApplicableCheckerTest extends \PHPUnit_Framework_TestCase
             [
                 'processor1',
                 'processor2',
-                'processor3',
+                'processor3'
             ],
             $iterator
         );
@@ -69,8 +70,8 @@ class MatchApplicableCheckerTest extends \PHPUnit_Framework_TestCase
      */
     protected function getProcessorFactory()
     {
-        $factory = $this->createMock('Oro\Component\ChainProcessor\ProcessorFactoryInterface');
-        $factory->expects($this->any())
+        $factory = $this->createMock(ProcessorFactoryInterface::class);
+        $factory->expects(self::any())
             ->method('getProcessor')
             ->willReturnCallback(
                 function ($processorId) {
@@ -93,6 +94,6 @@ class MatchApplicableCheckerTest extends \PHPUnit_Framework_TestCase
             $processorIds[] = $processor->getProcessorId();
         }
 
-        $this->assertEquals($expectedProcessorIds, $processorIds);
+        self::assertEquals($expectedProcessorIds, $processorIds);
     }
 }

@@ -4,20 +4,20 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Config;
 
 use Doctrine\Common\Cache\ArrayCache;
 use Doctrine\ORM\UnitOfWork;
-
-use Symfony\Component\Stopwatch\Stopwatch;
-
 use Oro\Bundle\EntityConfigBundle\Audit\AuditManager;
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigCache;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigDatabaseChecker;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigModelManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
+use Oro\Bundle\EntityConfigBundle\Config\LockObject;
 use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
-use Oro\Bundle\EntityConfigBundle\Config\LockObject;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * Contains tests for a performance crucial parts of entity configs
@@ -25,7 +25,7 @@ use Oro\Bundle\EntityConfigBundle\Config\LockObject;
  * modification of ConfigManager and related classes.
  * To enable tests use ENABLE_TESTS constant.
  */
-class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
+class ConfigManagerPerformanceTest extends \PHPUnit\Framework\TestCase
 {
     const ENABLE_TESTS = false;
     const ENABLE_ASSERTS = true;
@@ -41,13 +41,13 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
     /** @var Stopwatch */
     protected static $stopwatch;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $metadataFactory;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $eventDispatcher;
 
     public function testConfigGet()
@@ -88,7 +88,7 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
 
         self::assertBenchmark(
             __METHOD__,
-            7,
+            6.5,
             function () use ($configManager) {
                 $configManager->getConfigs('test');
             }
@@ -118,7 +118,7 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
 
         self::assertBenchmark(
             __METHOD__,
-            2,
+            1.7,
             function () use ($configManager) {
                 $configManager->getConfigs('test', 'Entity1');
             }
@@ -178,7 +178,7 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
 
         self::assertBenchmark(
             __METHOD__,
-            1.3,
+            1.1,
             function () use ($configManager) {
                 $configManager->getIds('test', 'Entity1');
             }
@@ -193,9 +193,42 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
 
         self::assertBenchmark(
             __METHOD__,
-            1.3,
+            1.1,
             function () use ($configManager) {
                 $configManager->getIds('test', 'Entity1', true);
+            }
+        );
+    }
+
+    public function testHasConfigForEntity()
+    {
+        $configManager = $this->createConfigManager();
+        $className = 'Entity1';
+        // warm-up cache
+        $this->assertTrue($configManager->hasConfig($className));
+
+        self::assertBenchmark(
+            __METHOD__,
+            0.1,
+            function () use ($configManager, $className) {
+                $configManager->hasConfig($className);
+            }
+        );
+    }
+
+    public function testHasConfigForField()
+    {
+        $configManager = $this->createConfigManager();
+        $className = 'Entity1';
+        $fieldName = 'field1';
+        // warm-up cache
+        $this->assertTrue($configManager->hasConfig($className, $fieldName));
+
+        self::assertBenchmark(
+            __METHOD__,
+            0.1,
+            function () use ($configManager, $className, $fieldName) {
+                $configManager->hasConfig($className, $fieldName);
             }
         );
     }
@@ -365,9 +398,7 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
         $this->em = $this->getMockBuilder('Doctrine\ORM\EntityManager')
             ->disableOriginalConstructor()
             ->getMock();
-        $emLink   = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $emLink   = $this->createMock(ServiceLink::class);
         $emLink->expects($this->any())
             ->method('getService')
             ->will($this->returnValue($this->em));
@@ -420,17 +451,13 @@ class ConfigManagerPerformanceTest extends \PHPUnit_Framework_TestCase
             ->method('getToken')
             ->willReturn(null);
 
-        $databaseChecker = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\Config\ConfigDatabaseChecker')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $databaseChecker->expects(self::any())
-            ->method('checkDatabase')
-            ->willReturn(true);
+        $lockObject = new LockObject();
+        $databaseChecker = new ConfigDatabaseChecker($lockObject, $doctrine, [], true);
 
         return new ConfigManager(
             $this->eventDispatcher,
             $this->metadataFactory,
-            new ConfigModelManager($emLink, new LockObject(), $databaseChecker),
+            new ConfigModelManager($emLink, $lockObject, $databaseChecker),
             new AuditManager($securityTokenStorage, $doctrine),
             new ConfigCache(new ArrayCache(), new ArrayCache())
         );

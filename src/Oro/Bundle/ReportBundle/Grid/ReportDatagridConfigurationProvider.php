@@ -2,14 +2,18 @@
 
 namespace Oro\Bundle\ReportBundle\Grid;
 
-use Symfony\Bridge\Doctrine\ManagerRegistry;
-
+use Doctrine\Common\Cache\Cache;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Provider\ConfigurationProviderInterface;
+use Oro\Bundle\DataGridBundle\Provider\SystemAwareResolver;
 use Oro\Bundle\QueryDesignerBundle\Exception\InvalidConfigurationException;
 use Oro\Bundle\QueryDesignerBundle\Grid\BuilderAwareInterface;
 use Oro\Bundle\ReportBundle\Entity\Report;
+use Symfony\Bridge\Doctrine\ManagerRegistry;
 
+/**
+ * The provider for configuration of datagrids used to show reports.
+ */
 class ReportDatagridConfigurationProvider implements ConfigurationProviderInterface, BuilderAwareInterface
 {
     /**
@@ -18,25 +22,44 @@ class ReportDatagridConfigurationProvider implements ConfigurationProviderInterf
     protected $doctrine;
 
     /**
-     * @var DatagridConfiguration
-     */
-    private $configuration = null;
-
-    /**
      * @var ReportDatagridConfigurationBuilder
      */
     protected $builder;
 
     /**
+     * @var string
+     */
+    private $prefixCacheKey;
+
+    /**
+     * @var Cache
+     */
+    private $reportCacheManager;
+
+    /**
+     * @var SystemAwareResolver
+     */
+    protected $resolver;
+
+    /**
      * @param ReportDatagridConfigurationBuilder $builder
      * @param ManagerRegistry                    $doctrine
+     * @param Cache                              $reportCacheManager
+     * @param SystemAwareResolver                $resolver
+     * @param string                             $prefixCacheKey
      */
     public function __construct(
         ReportDatagridConfigurationBuilder $builder,
-        ManagerRegistry $doctrine
+        ManagerRegistry $doctrine,
+        Cache $reportCacheManager,
+        SystemAwareResolver $resolver,
+        $prefixCacheKey
     ) {
         $this->builder  = $builder;
         $this->doctrine = $doctrine;
+        $this->reportCacheManager = $reportCacheManager;
+        $this->resolver = $resolver;
+        $this->prefixCacheKey = $prefixCacheKey;
     }
 
     /**
@@ -52,18 +75,15 @@ class ReportDatagridConfigurationProvider implements ConfigurationProviderInterf
      */
     public function getConfiguration($gridName)
     {
-        if ($this->configuration === null) {
-            $id     = intval(substr($gridName, strlen(Report::GRID_PREFIX)));
-            $repo   = $this->doctrine->getRepository('OroReportBundle:Report');
-            $report = $repo->find($id);
+        $cacheKey = $this->getCacheKey($gridName);
 
-            $this->builder->setGridName($gridName);
-            $this->builder->setSource($report);
-
-            $this->configuration = $this->builder->getConfiguration();
+        $config = $this->reportCacheManager->fetch($cacheKey);
+        if (false === $config) {
+            $config = $this->prepareConfiguration($gridName);
+            $this->reportCacheManager->save($cacheKey, $config);
         }
 
-        return $this->configuration;
+        return $this->resolver->resolve($gridName, $config);
     }
 
     /**
@@ -89,5 +109,36 @@ class ReportDatagridConfigurationProvider implements ConfigurationProviderInterf
     public function getBuilder()
     {
         return $this->builder;
+    }
+
+    /**
+     * Builds configuration of report grid by grid name
+     *
+     * @param $gridName
+     *
+     * @return DatagridConfiguration
+     */
+    protected function prepareConfiguration($gridName)
+    {
+        $id     = (int) (substr($gridName, strlen(Report::GRID_PREFIX)));
+        $repo   = $this->doctrine->getRepository('OroReportBundle:Report');
+        $report = $repo->find($id);
+
+        $this->builder->setGridName($gridName);
+        $this->builder->setSource($report);
+
+        return $this->builder->getConfiguration();
+    }
+
+    /**
+     * Return unique cache key for report by grid name
+     *
+     * @param $gridName
+     *
+     * @return string
+     */
+    private function getCacheKey($gridName)
+    {
+        return $this->prefixCacheKey.'.'.$gridName;
     }
 }

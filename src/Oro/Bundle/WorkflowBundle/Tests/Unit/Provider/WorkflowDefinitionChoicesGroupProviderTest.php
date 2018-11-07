@@ -4,17 +4,16 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Provider;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Oro\Bundle\WorkflowBundle\Entity\Repository\WorkflowDefinitionRepository;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Provider\WorkflowDefinitionChoicesGroupProvider;
 
-class WorkflowDefinitionChoicesGroupProviderTest extends \PHPUnit_Framework_TestCase
+class WorkflowDefinitionChoicesGroupProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var WorkflowDefinitionChoicesGroupProvider */
     protected $choicesProvider;
 
-    /** @var WorkflowDefinitionRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowDefinitionRepository|\PHPUnit\Framework\MockObject\MockObject */
     protected $workflowDefinitionRepo;
 
     /**
@@ -27,7 +26,7 @@ class WorkflowDefinitionChoicesGroupProviderTest extends \PHPUnit_Framework_Test
         $manager = $this->createMock(ObjectManager::class);
         $manager->expects($this->once())->method('getRepository')->willReturn($this->workflowDefinitionRepo);
 
-        /** @var ManagerRegistry|\PHPUnit_Framework_MockObject_MockObject $managerRegistry */
+        /** @var ManagerRegistry|\PHPUnit\Framework\MockObject\MockObject $managerRegistry */
         $managerRegistry = $this->createMock(ManagerRegistry::class);
         $managerRegistry->expects($this->once())->method('getManagerForClass')->willReturn($manager);
 
@@ -126,7 +125,7 @@ class WorkflowDefinitionChoicesGroupProviderTest extends \PHPUnit_Framework_Test
      * @param array $recordGroups
      * @param array $activeGroups
      *
-     * @return WorkflowDefinition|\PHPUnit_Framework_MockObject_MockObject
+     * @return WorkflowDefinition|\PHPUnit\Framework\MockObject\MockObject
      */
     private function createWorkflowDefinition(array $recordGroups, array $activeGroups)
     {

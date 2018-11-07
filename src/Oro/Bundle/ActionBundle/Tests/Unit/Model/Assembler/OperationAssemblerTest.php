@@ -8,11 +8,10 @@ use Oro\Bundle\ActionBundle\Model\Assembler\FormOptionsAssembler;
 use Oro\Bundle\ActionBundle\Model\Assembler\OperationAssembler;
 use Oro\Bundle\ActionBundle\Model\Operation;
 use Oro\Bundle\ActionBundle\Model\OperationDefinition;
-
 use Oro\Component\Action\Action\ActionFactory;
 use Oro\Component\ConfigExpression\ExpressionFactory as ConditionFactory;
 
-class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
+class OperationAssemblerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var OperationAssembler */
     protected $assembler;
@@ -72,7 +71,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
             ->setActions(OperationDefinition::PREACTIONS, [])
             ->setActions(OperationDefinition::ACTIONS, [])
             ->setActions(OperationDefinition::FORM_INIT, [])
-            ->setFormType(OperationType::NAME)
+            ->setFormType(OperationType::class)
             ->setConditions(
                 OperationDefinition::PRECONDITIONS,
                 [
@@ -104,12 +103,13 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
             ->setFormOptions(['config_form_options'])
             ->setFrontendOptions(['config_frontend_options'])
             ->setOrder(77)
-            ->setFormType(OperationType::NAME);
+            ->setFormType(OperationType::class);
 
         $definition3 = clone $definition2;
         $definition3
             ->setName('maximum_name_and_acl')
             ->setEnabled(false)
+            ->setPageReload(false)
             ->setAttributes(['config_attr'])
             ->setConditions(
                 OperationDefinition::PRECONDITIONS,
@@ -136,7 +136,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
             ->setFormOptions(['config_form_options'])
             ->setFrontendOptions(['config_frontend_options'])
             ->setOrder(77)
-            ->setFormType(OperationType::NAME);
+            ->setFormType(OperationType::class);
 
         return [
             'minimum data' => [
@@ -212,6 +212,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
                         'frontend_options' => ['config_frontend_options'],
                         'order' => 77,
                         'acl_resource' => 'test_acl',
+                        'page_reload' => false
                     ]
                 ],
                 'expected' => [
@@ -228,7 +229,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ActionFactory
+     * @return \PHPUnit\Framework\MockObject\MockObject|ActionFactory
      */
     protected function getActionFactory()
     {
@@ -236,7 +237,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ConditionFactory
+     * @return \PHPUnit\Framework\MockObject\MockObject|ConditionFactory
      */
     protected function getConditionFactory()
     {
@@ -246,7 +247,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|AttributeAssembler
+     * @return \PHPUnit\Framework\MockObject\MockObject|AttributeAssembler
      */
     protected function getAttributeAssembler()
     {
@@ -256,7 +257,7 @@ class OperationAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|FormOptionsAssembler
+     * @return \PHPUnit\Framework\MockObject\MockObject|FormOptionsAssembler
      */
     protected function getFormOptionsAssembler()
     {

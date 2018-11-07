@@ -27,6 +27,8 @@ Description for UPDATE action
 
 [a link to resource](http://localhost.com)
 
+    code block
+
 ## FIELDS
 
 ### id
@@ -80,3 +82,11 @@ Description for UPDATEDAT filter
 Description for *contacts GET_SUBRESOURCE* sub-resource
 
 # Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Group
+
+# Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Emphasize_In_Class_Name
+
+## FIELDS
+
+### emphasize_in_field_name
+
+Description for _field_

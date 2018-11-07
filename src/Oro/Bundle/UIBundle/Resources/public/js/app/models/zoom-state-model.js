@@ -1,4 +1,3 @@
-/** @lends RouteModel */
 define(function(require) {
     'use strict';
 
@@ -20,7 +19,7 @@ define(function(require) {
         ];
     }
 
-    ZoomStateModel = BaseModel.extend(/** @exports RouteModel.prototype */{
+    ZoomStateModel = BaseModel.extend(/** @lends ZoomStateModel.prototype */{
         /**
          * @inheritDoc
          * @member {Object}
@@ -38,6 +37,18 @@ define(function(require) {
                  * @type {number}
                  */
                 zoomSpeed: 1.1,
+
+                /**
+                 * Minimal allowed zoom level
+                 * @type {number}
+                 */
+                minZoom: 0.01,
+
+                /**
+                 * Maximal allowed zoom level
+                 * @type {number}
+                 */
+                maxZoom: 100,
 
                 /**
                  * X position of zoomable area center
@@ -59,6 +70,16 @@ define(function(require) {
             };
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function ZoomStateModel() {
+            ZoomStateModel.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(attributes, options) {
             ZoomStateModel.__super__.initialize.apply(this, arguments);
             if (!options.wrapper || !options.inner) {
@@ -98,7 +119,9 @@ define(function(require) {
                         .replace('matrix(', '')
                         .replace(')', '')
                         .split(' ')
-                        .map(function(str) {return str.trim();})
+                        .map(function(str) {
+                            return str.trim();
+                        })
                         .map(parseFloat);
                     var transformOrigin = style.transformOrigin
                         .split(' ')
@@ -180,8 +203,8 @@ define(function(require) {
 
             this.set({
                 zoom: zoomLevel,
-                dx: -currentCenter.x, //zeroPoint.x + currentCenter.x,
-                dy: -currentCenter.y + this.get('autoZoomPadding') * (1 - zoomLevel) //zeroPoint.y + currentCenter.y
+                dx: -currentCenter.x, // zeroPoint.x + currentCenter.x,
+                dy: -currentCenter.y + this.get('autoZoomPadding') * (1 - zoomLevel) // zeroPoint.y + currentCenter.y
             });
         },
 
@@ -195,7 +218,8 @@ define(function(require) {
             var currentZoom = this.get('zoom');
             var zoomSpeed = zoom / currentZoom;
             var center = this.getCenter();
-            //console.log(center, dx, dy);
+            zoom = Math.min(zoom, this.get('maxZoom'));
+            zoom = Math.max(zoom, this.get('minZoom'));
             this.set({
                 dx: this.get('dx') - (center.x - dx) * (1 - zoomSpeed),
                 dy: this.get('dy') - (center.y - dy) * (1 - zoomSpeed),

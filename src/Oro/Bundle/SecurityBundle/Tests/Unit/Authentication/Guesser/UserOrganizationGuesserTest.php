@@ -3,10 +3,9 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Authentication\Guesser;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
 use Oro\Bundle\SecurityBundle\Authentication\Guesser\UserOrganizationGuesser;
 
-class UserOrganizationGuesserTest extends \PHPUnit_Framework_TestCase
+class UserOrganizationGuesserTest extends \PHPUnit\Framework\TestCase
 {
     public function testGuessFromToken()
     {

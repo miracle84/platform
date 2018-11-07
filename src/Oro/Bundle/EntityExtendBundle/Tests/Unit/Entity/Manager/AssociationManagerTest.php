@@ -5,7 +5,6 @@ namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Entity\Manager;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
@@ -13,7 +12,9 @@ use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityExtendBundle\Entity\Manager\AssociationManager;
 use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\Mocks\EntityManagerMock;
+use Oro\Bundle\FeatureToggleBundle\Checker\FeatureChecker;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Oro\Component\TestUtils\ORM\Mocks\EntityManagerMock;
 use Oro\Component\TestUtils\ORM\OrmTestCase;
 
 class AssociationManagerTest extends OrmTestCase
@@ -21,16 +22,16 @@ class AssociationManagerTest extends OrmTestCase
     /** @var EntityManagerMock */
     private $em;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $configManager;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $aclHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $doctrineHelper;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     private $entityNameResolver;
 
     /** @var AssociationManager */
@@ -69,18 +70,24 @@ class AssociationManagerTest extends OrmTestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $aclHelperLink = $this->getMockBuilder('Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $aclHelperLink = $this->createMock(ServiceLink::class);
         $aclHelperLink->expects($this->any())
             ->method('getService')
             ->willReturn($this->aclHelper);
+
+        $featureChecker = $this->getMockBuilder(FeatureChecker::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $featureChecker->expects($this->any())
+            ->method('isResourceEnabled')
+            ->will($this->returnValue(true));
 
         $this->associationManager = new AssociationManager(
             $this->configManager,
             $aclHelperLink,
             $this->doctrineHelper,
-            $this->entityNameResolver
+            $this->entityNameResolver,
+            $featureChecker
         );
     }
 

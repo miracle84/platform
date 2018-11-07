@@ -1,4 +1,42 @@
-// @theme: blank;
+/* @theme: blank; */
+
+// Set theme fonts
+@include use-font-face($theme-fonts);
+
+// Generate classes for media queries
+
+@if (length($breakpoints) >= 1) {
+    // Iterate index;
+    $breakpoint-index: 0;
+
+    // List with section keys
+    // ('desktop', 'tablet', 'mobile')
+    $breakpoint-names: map_keys($breakpoints);
+
+    @each $breakpoint in $breakpoints {
+        $breakpoint-index: $breakpoint-index + 1;
+
+        // Iterate section name
+        $current-breakpoint-name: nth($breakpoint-names, $breakpoint-index);
+
+        @include breakpoint($current-breakpoint-name) {
+            // Create classes:
+            // .hide-on-desktop
+            // .hide-on-tablet,
+            // .hide-on-tablet-small,
+            // .hide-on-mobile-landscape,
+            // .hide-on-mobile,
+            // .hide-on-strict-desktop
+            // .hide-on-strict-tablet,
+            // .hide-on-strict-tablet-small
+            // .hide-on-strict-mobile-landscape,
+            // .hide-on-strict-mobile
+            .hide-on-#{$current-breakpoint-name} {
+                display: none !important;
+            }
+        }
+    }
+}
 
 @if ($use-basic-styles) {
     html {
@@ -22,5 +60,32 @@
 
         background-color: $body-bg-color;
         color: $body-color;
+    }
+}
+
+@include breakpoint('print') {
+    thead {
+        display: table-header-group;
+    }
+
+    tr,
+    img {
+        page-break-inside: avoid;
+    }
+
+    p,
+    h2,
+    h3 {
+        orphans: 3;
+        widows: 3;
+    }
+
+    tr {
+        page-break-inside: avoid
+    }
+
+    img {
+        max-width: 100% !important;
+        page-break-inside: avoid
     }
 }

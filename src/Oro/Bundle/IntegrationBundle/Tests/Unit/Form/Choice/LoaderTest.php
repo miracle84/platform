@@ -3,9 +3,8 @@
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Form\Choice;
 
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\IntegrationBundle\Form\Choice\Loader;
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\OrmTestCase;
+use Oro\Component\TestUtils\ORM\OrmTestCase;
 
 class LoaderTest extends OrmTestCase
 {
@@ -50,7 +49,7 @@ class LoaderTest extends OrmTestCase
             ],
             'test type is allowed'     => [
                 ['test'],
-                'SELECT i FROM OroIntegrationBundle:Channel i WHERE i.type IN(\'test\') ORDER BY i.name ASC'
+                'SELECT i FROM OroIntegrationBundle:Channel i WHERE i.type IN(:allowedTypes) ORDER BY i.name ASC'
             ]
         ];
     }

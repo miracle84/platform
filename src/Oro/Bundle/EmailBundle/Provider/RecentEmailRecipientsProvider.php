@@ -4,20 +4,18 @@ namespace Oro\Bundle\EmailBundle\Provider;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\Common\Util\ClassUtils;
-
 use Oro\Bundle\EmailBundle\Entity\Provider\EmailOwnerProvider;
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailRecipientRepository;
 use Oro\Bundle\EmailBundle\Model\EmailRecipientsProviderArgs;
 use Oro\Bundle\EmailBundle\Model\Recipient;
 use Oro\Bundle\EmailBundle\Model\RecipientEntity;
-use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 
 class RecentEmailRecipientsProvider implements EmailRecipientsProviderInterface
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var RelatedEmailsProvider */
     protected $relatedEmailsProvider;
@@ -35,22 +33,22 @@ class RecentEmailRecipientsProvider implements EmailRecipientsProviderInterface
     protected $emailRecipientsHelper;
 
     /**
-     * @param SecurityFacade $securityFacade
-     * @param RelatedEmailsProvider $relatedEmailsProvider
-     * @param AclHelper $aclHelper
-     * @param Registry $registry
-     * @param EmailOwnerProvider $emailOwnerProvider
-     * @param EmailRecipientsHelper $emailRecipientsHelper
+     * @param TokenAccessorInterface $tokenAccessor
+     * @param RelatedEmailsProvider  $relatedEmailsProvider
+     * @param AclHelper              $aclHelper
+     * @param Registry               $registry
+     * @param EmailOwnerProvider     $emailOwnerProvider
+     * @param EmailRecipientsHelper  $emailRecipientsHelper
      */
     public function __construct(
-        SecurityFacade $securityFacade,
+        TokenAccessorInterface $tokenAccessor,
         RelatedEmailsProvider $relatedEmailsProvider,
         AclHelper $aclHelper,
         Registry $registry,
         EmailOwnerProvider $emailOwnerProvider,
         EmailRecipientsHelper $emailRecipientsHelper
     ) {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
         $this->relatedEmailsProvider = $relatedEmailsProvider;
         $this->aclHelper = $aclHelper;
         $this->registry = $registry;
@@ -63,7 +61,8 @@ class RecentEmailRecipientsProvider implements EmailRecipientsProviderInterface
      */
     public function getRecipients(EmailRecipientsProviderArgs $args)
     {
-        if (null === $user = $this->securityFacade->getLoggedUser()) {
+        $user = $this->tokenAccessor->getUser();
+        if (null === $user) {
             return [];
         }
 

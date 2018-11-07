@@ -1,5 +1,3 @@
-/*jslint nomen:true*/
-/*global define*/
 define(function(require) {
     'use strict';
 
@@ -18,12 +16,18 @@ define(function(require) {
             _wid: '',
             success: false,
             deactivated: null,
-            workflow: '',
             selectors: {
                 form: null
             },
-            buttonName: '',
+            buttonName: 'activate',
             error: null
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DeactivateFormWidgetComponent() {
+            DeactivateFormWidgetComponent.__super__.constructor.apply(this, arguments);
         },
 
         /**

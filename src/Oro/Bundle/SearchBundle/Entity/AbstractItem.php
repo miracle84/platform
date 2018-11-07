@@ -2,13 +2,14 @@
 
 namespace Oro\Bundle\SearchBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
-
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
 use Oro\Bundle\SearchBundle\Engine\Indexer;
 
 /**
+ * Abstract class for an item at ORM search index
+ *
  * @ORM\MappedSuperclass
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
@@ -49,6 +50,12 @@ abstract class AbstractItem
      * @ORM\Column(name="title", type="string", length=255, nullable=true)
      */
     protected $title;
+
+    /**
+     * @var float
+     * @ORM\Column(name="weight", type="decimal", precision=21, scale=8, nullable=false, options={"default"=1.0}))
+     */
+    protected $weight = 1.0;
 
     /**
      * @var bool $changed
@@ -182,6 +189,25 @@ abstract class AbstractItem
     public function getChanged()
     {
         return $this->changed;
+    }
+
+    /**
+     * @return float
+     */
+    public function getWeight(): float
+    {
+        return $this->weight;
+    }
+
+    /**
+     * @param float $weight
+     * @return $this
+     */
+    public function setWeight(float $weight)
+    {
+        $this->weight = $weight;
+
+        return $this;
     }
 
     /**
@@ -362,7 +388,7 @@ abstract class AbstractItem
      */
     public function setTitle($title)
     {
-        $this->title = substr($title, 0, 255);
+        $this->title = mb_substr($title, 0, 255, mb_detect_encoding($title));
 
         return $this;
     }

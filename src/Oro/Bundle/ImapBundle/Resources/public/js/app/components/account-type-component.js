@@ -13,6 +13,13 @@ define(function(require) {
         ViewType: accountTypeView,
 
         /**
+         * @inheritDoc
+         */
+        constructor: function AccountTypeComponent() {
+            AccountTypeComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * @constructor
          * @param {Object} options
          */
@@ -22,6 +29,7 @@ define(function(require) {
 
             var viewConfig = this.prepareViewOptions(options);
             this.view = new this.ViewType(viewConfig);
+            this.view.render();
 
             this.listenTo(this.view, 'imapConnectionChangeType', this.onChangeAccountType);
             this.listenTo(mediator, 'imapGmailConnectionSetToken', this.onIMapGotToken);
@@ -51,8 +59,8 @@ define(function(require) {
                 url: this.getUrl(),
                 method: 'POST',
                 data: {
-                    'type': value,
-                    'formParentName': this.formParentName
+                    type: value,
+                    formParentName: this.formParentName
                 },
                 success: _.bind(this.templateLoaded, this)
             });
@@ -64,8 +72,8 @@ define(function(require) {
                 url: this.getUrl(),
                 method: 'POST',
                 data: {
-                    'type': value.type,
-                    'token': value.token
+                    type: value.type,
+                    token: value.token
                 },
                 success: _.bind(this.templateLoaded, this)
             });

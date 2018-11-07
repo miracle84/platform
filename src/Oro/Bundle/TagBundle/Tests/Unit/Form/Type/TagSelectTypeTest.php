@@ -3,26 +3,25 @@
 namespace Oro\Bundle\TagBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\TagBundle\Form\Type\TagSelectType;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class TagSelectTypeTest extends \PHPUnit_Framework_TestCase
+class TagSelectTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var TagSelectType */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $transformer;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $subscriber;
 
     protected function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
 
         $this->transformer = $this->getMockBuilder('Oro\Bundle\TagBundle\Form\Transformer\TagTransformer')
             ->disableOriginalConstructor()
@@ -33,22 +32,22 @@ class TagSelectTypeTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $this->type = new TagSelectType($this->securityFacade, $this->transformer, $this->subscriber);
+        $this->type = new TagSelectType($this->authorizationChecker, $this->transformer, $this->subscriber);
     }
 
     protected function tearDown()
     {
-        unset($this->securityFacade, $this->transformer, $this->subscriber, $this->type);
+        unset($this->authorizationChecker, $this->transformer, $this->subscriber, $this->type);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
 
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
     }
 
     public function testBuildForm()
@@ -70,10 +69,5 @@ class TagSelectTypeTest extends \PHPUnit_Framework_TestCase
             ->will($this->returnSelf());
 
         $this->type->buildForm($builder, array());
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_tag_select', $this->type->getName());
     }
 }

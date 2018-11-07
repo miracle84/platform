@@ -2,31 +2,31 @@
 
 namespace Oro\Bundle\IntegrationBundle\ImportExport\Helper;
 
-use Symfony\Bridge\Doctrine\RegistryInterface;
-
-use Doctrine\ORM\UnitOfWork;
-use Doctrine\ORM\EntityManager;
 use Doctrine\Common\Util\ClassUtils;
-
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\UnitOfWork;
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataInterface;
-use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProvider;
+use Oro\Bundle\SecurityBundle\Owner\Metadata\OwnershipMetadataProviderInterface;
+use Symfony\Bridge\Doctrine\RegistryInterface;
 
 class DefaultOwnerHelper
 {
     /** @var RegistryInterface */
     protected $registry;
 
-    /** @var OwnershipMetadataProvider */
+    /** @var OwnershipMetadataProviderInterface */
     protected $ownershipMetadataProvider;
 
     /**
-     * @param RegistryInterface         $registry
-     * @param OwnershipMetadataProvider $ownershipMetadataProvider
+     * @param RegistryInterface                  $registry
+     * @param OwnershipMetadataProviderInterface $ownershipMetadataProvider
      */
-    public function __construct(RegistryInterface $registry, OwnershipMetadataProvider $ownershipMetadataProvider)
-    {
-        $this->registry                  = $registry;
+    public function __construct(
+        RegistryInterface $registry,
+        OwnershipMetadataProviderInterface $ownershipMetadataProvider
+    ) {
+        $this->registry = $registry;
         $this->ownershipMetadataProvider = $ownershipMetadataProvider;
     }
 
@@ -44,16 +44,16 @@ class DefaultOwnerHelper
         $doctrineMetadata  = $this->getEm()->getClassMetadata($className);
         $ownershipMetadata = $this->getMetadata($className);
 
-        if ($defaultUserOwner && $ownershipMetadata->isBasicLevelOwned()) {
+        if ($defaultUserOwner && $ownershipMetadata->isUserOwned()) {
             $defaultUserOwner = $this->ensureNotDetached($defaultUserOwner);
             $doctrineMetadata->setFieldValue($entity, $ownershipMetadata->getOwnerFieldName(), $defaultUserOwner);
         }
         $defaultOrganization = $integration->getOrganization();
-        if ($defaultOrganization && $ownershipMetadata->getGlobalOwnerFieldName()) {
+        if ($defaultOrganization && $ownershipMetadata->getOrganizationFieldName()) {
             $defaultOrganization = $this->ensureNotDetached($defaultOrganization);
             $doctrineMetadata->setFieldValue(
                 $entity,
-                $ownershipMetadata->getGlobalOwnerFieldName(),
+                $ownershipMetadata->getOrganizationFieldName(),
                 $defaultOrganization
             );
         }

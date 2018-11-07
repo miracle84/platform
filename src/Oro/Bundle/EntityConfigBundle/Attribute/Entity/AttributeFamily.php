@@ -5,7 +5,6 @@ namespace Oro\Bundle\EntityConfigBundle\Attribute\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-
 use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareInterface;
 use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareTrait;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
@@ -16,7 +15,6 @@ use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationAwareInterface;
 use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
 use Oro\Bundle\UserBundle\Entity\User;
-
 use Oro\Component\Layout\ContextItemInterface;
 
 /**
@@ -116,8 +114,10 @@ class AttributeFamily extends ExtendAttributeFamily implements
      *     targetEntity="Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup",
      *     mappedBy="attributeFamily",
      *     cascade={"ALL"},
-     *     orphanRemoval=true
+     *     orphanRemoval=true,
+     *     indexBy="code"
      * )
+     * @ORM\OrderBy({"id" = "ASC"})
      */
     private $attributeGroups;
 
@@ -294,15 +294,26 @@ class AttributeFamily extends ExtendAttributeFamily implements
     }
 
     /**
+     * @param string $code
+     * @return null|AttributeGroup
+     */
+    public function getAttributeGroup($code)
+    {
+        if (!isset($this->attributeGroups[$code])) {
+            return null;
+        }
+
+        return $this->attributeGroups[$code];
+    }
+
+    /**
      * @param AttributeGroup $attributeGroup
      * @return $this
      */
     public function addAttributeGroup(AttributeGroup $attributeGroup)
     {
-        if (!$this->attributeGroups->contains($attributeGroup)) {
-            $this->attributeGroups->add($attributeGroup);
-            $attributeGroup->setAttributeFamily($this);
-        }
+        $this->attributeGroups[$attributeGroup->getCode()] = $attributeGroup;
+        $attributeGroup->setAttributeFamily($this);
 
         return $this;
     }
@@ -344,7 +355,7 @@ class AttributeFamily extends ExtendAttributeFamily implements
      */
     public function __toString()
     {
-        return $this->getDefaultLabel()->getString();
+        return (string)$this->getDefaultLabel()->getString();
     }
 
     /**

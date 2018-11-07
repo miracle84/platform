@@ -2,15 +2,15 @@
 
 namespace Oro\Bundle\BatchBundle\Tests\Unit\Step;
 
+use Akeneo\Bundle\BatchBundle\Job\BatchStatus;
 use Akeneo\Bundle\BatchBundle\Job\ExitStatus;
 use Oro\Bundle\BatchBundle\Step\ItemStep;
-use Akeneo\Bundle\BatchBundle\Job\BatchStatus;
 
 /**
  * Tests related to the ItemStep class
  *
  */
-class ItemStepTest extends \PHPUnit_Framework_TestCase
+class ItemStepTest extends \PHPUnit\Framework\TestCase
 {
     const STEP_NAME = 'test_step_name';
 
@@ -20,12 +20,12 @@ class ItemStepTest extends \PHPUnit_Framework_TestCase
     protected $itemStep = null;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $eventDispatcher = null;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $jobRepository = null;
 

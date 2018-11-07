@@ -26,7 +26,7 @@ define([
 
         messages: {
             success: 'oro.datagrid.export.success.message',
-            fail: 'oro.datagrid.export.fail.message',
+            fail: 'oro.datagrid.export.fail.message'
         },
 
         /** @property {Object} */
@@ -34,6 +34,13 @@ define([
             confirm_title: 'Export Confirmation',
             confirm_ok: 'Yes',
             confirm_cancel: 'Cancel'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ExportAction() {
+            ExportAction.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -107,7 +114,7 @@ define([
                         content: __(
                             'oro.datagrid.export.max_limit_message',
                             {max_limit: linkData.max_export_records, total: totalRecords}
-                            ),
+                        ),
                         okText: __(self.messages.confirm_ok),
                         cancelText: __(self.messages.confirm_cancel),
                         allowOk: self.allowOk

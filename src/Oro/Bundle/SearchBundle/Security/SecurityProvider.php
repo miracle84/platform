@@ -3,25 +3,25 @@
 namespace Oro\Bundle\SearchBundle\Security;
 
 use Oro\Bundle\SecurityBundle\Metadata\EntitySecurityMetadataProvider;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class SecurityProvider
 {
-    /**
-     * @var SecurityFacade
-     */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
 
-    /**
-     * @var EntitySecurityMetadataProvider
-     */
+    /** @var EntitySecurityMetadataProvider */
     protected $entitySecurityMetadataProvider;
 
+    /**
+     * @param AuthorizationCheckerInterface  $authorizationChecker
+     * @param EntitySecurityMetadataProvider $entitySecurityMetadataProvider
+     */
     public function __construct(
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
         EntitySecurityMetadataProvider $entitySecurityMetadataProvider
     ) {
-        $this->securityFacade = $securityFacade;
+        $this->authorizationChecker = $authorizationChecker;
         $this->entitySecurityMetadataProvider = $entitySecurityMetadataProvider;
     }
 
@@ -45,6 +45,6 @@ class SecurityProvider
      */
     public function isGranted($attribute, $objectString)
     {
-        return $this->securityFacade->isGranted($attribute, $objectString);
+        return $this->authorizationChecker->isGranted($attribute, $objectString);
     }
 }

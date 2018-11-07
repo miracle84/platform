@@ -3,23 +3,24 @@
 namespace Oro\Bundle\DataGridBundle\Extension\GridViews;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Translation\TranslatorInterface;
-
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\DataGridBundle\Entity\GridView;
+use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
+use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
+use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
+use Oro\Bundle\DataGridBundle\Entity\AbstractGridView;
 use Oro\Bundle\DataGridBundle\Event\GridViewsLoadEvent;
 use Oro\Bundle\DataGridBundle\Extension\AbstractExtension;
 use Oro\Bundle\DataGridBundle\Extension\Appearance\AppearanceExtension;
-use Oro\Bundle\DataGridBundle\Datagrid\ParameterBag;
-use Oro\Bundle\DataGridBundle\Datagrid\Common\MetadataObject;
-use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
-
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
 use Oro\Component\DependencyInjection\ServiceLink;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
+/**
+ * Adds grid views functionality to datagrids.
+ * Adds to parameters filters and sorters taken from actual grid view.
+ */
 class GridViewsExtension extends AbstractExtension
 {
     const GRID_VIEW_ROOT_PARAM = '_grid_view';
@@ -33,8 +34,11 @@ class GridViewsExtension extends AbstractExtension
     /** @var EventDispatcherInterface */
     protected $eventDispatcher;
 
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var TranslatorInterface */
     protected $translator;
@@ -48,30 +52,33 @@ class GridViewsExtension extends AbstractExtension
     /** @var ServiceLink */
     protected $managerLink;
 
-    /** @var GridView|null|bool */
-    protected $defaultGridView = false;
+    /** @var array|AbstractGridView[] */
+    protected $defaultGridView = [];
 
     /**
-     * @param EventDispatcherInterface $eventDispatcher
-     * @param SecurityFacade $securityFacade
-     * @param TranslatorInterface $translator
-     * @param ManagerRegistry $registry
-     * @param AclHelper $aclHelper
-     * @param ServiceLink $managerLink
+     * @param EventDispatcherInterface      $eventDispatcher
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenAccessorInterface        $tokenAccessor
+     * @param TranslatorInterface           $translator
+     * @param ManagerRegistry               $registry
+     * @param AclHelper                     $aclHelper
+     * @param ServiceLink                   $managerLink
      */
     public function __construct(
         EventDispatcherInterface $eventDispatcher,
-        SecurityFacade $securityFacade,
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor,
         TranslatorInterface $translator,
         ManagerRegistry $registry,
         AclHelper $aclHelper,
         ServiceLink $managerLink
     ) {
         $this->eventDispatcher = $eventDispatcher;
-        $this->securityFacade  = $securityFacade;
-        $this->translator      = $translator;
-        $this->registry        = $registry;
-        $this->aclHelper       = $aclHelper;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
+        $this->translator = $translator;
+        $this->registry = $registry;
+        $this->aclHelper = $aclHelper;
         $this->managerLink = $managerLink;
     }
 
@@ -80,7 +87,7 @@ class GridViewsExtension extends AbstractExtension
      */
     public function isApplicable(DatagridConfiguration $config)
     {
-        return !$this->isDisabled();
+        return parent::isApplicable($config) && !$this->isDisabled();
     }
 
     /**
@@ -106,25 +113,24 @@ class GridViewsExtension extends AbstractExtension
      */
     public function visitMetadata(DatagridConfiguration $config, MetadataObject $data)
     {
-        $currentViewId = $this->getCurrentViewId($config->getName());
-        // need to set [initialState][filters] from [state][filters]
-        // before [state][filters] will be set from default grid view
-        $filtersState = $data->offsetGetByPath('[state][filters]', []);
-        $data->offsetAddToArray('initialState', ['gridView' => self::DEFAULT_VIEW_ID, 'filters' => $filtersState]);
-        $this->setDefaultParams($config->getName(), $data);
-        $data->offsetAddToArray('state', ['gridView' => $currentViewId]);
+        $gridName = $config->getName();
+
+        $this->setDefaultParams($gridName);
+
+        $data->offsetAddToArray('initialState', ['gridView' => self::DEFAULT_VIEW_ID]);
+        $data->offsetAddToArray('state', ['gridView' => $this->getCurrentViewId($gridName)]);
 
         $systemGridView = new View(self::DEFAULT_VIEW_ID);
-        $systemGridView->setDefault($this->getDefaultViewId($config->getName()) === null);
+        $systemGridView->setDefault($this->getDefaultViewId($gridName) === null);
         if ($config->offsetGetByPath('[options][gridViews][allLabel]')) {
             $systemGridView->setLabel($this->translator->trans($config['options']['gridViews']['allLabel']));
         }
 
-        $currentUser = $this->getCurrentUser();
-        $gridViews = $this->managerLink->getService()->getAllGridViews($currentUser, $config->getName());
+        $currentUser = $this->tokenAccessor->getUser();
+        $gridViews = $this->managerLink->getService()->getAllGridViews($currentUser, $gridName);
 
         if ($this->eventDispatcher->hasListeners(GridViewsLoadEvent::EVENT_NAME)) {
-            $event = new GridViewsLoadEvent($config->getName(), $gridViews);
+            $event = new GridViewsLoadEvent($gridName, $gridViews);
             $this->eventDispatcher->dispatch(GridViewsLoadEvent::EVENT_NAME, $event);
             $gridViews = $event->getGridViews();
         }
@@ -133,7 +139,7 @@ class GridViewsExtension extends AbstractExtension
             'gridViews',
             [
                 'views'       => $gridViews,
-                'gridName'    => $config->getName(),
+                'gridName'    => $gridName,
                 'permissions' => $this->getPermissions()
             ]
         );
@@ -191,18 +197,20 @@ class GridViewsExtension extends AbstractExtension
      *
      * @param string $gridName
      *
-     * @return GridView|null
+     * @return AbstractGridView|null
      */
     protected function getDefaultView($gridName)
     {
-        if ($this->defaultGridView === false) {
-            if (!$currentUser = $this->getCurrentUser()) {
+        if (!array_key_exists($gridName, $this->defaultGridView)) {
+            $currentUser = $this->tokenAccessor->getUser();
+            if (null === $currentUser) {
                 return null;
             }
-            $this->defaultGridView = $this->managerLink->getService()->getDefaultView($currentUser, $gridName);
+            $this->defaultGridView[$gridName] = $this->managerLink->getService()
+                ->getDefaultView($currentUser, $gridName);
         }
 
-        return $this->defaultGridView;
+        return $this->defaultGridView[$gridName];
     }
 
     /**
@@ -210,9 +218,8 @@ class GridViewsExtension extends AbstractExtension
      * Added filters and sorters for defined as default grid view for current logged user.
      *
      * @param string         $gridName
-     * @param MetadataObject $data
      */
-    protected function setDefaultParams($gridName, MetadataObject $data)
+    protected function setDefaultParams($gridName)
     {
         $params = $this->getParameters()->get(ParameterBag::ADDITIONAL_PARAMETERS, []);
         if (!isset($params[self::VIEWS_PARAM_KEY])) {
@@ -227,11 +234,6 @@ class GridViewsExtension extends AbstractExtension
                     AppearanceExtension::APPEARANCE_TYPE_PARAM => $defaultGridView->getAppearanceTypeName(),
                     AppearanceExtension::APPEARANCE_DATA_PARAM => $defaultGridView->getAppearanceData()
                 ]);
-                $filtersState = array_merge(
-                    $defaultGridView->getFiltersData(),
-                    $data->offsetGetByPath('[state][filters]', [])
-                );
-                $data->offsetSetByPath('[state][filters]', $filtersState);
             }
         }
         $this->getParameters()->set(ParameterBag::ADDITIONAL_PARAMETERS, $params);
@@ -240,15 +242,14 @@ class GridViewsExtension extends AbstractExtension
     /**
      * @return array
      */
-    private function getPermissions()
+    protected function getPermissions()
     {
         return [
-            'VIEW'        => $this->securityFacade->isGranted('oro_datagrid_gridview_view'),
-            'CREATE'      => $this->securityFacade->isGranted('oro_datagrid_gridview_create'),
-            'EDIT'        => $this->securityFacade->isGranted('oro_datagrid_gridview_update'),
-            'DELETE'      => $this->securityFacade->isGranted('oro_datagrid_gridview_delete'),
-            'SHARE'       => $this->securityFacade->isGranted('oro_datagrid_gridview_publish'),
-            'EDIT_SHARED' => $this->securityFacade->isGranted('oro_datagrid_gridview_update_public'),
+            'VIEW'   => $this->authorizationChecker->isGranted('oro_datagrid_gridview_view'),
+            'CREATE' => $this->authorizationChecker->isGranted('oro_datagrid_gridview_create'),
+            'EDIT'   => $this->authorizationChecker->isGranted('oro_datagrid_gridview_update'),
+            'DELETE' => $this->authorizationChecker->isGranted('oro_datagrid_gridview_delete'),
+            'SHARE'  => $this->authorizationChecker->isGranted('oro_datagrid_gridview_publish'),
         ];
     }
 
@@ -269,18 +270,5 @@ class GridViewsExtension extends AbstractExtension
         }
 
         parent::setParameters($parameters);
-    }
-
-    /**
-     * @return User
-     */
-    protected function getCurrentUser()
-    {
-        $user = $this->securityFacade->getLoggedUser();
-        if ($user instanceof User) {
-            return $user;
-        }
-
-        return null;
     }
 }

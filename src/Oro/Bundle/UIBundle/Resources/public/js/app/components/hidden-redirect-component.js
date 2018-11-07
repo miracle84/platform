@@ -32,6 +32,13 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function HiddenRedirectComponent() {
+            HiddenRedirectComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.element = options._sourceElement;
             if (!this.element) {
@@ -51,9 +58,8 @@ define(function(require) {
                 self._showLoading();
 
                 e.preventDefault();
-                var pageStateView = mediator.execute('composer:retrieve', 'pageState', true);
 
-                if (pageStateView.isStateChanged()) {
+                if (mediator.execute('isPageStateChanged')) {
                     var confirmModal = self.createModal();
                     confirmModal.once('ok', function() {
                         self.saveAndRedirect();
@@ -103,6 +109,7 @@ define(function(require) {
         },
 
         startRedirect: function() {
+            mediator.execute('showLoading');
             var _this = this;
             $.ajax({
                 url: this.element.attr('href'),
@@ -122,9 +129,7 @@ define(function(require) {
                 title: __('oro.ui.leave_page_save_data_or_discard_title'),
                 content: __('oro.ui.leave_page_save_data_or_discard'),
                 okText: __('Save'),
-                secondaryText: __('Discard'),
                 className: 'modal modal-primary',
-                okButtonClass: 'btn-primary btn-large',
                 cancelText: __('Cancel'),
                 template: require('tpl!oroui/templates/three-buttons-modal.html')
             });

@@ -5,62 +5,49 @@ namespace Oro\Component\Config;
 use Oro\Component\Config\Loader\CumulativeResourceLoader;
 use Oro\Component\Config\Loader\CumulativeResourceLoaderCollection;
 use Symfony\Component\Config\Resource\ResourceInterface;
+use Symfony\Component\Config\Resource\SelfCheckingResourceInterface;
 
 /**
  * CumulativeResource represents a resource which can be located in any bundle
  * and does not required any special registration in a bundle.
  */
-class CumulativeResource implements ResourceInterface, \Serializable
+class CumulativeResource implements ResourceInterface, \Serializable, SelfCheckingResourceInterface
 {
-    /**
-     * @var string
-     */
-    protected $resource;
+    /** @var string */
+    private $resource;
+
+    /** @var CumulativeResourceLoaderCollection */
+    private $resourceLoaders;
 
     /**
      * The list of found the resource
      *
-     * @var array
-     *      key   = bundle class
-     *      value = array
-     *          key   = resource path
-     *          value = TRUE
+     * @var array [bundle class => [resource path => TRUE, ...], ...]
      */
-    protected $found = [];
+    private $found = [];
 
-    /**
-     * @var int
-     *
-     * not serializable
-     */
-    protected $isFreshTimestamp;
+    /** @var int not serializable */
+    private $isFreshTimestamp;
 
-    /**
-     * @var int|false
-     *
-     * not serializable
-     */
-    protected $isFresh;
-
-    /**
-     * @var CumulativeResourceLoaderCollection
-     */
-    private $resourceLoaders;
+    /** @var bool not serializable */
+    private $isFresh;
 
     /**
      * @param string                             $resource        The unique name of a configuration resource
      * @param CumulativeResourceLoaderCollection $resourceLoaders The resource loaders
      */
-    public function __construct($resource, CumulativeResourceLoaderCollection $resourceLoaders)
+    public function __construct(string $resource, CumulativeResourceLoaderCollection $resourceLoaders)
     {
-        $this->resource        = $resource;
+        $this->resource = $resource;
         $this->resourceLoaders = $resourceLoaders;
     }
 
     /**
-     * {@inheritdoc}
+     * Gets the unique name of a configuration resource.
+     *
+     * @return string
      */
-    public function getResource()
+    public function getResource(): string
     {
         return $this->resource;
     }
@@ -72,21 +59,14 @@ class CumulativeResource implements ResourceInterface, \Serializable
     {
         if ($this->isFreshTimestamp !== $timestamp) {
             $this->isFreshTimestamp = $timestamp;
-            $this->isFresh          = true;
+            $this->isFresh = true;
 
             $bundles = CumulativeResourceManager::getInstance()->getBundles();
             $appRootDir = CumulativeResourceManager::getInstance()->getAppRootDir();
             foreach ($bundles as $bundleName => $bundleClass) {
-                $reflection = new \ReflectionClass($bundleClass);
-                $bundleDir  = dirname($reflection->getFilename());
+                $bundleDir = $this->getBundleDir($bundleClass);
+                $bundleAppDir = $this->getBundleAppDir($bundleName, $appRootDir);
 
-                $bundleAppDir = '';
-                /**
-                 * This case needs for tests(without app root directory).
-                 */
-                if (is_dir($appRootDir)) {
-                    $bundleAppDir = $appRootDir . '/Resources/' . $bundleName;
-                }
                 /** @var CumulativeResourceLoader $loader */
                 foreach ($this->resourceLoaders as $loader) {
                     if (!$loader->isResourceFresh($bundleClass, $bundleDir, $bundleAppDir, $this, $timestamp)) {
@@ -109,11 +89,8 @@ class CumulativeResource implements ResourceInterface, \Serializable
      * @param string $bundleClass The full name of bundle class
      * @param string $path        The full path to the resource
      */
-    public function addFound($bundleClass, $path)
+    public function addFound(string $bundleClass, string $path): void
     {
-        if (!isset($this->found[$bundleClass])) {
-            $this->found[$bundleClass] = [];
-        }
         $this->found[$bundleClass][$path] = true;
     }
 
@@ -122,9 +99,10 @@ class CumulativeResource implements ResourceInterface, \Serializable
      *
      * @param string $bundleClass The full name of bundle class
      * @param string $path        The full path to the resource
+     *
      * @return bool
      */
-    public function isFound($bundleClass, $path)
+    public function isFound(string $bundleClass, string $path): bool
     {
         return isset($this->found[$bundleClass][$path]);
     }
@@ -133,9 +111,10 @@ class CumulativeResource implements ResourceInterface, \Serializable
      * Gets all found resources for the given bundle
      *
      * @param string $bundleClass The full name of bundle class
+     *
      * @return string[] A list of resources' full paths
      */
-    public function getFound($bundleClass)
+    public function getFound(string $bundleClass): array
     {
         return isset($this->found[$bundleClass])
             ? array_keys($this->found[$bundleClass])
@@ -147,7 +126,7 @@ class CumulativeResource implements ResourceInterface, \Serializable
      */
     public function __toString()
     {
-        return $this->resource;
+        return (string)$this->resource;
     }
 
     /**
@@ -164,5 +143,30 @@ class CumulativeResource implements ResourceInterface, \Serializable
     public function unserialize($serialized)
     {
         list($this->resource, $this->found, $this->resourceLoaders) = unserialize($serialized);
+    }
+
+    /**
+     * @param string $bundleClass
+     *
+     * @return string
+     */
+    private function getBundleDir(string $bundleClass): string
+    {
+        $reflection = new \ReflectionClass($bundleClass);
+
+        return dirname($reflection->getFileName());
+    }
+
+    /**
+     * @param string      $bundleName
+     * @param string|null $appRootDir
+     *
+     * @return string
+     */
+    private function getBundleAppDir(string $bundleName, ?string $appRootDir): string
+    {
+        return $appRootDir && is_dir($appRootDir)
+            ? $appRootDir . '/Resources/' . $bundleName
+            : '';
     }
 }

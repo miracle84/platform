@@ -3,25 +3,25 @@
 namespace Oro\Bundle\ImapBundle\Sync;
 
 use Doctrine\ORM\EntityManager;
-
-use Oro\Bundle\EmailBundle\Entity\Mailbox;
-use Oro\Bundle\EmailBundle\Model\FolderType;
 use Oro\Bundle\EmailBundle\Builder\EmailEntityBuilder;
 use Oro\Bundle\EmailBundle\Entity\Email as EmailEntity;
 use Oro\Bundle\EmailBundle\Entity\EmailFolder;
 use Oro\Bundle\EmailBundle\Entity\EmailOrigin;
+use Oro\Bundle\EmailBundle\Entity\Mailbox;
+use Oro\Bundle\EmailBundle\Exception\EmailAddressParseException;
+use Oro\Bundle\EmailBundle\Model\FolderType;
 use Oro\Bundle\EmailBundle\Sync\AbstractEmailSynchronizationProcessor;
 use Oro\Bundle\EmailBundle\Sync\KnownEmailAddressCheckerInterface;
 use Oro\Bundle\ImapBundle\Entity\ImapEmail;
 use Oro\Bundle\ImapBundle\Entity\ImapEmailFolder;
 use Oro\Bundle\ImapBundle\Entity\Repository\ImapEmailFolderRepository;
 use Oro\Bundle\ImapBundle\Entity\Repository\ImapEmailRepository;
-use Oro\Bundle\ImapBundle\Mail\Protocol\Exception\InvalidEmailFormatException;
-use Oro\Bundle\ImapBundle\Mail\Storage\Exception\UnsupportException;
 use Oro\Bundle\ImapBundle\Mail\Storage\Exception\UnselectableFolderException;
+use Oro\Bundle\ImapBundle\Mail\Storage\Exception\UnsupportException;
+use Oro\Bundle\ImapBundle\Manager\DTO\Email;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailIterator;
 use Oro\Bundle\ImapBundle\Manager\ImapEmailManager;
-use Oro\Bundle\ImapBundle\Manager\DTO\Email;
+use Psr\Log\LoggerInterface;
 
 /**
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
@@ -49,6 +49,9 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
     /** @var int */
     private $processStartTime;
 
+    /** @var  LoggerInterface */
+    private $emailErrorsLogger;
+
     /**
      * Constructor
      *
@@ -68,6 +71,14 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
         parent::__construct($em, $emailEntityBuilder, $knownEmailAddressChecker);
         $this->manager = $manager;
         $this->removeManager = $removeManager;
+    }
+
+    /**
+     * @param LoggerInterface $emailErrorsLogger
+     */
+    public function setEmailErrorsLogger(LoggerInterface $emailErrorsLogger)
+    {
+        $this->emailErrorsLogger = $emailErrorsLogger;
     }
 
     /**
@@ -109,11 +120,6 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
                 $this->removeManager->removeRemotelyRemovedEmails($imapFolder, $folder, $this->manager);
             } catch (UnselectableFolderException $e) {
                 $this->processUnselectableFolderException($folder);
-            } catch (InvalidEmailFormatException $e) {
-                $folder->setSyncEnabled(false);
-                $this->logger->info(
-                    sprintf('The folder "%s" has unsupported email format and was skipped and disabled.', $folderName)
-                );
             }
             $this->em->flush($folder);
 
@@ -125,7 +131,7 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
         }
 
         // run removing of empty outdated folders every N synchronizations
-        if ($origin->getSyncCount() > 0 && $origin->getSyncCount() % self::CLEANUP_EVERY_N_RUN == 0) {
+        if ($origin->getSyncCount() > 0 && $origin->getSyncCount() % self::CLEANUP_EVERY_N_RUN === 0) {
             $this->removeManager->cleanupOutdatedFolders($origin);
         }
     }
@@ -167,6 +173,7 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
         $emails = $this->getEmailIterator($origin, $imapFolder, $folder);
         $count = $processed = $invalid = $totalInvalid = 0;
         $emails->setIterationOrder(false);
+        $emails->setLogger($this->logger);
         $emails->setBatchSize(self::READ_BATCH_SIZE);
         $emails->setConvertErrorCallback(
             function (\Exception $e) use (&$invalid) {
@@ -286,7 +293,7 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
                 }
 
                 if (false === $this->getSettings()->isForceMode()
-                    || (true  === $this->getSettings()->isForceMode() && count($relatedExistingImapEmails) === 0)
+                    || (true === $this->getSettings()->isForceMode() && count($relatedExistingImapEmails) === 0)
                 ) {
                     $imapEmail = $this->createImapEmail($email->getId()->getUid(), $emailUser->getEmail(), $imapFolder);
                     $newImapEmails[] = $imapEmail;
@@ -299,6 +306,13 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
                         )
                     );
                 }
+            } catch (EmailAddressParseException $e) {
+                $errorContext = [];
+                $headers = $email->getMessage()->getHeaders();
+                foreach ($headers as $header) {
+                    $errorContext[$header->getFieldName()] = $header->getFieldValue();
+                }
+                $this->emailErrorsLogger->error($e->getMessage(), ['headers' => json_encode($errorContext)]);
             } catch (\Exception $e) {
                 $this->logger->warning(
                     sprintf(
@@ -330,6 +344,17 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
     }
 
     /**
+     * {@inheritdoc}
+     */
+    protected function entitiesToClear()
+    {
+        return array_merge(
+            parent::entitiesToClear(),
+            ['Oro\Bundle\ImapBundle\Entity\ImapEmail']
+        );
+    }
+
+    /**
      * Check allowing to save email by date
      *
      * @param EmailFolder $folder
@@ -341,8 +366,8 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
     protected function checkOnOldEmailForMailbox(EmailFolder $folder, Email $email, $mailbox)
     {
         /**
-         * @description Will select max of those dates because emails in folder `sent` could have no received date
-         *              or same date.
+         * Will select max of those dates because emails in folder "sent" could have no received date
+         * or same date.
          */
         $dateForCheck = max($email->getReceivedAt(), $email->getSentAt());
 
@@ -561,6 +586,7 @@ class ImapEmailSynchronizationProcessor extends AbstractEmailSynchronizationProc
      * The outdated folders are ignored
      *
      * @param EmailOrigin $origin
+     * @param bool        $sortByFailedCount
      *
      * @return ImapEmailFolder[]
      */

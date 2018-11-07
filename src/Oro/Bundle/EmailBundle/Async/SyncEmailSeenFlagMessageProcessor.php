@@ -3,9 +3,7 @@ namespace Oro\Bundle\EmailBundle\Async;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityManager;
-
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
-
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailUserRepository;
 use Oro\Bundle\EmailBundle\Manager\EmailFlagManager;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
@@ -52,10 +50,7 @@ class SyncEmailSeenFlagMessageProcessor implements MessageProcessorInterface, To
         $data = JSON::decode($message->getBody());
 
         if (! isset($data['id'], $data['seen'])) {
-            $this->logger->critical(
-                sprintf('[SyncEmailSeenFlagMessageProcessor] Got invalid message: "%s"', $message->getBody()),
-                ['message' => $message]
-            );
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }
@@ -64,8 +59,7 @@ class SyncEmailSeenFlagMessageProcessor implements MessageProcessorInterface, To
         $emailUser = $this->getUserEmailRepository()->find($data['id']);
         if (! $emailUser) {
             $this->logger->error(
-                sprintf('[SyncEmailSeenFlagMessageProcessor] UserEmail was not found. id: "%s"', $data['id']),
-                ['message' => $message]
+                sprintf('UserEmail was not found. id: "%s"', $data['id'])
             );
 
             return self::REJECT;

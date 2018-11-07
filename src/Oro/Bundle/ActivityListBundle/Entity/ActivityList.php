@@ -2,24 +2,24 @@
 
 namespace Oro\Bundle\ActivityListBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
-
+use Doctrine\ORM\Mapping as ORM;
 use Oro\Bundle\ActivityListBundle\Model\ExtendActivityList;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-use Oro\Bundle\UserBundle\Entity\User;
 use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareInterface;
 use Oro\Bundle\EntityBundle\EntityProperty\UpdatedByAwareInterface;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\UserBundle\Entity\User;
 
 /**
+ * The entity that is used to store a relation between an entity record and an activity entity record
+ * to be able to retrieve activities in the chronological order.
+ *
  * @ORM\Table(name="oro_activity_list", indexes={
  *     @ORM\Index(name="oro_activity_list_updated_idx", columns={"updated_at"}),
  *     @ORM\Index(name="al_related_activity_class", columns={"related_activity_class"}),
  *     @ORM\Index(name="al_related_activity_id", columns={"related_activity_id"}),
- *     @ORM\Index(name="al_is_head", columns={"is_head"}),
  * })
  * @ORM\Entity(repositoryClass="Oro\Bundle\ActivityListBundle\Entity\Repository\ActivityListRepository")
  * @Config(
@@ -79,10 +79,11 @@ class ActivityList extends ExtendActivityList implements DatesAwareInterface, Up
 
     /**
      * @var User
-     * @deprecated 1.8.0:1.10.0 Will be renamed to updatedBy
      *
      * @ORM\ManyToOne(targetEntity="Oro\Bundle\UserBundle\Entity\User")
      * @ORM\JoinColumn(name="user_editor_id", referencedColumnName="id", onDelete="SET NULL")
+     *
+     * This field should be renamed to updatedBy as a part of BAP-9004
      */
     protected $editor;
 
@@ -106,13 +107,6 @@ class ActivityList extends ExtendActivityList implements DatesAwareInterface, Up
      * @ORM\Column(name="description", type="text", nullable=true)
      */
     protected $description;
-
-    /**
-     * @var bool
-     *
-     * @ORM\Column(name="is_head", type="boolean", options={"default"=true})
-     */
-    protected $head = true;
 
     /**
      * @var string
@@ -348,30 +342,6 @@ class ActivityList extends ExtendActivityList implements DatesAwareInterface, Up
     }
 
     /**
-     * Get head item in the thread
-     *
-     * @return bool
-     */
-    public function isHead()
-    {
-        return $this->head;
-    }
-
-    /**
-     * Set head flag
-     *
-     * @param boolean $head
-     *
-     * @return self
-     */
-    public function setHead($head)
-    {
-        $this->head = (bool)$head;
-
-        return $this;
-    }
-
-    /**
      * Get owning organization
      *
      * @return Organization
@@ -424,32 +394,6 @@ class ActivityList extends ExtendActivityList implements DatesAwareInterface, Up
     }
 
     /**
-     * @param User $editor
-     * @deprecated 1.8.0:1.10.0 Use $this->setUpdatedBy() instead
-     *
-     * @return self
-     */
-    public function setEditor(User $editor = null)
-    {
-        if ($editor !== null) {
-            $this->updatedBySet = true;
-        }
-
-        $this->editor = $editor;
-
-        return $this;
-    }
-
-    /**
-     * @deprecated since 1.8. Use $this->getUpdatedBy() instead
-     * @return User
-     */
-    public function getEditor()
-    {
-        return $this->editor;
-    }
-
-    /**
      * @param User|null $updatedBy
      *
      * @return self
@@ -461,9 +405,6 @@ class ActivityList extends ExtendActivityList implements DatesAwareInterface, Up
             $this->updatedBySet = true;
         }
 
-        /**
-         * @TODO will be renamed after BAP-9004
-         */
         $this->editor = $updatedBy;
 
         return $this;

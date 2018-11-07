@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\ReportBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
-use Oro\Bundle\ReportBundle\Form\Type\ReportChartSchemaType;
-use Oro\Bundle\ReportBundle\Form\Type\ReportChartSchemaCollectionType;
 use Oro\Bundle\QueryDesignerBundle\Form\Type\FieldChoiceType;
+use Oro\Bundle\ReportBundle\Form\Type\ReportChartSchemaCollectionType;
+use Oro\Bundle\ReportBundle\Form\Type\ReportChartSchemaType;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
 
 class ReportChartSchemaCollectionTypeTest extends FormIntegrationTestCase
 {
@@ -17,7 +16,7 @@ class ReportChartSchemaCollectionTypeTest extends FormIntegrationTestCase
     protected $type;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $configProvider;
 
@@ -54,7 +53,7 @@ class ReportChartSchemaCollectionTypeTest extends FormIntegrationTestCase
 
     public function testBuildForm()
     {
-        $this->factory->create($this->type, null, []);
+        $this->factory->create(ReportChartSchemaCollectionType::class, null, []);
     }
 
     /**
@@ -67,14 +66,20 @@ class ReportChartSchemaCollectionTypeTest extends FormIntegrationTestCase
             ->disableOriginalConstructor()
             ->getMock();
 
+        $translator = $this
+            ->getMockBuilder('Symfony\Component\Translation\TranslatorInterface')
+            ->disableOriginalConstructor()
+            ->getMock();
+
         $schemaCollectionType = new ReportChartSchemaType($manager);
-        $fieldChoiceType      = new FieldChoiceType();
+        $fieldChoiceType      = new FieldChoiceType($translator);
 
         return [
             new PreloadedExtension(
                 [
-                    $schemaCollectionType->getName() => $schemaCollectionType,
-                    $fieldChoiceType->getName()      => $fieldChoiceType
+                    ReportChartSchemaCollectionType::class => $this->type,
+                    ReportChartSchemaType::class => $schemaCollectionType,
+                    FieldChoiceType::class => $fieldChoiceType
                 ],
                 []
             )

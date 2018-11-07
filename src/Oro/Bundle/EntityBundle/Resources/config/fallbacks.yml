@@ -1,8 +1,4 @@
 services:
-    oro_entity.fallback.resolver.entity_fallback_resolver.link:
-        tags:
-            - { name: oro_service_link, service: oro_entity.fallback.resolver.entity_fallback_resolver }
-
     oro_entity.fallback.resolver.entity_fallback_resolver:
         class: Oro\Bundle\EntityBundle\Fallback\EntityFallbackResolver
         arguments:
@@ -10,6 +6,7 @@ services:
             - "@oro_config.provider.system_configuration.form_provider"
             - "@oro_config.manager"
             - "@oro_config.config_bag"
+            - '@oro_entity.doctrine_helper'
 
     oro_entity.fallback.provider.abstract_provider:
         class: Oro\Bundle\EntityBundle\Fallback\Provider\AbstractEntityFallbackProvider

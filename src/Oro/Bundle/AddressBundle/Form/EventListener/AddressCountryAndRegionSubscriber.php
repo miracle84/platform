@@ -3,14 +3,13 @@
 namespace Oro\Bundle\AddressBundle\Form\EventListener;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
+use Oro\Bundle\AddressBundle\Entity\Country;
+use Oro\Bundle\AddressBundle\Entity\Repository\RegionRepository;
+use Oro\Bundle\AddressBundle\Form\Type\RegionType;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
-use Oro\Bundle\AddressBundle\Entity\Country;
-use Oro\Bundle\AddressBundle\Entity\Repository\RegionRepository;
 
 class AddressCountryAndRegionSubscriber implements EventSubscriberInterface
 {
@@ -71,12 +70,11 @@ class AddressCountryAndRegionSubscriber implements EventSubscriberInterface
             if ($form->has('region')) {
                 $regionTypeConfig = $form->get('region')->getConfig();
                 $config = $regionTypeConfig->getOptions();
-                unset($config['choice_list']);
                 unset($config['choices']);
-                $formType = $regionTypeConfig->getType()->getName();
+                $formType = get_class($regionTypeConfig->getType()->getInnerType());
             } else {
                 $config = array();
-                $formType = 'oro_region';
+                $formType = RegionType::class;
             }
 
             $config['country'] = $country;
@@ -114,7 +112,6 @@ class AddressCountryAndRegionSubscriber implements EventSubscriberInterface
             $form = $event->getForm();
 
             $config = $form->get('region')->getConfig()->getOptions();
-            unset($config['choice_list']);
             unset($config['choices']);
 
             $config['country'] = $country;
@@ -127,7 +124,7 @@ class AddressCountryAndRegionSubscriber implements EventSubscriberInterface
             $form->add(
                 $this->factory->createNamed(
                     'region',
-                    $form->get('region')->getConfig()->getType()->getName(),
+                    get_class($form->get('region')->getConfig()->getType()->getInnerType()),
                     null,
                     $config
                 )

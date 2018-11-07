@@ -2,13 +2,17 @@
 
 namespace Oro\Bundle\SearchBundle\Datagrid\Extension\Filter;
 
-use Oro\Bundle\FilterBundle\Grid\Extension\AbstractFilterExtension;
-use Oro\Bundle\FilterBundle\Grid\Extension\Configuration;
-use Oro\Bundle\SearchBundle\Datagrid\Filter\Adapter\SearchFilterDatasourceAdapter;
-use Oro\Bundle\SearchBundle\Datagrid\Datasource\SearchDatasource;
 use Oro\Bundle\DataGridBundle\Datagrid\Common\DatagridConfiguration;
 use Oro\Bundle\DataGridBundle\Datasource\DatasourceInterface;
+use Oro\Bundle\FilterBundle\Grid\Extension\AbstractFilterExtension;
+use Oro\Bundle\FilterBundle\Grid\Extension\Configuration;
+use Oro\Bundle\SearchBundle\Datagrid\Datasource\SearchDatasource;
+use Oro\Bundle\SearchBundle\Datagrid\Filter\Adapter\SearchFilterDatasourceAdapter;
 
+/**
+ * Applies filters to search datasource.
+ * {@inheritDoc}
+ */
 class SearchFilterExtension extends AbstractFilterExtension
 {
     /**
@@ -17,7 +21,8 @@ class SearchFilterExtension extends AbstractFilterExtension
     public function isApplicable(DatagridConfiguration $config)
     {
         return
-            SearchDatasource::TYPE === $config->getDatasourceType()
+            parent::isApplicable($config)
+            && SearchDatasource::TYPE === $config->getDatasourceType()
             && null !== $config->offsetGetByPath(Configuration::COLUMNS_PATH);
     }
 
@@ -26,34 +31,23 @@ class SearchFilterExtension extends AbstractFilterExtension
      */
     public function visitDatasource(DatagridConfiguration $config, DatasourceInterface $datasource)
     {
-        $datasourceAdapter = null;
-
-        if ($datasource instanceof SearchDatasource) {
-            $datasourceAdapter = new SearchFilterDatasourceAdapter($datasource->getSearchQuery());
-        }
-
-        if ($datasourceAdapter === null) {
+        if (!$datasource instanceof SearchDatasource) {
             throw new \InvalidArgumentException('Datasource should be an instance of SearchDatasource.');
         }
 
+        $datasourceAdapter = new SearchFilterDatasourceAdapter($datasource->getSearchQuery());
         $filters = $this->getFiltersToApply($config);
-        $values  = $this->getValuesToApply($config);
+        $filtersState = $this->filtersStateProvider->getStateFromParameters($config, $this->getParameters());
 
         foreach ($filters as $filter) {
-            $value = isset($values[$filter->getName()]) ? $values[$filter->getName()] : false;
+            $value = $filtersState[$filter->getName()] ?? null;
+            if ($value === null) {
+                continue;
+            }
 
-            if ($value !== false) {
-                $form = $filter->getForm();
-
-                if (!$form->isSubmitted()) {
-                    $form->submit($value);
-                }
-
-                if ($form->isValid()) {
-                    $data = $form->getData();
-
-                    $filter->apply($datasourceAdapter, $data);
-                }
+            $filterForm = $this->submitFilter($filter, $value);
+            if ($filterForm->isValid()) {
+                $filter->apply($datasourceAdapter, $filterForm->getData());
             }
         }
     }

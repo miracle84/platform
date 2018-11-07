@@ -2,15 +2,51 @@
 
 namespace Oro\Bundle\ActionBundle\Provider;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Oro\Bundle\ActionBundle\Button\ButtonInterface;
 use Oro\Bundle\ActionBundle\Button\ButtonsCollection;
 use Oro\Bundle\ActionBundle\Button\ButtonSearchContext;
 use Oro\Bundle\ActionBundle\Extension\ButtonProviderExtensionInterface;
+use Oro\Bundle\ActionBundle\Provider\Event\OnButtonsMatched;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ButtonProvider
 {
     /** @var ButtonProviderExtensionInterface[] */
     protected $extensions;
+
+    /** @var LoggerInterface */
+    protected $logger;
+
+    /** @var EventDispatcherInterface */
+    protected $eventDispatcher;
+
+    public function __construct()
+    {
+        $this->logger = new NullLogger();
+    }
+
+    /**
+     * @param LoggerInterface $logger
+     *
+     * @return $this
+     */
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+
+        return $this;
+    }
+
+    /**
+     * @param EventDispatcherInterface $eventDispatcher
+     */
+    public function setEventDispatcher(EventDispatcherInterface $eventDispatcher)
+    {
+        $this->eventDispatcher = $eventDispatcher;
+    }
 
     /**
      * @param ButtonProviderExtensionInterface $extension
@@ -32,6 +68,10 @@ class ButtonProvider
             $collection->consume($extension, $searchContext);
         }
 
+        if ($this->eventDispatcher) {
+            $this->eventDispatcher->dispatch(OnButtonsMatched::NAME, new OnButtonsMatched($collection));
+        }
+
         return $collection;
     }
 
@@ -41,11 +81,21 @@ class ButtonProvider
      */
     public function findAvailable(ButtonSearchContext $searchContext)
     {
+        $errors = new ArrayCollection();
+
         $storage = $this->match($searchContext)->filter(
-            function (ButtonInterface $button, ButtonProviderExtensionInterface $extension) use ($searchContext) {
-                return $extension->isAvailable($button, $searchContext);
+            function (
+                ButtonInterface $button,
+                ButtonProviderExtensionInterface $extension
+            ) use (
+                $searchContext,
+                $errors
+            ) {
+                return $extension->isAvailable($button, $searchContext, $errors);
             }
         );
+
+        $this->processErrors($errors);
 
         return $storage->toList();
     }
@@ -56,16 +106,26 @@ class ButtonProvider
      */
     public function findAll(ButtonSearchContext $searchContext)
     {
+        $errors = new ArrayCollection();
+
         $mapped = $this->match($searchContext)->map(
-            function (ButtonInterface $button, ButtonProviderExtensionInterface $extension) use ($searchContext) {
+            function (
+                ButtonInterface $button,
+                ButtonProviderExtensionInterface $extension
+            ) use (
+                $searchContext,
+                $errors
+            ) {
                 $newButton = clone $button;
                 $newButton->getButtonContext()->setEnabled(
-                    $extension->isAvailable($newButton, $searchContext)
+                    $extension->isAvailable($newButton, $searchContext, $errors)
                 );
 
                 return $newButton;
             }
         );
+
+        $this->processErrors($errors);
 
         return $mapped->toList();
     }
@@ -84,5 +144,15 @@ class ButtonProvider
         }
 
         return false;
+    }
+
+    /**
+     * @param ArrayCollection $errors
+     */
+    protected function processErrors(ArrayCollection $errors)
+    {
+        foreach ($errors as $error) {
+            $this->logger->error($error['message'], $error['parameters']);
+        }
     }
 }

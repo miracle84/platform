@@ -1,8 +1,5 @@
-/*jshint -W098*/
 var ORO = (function(ORO) {
     'use strict';
-
-    var console = window.console;
 
     var IframeEmbeddedForm = function(container, options) {
         this.container = document.getElementById(container);
@@ -59,12 +56,7 @@ var ORO = (function(ORO) {
         show: function() {
             this.ajax(this.options.url, {
                 method: 'GET',
-                success: this.renderForm,
-                error: function(xhr, statusText) {
-                    if (console) {
-                        console.error(statusText);
-                    }
-                }
+                success: this.renderForm
             });
         },
 
@@ -73,6 +65,29 @@ var ORO = (function(ORO) {
             var form = this.container.querySelector('form');
             if (form) {
                 form.addEventListener('submit', this.onSubmit.bind(this));
+            }
+
+            var scripts = this.container.querySelectorAll('script');
+            if (scripts.length > 0) {
+                var scriptsFragment = document.createDocumentFragment();
+                var realTag;
+                for (var k in scripts) {
+                    if (!scripts.hasOwnProperty(k)) {
+                        continue;
+                    }
+
+                    realTag = document.createElement('script');
+
+                    if (scripts[k].hasAttribute('src')) {
+                        realTag.setAttribute('src', scripts[k].getAttribute('src'));
+                    } else {
+                        realTag.innerHTML = scripts[k].innerHTML;
+                    }
+
+                    scripts[k].parentNode.removeChild(scripts[k]);
+                    scriptsFragment.appendChild(realTag);
+                }
+                this.container.appendChild(scriptsFragment);
             }
         },
 
@@ -87,12 +102,7 @@ var ORO = (function(ORO) {
             this.ajax(this.options.url, {
                 method: 'POST',
                 data: new FormData(e.target),
-                success: this.renderForm,
-                error: function(xhr, statusText) {
-                    if (console) {
-                        console.error(statusText);
-                    }
-                }
+                success: this.renderForm
             });
         }
     };

@@ -2,25 +2,26 @@
 
 namespace Oro\Bundle\NavigationBundle\Form\Handler;
 
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Security\Core\SecurityContextInterface;
-
 use Doctrine\Common\Persistence\ObjectManager;
-
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
 use Oro\Bundle\NavigationBundle\Entity\AbstractPageState;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class PageStateHandler
 {
+    use RequestHandlerTrait;
+
     /**
      * @var FormInterface
      */
     protected $form;
 
     /**
-     * @var Request
+     * @var RequestStack
      */
-    protected $request;
+    protected $requestStack;
 
     /**
      * @var ObjectManager
@@ -28,27 +29,27 @@ class PageStateHandler
     protected $manager;
 
     /**
-     * @var SecurityContextInterface
+     * @var TokenStorageInterface
      */
-    protected $security;
+    protected $tokenStorage;
 
     /**
      *
-     * @param FormInterface            $form
-     * @param Request                  $request
-     * @param ObjectManager            $manager
-     * @param SecurityContextInterface $security
+     * @param FormInterface         $form
+     * @param RequestStack          $requestStack
+     * @param ObjectManager         $manager
+     * @param TokenStorageInterface $tokenStorage
      */
     public function __construct(
         FormInterface $form,
-        Request $request,
+        RequestStack $requestStack,
         ObjectManager $manager,
-        SecurityContextInterface $security
+        TokenStorageInterface $tokenStorage
     ) {
-        $this->form     = $form;
-        $this->request  = $request;
-        $this->manager  = $manager;
-        $this->security = $security;
+        $this->form = $form;
+        $this->requestStack = $requestStack;
+        $this->manager = $manager;
+        $this->tokenStorage = $tokenStorage;
     }
 
     /**
@@ -59,14 +60,15 @@ class PageStateHandler
      */
     public function process(AbstractPageState $entity)
     {
-        if ($this->security->getToken() && is_object($user = $this->security->getToken()->getUser())) {
+        if ($this->tokenStorage->getToken() && is_object($user = $this->tokenStorage->getToken()->getUser())) {
             $entity->setUser($user);
         }
 
         $this->form->setData($entity);
 
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
-            $this->form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'], true)) {
+            $this->submitPostPutRequest($this->form, $request);
 
             if ($this->form->isValid()) {
                 $this->onSuccess($entity);

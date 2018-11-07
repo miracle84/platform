@@ -2,12 +2,11 @@
 
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class InTest extends \PHPUnit_Framework_TestCase
+class InTest extends \PHPUnit\Framework\TestCase
 {
     protected $condition;
 

@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\ApiBundle\ApiDoc;
 
-use Symfony\Component\HttpFoundation\RequestStack;
-
-use Oro\Bundle\ApiBundle\Request\Version;
 use Oro\Bundle\ApiBundle\Request\RequestType;
+use Oro\Bundle\ApiBundle\Request\Version;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class RestDocViewDetector
 {
@@ -50,15 +49,19 @@ class RestDocViewDetector
      */
     public function getView()
     {
-        if (null === $this->view) {
+        $view = $this->view;
+        if (null === $view) {
+            $view = '';
             $request = $this->requestStack->getMasterRequest();
-            $view = null !== $request && $request->attributes->has('view')
-                ? $request->attributes->get('view')
-                : '';
-            $this->setView($view);
+            if (null !== $request) {
+                if ($request->attributes->has('view')) {
+                    $view = $request->attributes->get('view');
+                }
+                $this->setView($view);
+            }
         }
 
-        return $this->view;
+        return $view;
     }
 
     /**
@@ -68,6 +71,7 @@ class RestDocViewDetector
     {
         $this->view = $view;
         $this->requestType = null;
+        $this->version = null;
     }
 
     /**

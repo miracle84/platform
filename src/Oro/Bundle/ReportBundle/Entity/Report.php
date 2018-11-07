@@ -3,7 +3,6 @@
 namespace Oro\Bundle\ReportBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
@@ -12,7 +11,7 @@ use Oro\Bundle\QueryDesignerBundle\Model\GridQueryDesignerInterface;
 use Oro\Bundle\ReportBundle\Model\ExtendReport;
 
 /**
- * @ORM\Entity()
+ * @ORM\Entity(repositoryClass="Oro\Bundle\ReportBundle\Entity\Repository\ReportRepository")
  * @ORM\Table(name="oro_report")
  * @ORM\HasLifecycleCallbacks()
  * @Config(

@@ -2,16 +2,13 @@
 
 namespace Oro\Bundle\WorkflowBundle\Controller\Api\Rest;
 
-use Nelmio\ApiDocBundle\Annotation\ApiDoc;
-
-use Symfony\Component\HttpFoundation\Response;
-
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Controller\FOSRestController;
 use FOS\RestBundle\Util\Codes;
-
-use Oro\Bundle\EntityBundle\Provider\EntityWithFieldsProvider;
+use Nelmio\ApiDocBundle\Annotation\ApiDoc;
 use Oro\Bundle\EntityBundle\Exception\InvalidEntityException;
+use Oro\Bundle\EntityBundle\Provider\EntityWithFieldsProvider;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @Rest\NamePrefix("oro_api_workflow_entity_")
@@ -32,12 +29,12 @@ class EntityController extends FOSRestController
     {
         $statusCode = Codes::HTTP_OK;
         /** @var EntityWithFieldsProvider $provider */
-        $provider = $this->get('oro_entity.entity_field_list_provider');
+        $provider = $this->get('oro_workflow.entity_field_list_provider');
         try {
-            $result = $provider->getFields(false, false, true, false);
+            $result = $provider->getFields(false, false, true, false, true, true);
         } catch (InvalidEntityException $ex) {
             $statusCode = Codes::HTTP_NOT_FOUND;
-            $result     = array('message' => $ex->getMessage());
+            $result = ['message' => $ex->getMessage()];
         }
 
         return $this->handleView($this->view($result, $statusCode));

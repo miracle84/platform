@@ -101,24 +101,15 @@ class QueryHintResolver implements QueryHintResolverInterface
      */
     public function addHint(Query $query, $name, $value)
     {
+        if (Query::HINT_CUSTOM_TREE_WALKERS === $name) {
+            return QueryUtil::addTreeWalker($query, $value);
+        }
+
         $result = false;
-        if ($name === Query::HINT_CUSTOM_TREE_WALKERS) {
-            $walkers = $query->getHint(Query::HINT_CUSTOM_TREE_WALKERS);
-            if (false === $walkers) {
-                $walkers = [$value];
-                $query->setHint(Query::HINT_CUSTOM_TREE_WALKERS, $walkers);
-                $result = true;
-            } elseif (!in_array($value, $walkers, true)) {
-                $walkers[] = $value;
-                $query->setHint(Query::HINT_CUSTOM_TREE_WALKERS, $walkers);
-                $result = true;
-            }
-        } elseif ($name === Query::HINT_CUSTOM_OUTPUT_WALKER) {
-            if ($query->getHint($name) !== $value) {
-                $query->setHint($name, $value);
-                $result = true;
-            }
-        } else {
+        if (Query::HINT_CUSTOM_OUTPUT_WALKER !== $name) {
+            $query->setHint($name, $value);
+            $result = true;
+        } elseif ($query->getHint($name) !== $value) {
             $query->setHint($name, $value);
             $result = true;
         }
@@ -139,7 +130,7 @@ class QueryHintResolver implements QueryHintResolverInterface
                 $this->addHint(
                     $query,
                     $this->resolveHintName($hint['name']),
-                    isset($hint['value']) ? $hint['value'] : true
+                    isset($hint['value']) ? $this->resolveHintValue($query, $hint['value']) : true
                 );
             } elseif (is_string($hint)) {
                 $this->addHint($query, $this->resolveHintName($hint), true);
@@ -162,5 +153,29 @@ class QueryHintResolver implements QueryHintResolverInterface
         }
 
         return $name;
+    }
+
+    /**
+     * @param Query $query
+     * @param mixed $value
+     *
+     * @return mixed
+     */
+    private function resolveHintValue(Query $query, $value)
+    {
+        if (is_string($value) && $value[0] === ':') {
+            $parameterName = substr($value, 1);
+            if ($query->getParameter($parameterName) !== null) {
+                return $query->getParameter($parameterName)->getValue();
+            }
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->resolveHintValue($query, $item);
+            }
+        }
+
+        return $value;
     }
 }

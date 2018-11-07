@@ -4,43 +4,36 @@ namespace Oro\Bundle\EmailBundle\Controller;
 
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\Query;
-
 use FOS\RestBundle\Util\Codes;
-
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
 use Oro\Bundle\EmailBundle\Async\Topics;
 use Oro\Bundle\EmailBundle\Cache\EmailCacheManager;
-use Oro\Bundle\EmailBundle\Entity\Manager\EmailManager;
+use Oro\Bundle\EmailBundle\Decoder\ContentDecoder;
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailAttachment;
 use Oro\Bundle\EmailBundle\Entity\EmailBody;
 use Oro\Bundle\EmailBundle\Entity\EmailUser;
+use Oro\Bundle\EmailBundle\Entity\Manager\EmailManager;
+use Oro\Bundle\EmailBundle\Exception\LoadEmailBodyException;
 use Oro\Bundle\EmailBundle\Form\Model\Email as EmailModel;
 use Oro\Bundle\EmailBundle\Form\Model\SmtpSettingsFactory;
-use Oro\Bundle\EmailBundle\Decoder\ContentDecoder;
+use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
 use Oro\Bundle\EmailBundle\Provider\EmailRecipientsProvider;
-use Oro\Bundle\EmailBundle\Exception\LoadEmailBodyException;
 use Oro\Bundle\EntityBundle\Tools\EntityRoutingHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
-use Oro\Bundle\EmailBundle\Provider\EmailRecipientsHelper;
 use Oro\Component\MessageQueue\Client\MessageProducer;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
- * Class EmailController
- *
- * @package Oro\Bundle\EmailBundle\Controller
+ * The controller for the email related functionality.
  *
  * @SuppressWarnings(PHPMD.TooManyMethods)
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
@@ -67,7 +60,6 @@ class EmailController extends Controller
      */
     public function purgeEmailsAttachmentsAction()
     {
-
         $this->getMessageProducer()->send(Topics::PURGE_EMAIL_ATTACHMENTS, []);
 
         return new JsonResponse([
@@ -80,8 +72,11 @@ class EmailController extends Controller
      * @Route("/view/{id}", name="oro_email_view", requirements={"id"="\d+"})
      * @AclAncestor("oro_email_email_view")
      * @Template
+     * @param Request $request
+     * @param Email $entity
+     * @return array
      */
-    public function viewAction(Email $entity)
+    public function viewAction(Request $request, Email $entity)
     {
         try {
             $this->getEmailCacheManager()->ensureEmailBodyCached($entity);
@@ -94,9 +89,9 @@ class EmailController extends Controller
         return [
             'entity' => $entity,
             'noBodyFound' => $noBodyFound,
-            'target' => $this->getTargetEntity($entity),
-            'hasGrantReattach' => $this->isAttachmentCreationGranted(),
-            'targetEntityData' => $this->getTargetEntityConfig()
+            'target' => $this->getTargetEntity($request),
+            'hasGrantReattach' => $this->isAttachmentCreationGranted($request),
+            'targetEntityData' => $this->getTargetEntityConfig($request)
         ];
     }
 
@@ -112,13 +107,13 @@ class EmailController extends Controller
             'emails' => []
         ];
 
-        if ($this->get('oro_security.security_facade')->isGranted('oro_email_email_user_view')) {
-            $currentOrganization = $this->get('oro_security.security_facade')->getOrganization();
+        if ($this->isGranted('oro_email_email_user_view')) {
+            $currentOrganization = $this->get('oro_security.token_accessor')->getOrganization();
             $maxEmailsDisplay = $this->container->getParameter('oro_email.flash_notification.max_emails_display');
             $emailNotificationManager = $this->get('oro_email.manager.notification');
 
             $result = [
-                'emails' => json_encode($emailNotificationManager->getEmails(
+                'emails' => json_encode($this->get('oro_email.manager.notification')->getEmails(
                     $this->getUser(),
                     $currentOrganization,
                     $maxEmailsDisplay,
@@ -147,7 +142,7 @@ class EmailController extends Controller
         $request = $this->container->get('request_stack')->getCurrentRequest();
         $maxEmailsDisplay = (int)$request->get('limit');
         $folderId = (int)$request->get('folderId');
-        $currentOrganization = $this->get('oro_security.security_facade')->getOrganization();
+        $currentOrganization = $this->get('oro_security.token_accessor')->getOrganization();
         if (!$maxEmailsDisplay) {
             $maxEmailsDisplay = $this->container->getParameter('oro_email.flash_notification.max_emails_display');
         }
@@ -157,12 +152,12 @@ class EmailController extends Controller
             'emails' => []
         ];
 
-        if ($this->get('oro_security.security_facade')->isGranted('oro_email_email_user_view')) {
+        if ($this->isGranted('oro_email_email_user_view')) {
             $emailNotificationManager = $this->get('oro_email.manager.notification');
             $result = [
                 'count' => $emailNotificationManager
                     ->getCountNewEmails($this->getUser(), $currentOrganization, $folderId),
-                'emails' => $emailNotificationManager->getEmails(
+                'emails' => $this->get('oro_email.manager.notification')->getEmails(
                     $this->getUser(),
                     $currentOrganization,
                     $maxEmailsDisplay,
@@ -188,21 +183,34 @@ class EmailController extends Controller
     /**
      * @Route("/widget/thread/{id}", name="oro_email_thread_widget", requirements={"id"="\d+"})
      * @Template("OroEmailBundle:Email/widget:thread.html.twig")
+     * @param Request $request
+     * @param Email $entity
+     * @return array
      */
-    public function threadWidgetAction(Email $entity)
+    public function threadWidgetAction(Request $request, Email $entity)
     {
         $emails = [];
-        if ($this->getRequest()->get('showSingleEmail', false)) {
+        if ($request->get('showSingleEmail', false)) {
             $emails[] = $entity;
         } else {
             $emails = $this->get('oro_email.email.thread.provider')->getThreadEmails(
                 $this->get('doctrine')->getManager(),
                 $entity
             );
+            $targetActivityClass = $request->get('targetActivityClass');
+            $targetActivityId = $request->get('targetActivityId');
+            if ($targetActivityClass && $targetActivityId) {
+                $emails = $this->get('oro_activity_list.manager')->filterGroupedEntitiesByActivityLists(
+                    $emails,
+                    $entity,
+                    $targetActivityClass,
+                    $targetActivityId
+                );
+            }
         }
 
         $emails = array_filter($emails, function ($email) {
-            return $this->get('security.context')->isGranted('VIEW', $email);
+            return $this->isGranted('VIEW', $email);
         });
         $this->loadEmailBody($emails);
 
@@ -211,10 +219,66 @@ class EmailController extends Controller
         return [
             'entity' => $entity,
             'thread' => $emails,
-            'target' => $this->getTargetEntity(),
-            'hasGrantReattach' => $this->isAttachmentCreationGranted(),
-            'routeParameters' => $this->getTargetEntityConfig(),
-            'renderContexts' => $this->getRequest()->get('renderContexts', true),
+            'target' => $this->getTargetEntity($request),
+            'hasGrantReattach' => $this->isAttachmentCreationGranted($request),
+            'routeParameters' => $this->getTargetEntityConfig($request),
+            'renderContexts' => $request->get('renderContexts', true),
+            'defaultReplyButton' => $this->get('oro_config.user')->get('oro_email.default_button_reply')
+        ];
+    }
+
+    /**
+     * Used on `My Emails` page to show emails thread with only emails being related to currently logged user.
+     *
+     * @Route("/view/user-thread/{id}", name="oro_email_user_thread_view", requirements={"id"="\d+"})
+     * @AclAncestor("oro_email_email_view")
+     * @Template("OroEmailBundle:Email/Thread:userEmails.html.twig")
+     */
+    public function viewUserThreadAction(Email $entity)
+    {
+        $this->getEmailManager()->setSeenStatus($entity, true, true);
+
+        return ['entity' => $entity];
+    }
+
+    /**
+     * Used on `My Emails` page to show emails thread with only emails being related to currently logged user.
+     *
+     * @Route("/widget/user-thread/{id}", name="oro_email_user_thread_widget", requirements={"id"="\d+"})
+     * @Template("OroEmailBundle:Email/widget:thread.html.twig")
+     * @param Request $request
+     * @param Email $entity
+     * @return array
+     */
+    public function userThreadWidgetAction(Request $request, Email $entity)
+    {
+        $emails = [];
+        if ($request->get('showSingleEmail', false)) {
+            $emails[] = $entity;
+        } else {
+            $emails = $this->get('oro_email.email.thread.provider')->getUserThreadEmails(
+                $this->get('doctrine')->getManager(),
+                $entity,
+                $this->getUser(),
+                $this->get('oro_email.mailbox.manager')->findAvailableMailboxes(
+                    $this->getUser(),
+                    $this->get('security.token_storage')->getToken()->getOrganizationContext()
+                )
+            );
+        }
+
+        $emails = array_filter($emails, function ($email) {
+            return $this->isGranted('VIEW', $email);
+        });
+        $this->loadEmailBody($emails);
+
+        return [
+            'entity' => $entity,
+            'thread' => $emails,
+            'target' => $this->getTargetEntity($request),
+            'hasGrantReattach' => $this->isAttachmentCreationGranted($request),
+            'routeParameters' => $this->getTargetEntityConfig($request),
+            'renderContexts' => $request->get('renderContexts', true),
             'defaultReplyButton' => $this->get('oro_config.user')->get('oro_email.default_button_reply')
         ];
     }
@@ -222,40 +286,50 @@ class EmailController extends Controller
     /**
      * @Route("/view-items", name="oro_email_items_view")
      * @Template
+     * @param Request $request
+     * @return array
      */
-    public function itemsAction()
+    public function itemsAction(Request $request)
     {
         $emails = [];
-        $ids = $this->prepareArrayParam('ids');
+        $ids = $this->prepareArrayParam($request, 'ids');
         if (count($ids) !== 0) {
             $emails = $this->get('doctrine')->getRepository("OroEmailBundle:Email")->findEmailsByIds($ids);
         }
         $this->loadEmailBody($emails);
 
         $items = array_filter($emails, function ($email) {
-            return $this->get('security.context')->isGranted('VIEW', $email);
+            return $this->isGranted('VIEW', $email);
         });
 
         return [
             'items' => $items,
-            'target' => $this->getTargetEntity(),
-            'hasGrantReattach' => $this->isAttachmentCreationGranted(),
-            'routeParameters' => $this->getTargetEntityConfig()
+            'target' => $this->getTargetEntity($request),
+            'hasGrantReattach' => $this->isAttachmentCreationGranted($request),
+            'routeParameters' => $this->getTargetEntityConfig($request)
         ];
     }
 
     /**
-     * @Route("/view-group/{id}", name="oro_email_view_group", requirements={"id"="\d+"})
+     * @Route(
+     *     "/view-group/{id}",
+     *     name="oro_email_view_group",
+     *     requirements={"id"="\d+"},
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @AclAncestor("oro_email_email_view")
      * @Template
+     * @param Request $request
+     * @param Email $email
+     * @return array
      */
-    public function viewGroupAction(Email $email)
+    public function viewGroupAction(Request $request, Email $email)
     {
         $results = $this->get('oro_activity_list.manager')->getGroupedEntities(
             $email,
-            $this->getRequest()->get('targetActivityClass'),
-            $this->getRequest()->get('targetActivityId'),
-            $this->getRequest()->get('_wid'),
+            $request->get('targetActivityClass'),
+            $request->get('targetActivityId'),
+            $request->get('_wid'),
             $this->get('oro_filter.datetime_range_filter')->getMetadata()
         );
 
@@ -277,7 +351,7 @@ class EmailController extends Controller
     public function activityAction($entityClass, $entityId)
     {
         $entity = $this->get('oro_entity.routing_helper')->getEntity($entityClass, $entityId);
-        if (!$this->get('oro_security.security_facade')->isGranted('VIEW', $entity)) {
+        if (!$this->isGranted('VIEW', $entity)) {
             throw new AccessDeniedException();
         }
 
@@ -287,7 +361,11 @@ class EmailController extends Controller
     }
 
     /**
-     * @Route("/create", name="oro_email_email_create")
+     * @Route(
+     *     "/create",
+     *     name="oro_email_email_create",
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @AclAncestor("oro_email_email_create")
      * @Template("OroEmailBundle:Email:update.html.twig")
      */
@@ -298,7 +376,11 @@ class EmailController extends Controller
     }
 
     /**
-     * @Route("/reply/{id}", name="oro_email_email_reply", requirements={"id"="\d+"})
+     * @Route(
+     *     "/reply/{id}", name="oro_email_email_reply",
+     *     requirements={"id"="\d+"},
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @AclAncestor("oro_email_email_create")
      * @Template("OroEmailBundle:Email:update.html.twig")
      *
@@ -307,12 +389,20 @@ class EmailController extends Controller
      */
     public function replyAction(Email $email)
     {
+        if (!$this->isGranted('VIEW', $email)) {
+            throw new AccessDeniedException();
+        }
         $emailModel = $this->get('oro_email.email.model.builder')->createReplyEmailModel($email);
         return $this->process($emailModel);
     }
 
     /**
-     * @Route("/replyall/{id}", name="oro_email_email_reply_all", requirements={"id"="\d+"})
+     * @Route(
+     *     "/replyall/{id}",
+     *     name="oro_email_email_reply_all",
+     *     requirements={"id"="\d+"},
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @AclAncestor("oro_email_email_create")
      * @Template("OroEmailBundle:Email:update.html.twig")
      *
@@ -321,17 +411,28 @@ class EmailController extends Controller
      */
     public function replyAllAction(Email $email)
     {
+        if (!$this->isGranted('VIEW', $email)) {
+            throw new AccessDeniedException();
+        }
         $emailModel = $this->get('oro_email.email.model.builder')->createReplyAllEmailModel($email);
         return $this->process($emailModel);
     }
 
     /**
-     * @Route("/forward/{id}", name="oro_email_email_forward", requirements={"id"="\d+"})
+     * @Route(
+     *     "/forward/{id}",
+     *     name="oro_email_email_forward",
+     *     requirements={"id"="\d+"},
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @AclAncestor("oro_email_email_create")
      * @Template("OroEmailBundle:Email:update.html.twig")
      */
     public function forwardAction(Email $email)
     {
+        if (!$this->isGranted('VIEW', $email)) {
+            throw new AccessDeniedException();
+        }
         $emailModel = $this->get('oro_email.email.model.builder')->createForwardEmailModel($email);
         return $this->process($emailModel);
     }
@@ -377,15 +478,15 @@ class EmailController extends Controller
      *   requirements={"id"="\d+", "width"="\d+", "height"="\d+"}
      * )
      * @AclAncestor("oro_email_email_attachment_view")
-     *
+     * @param Request $request
      * @param EmailAttachment $attachment
      * @param int $width
      * @param int $height
      * @return Response
      */
-    public function getResizedAttachmentImageAction(EmailAttachment $attachment, $width, $height)
+    public function getResizedAttachmentImageAction(Request $request, EmailAttachment $attachment, $width, $height)
     {
-        $path = substr($this->getRequest()->getPathInfo(), 1);
+        $path = substr($request->getPathInfo(), 1);
         $fileManager = $this->get('oro_attachment.file_manager');
         $content = $fileManager->getContent($path, false);
         if (null === $content) {
@@ -418,7 +519,8 @@ class EmailController extends Controller
         $attachments = $entity->getAttachments();
         if (count($attachments)) {
             $zip = new \ZipArchive();
-            $zipName = 'attachments-' . time() . '.zip';
+            $fileManager = $this->get('oro_attachment.file_manager');
+            $zipName = $fileManager->getTemporaryFileName('attachments-' . time() . '.zip');
             $zip->open($zipName, \ZipArchive::CREATE);
             foreach ($attachments as $attachment) {
                 $content = ContentDecoder::decode(
@@ -448,11 +550,14 @@ class EmailController extends Controller
      *
      * @Route("/attachment/{id}/link", name="oro_email_attachment_link", requirements={"id"="\d+"})
      * @AclAncestor("oro_email_email_user_edit")
+     * @param Request $request
+     * @param EmailAttachment $emailAttachment
+     * @return JsonResponse
      */
-    public function linkAction(EmailAttachment $emailAttachment)
+    public function linkAction(Request $request, EmailAttachment $emailAttachment)
     {
         try {
-            $entity = $this->getTargetEntity();
+            $entity = $this->getTargetEntity($request);
             $this->get('oro_email.manager.email_attachment_manager')
                 ->linkEmailAttachmentToTargetEntity($emailAttachment, $entity);
             $result = [];
@@ -466,7 +571,11 @@ class EmailController extends Controller
     }
 
     /**
-     * @Route("/widget", name="oro_email_widget_emails")
+     * @Route(
+     *     "/widget",
+     *     name="oro_email_widget_emails",
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @Template
      *
      * @param Request $request
@@ -481,7 +590,11 @@ class EmailController extends Controller
     }
 
     /**
-     * @Route("/base-widget", name="oro_email_widget_base_emails")
+     * @Route(
+     *     "/base-widget",
+     *     name="oro_email_widget_base_emails",
+     *     condition="request !== null && request.get('_widgetContainer')"
+     * )
      * @Template
      *
      * @param Request $request
@@ -513,7 +626,7 @@ class EmailController extends Controller
         try {
             $this->get('oro_email.email_synchronization_manager')->syncOrigins(
                 $this->get('oro_email.helper.datagrid.emails')->getEmailOrigins(
-                    $this->get('oro_security.security_facade')->getLoggedUserId()
+                    $this->get('oro_security.token_accessor')->getUserId()
                 ),
                 true
             );
@@ -577,8 +690,8 @@ class EmailController extends Controller
      */
     public function markAllEmailsAsSeenAction()
     {
-        $loggedUser = $this->get('oro_security.security_facade')->getLoggedUser();
-        $currentOrganization = $this->get('oro_security.security_facade')->getOrganization();
+        $loggedUser = $this->get('oro_security.token_accessor')->getUser();
+        $currentOrganization = $this->get('oro_security.token_accessor')->getOrganization();
         $ids = $this->container->get('request_stack')->getCurrentRequest()->query->get('ids', []);
         $result = false;
 
@@ -591,18 +704,18 @@ class EmailController extends Controller
 
     /**
      * @Route("/{gridName}/massAction/{actionName}", name="oro_email_mark_massaction")
-     *
+     * @param Request $request
      * @param string $gridName
      * @param string $actionName
      *
      * @return JsonResponse
      */
-    public function markMassAction($gridName, $actionName)
+    public function markMassAction(Request $request, $gridName, $actionName)
     {
         /** @var MassActionDispatcher $massActionDispatcher */
         $massActionDispatcher = $this->get('oro_datagrid.mass_action.dispatcher');
 
-        $response = $massActionDispatcher->dispatchByRequest($gridName, $actionName, $this->getRequest());
+        $response = $massActionDispatcher->dispatchByRequest($gridName, $actionName, $request);
 
         $data = [
             'successful' => $response->isSuccessful(),
@@ -752,14 +865,15 @@ class EmailController extends Controller
     }
 
     /**
+     * @param Request $request
      * @param string $param
      *
      * @return array
      */
-    protected function prepareArrayParam($param)
+    protected function prepareArrayParam(Request $request, $param)
     {
         $result = [];
-        $ids = $this->getRequest()->get($param);
+        $ids = $request->get($param);
         if ($ids) {
             if (is_string($ids)) {
                 $ids = explode(',', $ids);
@@ -779,17 +893,17 @@ class EmailController extends Controller
 
     /**
      * Get target entity parameters
-     *
+     * @param Request $request
      * @param bool $encode
      *
      * @return array
      */
-    protected function getTargetEntityConfig($encode = true)
+    protected function getTargetEntityConfig(Request $request, $encode = true)
     {
         /** @var EntityRoutingHelper $entityRoutingHelper */
         $entityRoutingHelper = $this->get('oro_entity.routing_helper');
-        $targetEntityClass = $entityRoutingHelper->getEntityClassName($this->getRequest(), 'targetActivityClass');
-        $targetEntityId = $entityRoutingHelper->getEntityId($this->getRequest(), 'targetActivityId');
+        $targetEntityClass = $entityRoutingHelper->getEntityClassName($request, 'targetActivityClass');
+        $targetEntityId = $entityRoutingHelper->getEntityId($request, 'targetActivityId');
         if ($encode) {
             $targetEntityClass = $entityRoutingHelper->getUrlSafeClassName($targetEntityClass);
         }
@@ -805,13 +919,14 @@ class EmailController extends Controller
     /**
      * Get target entity
      *
+     * @param Request $request
      * @return object|null
      */
-    protected function getTargetEntity()
+    protected function getTargetEntity(Request $request)
     {
         $entityRoutingHelper = $this->get('oro_entity.routing_helper');
-        $targetEntityClass = $entityRoutingHelper->getEntityClassName($this->getRequest(), 'targetActivityClass');
-        $targetEntityId = $entityRoutingHelper->getEntityId($this->getRequest(), 'targetActivityId');
+        $targetEntityClass = $entityRoutingHelper->getEntityClassName($request, 'targetActivityClass');
+        $targetEntityId = $entityRoutingHelper->getEntityId($request, 'targetActivityId');
         if (!$targetEntityClass || !$targetEntityId) {
             return null;
         }
@@ -819,13 +934,14 @@ class EmailController extends Controller
     }
 
     /**
+     * @param Request $request
      * @return bool
      */
-    protected function isAttachmentCreationGranted()
+    protected function isAttachmentCreationGranted(Request $request)
     {
         $enabledAttachment = false;
         $entityRoutingHelper = $this->get('oro_entity.routing_helper');
-        $entityClassName = $entityRoutingHelper->getEntityClassName($this->getRequest(), 'targetActivityClass');
+        $entityClassName = $entityRoutingHelper->getEntityClassName($request, 'targetActivityClass');
         if (null !== $entityClassName) {
             /** @var ConfigProvider $targetConfigProvider */
             $targetConfigProvider = $this->get('oro_entity_config.provider.attachment');
@@ -833,8 +949,7 @@ class EmailController extends Controller
                 $enabledAttachment = (bool)$targetConfigProvider->getConfig($entityClassName)->get('enabled');
             }
         }
-        $createGrant = $this->get('oro_security.security_facade')
-            ->isGranted('CREATE', 'entity:' . 'Oro\Bundle\AttachmentBundle\Entity\Attachment');
+        $createGrant = $this->isGranted('CREATE', 'entity:' . 'Oro\Bundle\AttachmentBundle\Entity\Attachment');
 
         return $enabledAttachment && $createGrant;
     }

@@ -2,8 +2,8 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Tests\Unit\Validator\Constraints;
 
-use Symfony\Component\PropertyAccess\PropertyAccess;
-
+use Doctrine\Common\EventManager;
+use Doctrine\ORM\EntityManager;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\ConfigProviderMock;
@@ -11,8 +11,12 @@ use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\UniqueExtendEntityField;
 use Oro\Bundle\EntityExtendBundle\Validator\Constraints\UniqueExtendEntityFieldValidator;
 use Oro\Bundle\EntityExtendBundle\Validator\FieldNameValidationHelper;
+use Oro\Bundle\ImportExportBundle\Strategy\Import\NewEntitiesHelper;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-class UniqueExtendEntityFieldValidatorTest extends \PHPUnit_Framework_TestCase
+class UniqueExtendEntityFieldValidatorTest extends \PHPUnit\Framework\TestCase
 {
     const ENTITY_CLASS = 'Test\Entity';
 
@@ -45,8 +49,11 @@ class UniqueExtendEntityFieldValidatorTest extends \PHPUnit_Framework_TestCase
             ['state' => ExtendScope::STATE_DELETE]
         );
 
+        /** @var EventDispatcherInterface|\PHPUnit\Framework\MockObject\MockObject $eventDispatcher */
+        $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+
         $this->validator = new UniqueExtendEntityFieldValidator(
-            new FieldNameValidationHelper($extendConfigProvider)
+            new FieldNameValidationHelper($extendConfigProvider, $eventDispatcher, new NewEntitiesHelper())
         );
     }
 
@@ -62,7 +69,7 @@ class UniqueExtendEntityFieldValidatorTest extends \PHPUnit_Framework_TestCase
         $field  = new FieldConfigModel($fieldName);
         $entity->addField($field);
 
-        $context = $this->createMock('Symfony\Component\Validator\Context\ExecutionContextInterface');
+        $context = $this->createMock(ExecutionContextInterface::class);
         $this->validator->initialize($context);
 
         $constraint = new UniqueExtendEntityField();

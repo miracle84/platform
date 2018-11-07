@@ -2,41 +2,42 @@
 
 namespace Oro\Bundle\ImapBundle\Tests\Unit\Form\Type;
 
-use Symfony\Bundle\FrameworkBundle\Translation\Translator;
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
-use Oro\Bundle\ImapBundle\Form\Type\ChoiceAccountType;
-use Oro\Bundle\ImapBundle\Form\Type\ConfigurationGmailType;
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EmailBundle\Form\Type\EmailFolderTreeType;
 use Oro\Bundle\FormBundle\Form\Extension\TooltipFormExtension;
 use Oro\Bundle\ImapBundle\Entity\UserEmailOrigin;
 use Oro\Bundle\ImapBundle\Form\Type\CheckButtonType;
+use Oro\Bundle\ImapBundle\Form\Type\ChoiceAccountType;
+use Oro\Bundle\ImapBundle\Form\Type\ConfigurationGmailType;
 use Oro\Bundle\ImapBundle\Form\Type\ConfigurationType;
-use Oro\Bundle\SecurityBundle\Encoder\Mcrypt;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Bundle\SecurityBundle\Encoder\DefaultCrypter;
+use Oro\Bundle\SecurityBundle\Encoder\SymmetricCrypterInterface;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Bundle\FrameworkBundle\Translation\Translator;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
 
 class ChoiceAccountTypeTest extends FormIntegrationTestCase
 {
-    /** @var Mcrypt */
+    /** @var SymmetricCrypterInterface */
     protected $encryptor;
 
-    /** @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
-    /** @var Translator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Translator|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configProvider;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $userConfigManager;
 
     protected function setUp()
     {
-        $this->encryptor = new Mcrypt('someKey');
+        $this->encryptor = new DefaultCrypter('someKey');
 
         $user = $this->getUser();
 
@@ -46,21 +47,22 @@ class ChoiceAccountTypeTest extends FormIntegrationTestCase
             ->method('getOrganization')
             ->willReturn($organization);
 
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->securityFacade->expects($this->any())
-            ->method('getLoggedUser')
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->tokenAccessor->expects($this->any())
+            ->method('getUser')
             ->willReturn($user);
-
-        $this->securityFacade->expects($this->any())
+        $this->tokenAccessor->expects($this->any())
             ->method('getOrganization')
             ->willReturn($organization);
 
         $this->translator = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Translation\Translator')
             ->disableOriginalConstructor()
             ->getMock();
+        $this->translator->expects($this->any())
+            ->method('trans')
+            ->willReturnCallback(function ($string) {
+                return $string . '.trans';
+            });
 
         $this->userConfigManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()
@@ -76,7 +78,7 @@ class ChoiceAccountTypeTest extends FormIntegrationTestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getUser()
     {
@@ -85,26 +87,29 @@ class ChoiceAccountTypeTest extends FormIntegrationTestCase
 
     protected function getExtensions()
     {
+        $type = new ChoiceAccountType($this->translator);
+
         return array_merge(
             parent::getExtensions(),
             [
                 new PreloadedExtension(
                     [
-                        'oro_imap_configuration_check' => new CheckButtonType(),
-                        'oro_imap_configuration_gmail' => new ConfigurationGmailType(
+                        ChoiceAccountType::class => $type,
+                        CheckButtonType::class => new CheckButtonType(),
+                        ConfigurationGmailType::class => new ConfigurationGmailType(
                             $this->translator,
                             $this->userConfigManager,
-                            $this->securityFacade
+                            $this->tokenAccessor
                         ),
-                        'oro_imap_configuration' => new ConfigurationType(
+                        ConfigurationType::class => new ConfigurationType(
                             $this->encryptor,
-                            $this->securityFacade,
+                            $this->tokenAccessor,
                             $this->translator
                         ),
-                        'oro_email_email_folder_tree' => new EmailFolderTreeType(),
+                        EmailFolderTreeType::class => new EmailFolderTreeType(),
                     ],
                     [
-                        'form' => [new TooltipFormExtension($this->configProvider, $this->translator)],
+                        FormType::class => [new TooltipFormExtension($this->configProvider, $this->translator)],
                     ]
                 ),
             ]
@@ -126,8 +131,7 @@ class ChoiceAccountTypeTest extends FormIntegrationTestCase
      */
     public function testBindValidData($formData, $expectedViewData, $expectedModelData)
     {
-        $type = new ChoiceAccountType($this->translator);
-        $form = $this->factory->create($type);
+        $form = $this->factory->create(ChoiceAccountType::class);
         if ($expectedViewData) {
             $form->submit($formData);
             foreach ($expectedViewData as $name => $value) {
@@ -268,14 +272,5 @@ class ChoiceAccountTypeTest extends FormIntegrationTestCase
         $userEmailOrigin->setOwner($this->getUser());
 
         return $userEmailOrigin;
-    }
-
-    /**
-     * Test name of type
-     */
-    public function testGetName()
-    {
-        $type = new ChoiceAccountType($this->translator);
-        $this->assertEquals(ChoiceAccountType::NAME, $type->getName());
     }
 }

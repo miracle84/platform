@@ -2,15 +2,17 @@
 
 namespace Oro\Bundle\NavigationBundle\Form\Type;
 
-use Doctrine\Common\Persistence\ManagerRegistry;
-use Oro\Bundle\NavigationBundle\Entity\Repository\TitleRepository;
-use Oro\Bundle\NavigationBundle\Entity\Title;
+use Oro\Bundle\FormBundle\Form\Type\Select2ChoiceType;
+use Oro\Bundle\NavigationBundle\Provider\TitleService;
+use Oro\Bundle\NavigationBundle\Provider\TitleTranslator;
+use Oro\Bundle\NavigationBundle\Title\TitleReader\TitleReaderRegistry;
+use Oro\Component\DependencyInjection\ServiceLink;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Routing\Route;
+use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Translation\TranslatorInterface;
 
 class RouteChoiceType extends AbstractType
 {
@@ -22,25 +24,41 @@ class RouteChoiceType extends AbstractType
     private $router;
 
     /**
-     * @var ManagerRegistry
+     * @var TitleTranslator
      */
-    private $registry;
+    private $titleTranslator;
 
     /**
-     * @var TranslatorInterface
+     * @var TitleReaderRegistry
      */
-    private $translator;
+    private $readerRegistry;
+
+    /**
+     * @var ServiceLink
+     */
+    private $titleServiceLink;
+
+    /**
+     * @var RouteCollection
+     */
+    private $routeCollection;
 
     /**
      * @param RouterInterface $router
-     * @param ManagerRegistry $registry
-     * @param TranslatorInterface $translator
+     * @param TitleReaderRegistry $readerRegistry
+     * @param TitleTranslator $titleTranslator
+     * @param ServiceLink $titleServiceLink
      */
-    public function __construct(RouterInterface $router, ManagerRegistry $registry, TranslatorInterface $translator)
-    {
+    public function __construct(
+        RouterInterface $router,
+        TitleReaderRegistry $readerRegistry,
+        TitleTranslator $titleTranslator,
+        ServiceLink $titleServiceLink
+    ) {
         $this->router = $router;
-        $this->registry = $registry;
-        $this->translator = $translator;
+        $this->readerRegistry = $readerRegistry;
+        $this->titleTranslator = $titleTranslator;
+        $this->titleServiceLink = $titleServiceLink;
     }
 
     /**
@@ -48,6 +66,8 @@ class RouteChoiceType extends AbstractType
      */
     public function configureOptions(OptionsResolver $resolver)
     {
+        $resolver->setRequired('menu_name');
+
         $resolver->setDefault('path_filter', null);
         $resolver->setDefault('name_filter', '/^oro_\w+$/');
         $resolver->setDefault('options_filter', []);
@@ -78,7 +98,7 @@ class RouteChoiceType extends AbstractType
                 }
 
                 if ($options['add_titles']) {
-                    $titles = $this->loadRouteTitles($routes);
+                    $titles = $this->loadRouteTitles($routes, $options['menu_name']);
                     foreach ($choices as $routeName => $routeTitle) {
                         if (array_key_exists($routeName, $titles)) {
                             $choices[$routeName] = sprintf('%s (%s)', $routeTitle, $titles[$routeName]);
@@ -88,7 +108,7 @@ class RouteChoiceType extends AbstractType
                     }
                 }
 
-                return $choices;
+                return array_flip($choices);
             }
         );
     }
@@ -106,9 +126,8 @@ class RouteChoiceType extends AbstractType
         $nameFilter = null,
         $pathFilter = null
     ) {
-        $routes = $this->router->getRouteCollection();
         $filteredRoutes = [];
-        foreach ($routes as $routeName => $route) {
+        foreach ($this->getRouteCollection() as $routeName => $route) {
             $required = $this->isGetMethodAllowed($route)
                 && $this->isParametersAllowed($withoutParametersOnly, $route)
                 && $this->isOptionsAllowed($optionsFilter, $route)
@@ -182,22 +201,37 @@ class RouteChoiceType extends AbstractType
     }
 
     /**
-     * @param array $routes
+     * @param array  $routes
+     * @param string $menuName
      * @return array
      */
-    private function loadRouteTitles(array $routes)
+    private function loadRouteTitles(array $routes, $menuName)
     {
-        /** @var TitleRepository $repository */
-        $repository = $this->registry
-            ->getManagerForClass(Title::class)
-            ->getRepository(Title::class);
-        $titles = $repository->getTitles($routes);
-        $result = [];
-        foreach ($titles as $title) {
-            $result[$title['route']] = $this->translator->trans($title['shortTitle']);
+        /** @var TitleService $titleService */
+        $titleService = $this->titleServiceLink->getService();
+
+        $titles = [];
+        foreach ($routes as $routeName) {
+            $title = $this->readerRegistry->getTitleByRoute($routeName);
+            if ($title) {
+                $titles[$routeName] = $this->titleTranslator
+                    ->trans($titleService->createTitle($routeName, $title, $menuName));
+            }
         }
 
-        return $result;
+        return $titles;
+    }
+
+    /**
+     * @return RouteCollection
+     */
+    private function getRouteCollection()
+    {
+        if ($this->routeCollection === null) {
+            $this->routeCollection = $this->router->getRouteCollection();
+        }
+
+        return $this->routeCollection;
     }
 
     /**
@@ -221,6 +255,6 @@ class RouteChoiceType extends AbstractType
      */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_choice';
+        return Select2ChoiceType::class;
     }
 }

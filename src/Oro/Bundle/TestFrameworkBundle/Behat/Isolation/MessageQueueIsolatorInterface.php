@@ -2,14 +2,23 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Behat\Isolation;
 
-use Symfony\Component\Process\Exception\RuntimeException;
-
 interface MessageQueueIsolatorInterface extends IsolatorInterface
 {
+    const TIMEOUT = 600;
+
     /**
-     * @param int $timeLimit Time in seconds
+     * @param int $timeLimit Limit queue processing, seconds
      * @return void
-     * @throws RuntimeException If massages not processed during time limit
      */
-    public function waitWhileProcessingMessages($timeLimit = 60);
+    public function waitWhileProcessingMessages($timeLimit = self::TIMEOUT);
+
+    /**
+     * @return void
+     */
+    public function stopMessageQueue();
+
+    /**
+     * @return void
+     */
+    public function startMessageQueue();
 }

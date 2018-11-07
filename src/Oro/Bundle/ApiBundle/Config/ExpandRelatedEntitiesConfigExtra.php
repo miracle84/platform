@@ -5,7 +5,7 @@ namespace Oro\Bundle\ApiBundle\Config;
 use Oro\Bundle\ApiBundle\Processor\Config\ConfigContext;
 
 /**
- * An instance of this class can be added to the config extras of the Context
+ * An instance of this class can be added to the config extras of the context
  * to request to add related entities to a result.
  */
 class ExpandRelatedEntitiesConfigExtra implements ConfigExtraInterface
@@ -25,6 +25,20 @@ class ExpandRelatedEntitiesConfigExtra implements ConfigExtraInterface
     public function __construct(array $expandedEntities)
     {
         $this->expandedEntities = $expandedEntities;
+    }
+
+    /**
+     * Gets the list of related entities.
+     * Each item can be an association name or a path to a nested association.
+     * Example: ["comments", "comments.author"]
+     * Where "comments" is an association under a primary entity,
+     * "author" is an association under the "comments" entity.
+     *
+     * @return string[]
+     */
+    public function getExpandedEntities()
+    {
+        return $this->expandedEntities;
     }
 
     /**

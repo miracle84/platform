@@ -5,11 +5,10 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Validator\Expression;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\QueryException;
-
 use Oro\Bundle\WorkflowBundle\Validator\Expression\DQLExpressionVerifier;
 use Oro\Bundle\WorkflowBundle\Validator\Expression\ExpressionVerifierInterface;
 
-class DQLExpressionVerifierTest extends \PHPUnit_Framework_TestCase
+class DQLExpressionVerifierTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ExpressionVerifierInterface */
     protected $verifier;
@@ -87,7 +86,7 @@ class DQLExpressionVerifierTest extends \PHPUnit_Framework_TestCase
     /**
      * @param string $statementClass
      *
-     * @return \PHPUnit_Framework_MockObject_MockObject|AbstractQuery
+     * @return \PHPUnit\Framework\MockObject\MockObject|AbstractQuery
      */
     protected function createQuery($statementClass)
     {

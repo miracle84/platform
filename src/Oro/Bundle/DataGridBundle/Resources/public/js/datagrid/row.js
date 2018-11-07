@@ -27,7 +27,9 @@ define([
      */
     Row = Chaplin.CollectionView.extend({
         tagName: 'tr',
+
         autoRender: false,
+
         animationDuration: 0,
 
         /**
@@ -35,25 +37,27 @@ define([
          * This code supports perfomance fix.
          */
         delegateEvents: Backbone.View.prototype.delegateEvents,
+
         events: function() {
             var resultEvents = {};
 
             var events = this.collection.getCellEventList().getEventsMap();
             // prevent CS error 'cause we must completely repeat Backbone behaviour
-            for (var key in events) { // jshint forin:false
+            // eslint-disable-next-line guard-for-in
+            for (var key in events) {
                 var match = key.match(delegateEventSplitter);
                 var eventName = match[1];
                 var selector = match[2];
-                resultEvents[eventName + ' ' + 'td' + (selector ? ' ' + selector : '')] =
+                resultEvents[eventName + ' td' + (selector ? ' ' + selector : '')] =
                     _.partial(this.delegateEventToCell, key);
             }
 
             // the order is important, please do not move up
             _.extend(resultEvents, {
-                'mousedown': 'onMouseDown',
-                'mouseleave': 'onMouseLeave',
-                'mouseup': 'onMouseUp',
-                'click': 'onClick'
+                mousedown: 'onMouseDown',
+                mouseleave: 'onMouseLeave',
+                mouseup: 'onMouseUp',
+                click: 'onClick'
             });
             return resultEvents;
         },
@@ -72,6 +76,13 @@ define([
         /**
          * @inheritDoc
          */
+        constructor: function Row() {
+            Row.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             // itemView function is called as new this.itemView
             // it is placed here to pass THIS within closure
@@ -85,6 +96,9 @@ define([
                     cellOptions.model = _this.model;
                     var Cell = column.get('cell');
                     var cell = new Cell(cellOptions);
+                    cell.$el.attr({
+                        'data-column-label': column.get('label')
+                    });
                     if (column.has('align')) {
                         cell.$el.removeClass('align-left align-center align-right');
                         cell.$el.addClass('align-' + column.get('align'));
@@ -173,6 +187,10 @@ define([
          * @param isSelected
          */
         onBackgridSelected: function(model, isSelected) {
+            if (_.isUndefined(isSelected)) {
+                isSelected = false;
+            }
+
             this.$el.toggleClass('row-selected', isSelected);
         },
 

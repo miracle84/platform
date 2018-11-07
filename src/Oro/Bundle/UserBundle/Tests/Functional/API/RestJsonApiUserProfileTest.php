@@ -14,7 +14,7 @@ class RestJsonApiUserProfileTest extends RestJsonApiTestCase
     {
         $response = $this->request(
             'GET',
-            $this->getUrl('oro_rest_api_get_user_profile')
+            $this->getUrl('oro_rest_api_user_profile')
         );
 
         self::assertResponseStatusCodeEquals($response, 200);
@@ -34,6 +34,12 @@ class RestJsonApiUserProfileTest extends RestJsonApiTestCase
         );
     }
 
+    public function testOptions()
+    {
+        $response = $this->options('oro_rest_api_user_profile');
+        self::assertAllowResponseHeader($response, 'OPTIONS, GET');
+    }
+
     /**
      * @dataProvider getNotAllowedMethods
      */
@@ -41,10 +47,9 @@ class RestJsonApiUserProfileTest extends RestJsonApiTestCase
     {
         $response = $this->request(
             $method,
-            $this->getUrl('oro_rest_api_get_user_profile')
+            $this->getUrl('oro_rest_api_user_profile')
         );
-
-        self::assertResponseStatusCodeEquals($response, 405);
+        self::assertMethodNotAllowedResponse($response, 'OPTIONS, GET');
     }
 
     /**
@@ -53,8 +58,10 @@ class RestJsonApiUserProfileTest extends RestJsonApiTestCase
     public function getNotAllowedMethods()
     {
         return [
+            ['HEAD'],
             ['POST'],
-            ['DELETE'],
+            ['PATCH'],
+            ['DELETE']
         ];
     }
 }

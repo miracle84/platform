@@ -2,16 +2,16 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Form\Type;
 
+use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateTranslationType;
+use Oro\Bundle\TranslationBundle\Form\Type\GedmoTranslationsType;
 use Symfony\Component\Form\FormView;
 
-use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateTranslationType;
-
-class EmailTemplateTranslationTypeTest extends \PHPUnit_Framework_TestCase
+class EmailTemplateTranslationTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var EmailTemplateTranslationType */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     protected function setUp()
@@ -19,7 +19,7 @@ class EmailTemplateTranslationTypeTest extends \PHPUnit_Framework_TestCase
         $this->configManager = $this->getMockBuilder('Oro\Bundle\ConfigBundle\Config\ConfigManager')
             ->disableOriginalConstructor()->getMock();
 
-        $this->type = new EmailTemplateTranslationType($this->configManager);
+        $this->type = new EmailTemplateTranslationType($this->configManager, GedmoTranslationsType::class);
     }
 
     protected function tearDown()
@@ -28,14 +28,14 @@ class EmailTemplateTranslationTypeTest extends \PHPUnit_Framework_TestCase
         unset($this->configManager);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
 
-        $this->type->setDefaultOptions($resolver);
+        $this->type->configureOptions($resolver);
     }
 
     public function testBuildView()
@@ -50,13 +50,8 @@ class EmailTemplateTranslationTypeTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($options['labels'], $view->vars['labels']);
     }
 
-    public function testGetName()
-    {
-        $this->assertEquals('oro_email_emailtemplate_translatation', $this->type->getName());
-    }
-
     public function testGetParent()
     {
-        $this->assertEquals('a2lix_translations_gedmo', $this->type->getParent());
+        $this->assertEquals(GedmoTranslationsType::class, $this->type->getParent());
     }
 }

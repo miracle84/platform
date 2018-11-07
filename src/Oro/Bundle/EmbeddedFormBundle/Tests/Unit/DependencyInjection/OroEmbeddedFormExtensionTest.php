@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\EmbeddedFormBundle\Tests\Unit\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-
 use Oro\Bundle\EmbeddedFormBundle\DependencyInjection\OroEmbeddedFormExtension;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 
-class OroEmbeddedFormExtensionTest extends \PHPUnit_Framework_TestCase
+class OroEmbeddedFormExtensionTest extends \PHPUnit\Framework\TestCase
 {
     public function testDefaultConfiguration()
     {

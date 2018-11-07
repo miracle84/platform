@@ -3,10 +3,8 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Async;
 
 use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\EmailBundle\Async\AutoResponseMessageProcessor;
 use Oro\Bundle\EmailBundle\Async\Topics;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Manager\AutoResponseManager;
 use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
@@ -15,7 +13,7 @@ use Oro\Component\MessageQueue\Transport\Null\NullMessage;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Psr\Log\LoggerInterface;
 
-class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class AutoResponseMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredArguments()
     {
@@ -33,7 +31,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('critical')
-            ->with('[AutoResponseMessageProcessor] Got invalid message. "{"key":"value"}"')
+            ->with('Got invalid message')
         ;
 
         $processor = new AutoResponseMessageProcessor(
@@ -134,7 +132,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
         $logger
             ->expects($this->once())
             ->method('error')
-            ->with('[AutoResponseMessageProcessor] Email was not found. id: "123"')
+            ->with('Email was not found. id: "123"')
         ;
 
         $processor = new AutoResponseMessageProcessor(
@@ -158,7 +156,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|SessionInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|SessionInterface
      */
     private function createSessionMock()
     {
@@ -166,7 +164,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|AutoResponseManager
+     * @return \PHPUnit\Framework\MockObject\MockObject|AutoResponseManager
      */
     private function createAutoResponseManagerMock()
     {
@@ -174,7 +172,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|Registry
+     * @return \PHPUnit\Framework\MockObject\MockObject|Registry
      */
     private function createDoctrineMock()
     {
@@ -182,7 +180,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|EntityRepository
+     * @return \PHPUnit\Framework\MockObject\MockObject|EntityRepository
      */
     private function createEntityRepositoryMock()
     {
@@ -190,7 +188,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -198,7 +196,7 @@ class AutoResponseMessageProcessorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     private function createLoggerMock()
     {

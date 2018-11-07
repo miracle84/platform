@@ -2,15 +2,14 @@
 
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Authentication\Provider;
 
-use Symfony\Component\Security\Core\Authentication\Token\RememberMeToken;
-
-use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\User;
+use Oro\Bundle\SecurityBundle\Authentication\Provider\OrganizationRememberMeAuthenticationProvider;
 use Oro\Bundle\SecurityBundle\Authentication\Token\OrganizationRememberMeToken;
 use Oro\Bundle\SecurityBundle\Authentication\Token\OrganizationRememberMeTokenFactory;
 use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\Organization;
-use Oro\Bundle\SecurityBundle\Authentication\Provider\OrganizationRememberMeAuthenticationProvider;
+use Oro\Bundle\SecurityBundle\Tests\Unit\Acl\Domain\Fixtures\Entity\User;
+use Symfony\Component\Security\Core\Authentication\Token\RememberMeToken;
 
-class OrganizationRememberMeAuthenticationProviderTest extends \PHPUnit_Framework_TestCase
+class OrganizationRememberMeAuthenticationProviderTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var OrganizationRememberMeAuthenticationProvider
@@ -18,7 +17,7 @@ class OrganizationRememberMeAuthenticationProviderTest extends \PHPUnit_Framewor
     protected $provider;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $userChecker;
 

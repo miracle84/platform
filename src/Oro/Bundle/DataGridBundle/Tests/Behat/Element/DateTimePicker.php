@@ -4,8 +4,6 @@ namespace Oro\Bundle\DataGridBundle\Tests\Behat\Element;
 
 use Behat\Mink\Element\NodeElement;
 use Oro\Bundle\TestFrameworkBundle\Behat\Element\Element;
-use Oro\Bundle\TestFrameworkBundle\Behat\Element\InputMethod;
-use Oro\Bundle\TestFrameworkBundle\Behat\Element\InputValue;
 
 class DateTimePicker extends Element
 {
@@ -14,13 +12,49 @@ class DateTimePicker extends Element
      */
     public function setValue($dateTime)
     {
-        $this->getDatePicker()->click();
-
-        $this->getMonthPicker()->selectOption($dateTime->format('M'));
+        $this->open();
         $this->getYearPicker()->selectOption($dateTime->format('Y'));
+        $this->getMonthPicker()->selectOption($dateTime->format('M'));
         $this->getCalendarDate($dateTime->format('j'))->click();
 
-        $this->getTimePicker()->setValue($dateTime);
+        if ($this->getElements('TimePicker')) {
+            $this->getTimePicker()->setValue($dateTime);
+        }
+    }
+
+    protected function open()
+    {
+        if (!$this->isOpened()) {
+            $this->getDatePicker()->click();
+        }
+    }
+
+    protected function close()
+    {
+        if ($this->isOpened()) {
+            $this->getDatePicker()->click();
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getHeader()
+    {
+        $this->open();
+
+        $container = $this->findVisible('css', 'table.ui-datepicker-calendar');
+
+        $header = array_map(
+            function (NodeElement $element) {
+                return $element->getText();
+            },
+            $container->findAll('css', 'thead th > span')
+        );
+
+        $this->close();
+
+        return $header;
     }
 
     /**
@@ -28,7 +62,7 @@ class DateTimePicker extends Element
      */
     protected function getMonthPicker()
     {
-        return $this->findVisible('css', '.ui-datepicker-month');
+        return $this->getDatePickerHeader()->find('css', '.ui-datepicker-month');
     }
 
     /**
@@ -36,7 +70,15 @@ class DateTimePicker extends Element
      */
     protected function getYearPicker()
     {
-        return $this->findVisible('css', '.ui-datepicker-year');
+        return $this->getDatePickerHeader()->find('css', '.ui-datepicker-year');
+    }
+
+    /**
+     * @return NodeElement|null
+     */
+    protected function getDatePickerHeader()
+    {
+        return $this->findVisible('css', '.ui-datepicker-header');
     }
 
     /**
@@ -70,5 +112,19 @@ class DateTimePicker extends Element
     protected function getCalendarDate($dateValue)
     {
         return $this->getCalendar()->find('css', "tbody a:contains('$dateValue')");
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isOpened()
+    {
+        $class = $this->getDatePicker()->getAttribute('class');
+
+        if ($class !== null) {
+            return preg_match('/\bui-datepicker-dialog-is-(below|above)\b/', $class) === 1;
+        }
+
+        return false;
     }
 }

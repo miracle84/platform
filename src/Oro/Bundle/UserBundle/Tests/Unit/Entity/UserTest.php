@@ -4,7 +4,6 @@ namespace Oro\Bundle\UserBundle\Tests\Unit\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
-
 use Oro\Bundle\EmailBundle\Entity\InternalEmailOrigin;
 use Oro\Bundle\ImapBundle\Form\Model\AccountTypeModel;
 use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
@@ -38,25 +37,6 @@ class UserTest extends AbstractUserTest
         $this->assertEquals($mail, $user->getEmail());
     }
 
-    public function testSetRolesCollection()
-    {
-        $user = $this->getUser();
-        $role = new Role(User::ROLE_DEFAULT);
-        $roles = new ArrayCollection([$role]);
-        $user->setRolesCollection($roles);
-        $this->assertSame($roles, $user->getRolesCollection());
-    }
-
-    /**
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage $collection must be an instance of Doctrine\Common\Collections\Collection
-     */
-    public function testSetRolesCollectionThrowsException()
-    {
-        $user = $this->getUser();
-        $user->setRolesCollection([]);
-    }
-
     public function testGroups()
     {
         $user = $this->getUser();
@@ -77,13 +57,6 @@ class UserTest extends AbstractUserTest
         $user->removeGroup($group);
 
         $this->assertFalse($user->hasRole($role));
-    }
-
-    public function testCallbacks()
-    {
-        $user = $this->getUser();
-        $user->beforeSave();
-        $this->assertInstanceOf('\DateTime', $user->getCreatedAt());
     }
 
     public function testStatuses()
@@ -176,6 +149,15 @@ class UserTest extends AbstractUserTest
         ];
     }
 
+    public function testBeforeSave()
+    {
+        $user = $this->getUser();
+        $user->beforeSave();
+        $this->assertInstanceOf(\DateTime::class, $user->getCreatedAt());
+        $this->assertInstanceOf(\DateTime::class, $user->getUpdatedAt());
+        $this->assertEquals(0, $user->getLoginCount());
+    }
+
     public function testPreUpdateUnChanged()
     {
         $changeSet = [
@@ -187,7 +169,7 @@ class UserTest extends AbstractUserTest
         $updatedAt = new \DateTime('2015-01-01');
         $user->setUpdatedAt($updatedAt);
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|PreUpdateEventArgs $event */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|PreUpdateEventArgs $event */
         $event = $this->getMockBuilder('Doctrine\ORM\Event\PreUpdateEventArgs')
             ->disableOriginalConstructor()
             ->getMock();
@@ -207,7 +189,7 @@ class UserTest extends AbstractUserTest
         $updatedAt = new \DateTime('2015-01-01');
         $user->setUpdatedAt($updatedAt);
 
-        /** @var \PHPUnit_Framework_MockObject_MockObject|PreUpdateEventArgs $event */
+        /** @var \PHPUnit\Framework\MockObject\MockObject|PreUpdateEventArgs $event */
         $event = $this->getMockBuilder('Doctrine\ORM\Event\PreUpdateEventArgs')
             ->disableOriginalConstructor()
             ->getMock();
@@ -429,5 +411,13 @@ class UserTest extends AbstractUserTest
         $result = $user->getOrganizations(true);
         $this->assertCount(1, $result);
         $this->assertSame($result->first(), $organization);
+    }
+
+    public function testSetEmailGetEmailLowercase()
+    {
+        $user = $this->getUser();
+        $user->setEmail('John.Doe@example.org');
+
+        $this->assertEquals('john.doe@example.org', $user->getEmailLowercase());
     }
 }

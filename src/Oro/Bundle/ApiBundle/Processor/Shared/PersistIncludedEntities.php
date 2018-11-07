@@ -2,10 +2,10 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Processor\FormContext;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Makes all new included entities persistent.
@@ -38,7 +38,7 @@ class PersistIncludedEntities implements ProcessorInterface
 
         $includedEntities = $context->getIncludedEntities();
         if (null === $includedEntities) {
-            // the Context does not have included entities
+            // the context does not have included entities
             return;
         }
 

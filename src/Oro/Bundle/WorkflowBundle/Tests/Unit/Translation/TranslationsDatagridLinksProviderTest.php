@@ -5,22 +5,21 @@ namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Translation;
 use Oro\Bundle\TranslationBundle\Helper\TranslationsDatagridRouteHelper;
 use Oro\Bundle\TranslationBundle\Provider\LanguageProvider;
 use Oro\Bundle\TranslationBundle\Translation\KeySource\TranslationKeySource;
-
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Translation\KeyTemplate\WorkflowTemplate;
 use Oro\Bundle\WorkflowBundle\Translation\TranslationsDatagridLinksProvider;
 
-class TranslationsDatagridLinksProviderTest extends \PHPUnit_Framework_TestCase
+class TranslationsDatagridLinksProviderTest extends \PHPUnit\Framework\TestCase
 {
     const NODE = 'test_node';
     const ATTRIBUTE_NAME = 'test_attr_name';
     const WORKFLOW_LABEL = 'test.workflow.label.key';
 
-    /** @var TranslationsDatagridRouteHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationsDatagridRouteHelper|\PHPUnit\Framework\MockObject\MockObject */
     private $routeHelper;
 
-    /** @var LanguageProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LanguageProvider|\PHPUnit\Framework\MockObject\MockObject */
     private $languageProvider;
 
     /** @var TranslationsDatagridLinksProvider */
@@ -92,6 +91,9 @@ class TranslationsDatagridLinksProviderTest extends \PHPUnit_Framework_TestCase
                     WorkflowConfiguration::NODE_STEPS => [],
                     WorkflowConfiguration::NODE_TRANSITIONS => [],
                     WorkflowConfiguration::NODE_ATTRIBUTES => [],
+                    WorkflowConfiguration::NODE_VARIABLE_DEFINITIONS => [
+                        WorkflowConfiguration::NODE_VARIABLES => [],
+                    ],
                 ],
             ],
             'full' => [
@@ -100,6 +102,8 @@ class TranslationsDatagridLinksProviderTest extends \PHPUnit_Framework_TestCase
                     WorkflowConfiguration::NODE_TRANSITIONS => [
                         'trans1' => [
                             'label' => 'trans_label1',
+                            'button_label' => 'trans_button_label1',
+                            'button_title' => 'trans_button_title1',
                             'message' => 'trans_message1',
                             'form_options' => [
                                 'attribute_fields' => [
@@ -111,7 +115,17 @@ class TranslationsDatagridLinksProviderTest extends \PHPUnit_Framework_TestCase
                                 ]
                             ]
                         ]
-                    ]
+                    ],
+                    WorkflowConfiguration::NODE_VARIABLE_DEFINITIONS => [
+                        WorkflowConfiguration::NODE_VARIABLES => [
+                            'var1' => [
+                                'label' => 'var_label',
+                                'form_options' => [
+                                    'tooltip' => 'var_tootltip',
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
                 'languagesAvailable' => true,
                 'expected' => [
@@ -120,12 +134,19 @@ class TranslationsDatagridLinksProviderTest extends \PHPUnit_Framework_TestCase
                     WorkflowConfiguration::NODE_TRANSITIONS => [
                         'trans1' => [
                             'label' => 'link_to_trans_label1',
+                            'button_label' => 'link_to_trans_button_label1',
+                            'button_title' => 'link_to_trans_button_title1',
                             'message' => 'link_to_trans_message1'
                         ]
                     ],
                     WorkflowConfiguration::NODE_ATTRIBUTES => ['attr1' => [
                         'trans1' => ['label' => 'link_to_attr_label1']]
-                    ]
+                    ],
+                    WorkflowConfiguration::NODE_VARIABLE_DEFINITIONS => [
+                        WorkflowConfiguration::NODE_VARIABLES => [
+                            'var1' => 'link_to_var1',
+                        ],
+                    ],
                 ],
             ],
             'full, languages not available' => [

@@ -2,25 +2,25 @@
 
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Form\Handler;
 
-use Symfony\Component\HttpFoundation\Request;
-
 use Oro\Bundle\EmailBundle\Form\Handler\EmailHandler;
 use Oro\Bundle\EmailBundle\Form\Model\Email;
-use Oro\Bundle\EmailBundle\Tests\Unit\Fixtures\Entity\TestUser;
-use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
-class EmailHandlerTest extends \PHPUnit_Framework_TestCase
+class EmailHandlerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    const FORM_DATA = ['field' => 'value'];
+
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $form;
 
     /** @var Request */
     protected $request;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $emailProcessor;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $logger;
 
     /** @var EmailHandler */
@@ -36,6 +36,8 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
             ->getMock();
 
         $this->request             = new Request();
+        $requestStack = new RequestStack();
+        $requestStack->push($this->request);
 
         $this->emailProcessor      = $this->getMockBuilder('Oro\Bundle\EmailBundle\Mailer\Processor')
             ->disableOriginalConstructor()
@@ -47,7 +49,7 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
 
         $this->handler = new EmailHandler(
             $this->form,
-            $this->request,
+            $requestStack,
             $this->emailProcessor,
             $this->logger
         );
@@ -76,6 +78,7 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testProcessData($method, $valid, $assert)
     {
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod($method);
         $this->model
             ->setFrom('from@example.com')
@@ -90,7 +93,7 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
         if (in_array($method, ['POST', 'PUT'])) {
             $this->form->expects($this->once())
                 ->method('submit')
-                ->with($this->request);
+                ->with(self::FORM_DATA);
 
             $this->form->expects($this->once())
                 ->method('isValid')
@@ -113,6 +116,7 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testProcessException($method)
     {
+        $this->request->initialize([], self::FORM_DATA);
         $this->request->setMethod($method);
         $this->model
             ->setFrom('from@example.com')
@@ -126,7 +130,7 @@ class EmailHandlerTest extends \PHPUnit_Framework_TestCase
 
         $this->form->expects($this->once())
             ->method('submit')
-            ->with($this->request);
+            ->with(self::FORM_DATA);
 
         $this->form->expects($this->once())
             ->method('isValid')

@@ -5,11 +5,16 @@ namespace Oro\Bundle\DistributionBundle\Controller;
 use Oro\Bundle\DistributionBundle\Entity\PackageRequirement;
 use Oro\Bundle\DistributionBundle\Exception\VerboseException;
 use Oro\Bundle\DistributionBundle\Manager\PackageManager;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\Response;
+use Oro\Bundle\HelpBundle\Annotation\Help;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * @Help(link="https://www.oroinc.com/doc/orocommerce/current/install-upgrade")
+ */
 class PackageController extends Controller
 {
     const CODE_INSTALLED = 0;
@@ -19,9 +24,9 @@ class PackageController extends Controller
 
     protected function setUpEnvironment()
     {
-        $kernelRootDir = $this->container->getParameter('kernel.root_dir');
+        $kernelProjectDir = $this->container->getParameter('kernel.project_dir');
         putenv(sprintf('COMPOSER_HOME=%s', $this->container->getParameter('oro_distribution.composer_cache_home')));
-        chdir(realpath($kernelRootDir . '/../'));
+        chdir(realpath($kernelProjectDir . '/'));
         set_time_limit(0);
     }
 
@@ -88,12 +93,16 @@ class PackageController extends Controller
 
     /**
      * @Route("/package/install")
+     *
+     * @param Request $request
+     *
+     * @return Response
      */
-    public function installAction()
+    public function installAction(Request $request)
     {
         $this->setUpEnvironment();
 
-        $params = $this->getRequest()->get('params');
+        $params = $request->get('params');
         $packageName = $this->getParamValue($params, 'packageName', null);
         $packageVersion = $this->getParamValue($params, 'version', null);
         $loadDemoData = $this->getParamValue($params, 'loadDemoData', null);
@@ -109,7 +118,7 @@ class PackageController extends Controller
         if ($manager->isPackageInstalled($packageName)) {
             $responseContent = [
                 'code' => self::CODE_ERROR,
-                'message' => 'Package has already been installed'
+                'message' => $this->trans('oro.distribution.package.already_installed'),
             ];
             $response->setContent(json_encode($responseContent));
 
@@ -163,12 +172,16 @@ class PackageController extends Controller
 
     /**
      * @Route("/package/update")
+     *
+     * @param Request $request
+     *
+     * @return Response
      */
-    public function updateAction()
+    public function updateAction(Request $request)
     {
         $this->setUpEnvironment();
 
-        $params = $this->getRequest()->get('params');
+        $params = $request->get('params');
         $packageName = $this->getParamValue($params, 'packageName', null);
 
         /** @var PackageManager $manager */
@@ -179,7 +192,7 @@ class PackageController extends Controller
         if (!$manager->isPackageInstalled($packageName)) {
             $responseContent = [
                 'code' => self::CODE_ERROR,
-                'message' => sprintf('Package %s is not yet installed', $packageName)
+                'message' => $this->trans('oro.distribution.package.not_installed', ['%package%' => $packageName]),
             ];
             $response->setContent(json_encode($responseContent));
 
@@ -189,7 +202,7 @@ class PackageController extends Controller
         if (!$manager->isUpdateAvailable($packageName)) {
             $responseContent = [
                 'code' => self::CODE_ERROR,
-                'message' => sprintf('No updates available for package %s', $packageName)
+                'message' => $this->trans('oro.distribution.package.no_updates', ['%package%' => $packageName]),
             ];
             $response->setContent(json_encode($responseContent));
 
@@ -246,16 +259,27 @@ class PackageController extends Controller
     protected function getNotWritablePaths()
     {
         $paths = $this->container->getParameter('oro_distribution.package_manager.system_paths');
-        $kernelRootDir = $this->container->getParameter('kernel.root_dir');
+        $kernelProjectDir = $this->container->getParameter('kernel.project_dir');
 
         $notWritablePaths = [];
         foreach ($paths as $path) {
-            $realPath = realpath($kernelRootDir . '/../' . $path);
+            $realPath = realpath($kernelProjectDir . '/' . $path);
             if (!is_writable($realPath)) {
                 $notWritablePaths[] = $path;
             }
         }
 
         return $notWritablePaths;
+    }
+
+    /**
+     * @param $key
+     * @param array $params
+     *
+     * @return string
+     */
+    private function trans($key, $params = [])
+    {
+        return $this->get('translator')->trans($key, $params);
     }
 }

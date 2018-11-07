@@ -24,17 +24,28 @@ define([
         privileges: null,
 
         $form: null,
+
         $privileges: null,
+
         $appendUsers: null,
+
         $removeUsers: null,
+
         $fields: null,
 
         events: {
-            'click': 'onSubmit'
+            click: 'onSubmit'
         },
 
         listen: {
             'securityAccessLevelsComponent:link:click mediator': 'onAccessLevelsLinkClicked'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function RoleView() {
+            RoleView.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -141,7 +152,7 @@ define([
                         value = element.is(':checked') ? 1 : 0;
 
                         if (value === 0) { // do not send the value of checkbox,
-                            return;       // it will be set as false in the backend
+                            return; // it will be set as false in the backend
                         }
                     }
 

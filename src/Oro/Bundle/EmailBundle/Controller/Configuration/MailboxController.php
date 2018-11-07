@@ -3,27 +3,23 @@
 namespace Oro\Bundle\EmailBundle\Controller\Configuration;
 
 use FOS\RestBundle\Controller\Annotations\Delete;
-
+use Oro\Bundle\EmailBundle\Entity\Mailbox;
+use Oro\Bundle\FormBundle\Model\AutocompleteRequest;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-use Oro\Bundle\EmailBundle\Entity\Mailbox;
-use Oro\Bundle\FormBundle\Model\AutocompleteRequest;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
-
 /**
  * Class MailboxController
  *
  * Actions in this controller are protected by MailboxAuthorizationListener because access to them is determined
  * by access to Organization entity which is not even always available.
- * @see Oro\Bundle\EmailBundle\EventListener\MailboxAuthorizationListener
+ * @see \Oro\Bundle\EmailBundle\EventListener\MailboxAuthorizationListener
  *
  * @package Oro\Bundle\EmailBundle\Controller\Configuration
  */
@@ -67,7 +63,7 @@ class MailboxController extends Controller
 
         list($activeGroup, $activeSubGroup) = $provider->chooseActiveGroups(self::ACTIVE_GROUP, self::ACTIVE_SUBGROUP);
 
-        $tree = $provider->getTree();
+        $jsTree = $provider->getJsTree();
 
         $handler = $this->get('oro_email.form.handler.mailbox');
 
@@ -91,7 +87,7 @@ class MailboxController extends Controller
         }
 
         return [
-            'data'           => $tree,
+            'data'           => $jsTree,
             'form'           => $handler->getForm()->createView(),
             'activeGroup'    => $activeGroup,
             'activeSubGroup' => $activeSubGroup,
@@ -100,34 +96,16 @@ class MailboxController extends Controller
     }
 
     /**
-     * @Route(
-     *      "/mailbox/create/{organization_id}",
-     *      name="oro_email_mailbox_create",
-     *      defaults={"organization_id"=null}
-     * )
-     * @ParamConverter(
-     *      "organization",
-     *      class="OroOrganizationBundle:Organization",
-     *      isOptional=true,
-     *      options={"id"="organization_id"}
-     * )
+     * @Route("/mailbox/create", name="oro_email_mailbox_create")
      * @Template("OroEmailBundle:Configuration/Mailbox:update.html.twig")
      *
      * @param Request      $request
-     * @param Organization $organization
      *
      * @return array
      */
-    public function createAction(Request $request, Organization $organization = null)
+    public function createAction(Request $request)
     {
-        $data = new Mailbox();
-        if ($organization != null) {
-            $data->setOrganization($organization);
-        } else {
-            $data->setOrganization($this->get('oro_security.security_facade')->getOrganization());
-        }
-
-        return $this->update($data, $request);
+        return $this->update(new Mailbox(), $request);
     }
 
     /**

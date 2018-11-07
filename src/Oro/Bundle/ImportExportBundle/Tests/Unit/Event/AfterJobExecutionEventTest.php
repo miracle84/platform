@@ -3,11 +3,10 @@
 namespace Oro\Bundle\ImportExportBundle\Tests\Unit\Event;
 
 use Akeneo\Bundle\BatchBundle\Entity\JobExecution;
-
 use Oro\Bundle\ImportExportBundle\Event\AfterJobExecutionEvent;
 use Oro\Bundle\ImportExportBundle\Job\JobResult;
 
-class AfterJobExecutionEventTest extends \PHPUnit_Framework_TestCase
+class AfterJobExecutionEventTest extends \PHPUnit\Framework\TestCase
 {
     public function testEvent()
     {

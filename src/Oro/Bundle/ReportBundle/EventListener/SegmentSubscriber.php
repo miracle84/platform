@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\ReportBundle\EventListener;
 
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-
 use Oro\Bundle\SegmentBundle\Event\ConditionBuilderOptionsLoadEvent;
 use Oro\Bundle\SegmentBundle\Event\WidgetOptionsLoadEvent;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class SegmentSubscriber implements EventSubscriberInterface
 {
@@ -47,10 +46,8 @@ class SegmentSubscriber implements EventSubscriberInterface
         $event->setOptions(array_merge_recursive(
             $event->getOptions(),
             [
-                'onFieldsUpdate' => [
-                    'toggleCriteria' => [
-                        'aggregated-condition-item',
-                    ],
+                'fieldsRelatedCriteria' => [
+                    'aggregated-condition-item',
                 ],
             ]
         ));

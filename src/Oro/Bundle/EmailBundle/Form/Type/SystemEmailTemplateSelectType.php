@@ -3,13 +3,12 @@
 namespace Oro\Bundle\EmailBundle\Form\Type;
 
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\CallbackTransformer;
-use Symfony\Component\OptionsResolver\OptionsResolverInterface;
-
 use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
+use Oro\Bundle\TranslationBundle\Form\Type\Select2TranslatableEntityType;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\CallbackTransformer;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class SystemEmailTemplateSelectType extends AbstractType
 {
@@ -29,11 +28,12 @@ class SystemEmailTemplateSelectType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function setDefaultOptions(OptionsResolverInterface $resolver)
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
             'query_builder' => $this->getRepository()->getSystemTemplatesQueryBuilder(),
             'class' => 'OroEmailBundle:EmailTemplate',
+            'choice_label' => 'name',
             'choice_value' => 'name',
         ]);
     }
@@ -79,7 +79,7 @@ class SystemEmailTemplateSelectType extends AbstractType
      */
     public function getParent()
     {
-        return 'genemu_jqueryselect2_translatable_entity';
+        return Select2TranslatableEntityType::class;
     }
 
     /**

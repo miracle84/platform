@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\UserBundle\Validator;
 
+use Oro\Bundle\UserBundle\Provider\PasswordComplexityConfigProvider;
+use Oro\Bundle\UserBundle\Validator\Constraints\PasswordComplexity;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
-
-use Oro\Bundle\UserBundle\Provider\PasswordComplexityConfigProvider;
-use Oro\Bundle\UserBundle\Validator\Constraints\PasswordComplexity;
 
 /**
  * Validates a password against requirements from the constraint or stored in the system config (if not set)
@@ -45,7 +44,7 @@ class PasswordComplexityValidator extends ConstraintValidator
             throw new UnexpectedTypeException($constraint, PasswordComplexity::class);
         }
 
-        if (empty($value)) {
+        if (null === $value || '' === $value) {
             return;
         }
 

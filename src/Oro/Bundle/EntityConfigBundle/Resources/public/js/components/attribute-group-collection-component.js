@@ -9,7 +9,6 @@ define(function(require) {
     var Modal = require('oroui/js/modal');
 
     AttributeGroupComponent = BaseComponent.extend({
-
         /**
          * @property {Object}
          */
@@ -26,6 +25,13 @@ define(function(require) {
          * @property {String}
          */
         removeBtn: '.removeRow.btn-link',
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function AttributeGroupComponent() {
+            AttributeGroupComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @inheritDoc
@@ -51,13 +57,13 @@ define(function(require) {
                 }
                 return true;
             });
-            //temporary width fix
+            // temporary width fix
             $(this.options._sourceElement).parents().find('.oro-item-collection .row-oro').width(960);
         },
 
         showConfirmModal: function(removeBtn) {
             var confirmDialog = new Modal({
-                title:  _.__('oro.attribute.remove_confirmation_title'),
+                title: _.__('oro.attribute.remove_confirmation_title'),
                 content: _.__('oro.attribute.remove_confirmation_text'),
                 className: 'modal oro-modal-danger'
             });

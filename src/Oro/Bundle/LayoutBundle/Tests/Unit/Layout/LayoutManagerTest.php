@@ -2,6 +2,7 @@
 
 namespace Oro\Bundle\LayoutBundle\Tests\Unit\Layout;
 
+use Oro\Bundle\LayoutBundle\DataCollector\LayoutDataCollector;
 use Oro\Bundle\LayoutBundle\Layout\LayoutContextHolder;
 use Oro\Bundle\LayoutBundle\Layout\LayoutManager;
 use Oro\Component\Layout\Layout;
@@ -10,16 +11,19 @@ use Oro\Component\Layout\LayoutContext;
 use Oro\Component\Layout\LayoutFactoryBuilderInterface;
 use Oro\Component\Layout\LayoutFactoryInterface;
 
-class LayoutManagerTest extends \PHPUnit_Framework_TestCase
+class LayoutManagerTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var LayoutBuilderInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LayoutBuilderInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $builder;
 
-    /** @var LayoutContextHolder|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LayoutContextHolder|\PHPUnit\Framework\MockObject\MockObject */
     protected $contextHolder;
 
     /** @var LayoutManager */
     private $manager;
+
+    /** @var LayoutDataCollector|\PHPUnit\Framework\MockObject\MockObject */
+    private $layoutDataCollector;
 
     protected function setUp()
     {
@@ -36,7 +40,11 @@ class LayoutManagerTest extends \PHPUnit_Framework_TestCase
             ->method('getLayoutFactory')
             ->willReturn($factory);
 
-        $this->manager = new LayoutManager($factoryBuilder, $this->contextHolder);
+        $this->layoutDataCollector = $this->getMockBuilder(LayoutDataCollector::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->manager = new LayoutManager($factoryBuilder, $this->contextHolder, $this->layoutDataCollector);
     }
 
     public function testGetLayout()
@@ -52,6 +60,13 @@ class LayoutManagerTest extends \PHPUnit_Framework_TestCase
         $this->builder->expects($this->once())
             ->method('add')
             ->with('root', null, 'root');
+
+        $this->builder->expects($this->once())
+            ->method('getNotAppliedActions')
+            ->willReturn([]);
+
+        $this->layoutDataCollector->expects($this->once())
+            ->method('setNotAppliedActions');
 
         $this->contextHolder->expects($this->once())
             ->method('setContext')
@@ -83,6 +98,13 @@ class LayoutManagerTest extends \PHPUnit_Framework_TestCase
         $this->builder->expects($this->once())
             ->method('add')
             ->with('root', null, 'root');
+
+        $this->builder->expects($this->once())
+            ->method('getNotAppliedActions')
+            ->willReturn([]);
+
+        $this->layoutDataCollector->expects($this->once())
+            ->method('setNotAppliedActions');
 
         $this->contextHolder->expects($this->once())
             ->method('setContext')

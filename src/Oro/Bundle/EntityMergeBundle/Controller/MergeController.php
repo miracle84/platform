@@ -3,23 +3,22 @@
 namespace Oro\Bundle\EntityMergeBundle\Controller;
 
 use Doctrine\ORM\EntityManager;
-
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\ConstraintViolation;
-use Symfony\Component\Validator\ValidatorInterface;
-
-use Oro\Bundle\EntityMergeBundle\Exception\ValidationException;
 use Oro\Bundle\DataGridBundle\Extension\MassAction\MassActionDispatcher;
 use Oro\Bundle\EntityMergeBundle\Data\EntityData;
 use Oro\Bundle\EntityMergeBundle\Data\EntityDataFactory;
 use Oro\Bundle\EntityMergeBundle\Doctrine\DoctrineHelper;
+use Oro\Bundle\EntityMergeBundle\Exception\ValidationException;
+use Oro\Bundle\EntityMergeBundle\Form\Type\MergeType;
 use Oro\Bundle\EntityMergeBundle\Model\EntityMerger;
 use Oro\Bundle\SecurityBundle\Annotation\Acl;
 use Oro\Bundle\SecurityBundle\Annotation\AclAncestor;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Validator\ConstraintViolation;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @Route("/merge")
@@ -31,20 +30,24 @@ class MergeController extends Controller
      * @Route("/{gridName}/massAction/{actionName}", name="oro_entity_merge_massaction")
      * @AclAncestor("oro_entity_merge")
      * @Template("OroEntityMergeBundle:Merge:merge.html.twig")
+     * @param Request $request
+     * @param string $gridName
+     * @param string $actionName
+     * @return array|RedirectResponse
      */
-    public function mergeMassActionAction($gridName, $actionName)
+    public function mergeMassActionAction(Request $request, $gridName, $actionName)
     {
         /** @var MassActionDispatcher $massActionDispatcher */
-        $massActionDispatcher = $this->get('oro_datagrid.mass_action.dispatcher');
+        $massActionDispatcher = $this->get('oro_entity_merge.mass_action.dispatcher');
 
-        $response = $massActionDispatcher->dispatchByRequest($gridName, $actionName, $this->getRequest());
+        $response = $massActionDispatcher->dispatchByRequest($gridName, $actionName, $request);
 
         $entityData = $this->getEntityDataFactory()->createEntityData(
             $response->getOption('entity_name'),
             $response->getOption('entities')
         );
 
-        return $this->mergeAction($entityData);
+        return $this->mergeAction($request, $entityData);
     }
 
     /**
@@ -56,19 +59,22 @@ class MergeController extends Controller
      *      category="entity"
      * )
      * @Template()
+     * @param Request $request
+     * @param EntityData|null $entityData
+     * @return array|RedirectResponse
      */
-    public function mergeAction(EntityData $entityData = null)
+    public function mergeAction(Request $request, EntityData $entityData = null)
     {
         if (!$entityData) {
-            $className = $this->getRequest()->get('className');
-            $ids = (array)$this->getRequest()->get('ids');
+            $className = $request->get('className');
+            $ids = (array)$request->get('ids');
 
             $entityData = $this->getEntityDataFactory()->createEntityDataByIds($className, $ids);
         } else {
             $className = $entityData->getClassName();
         }
 
-        $constraintViolations = $this->getValidator()->validate($entityData, ['validateCount']);
+        $constraintViolations = $this->getValidator()->validate($entityData, null, ['validateCount']);
         if ($constraintViolations->count()) {
             foreach ($constraintViolations as $violation) {
                 /* @var ConstraintViolation $violation */
@@ -82,17 +88,17 @@ class MergeController extends Controller
         }
 
         $form = $this->createForm(
-            'oro_entity_merge',
+            MergeType::class,
             $entityData,
-            array(
+            [
                 'metadata' => $entityData->getMetadata(),
                 'entities' => $entityData->getEntities(),
-            )
+            ]
         );
 
-        if ($this->getRequest()->isMethod('POST')) {
-            $form->submit($this->getRequest());
-            if ($form->isValid()) {
+        if ($request->isMethod('POST')) {
+            $form->handleRequest($request);
+            if ($form->isSubmitted() && $form->isValid()) {
                 $merger = $this->getEntityMerger();
 
                 try {
@@ -120,24 +126,24 @@ class MergeController extends Controller
                 return $this->redirect(
                     $this->generateUrl(
                         $this->getEntityViewRoute($entityData->getClassName()),
-                        array('id' => $entityData->getMasterEntity()->getId())
+                        ['id' => $entityData->getMasterEntity()->getId()]
                     )
                 );
             }
         }
 
-        return array(
+        return [
             'formAction' => $this->generateUrl(
                 'oro_entity_merge',
-                array(
+                [
                     'className' => $className,
                     'ids' => $this->getDoctineHelper()->getEntityIds($entityData->getEntities()),
-                )
+                ]
             ),
             'entityLabel' => $entityData->getMetadata()->get('label'),
             'cancelPath' => $this->generateUrl($this->getEntityIndexRoute($className)),
             'form' => $form->createView()
-        );
+        ];
     }
 
     /**

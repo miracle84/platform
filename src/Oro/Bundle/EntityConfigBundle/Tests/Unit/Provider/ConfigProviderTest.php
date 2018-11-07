@@ -4,23 +4,21 @@ namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Provider;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\PersistentCollection;
-
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\Mocks\ConnectionMock;
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\Mocks\EntityManagerMock;
-use Oro\Bundle\TestFrameworkBundle\Test\Doctrine\ORM\Mocks\DriverMock;
-
-use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
-
 use Oro\Bundle\EntityConfigBundle\Config\Config;
+use Oro\Bundle\EntityConfigBundle\Config\ConfigInterface;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
+use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigBag;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\Fixture\DemoEntity;
+use Oro\Component\TestUtils\ORM\Mocks\ConnectionMock;
+use Oro\Component\TestUtils\ORM\Mocks\DriverMock;
+use Oro\Component\TestUtils\ORM\Mocks\EntityManagerMock;
 
-class ConfigProviderTest extends \PHPUnit_Framework_TestCase
+class ConfigProviderTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $configManager;
 
@@ -58,7 +56,11 @@ class ConfigProviderTest extends \PHPUnit_Framework_TestCase
         $this->configManager->expects($this->any())->method('persist')->will($this->returnValue(true));
         $this->configManager->expects($this->any())->method('flush')->will($this->returnValue(true));
 
-        $this->configProvider  = new ConfigProvider($this->configManager, 'testScope', array());
+        $this->configProvider  = new ConfigProvider(
+            $this->configManager,
+            'testScope',
+            new PropertyConfigBag([])
+        );
     }
 
     /**
@@ -91,12 +93,6 @@ class ConfigProviderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($this->entityConfig, $this->configProvider->getConfigById($entityConfigIdWithOtherScope));
     }
 
-    public function testPersistFlush()
-    {
-        $this->configProvider->persist($this->entityConfig);
-        $this->configProvider->flush();
-    }
-
     public function testGetClassName()
     {
         $this->assertEquals(DemoEntity::ENTITY_NAME, $this->configProvider->getClassName(DemoEntity::ENTITY_NAME));
@@ -120,17 +116,6 @@ class ConfigProviderTest extends \PHPUnit_Framework_TestCase
 
         $this->expectException('Oro\Bundle\EntityConfigBundle\Exception\RuntimeException');
         $this->assertEquals(DemoEntity::ENTITY_NAME, $this->configProvider->getClassName(array()));
-    }
-
-    public function testClearCache()
-    {
-        $this->configManager
-            ->expects($this->once())
-            ->method('clearCache')
-            ->with(new EntityConfigId('testScope', DemoEntity::ENTITY_NAME))
-            ->will($this->returnValue(true));
-
-        $this->configProvider->clearCache(DemoEntity::ENTITY_NAME);
     }
 
     public function testGetIds()

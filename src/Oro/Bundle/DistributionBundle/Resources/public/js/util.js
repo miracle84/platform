@@ -1,13 +1,14 @@
-/*global $, bootbox, Util*/
-/*jshint -W098*/
+/* global $, bootbox, Util */
+// eslint-disable-next-line no-unused-vars
 function Util(rootMessagesElements) {
     'use strict';
 
     rootMessagesElements = rootMessagesElements || $('#alerts');
 
-    var messageTemplate = '<div class="alert fade in alert-{message-type}"> ' +
-        '<i class="fa-{message-type}"></i>' +
-        '<button type="button" class="close" data-dismiss="alert">&times;</button> ' +
+    var messageTemplate = '<div class="alert fade in alert-{message-type} alert-dismissible" role="alert"> ' +
+        '<span class="fa-{message-type}" aria-hidden="true"></span>' +
+        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+        '<span aria-hidden="true">&times;</span></button> ' +
         '{message} ' +
         '</div>';
 
@@ -16,12 +17,12 @@ function Util(rootMessagesElements) {
         message: 'Test message. Just a stub',
         className: 'confirm-dialog',
         buttons: {
-            cancel: {
+            'cancel': {
                 label: 'Cancel',
                 callback: function() {
                 }
             },
-            continue: {
+            'continue': {
                 className: 'btn-danger',
                 callback: function() {
                 }
@@ -56,10 +57,10 @@ function Util(rootMessagesElements) {
                 message: message,
                 onEscape: cancelCallback,
                 buttons: {
-                    cancel: {
+                    'cancel': {
                         callback: cancelCallback
                     },
-                    continue: {
+                    'continue': {
                         label: continueLabel,
                         callback: continueCallback
                     }

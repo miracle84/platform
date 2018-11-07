@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Condition;
 
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Bundle\ActionBundle\Condition\CollectionElementValueExists;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class CollectionElementValueExistsTest extends \PHPUnit_Framework_TestCase
+class CollectionElementValueExistsTest extends \PHPUnit\Framework\TestCase
 {
     /** @var CollectionElementValueExists */
     protected $condition;

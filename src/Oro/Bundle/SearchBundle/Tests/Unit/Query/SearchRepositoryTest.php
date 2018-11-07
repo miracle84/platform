@@ -2,20 +2,20 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Query;
 
+use Oro\Bundle\SearchBundle\Provider\AbstractSearchMappingProvider;
+use Oro\Bundle\SearchBundle\Query\Factory\QueryFactoryInterface;
 use Oro\Bundle\SearchBundle\Query\SearchQueryInterface;
 use Oro\Bundle\SearchBundle\Query\SearchRepository;
-use Oro\Bundle\SearchBundle\Query\Factory\QueryFactoryInterface;
-use Oro\Bundle\SearchBundle\Provider\AbstractSearchMappingProvider;
 
-class SearchRepositoryTest extends \PHPUnit_Framework_TestCase
+class SearchRepositoryTest extends \PHPUnit\Framework\TestCase
 {
     /** @var SearchRepository */
     protected $repository;
 
-    /** @var QueryFactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var QueryFactoryInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $queryFactory;
 
-    /** @var AbstractSearchMappingProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var AbstractSearchMappingProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $mappingProvider;
 
     protected function setUp()

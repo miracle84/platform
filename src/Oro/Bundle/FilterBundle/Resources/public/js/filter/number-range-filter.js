@@ -1,13 +1,13 @@
-define([
-    'jquery',
-    'underscore',
-    'orotranslation/js/translator',
-    'oroui/js/tools',
-    'oro/filter/number-filter'
-], function($, _, __, tools, NumberFilter) {
+define(function(require) {
     'use strict';
 
     var NumberRangeFilter;
+    var template = require('tpl!orofilter/templates/filter/number-range-filter.html');
+    var $ = require('jquery');
+    var _ = require('underscore');
+    var __ = require('orotranslation/js/translator');
+    var tools = require('oroui/js/tools');
+    var NumberFilter = require('oro/filter/number-filter');
 
     NumberRangeFilter = NumberFilter.extend({
 
@@ -16,6 +16,7 @@ define([
          *
          * @property
          */
+        template: template,
         templateSelector: '#number-range-filter-template',
 
         /**
@@ -33,7 +34,7 @@ define([
          * @property {Object}
          */
         typeValues: {
-            between:    7,
+            between: 7,
             notBetween: 8
         },
 
@@ -53,6 +54,13 @@ define([
          * @property
          */
         autoUpdateRangeFilterType: true,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function NumberRangeFilter() {
+            NumberRangeFilter.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initialize.
@@ -105,7 +113,9 @@ define([
                 this.$('.filter-separator, .filter-end').show();
             } else {
                 this.$('.filter-separator, .filter-end').hide();
-                this._setInputValue(this.criteriaValueSelectors.value_end, this.emptyValue.value_end);
+
+                this.value.value_end = this.emptyValue.value_end;
+                this._setInputValue(this.criteriaValueSelectors.value_end, this.value.value_end);
             }
         },
 
@@ -145,7 +155,6 @@ define([
          * @inheritDoc
          */
         _getCriteriaHint: function() {
-
             if (this.isEmptyValue()) {
                 return this.placeholder;
             }
@@ -194,8 +203,8 @@ define([
             var oldValue = tools.deepClone(value);
             if (this.isApplicable(value.type)) {
                 if (value.value && value.value_end) {
-                    //if both values are filled
-                    //start/end values if end value is lower than start
+                    // if both values are filled
+                    // start/end values if end value is lower than start
                     if (value.value_end < value.value) {
                         var endValue = value.value_end;
                         value.value_end = value.value;
@@ -204,21 +213,21 @@ define([
                 } else {
                     if (value.value || value.value_end) {
                         var type = parseInt(value.type);
-                        //if only one value is filled, replace filter type to less than or more than
+                        // if only one value is filled, replace filter type to less than or more than
                         if (value.value_end) {
-                            value.type = type === this.typeValues.between ?
-                                this.fallbackTypeValues.lessThan : this.fallbackTypeValues.moreThan;
+                            value.type = type === this.typeValues.between
+                                ? this.fallbackTypeValues.lessThan : this.fallbackTypeValues.moreThan;
                             value.value = value.value_end;
                             value.value_end = '';
                         } else {
-                            value.type = type === this.typeValues.between ?
-                                this.fallbackTypeValues.moreThan : this.fallbackTypeValues.lessThan;
+                            value.type = type === this.typeValues.between
+                                ? this.fallbackTypeValues.moreThan : this.fallbackTypeValues.lessThan;
                         }
                     }
                 }
                 if (!tools.isEqualsLoosely(value, oldValue)) {
-                    //apply new values and filter type
-                    this._writeDOMValue(value);
+                    // apply new values and filter type
+                    this.setValue(value);
                 }
             }
         },
@@ -227,6 +236,8 @@ define([
          * @inheritDoc
          */
         _writeDOMValue: function(data) {
+            NumberRangeFilter.__super__._writeDOMValue.apply(this, arguments);
+
             this._setInputValue(this.criteriaValueSelectors.value_end, data.value_end);
             var $typeInput = this.$(this.criteriaValueSelectors.type);
             if ($typeInput.length && data.type !== $typeInput.val()) {
@@ -234,7 +245,7 @@ define([
                 this._updateTypeDropdown(data.type);
             }
 
-            return NumberRangeFilter.__super__._writeDOMValue.apply(this, arguments);
+            return this;
         },
 
         /**
@@ -255,7 +266,7 @@ define([
             var parentDiv = a.parent().parent().parent();
             var choiceName = a.html();
             choiceName += this.caret;
-            parentDiv.find('.dropdown-toggle').html(choiceName);
+            parentDiv.find('[data-toggle="dropdown"]').html(choiceName);
         },
 
         /**
@@ -289,6 +300,22 @@ define([
             formatted.value_end = this._toDisplayValue(data.value_end);
 
             return formatted;
+        },
+
+        /**
+         * @inheritDoc
+         * @returns {boolean}
+         * @private
+         */
+        _isValid: function() {
+            var rawValue = this.formatter.toRaw(this._readDOMValue().value_end);
+            var validValueEnd = rawValue === void 0 || this._checkNumberRules(rawValue);
+
+            if (!validValueEnd) {
+                return false;
+            } else {
+                return NumberRangeFilter.__super__._isValid.apply(this, arguments);
+            }
         }
     });
 

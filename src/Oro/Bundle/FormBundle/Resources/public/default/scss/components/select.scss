@@ -1,4 +1,7 @@
+/* @theme: default; */
+
 //more styles in FrontendBundle/default/grid.scss
+
 .select {
     max-width: 100%;
 
@@ -7,10 +10,12 @@
     }
 
     &--size-m {
+        height: $base-ui-element-height-size-m;
         padding: $select-padding--m;
     }
 
     &--size-s {
+        height: $select-height--s;
         padding: $select-padding--s;
     }
 

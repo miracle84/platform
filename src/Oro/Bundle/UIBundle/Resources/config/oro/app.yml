@@ -1,4 +1,9 @@
 liip_imagine:
+    loaders:
+        default:
+            filesystem:
+                bundle_resources:
+                    enabled: true
     filter_sets:
         avatar_med:
             quality:          95
@@ -11,3 +16,13 @@ liip_imagine:
                 thumbnail:    { size: [16, 16], mode: outbound }
                 strip:        ~
 
+assetic:
+    filters:
+        scssphp:
+            file: '%kernel.project_dir%/vendor/leafo/scssphp/scss.inc.php'
+            apply_to: '\.scss$'
+            import_paths: ["%kernel.project_dir%/public/bundles"]
+
+fos_rest:
+    exception:
+        exception_controller: 'Oro\Bundle\UIBundle\Controller\ExceptionController::showAction'

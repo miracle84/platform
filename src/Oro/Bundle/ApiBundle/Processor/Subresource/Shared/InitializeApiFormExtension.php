@@ -2,13 +2,13 @@
 
 namespace Oro\Bundle\ApiBundle\Processor\Subresource\Shared;
 
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Processor\FormContext;
 use Oro\Bundle\ApiBundle\Processor\Shared\SwitchFormExtension;
 use Oro\Bundle\ApiBundle\Processor\Subresource\ContextParentConfigAccessor;
 use Oro\Bundle\ApiBundle\Processor\Subresource\ContextParentMetadataAccessor;
 use Oro\Bundle\ApiBundle\Processor\Subresource\SubresourceContext;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Switches to Data API form extension.
@@ -29,6 +29,7 @@ class InitializeApiFormExtension extends SwitchFormExtension implements Processo
 
         $this->switchToApiFormExtension($context);
         $this->rememberContext($context);
+        $this->metadataTypeGuesser->setEntityMapper($context->getEntityMapper());
         $this->metadataTypeGuesser->setIncludedEntities($context->getIncludedEntities());
         $this->metadataTypeGuesser->setMetadataAccessor(new ContextParentMetadataAccessor($context));
         $this->metadataTypeGuesser->setConfigAccessor(new ContextParentConfigAccessor($context));

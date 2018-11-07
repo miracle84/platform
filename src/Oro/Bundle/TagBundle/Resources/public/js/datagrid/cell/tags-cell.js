@@ -12,7 +12,7 @@ define(function(require) {
      *
      * Requires income data format:
      * ```javascript
-     * var cellValue = [{id: 1, text: 'tag-1', locked: false}, {id: 2, text: 'tag-2', locked: true}, ...];
+     * var cellValue = [{id: 1, text: 'tag-1'}, {id: 2, text: 'tag-2'}, ...];
      * ```
      *
      * Also please prepare and pass choices through cell configuration
@@ -43,7 +43,7 @@ define(function(require) {
             initialize: function() {
                 Backgrid.StringCell.__super__.initialize.apply(this, arguments);
                 this.fieldName = this.column.get('name');
-                //TODO move url generation to server side
+                // TODO move url generation to server side
                 var tags = this.model.get(this.fieldName);
                 tags = _.map(tags, function(tag) {
                     if (!tag.hasOwnProperty('url')) {

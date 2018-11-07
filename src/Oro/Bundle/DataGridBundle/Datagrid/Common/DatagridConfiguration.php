@@ -3,15 +3,16 @@
 namespace Oro\Bundle\DataGridBundle\Datagrid\Common;
 
 use Doctrine\ORM\EntityRepository;
-
-use Oro\Component\Config\Common\ConfigObject;
 use Oro\Bundle\DataGridBundle\Datagrid\Builder;
-use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmQueryConfiguration;
 use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmDatasource;
+use Oro\Bundle\DataGridBundle\Datasource\Orm\OrmQueryConfiguration;
 use Oro\Bundle\DataGridBundle\Exception\LogicException;
+use Oro\Bundle\DataGridBundle\Provider\SystemAwareResolver;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
+use Oro\Component\Config\Common\ConfigObject;
 
 /**
+ * This class represents read & parsed datagrid configuration.
  * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
 class DatagridConfiguration extends ConfigObject
@@ -244,44 +245,6 @@ class DatagridConfiguration extends ConfigObject
     }
 
     /**
-     * @param string $select
-     *
-     * @return self
-     * @deprecated since 2.0. Use config->getOrmQuery()->addSelect() instead
-     */
-    public function addSelect($select)
-    {
-        if (empty($select)) {
-            throw new \BadMethodCallException('DatagridConfiguration::addSelect: select should not be empty');
-        }
-
-        $this->offsetAddToArrayByPath(
-            '[source][query][select]',
-            [$select]
-        );
-
-        return $this;
-    }
-
-    /**
-     * @param string $type
-     * @param array  $definition
-     *
-     * @return self
-     * @deprecated since 2.0. Use config->getOrmQuery()->addInnerJoin() or config->getOrmQuery()->addLeftJoin() instead
-     */
-    public function joinTable($type, array $definition)
-    {
-        $this
-            ->offsetAddToArrayByPath(
-                sprintf('[source][query][join][%s]', $type),
-                [$definition]
-            );
-
-        return $this;
-    }
-
-    /**
      * @param string $name
      * @param array  $definition
      *
@@ -379,13 +342,13 @@ class DatagridConfiguration extends ConfigObject
                 'data_name' => $dataName,
                 'options'   => [
                     'field_options' => [
-                        'class'         => ExtendHelper::buildEnumValueClassName($enumCode),
-                        'property'      => 'name',
+                        'class' => ExtendHelper::buildEnumValueClassName($enumCode),
+                        'choice_label' => 'name',
                         'query_builder' => function (EntityRepository $entityRepository) {
                             return $entityRepository->createQueryBuilder('c')
                                 ->orderBy('c.name', 'ASC');
                         },
-                        'multiple'      => $isMultiple,
+                        'multiple' => $isMultiple,
                     ],
                 ],
             ]
@@ -436,5 +399,20 @@ class DatagridConfiguration extends ConfigObject
         );
 
         return $this;
+    }
+
+    /**
+     * @param string $datagridName
+     * @return bool
+     */
+    public function isDatagridExtendedFrom($datagridName)
+    {
+        $parentGrids = $this->offsetGetOr(SystemAwareResolver::KEY_EXTENDED_FROM, []);
+        foreach ($parentGrids as $parentGridName) {
+            if ($parentGridName === $datagridName) {
+                return true;
+            }
+        }
+        return false;
     }
 }

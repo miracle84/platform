@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler\EventTriggerExtensionCompilerPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
-use Oro\Bundle\WorkflowBundle\DependencyInjection\Compiler\EventTriggerExtensionCompilerPass;
-
-class EventTriggerExtensionCompilerPassTest extends \PHPUnit_Framework_TestCase
+class EventTriggerExtensionCompilerPassTest extends \PHPUnit\Framework\TestCase
 {
     const TAGGED_SERVICE_1 = 'test.tagged.service.first';
     const TAGGED_SERVICE_2 = 'test.tagged.service.second';

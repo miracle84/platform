@@ -4,17 +4,17 @@ namespace Oro\Bundle\EmailBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\EmailBundle\Form\Type\EmailTemplateApiType;
 
-class EmailTemplateApiTypeTest extends \PHPUnit_Framework_TestCase
+class EmailTemplateApiTypeTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EmailTemplateApiType
      */
     protected $type;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $localeSettings;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
     protected function setUp()
@@ -36,19 +36,14 @@ class EmailTemplateApiTypeTest extends \PHPUnit_Framework_TestCase
         unset($this->type);
     }
 
-    public function testSetDefaultOptions()
+    public function testConfigureOptions()
     {
-        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolverInterface');
+        $resolver = $this->createMock('Symfony\Component\OptionsResolver\OptionsResolver');
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
 
-        $this->type->setDefaultOptions($resolver);
-    }
-
-    public function testGetName()
-    {
-        $this->assertEquals('oro_email_emailtemplate_api', $this->type->getName());
+        $this->type->configureOptions($resolver);
     }
 
     public function testBuildForm()
@@ -68,7 +63,7 @@ class EmailTemplateApiTypeTest extends \PHPUnit_Framework_TestCase
                 ['oro_email.sanitize_html', false, false, null, true]
             ]));
 
-        $this->localeSettings->expects($this->exactly(3))
+        $this->localeSettings->expects($this->exactly(2))
             ->method('getLanguage')
             ->will($this->returnValue('ru_UA'));
 
@@ -76,6 +71,6 @@ class EmailTemplateApiTypeTest extends \PHPUnit_Framework_TestCase
             ->method('getLocalesByCodes')
             ->will($this->returnValue(['en', 'fr_FR']));
 
-        $this->type->buildForm($builder, array());
+        $this->type->buildForm($builder, ['additional_language_codes' => []]);
     }
 }

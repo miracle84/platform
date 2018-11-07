@@ -2,28 +2,26 @@
 
 namespace Oro\Bundle\EmailBundle\Form\EventListener;
 
-use Closure;
-
+use Oro\Bundle\EmailBundle\Entity\Email;
+use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
+use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
+use Oro\Bundle\EmailBundle\Form\Type\AutoResponseTemplateChoiceType;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 
-use Oro\Bundle\EmailBundle\Entity\Email;
-use Oro\Bundle\EmailBundle\Entity\EmailTemplate;
-use Oro\Bundle\EmailBundle\Entity\Repository\EmailTemplateRepository;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-
 class AutoResponseRuleSubscriber implements EventSubscriberInterface
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /**
-     * @param SecurityFacade $securityFacade
+     * @param TokenAccessorInterface $tokenAccessor
      */
-    public function __construct(SecurityFacade $securityFacade)
+    public function __construct(TokenAccessorInterface $tokenAccessor)
     {
-        $this->securityFacade = $securityFacade;
+        $this->tokenAccessor = $tokenAccessor;
     }
 
     /**
@@ -55,9 +53,8 @@ class AutoResponseRuleSubscriber implements EventSubscriberInterface
 
         $options = $existingEntityForm->getConfig()->getOptions();
         unset($options['choices']);
-        unset($options['choice_list']);
 
-        $templateForm->add('existing_entity', 'oro_email_autoresponse_template_choice', array_merge(
+        $templateForm->add('existing_entity', AutoResponseTemplateChoiceType::class, array_merge(
             $options,
             [
                 'choices' => null,
@@ -69,7 +66,7 @@ class AutoResponseRuleSubscriber implements EventSubscriberInterface
     /**
      * @param EmailTemplate $template
      *
-     * @return Closure
+     * @return \Closure
      */
     protected function createExistingEntityQueryBuilder(EmailTemplate $template)
     {
@@ -85,7 +82,7 @@ class AutoResponseRuleSubscriber implements EventSubscriberInterface
                     $qb->expr()->eq('e.id', ':id')
                 ))
                 ->setParameter('entityName', Email::ENTITY_CLASS)
-                ->setParameter('organization', $this->securityFacade->getOrganization())
+                ->setParameter('organization', $this->tokenAccessor->getOrganization())
                 ->setParameter('id', $template->getId())
                 ->setParameter('visible', true);
         };

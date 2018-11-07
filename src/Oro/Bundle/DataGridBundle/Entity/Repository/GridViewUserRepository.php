@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\DataGridBundle\Entity\Repository;
 
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\Security\Core\User\UserInterface;
-
-use Oro\Bundle\DataGridBundle\Entity\GridViewUser;
+use Doctrine\ORM\QueryBuilder;
+use Oro\Bundle\DataGridBundle\Entity\AbstractGridViewUser;
+use Oro\Bundle\DataGridBundle\Extension\GridViews\ViewInterface;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 class GridViewUserRepository extends EntityRepository
 {
@@ -17,7 +16,7 @@ class GridViewUserRepository extends EntityRepository
      * @param UserInterface $user
      * @param string        $gridName
      *
-     * @return GridViewUser|null
+     * @return AbstractGridViewUser|null
      */
     public function findDefaultGridView(AclHelper $aclHelper, UserInterface $user, $gridName)
     {
@@ -32,17 +31,33 @@ class GridViewUserRepository extends EntityRepository
      * @param UserInterface $user
      * @param string        $gridName
      *
-     * @return GridViewUser[]
+     * @return AbstractGridViewUser[]
      */
     public function findDefaultGridViews(
         AclHelper $aclHelper,
         UserInterface $user,
         $gridName
     ) {
-        /** @var GridViewUser[] $defaultGridViews */
+        /** @var AbstractGridViewUser[] $defaultGridViews */
         $qb = $this->getFindDefaultGridViewQb($user, $gridName);
 
         return $aclHelper->apply($qb)->getResult();
+    }
+
+    /**
+     * @param ViewInterface $view
+     * @param UserInterface $user
+     * @return AbstractGridViewUser
+     */
+    public function findByGridViewAndUser(ViewInterface $view, UserInterface $user)
+    {
+        return $this->findOneBy(
+            [
+                $this->getUserFieldName() => $user,
+                'alias' => $view->getName(),
+                'gridName' => $view->getGridName()
+            ]
+        );
     }
 
     /**
@@ -53,16 +68,26 @@ class GridViewUserRepository extends EntityRepository
      */
     protected function getFindDefaultGridViewQb(UserInterface $user, $gridName)
     {
-        $parameters = [
-            'gridName' => $gridName,
-            'user'     => $user,
-        ];
-
         $qb = $this->createQueryBuilder('gvu');
-        $qb->where('gvu.user = :user')
-            ->andWhere('gvu.gridName = :gridName');
-        $qb->setParameters($parameters);
+        $qb->where(
+            $qb->expr()->eq('gvu.' . $this->getUserFieldName(), ':user'),
+            $qb->expr()->eq('gvu.gridName', ':gridName')
+        )
+        ->setParameters(
+            [
+                'user' => $user,
+                'gridName' => $gridName
+            ]
+        );
 
         return $qb;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getUserFieldName()
+    {
+        return 'user';
     }
 }

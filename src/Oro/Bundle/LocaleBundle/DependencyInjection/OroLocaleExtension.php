@@ -2,16 +2,13 @@
 
 namespace Oro\Bundle\LocaleBundle\DependencyInjection;
 
+use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
+use Oro\Component\Config\Loader\CumulativeConfigLoader;
+use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
-
-
-use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
-
-use Oro\Component\Config\Loader\CumulativeConfigLoader;
-use Oro\Component\Config\Loader\YamlCumulativeFileLoader;
 
 class OroLocaleExtension extends Extension
 {
@@ -53,6 +50,8 @@ class OroLocaleExtension extends Extension
         $loader->load('form_types.yml');
         $loader->load('importexport.yml');
         $loader->load('cache.yml');
+        $loader->load('services_api.yml');
+        $loader->load('commands.yml');
 
         $this->addClassesToCompile(['Oro\Bundle\LocaleBundle\EventListener\LocaleListener']);
     }

@@ -3,23 +3,21 @@
 namespace Oro\Bundle\IntegrationBundle\Tests\Unit\Provider;
 
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\DependencyInjection\Container;
-
 use Oro\Bundle\IntegrationBundle\Entity\Channel as Integration;
 use Oro\Bundle\IntegrationBundle\Manager\TypesRegistry;
 use Oro\Bundle\IntegrationBundle\Provider\ConnectorContextMediator;
-use Oro\Bundle\EntityConfigBundle\DependencyInjection\Utils\ServiceLink;
+use Oro\Component\DependencyInjection\ServiceLink;
+use Symfony\Component\DependencyInjection\Container;
 
-class ConnectorContextMediatorTest extends \PHPUnit_Framework_TestCase
+class ConnectorContextMediatorTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ConnectorContextMediator */
     protected $contextMediator;
 
-    /** @var EntityRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityRepository|\PHPUnit\Framework\MockObject\MockObject */
     protected $repo;
 
-    /** @var TypesRegistry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TypesRegistry|\PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
     protected function setUp()
@@ -41,7 +39,7 @@ class ConnectorContextMediatorTest extends \PHPUnit_Framework_TestCase
         $registry = $this->createMock('Symfony\Bridge\Doctrine\RegistryInterface');
         $registry->expects($this->any())->method('getManager')
             ->will($this->returnValue($em));
-        $link =new ServiceLink($container, $proxiedServiceID);
+        $link = new ServiceLink($container, $proxiedServiceID);
 
         $this->contextMediator = new ConnectorContextMediator($link, $registry);
     }

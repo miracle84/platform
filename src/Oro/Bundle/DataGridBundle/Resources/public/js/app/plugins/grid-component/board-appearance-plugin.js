@@ -84,7 +84,7 @@ define(function(require) {
             this.view.render();
             this.view.$el.insertAfter(this.main.$el.find('.other-scroll-container'));
             this.main.$el.find('.other-scroll-container, .pagination, .page-size, ' +
-                '.column-manager, .extra-actions-panel').hide();
+                '.datagrid-settings, .extra-actions-panel').hide();
             this.main.$el.find('.visible-items-counter').show();
             this.main.$el.find('.board').show();
 
@@ -133,7 +133,7 @@ define(function(require) {
         disable: function() {
             this.main.$el.find('.board').hide();
             this.main.$el.find('.other-scroll-container, .pagination, .page-size, ' +
-                '.column-manager, .extra-actions-panel').show();
+                '.datagrid-settings, .extra-actions-panel').show();
             this.main.$el.find('.visible-items-counter').hide();
 
             // restore sorting settings
@@ -240,7 +240,7 @@ define(function(require) {
          */
         saveApiAccessorDefaults: {
             'class': 'oroui/js/tools/api-accessor',
-            http_method: 'PATCH'
+            'http_method': 'PATCH'
         },
 
         /**
@@ -261,11 +261,13 @@ define(function(require) {
         processMetadata: function(options, gridConfiguration) {
             _.defaults(options, this.defaultOptions);
 
-            if (!options.save_api_accessor) {
-                options.save_api_accessor = _.extend({}, gridConfiguration.metadata.inline_editing.save_api_accessor);
+            if (!options.default_transition.save_api_accessor) {
+                options.default_transition.save_api_accessor = _.extend(
+                    {}, gridConfiguration.metadata.inline_editing.save_api_accessor
+                );
             }
 
-            _.defaults(options.save_api_accessor, this.saveApiAccessorDefaults);
+            _.defaults(options.default_transition.save_api_accessor, this.saveApiAccessorDefaults);
 
             // prepare transition options
             options.columns.forEach(function(column) {
@@ -273,12 +275,12 @@ define(function(require) {
                     column.transition = options.default_transition;
                 }
                 if (!column.transition.save_api_accessor) {
-                    column.transition.save_api_accessor = options.save_api_accessor;
+                    column.transition.save_api_accessor = options.default_transition.save_api_accessor;
                 }
                 _.extend(column.transition, BoardAppearancePlugin.transitionDefaults);
             });
 
-            return $.when.apply($, [
+            return $.when(
                 tools.loadModuleAndReplace(options, 'board_view'),
                 tools.loadModuleAndReplace(options, 'card_view'),
                 tools.loadModuleAndReplace(options, 'column_header_view'),
@@ -289,7 +291,7 @@ define(function(require) {
                 $.when.apply($, options.columns.map(function(column) {
                     return tools.loadModuleAndReplace(column.transition.save_api_accessor, 'class');
                 }))
-            ]);
+            );
         }
     });
 

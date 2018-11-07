@@ -2,27 +2,23 @@
 
 namespace Oro\Bundle\ActivityBundle\Autocomplete;
 
-use Symfony\Component\Translation\TranslatorInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
-use Doctrine\DBAL\Types\Type;
-use Doctrine\Common\Util\ClassUtils;
 use Doctrine\Common\Persistence\ObjectManager;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
-
-use Oro\Component\DoctrineUtils\ORM\SqlQueryBuilder;
-use Oro\Component\DoctrineUtils\ORM\UnionQueryBuilder;
-
+use Oro\Bundle\ActivityBundle\Event\SearchAliasesEvent;
+use Oro\Bundle\ActivityBundle\Form\DataTransformer\ContextsToViewTransformer;
+use Oro\Bundle\ActivityBundle\Manager\ActivityManager;
 use Oro\Bundle\EntityBundle\Provider\EntityNameResolver;
 use Oro\Bundle\EntityBundle\Tools\EntityClassNameHelper;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
-use Oro\Bundle\ActivityBundle\Manager\ActivityManager;
-use Oro\Bundle\ActivityBundle\Event\SearchAliasesEvent;
 use Oro\Bundle\FormBundle\Autocomplete\ConverterInterface;
 use Oro\Bundle\SearchBundle\Engine\Indexer;
-use Oro\Bundle\SearchBundle\Query\Result\Item;
 use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
+use Oro\Bundle\SearchBundle\Query\Result\Item;
+use Oro\Component\DoctrineUtils\ORM\SqlQueryBuilder;
+use Oro\Component\DoctrineUtils\ORM\UnionQueryBuilder;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
 /**
  * This is specified handler that search targets entities for specified activity class.
@@ -34,9 +30,6 @@ use Oro\Bundle\SearchBundle\Event\PrepareResultItemEvent;
  */
 class ContextSearchHandler implements ConverterInterface
 {
-    /** @var TokenStorageInterface */
-    protected $token;
-
     /** @var TranslatorInterface */
     protected $translator;
 
@@ -65,7 +58,6 @@ class ContextSearchHandler implements ConverterInterface
     protected $class;
 
     /**
-     * @param TokenStorageInterface    $token
      * @param TranslatorInterface      $translator
      * @param Indexer                  $indexer
      * @param ActivityManager          $activityManager
@@ -79,7 +71,6 @@ class ContextSearchHandler implements ConverterInterface
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
     public function __construct(
-        TokenStorageInterface $token,
         TranslatorInterface $translator,
         Indexer $indexer,
         ActivityManager $activityManager,
@@ -90,7 +81,6 @@ class ContextSearchHandler implements ConverterInterface
         EventDispatcherInterface $dispatcher,
         $class = null
     ) {
-        $this->token                 = $token;
         $this->translator            = $translator;
         $this->indexer               = $indexer;
         $this->activityManager       = $activityManager;
@@ -213,16 +203,9 @@ class ContextSearchHandler implements ConverterInterface
      */
     protected function convertItems(array $items)
     {
-        $user = $this->token->getToken()->getUser();
-
         $result = [];
         /** @var Item $item */
         foreach ($items as $item) {
-            // Exclude current user from result
-            if (ClassUtils::getClass($user) === $item->getEntityName() && $user->getId() === $item->getRecordId()) {
-                continue;
-            }
-
             $result[] = $this->convertItem($item);
         }
 
@@ -238,7 +221,7 @@ class ContextSearchHandler implements ConverterInterface
      */
     protected function decodeTargets($targetsString)
     {
-        $targetsJsonArray = explode(';', $targetsString);
+        $targetsJsonArray = explode(ContextsToViewTransformer::SEPARATOR, $targetsString);
         $targetsArray = [];
 
         foreach ($targetsJsonArray as $targetJson) {
@@ -302,16 +285,16 @@ class ContextSearchHandler implements ConverterInterface
             ->addSelect('entityClass', 'entity')
             ->addSelect('entityTitle', 'title');
         foreach ($groupedTargets as $entityClass => $ids) {
-            $subQb = $em->getRepository($entityClass)->createQueryBuilder('e')
+            $nameDql = $this->nameResolver->prepareNameDQL(
+                $this->nameResolver->getNameDQL($entityClass, 'e'),
+                true
+            );
+            $subQb = $em->getRepository($entityClass)->createQueryBuilder('e');
+            $subQb
                 ->select(
-                    sprintf(
-                        'e.id AS id, \'%s\' AS entityClass, %s AS entityTitle',
-                        $entityClass,
-                        $this->nameResolver->prepareNameDQL(
-                            $this->nameResolver->getNameDQL($entityClass, 'e'),
-                            true
-                        )
-                    )
+                    'e.id AS id',
+                    (string)$subQb->expr()->literal($entityClass) . ' AS entityClass',
+                    $nameDql . ' AS entityTitle'
                 );
             $subQb->where($subQb->expr()->in('e.id', $ids));
             $qb->addSubQuery($subQb->getQuery());

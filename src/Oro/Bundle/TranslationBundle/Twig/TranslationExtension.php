@@ -3,29 +3,30 @@
 namespace Oro\Bundle\TranslationBundle\Twig;
 
 use Oro\Bundle\TranslationBundle\Helper\TranslationsDatagridRouteHelper;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Routing\RouterInterface;
 
 class TranslationExtension extends \Twig_Extension
 {
     const NAME = 'oro_translation';
 
-    /**
-     * @var bool
-     */
-    protected $debugTranslator = false;
+    /** @var ContainerInterface */
+    protected $container;
 
     /**
-     * @var TranslationsDatagridRouteHelper
+     * @param ContainerInterface $container
      */
-    protected $translationRouteHelper;
-
-    /**
-     * @param bool $debugTranslator
-     * @param TranslationsDatagridRouteHelper $translationRouteHelper
-     */
-    public function __construct($debugTranslator, TranslationsDatagridRouteHelper $translationRouteHelper)
+    public function __construct(ContainerInterface $container)
     {
-        $this->debugTranslator = $debugTranslator;
-        $this->translationRouteHelper = $translationRouteHelper;
+        $this->container = $container;
+    }
+
+    /**
+     * @return TranslationsDatagridRouteHelper
+     */
+    protected function getTranslationsDatagridRouteHelper()
+    {
+        return $this->container->get('oro_translation.helper.translation_route');
     }
 
     /**
@@ -42,13 +43,36 @@ class TranslationExtension extends \Twig_Extension
     public function getFunctions()
     {
         return [
-            new \Twig_SimpleFunction(
-                'oro_translation_debug_translator',
-                function () {
-                    return $this->debugTranslator;
-                }
-            ),
-            new \Twig_SimpleFunction('translation_grid_link', [$this->translationRouteHelper, 'generate'])
+            new \Twig_SimpleFunction('oro_translation_debug_translator', [$this, 'isDebugTranslator']),
+            new \Twig_SimpleFunction('oro_translation_debug_js_translations', [$this, 'isDebugJsTranslations']),
+            new \Twig_SimpleFunction('translation_grid_link', [$this, 'getTranslationGridLink'])
         ];
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDebugTranslator()
+    {
+        return $this->container->getParameter('oro_translation.debug_translator');
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDebugJsTranslations()
+    {
+        return $this->container->getParameter('oro_translation.js_translation.debug');
+    }
+
+    /**
+     * @param array $filters
+     * @param int   $referenceType
+     *
+     * @return string
+     */
+    public function getTranslationGridLink(array $filters = [], $referenceType = RouterInterface::ABSOLUTE_PATH)
+    {
+        return $this->getTranslationsDatagridRouteHelper()->generate($filters, $referenceType);
     }
 }

@@ -8,6 +8,7 @@ define(function(require) {
     var __ = require('orotranslation/js/translator');
     var mediator = require('oroui/js/mediator');
     var BaseView = require('oroui/js/app/views/base/view');
+    var tinyMCE = require('tinymce/tinymce');
     require('jquery-ui');
 
     /**
@@ -15,16 +16,16 @@ define(function(require) {
      */
     EmailVariableView = BaseView.extend({
         options: {
-            templateSelector:        null,
+            templateSelector: null,
             sectionTemplateSelector: null,
-            sectionContentSelector:  null,
-            sectionTabSelector:      null,
-            fieldsSelectors:         ['input[name*="subject"]', 'textarea[name*="content"]'],
-            defaultFieldIndex:       1 // index in fieldsSelectors
+            sectionContentSelector: null,
+            sectionTabSelector: null,
+            fieldsSelectors: ['input[name*="subject"]', 'textarea[name*="content"]'],
+            defaultFieldIndex: 1 // index in fieldsSelectors
         },
 
         events: {
-            'click a.variable':  '_handleVariableClick',
+            'click a.variable': '_handleVariableClick',
             'click a.reference': '_handleReferenceClick'
         },
 
@@ -37,6 +38,13 @@ define(function(require) {
         * @property {jQuery}
         */
         lastElement: null,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmailVariableView() {
+            EmailVariableView.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Constructor
@@ -98,7 +106,10 @@ define(function(require) {
          */
         clear: function() {
             _.each(this.fields, function(el) {
-                if (el.value) {
+                var editor = tinyMCE.get(el.id);
+                if (editor) {
+                    editor.setContent('');
+                } else if (el.value) {
                     el.value = '';
                 }
             });

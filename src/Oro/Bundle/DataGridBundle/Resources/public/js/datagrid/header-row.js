@@ -11,7 +11,9 @@ define([
 
     HeaderRow = Chaplin.CollectionView.extend({
         tagName: 'tr',
+
         className: '',
+
         animationDuration: 0,
 
         /* Required fby current realization of grid.js, see header initialization code */
@@ -22,6 +24,16 @@ define([
             className: 'grid-header-row'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function HeaderRow() {
+            HeaderRow.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.columns = options.columns;
             this.dataCollection = options.dataCollection;
@@ -73,7 +85,7 @@ define([
             this._deferredRender();
             if (this.template) {
                 this.renderCustomTemplate();
-            }else {
+            } else {
                 HeaderRow.__super__.render.apply(this, arguments);
             }
             this._resolveDeferredRender();
@@ -100,11 +112,18 @@ define([
                         return model.get('name') === columnName;
                     });
                     if (columnModel) {
+                        attributes.id = columnModel.get('name');
                         return self.columnRenderer.getRawAttributes(self.renderItem(columnModel).$el, attributes);
                     }
                     return '';
                 }
             }));
+
+            _.each(this.getItemViews(), function(view) {
+                view.setElement(this.$('#' + view.column.get('name')));
+                view.$el.attr('id', null);
+            }, this);
+
             return this;
         }
     });

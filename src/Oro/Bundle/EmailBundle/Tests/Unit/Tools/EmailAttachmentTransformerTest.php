@@ -3,24 +3,23 @@
 namespace Oro\Bundle\EmailBundle\Tests\Unit\Tools;
 
 use Gaufrette\Filesystem;
-
 use Oro\Bundle\AttachmentBundle\Entity\Attachment;
 use Oro\Bundle\AttachmentBundle\Entity\File;
+use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
 use Oro\Bundle\AttachmentBundle\Manager\FileManager;
 use Oro\Bundle\EmailBundle\Form\Model\Factory;
 use Oro\Bundle\EmailBundle\Tests\Unit\ReflectionUtil;
 use Oro\Bundle\EmailBundle\Tools\EmailAttachmentTransformer;
-use Oro\Bundle\AttachmentBundle\Manager\AttachmentManager;
 
-class EmailAttachmentTransformerTest extends \PHPUnit_Framework_TestCase
+class EmailAttachmentTransformerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var Filesystem|\PHPUnit_Framework_MockObject_MockObject
+     * @var Filesystem|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $filesystem;
 
     /**
-     * @var FileManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var FileManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $fileManager;
 
@@ -30,12 +29,12 @@ class EmailAttachmentTransformerTest extends \PHPUnit_Framework_TestCase
     protected $factory;
 
     /**
-     * @var AttachmentManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttachmentManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $manager;
 
     /**
-     * @var AttachmentManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttachmentManager|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $emailAttachmentManager;
 
@@ -97,7 +96,7 @@ class EmailAttachmentTransformerTest extends \PHPUnit_Framework_TestCase
             ->method('isImageType')
             ->willReturn(true);
 
-         $this->manager->expects($this->once())
+        $this->manager->expects($this->once())
             ->method('getAttachmentIconClass')
             ->willReturn('fa-class');
 

@@ -2,13 +2,11 @@
 
 namespace Oro\Bundle\DataGridBundle\Entity\Repository;
 
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityRepository;
-
-use Symfony\Component\Security\Core\User\UserInterface;
-
-use Oro\Bundle\DataGridBundle\Entity\GridView;
+use Doctrine\ORM\QueryBuilder;
+use Oro\Bundle\DataGridBundle\Entity\AbstractGridView;
 use Oro\Bundle\SecurityBundle\ORM\Walker\AclHelper;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 class GridViewRepository extends EntityRepository
 {
@@ -23,7 +21,7 @@ class GridViewRepository extends EntityRepository
      * @param UserInterface $user
      * @param string        $gridName
      *
-     * @return GridView[]
+     * @return AbstractGridView[]
      */
     public function findGridViews(AclHelper $aclHelper, UserInterface $user, $gridName)
     {
@@ -34,15 +32,15 @@ class GridViewRepository extends EntityRepository
                 ->andWhere('gv.gridName = :gridName')
                 ->andWhere(
                     $qb->expr()->orX(
-                        'gv.owner = :owner',
-                        'gv.type = :public'
+                        $qb->expr()->eq('gv.' . $this->getOwnerFieldName(), ':owner'),
+                        $qb->expr()->eq('gv.type', ':public')
                     )
                 )
                 ->setParameters(
                     [
                         'gridName' => $gridName,
                         'owner'    => $user,
-                        'public'   => GridView::TYPE_PUBLIC,
+                        'public'   => AbstractGridView::TYPE_PUBLIC
                     ]
                 )
                 ->orderBy('gv.gridName');
@@ -58,7 +56,7 @@ class GridViewRepository extends EntityRepository
      * @param UserInterface $user
      * @param string        $gridName
      *
-     * @return GridView|null
+     * @return AbstractGridView|null
      */
     public function findDefaultGridView(AclHelper $aclHelper, UserInterface $user, $gridName)
     {
@@ -73,20 +71,20 @@ class GridViewRepository extends EntityRepository
     }
 
     /**
-     * @param AclHelper     $aclHelper
+     * @param AclHelper $aclHelper
      * @param UserInterface $user
-     * @param GridView      $gridView
-     * @param bool          $checkOwner
+     * @param AbstractGridView $gridView
+     * @param bool $checkOwner
      *
-     * @return GridView[]
+     * @return AbstractGridView[]
      */
     public function findDefaultGridViews(
         AclHelper $aclHelper,
         UserInterface $user,
-        GridView $gridView,
+        AbstractGridView $gridView,
         $checkOwner = true
     ) {
-        /** @var GridView[] $defaultGridViews */
+        /** @var AbstractGridView[] $defaultGridViews */
         $qb = $this->getFindDefaultGridViewQb($user, $gridView->getGridName(), $checkOwner);
 
         return $aclHelper->apply($qb)->getResult();
@@ -108,14 +106,16 @@ class GridViewRepository extends EntityRepository
 
         $qb = $this->createQueryBuilder('gv');
         $qb->innerJoin('gv.users', 'u')
-            ->where('gv.gridName = :gridName')
-            ->andWhere('u.user = :user');
+            ->where(
+                $qb->expr()->eq('gv.gridName', ':gridName'),
+                $qb->expr()->eq('u.' . $this->getUserFieldName(), ':user')
+            );
 
         if ($checkOwner) {
             $qb->andWhere(
                 $qb->expr()->orX(
-                    'gv.owner = :owner',
-                    'gv.type = :public'
+                    $qb->expr()->eq('gv.' . $this->getOwnerFieldName(), ':owner'),
+                    $qb->expr()->eq('gv.type', ':public')
                 )
             );
 
@@ -123,7 +123,7 @@ class GridViewRepository extends EntityRepository
                 $parameters,
                 [
                     'owner'  => $user,
-                    'public' => GridView::TYPE_PUBLIC
+                    'public' => AbstractGridView::TYPE_PUBLIC
                 ]
             );
         }
@@ -141,5 +141,21 @@ class GridViewRepository extends EntityRepository
     protected function getCacheKey(UserInterface $user, $gridName)
     {
         return sprintf('%s.%s', $user->getUsername(), $gridName);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getOwnerFieldName()
+    {
+        return 'owner';
+    }
+
+    /**
+     * @return string
+     */
+    protected function getUserFieldName()
+    {
+        return 'user';
     }
 }

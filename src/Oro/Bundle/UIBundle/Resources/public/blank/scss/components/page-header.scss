@@ -1,8 +1,17 @@
-// @theme: blank;
+/* @theme: blank; */
 
 .page-header {
     padding: $page-header-inner-offset;
-    box-sizing: border-box;
 
     @include clearfix();
+
+    &__inner {
+        padding: $page-header-inner-inner-offset;
+    }
+}
+
+@include breakpoint('print') {
+    .page-header {
+        display: none !important;
+    }
 }

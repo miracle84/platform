@@ -3,51 +3,64 @@
 namespace Oro\Bundle\RequireJSBundle\Twig;
 
 use Oro\Bundle\RequireJSBundle\Manager\ConfigProviderManager;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class OroRequireJSExtension extends \Twig_Extension
 {
     const DEFAULT_PROVIDER_ALIAS = 'oro_requirejs_config_provider';
+    const BUILD_LOGGER_TEMPLATE = 'OroRequireJSBundle::requirejs_build_logger.html.twig';
 
-    /**
-     * @var ConfigProviderManager
-     */
-    protected $manager;
+    /** @var ContainerInterface */
+    protected $container;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $webRoot;
 
+    /** @var boolean */
+    protected $buildLogger;
+
     /**
-     * @param ConfigProviderManager $manager
-     * @param string                $webRoot
+     * @param ContainerInterface $container
+     * @param string             $webRoot
+     * @param boolean            $buildLogger
      */
-    public function __construct(ConfigProviderManager $manager, $webRoot)
+    public function __construct(ContainerInterface $container, $webRoot, $buildLogger)
     {
-        $this->manager = $manager;
+        $this->container = $container;
         $this->webRoot = $webRoot;
+        $this->buildLogger = $buildLogger;
     }
 
     /**
-     * Returns a list of functions to add to the existing list.
-     *
-     * @return array An array of functions
+     * @return ConfigProviderManager
+     */
+    protected function getManager()
+    {
+        return $this->container->get('oro_requirejs.config_provider.manager');
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function getFunctions()
     {
         return [
-            'get_requirejs_config'      => new \Twig_SimpleFunction(
+            new \Twig_SimpleFunction(
                 'get_requirejs_config',
                 [$this, 'getRequireJSConfig'],
                 ['is_safe' => ['html']]
             ),
-            'get_requirejs_build_path'  => new \Twig_SimpleFunction(
+            new \Twig_SimpleFunction(
                 'get_requirejs_build_path',
                 [$this, 'getRequireJSBuildPath']
             ),
-            'requirejs_build_exists'    => new \Twig_SimpleFunction(
+            new \Twig_SimpleFunction(
                 'requirejs_build_exists',
                 [$this, 'isRequireJSBuildExists']
+            ),
+            new \Twig_SimpleFunction(
+                'requirejs_build_logger',
+                [$this, 'getRequireJSBuildLogger']
             ),
         ];
     }
@@ -61,9 +74,13 @@ class OroRequireJSExtension extends \Twig_Extension
      */
     public function getRequireJSConfig($alias = null)
     {
-        $provider = $this->manager->getProvider($this->getDefaultAliasIfEmpty($alias));
+        $provider = $this->getManager()->getProvider($this->getDefaultAliasIfEmpty($alias));
 
-        return $provider ? $provider->getConfig()->getMainConfig() : json_encode([]);
+        if (null === $provider) {
+            return json_encode([]);
+        }
+
+        return $provider->getConfig()->getMainConfig();
     }
 
     /**
@@ -75,9 +92,13 @@ class OroRequireJSExtension extends \Twig_Extension
      */
     public function getRequireJSBuildPath($alias = null)
     {
-        $provider = $this->manager->getProvider($this->getDefaultAliasIfEmpty($alias));
+        $provider = $this->getManager()->getProvider($this->getDefaultAliasIfEmpty($alias));
 
-        return $provider ? $provider->getConfig()->getOutputFilePath() : null;
+        if (null === $provider) {
+            return null;
+        }
+
+        return $provider->getConfig()->getOutputFilePath();
     }
 
     /**
@@ -92,6 +113,35 @@ class OroRequireJSExtension extends \Twig_Extension
         $filePath = $this->getRequireJSBuildPath($this->getDefaultAliasIfEmpty($alias));
 
         return file_exists($this->webRoot . DIRECTORY_SEPARATOR . $filePath);
+    }
+
+    /**
+     * Get require.js build logger script
+     *
+     * @param string $alias
+     *
+     * @return string
+     */
+    public function getRequireJSBuildLogger($alias = null)
+    {
+        $provider = $this->getManager()->getProvider($this->getDefaultAliasIfEmpty($alias));
+        if (null === $provider || !$this->buildLogger) {
+            return '';
+        }
+
+        $configs = $provider->getConfig()->getBuildConfig();
+        $excludeList = array_filter(
+            $configs['paths'],
+            function ($config) {
+                return $config === 'empty:';
+            }
+        );
+
+        $parameters = [];
+        $parameters['excludeList'] = array_keys($excludeList);
+
+        return $this->container->get('twig')
+            ->render(static::BUILD_LOGGER_TEMPLATE, $parameters);
     }
 
     /**

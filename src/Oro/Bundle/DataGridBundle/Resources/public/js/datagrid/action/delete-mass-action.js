@@ -46,6 +46,13 @@ define([
         allowOk: true,
 
         /**
+         * @inheritDoc
+         */
+        constructor: function DeleteMassAction() {
+            DeleteMassAction.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * As in this action we need to send POST request to get data for confirm message
          * we set this.confirmation = false at initialization to prevent opening confirm window.
          *
@@ -135,7 +142,8 @@ define([
                     this.allowOk = false;
                 } else if (data.deletable <= data.max_limit) {
                     if (data.deletable >= data.selected) {
-                        this.confirmMessage = __(this.confirmMessages.selected_message, {selected: data.selected});
+                        var placeholders = {selected: data.selected};
+                        this.confirmMessage = __(this.confirmMessages.selected_message, placeholders, data.selected);
                     } else {
                         this.confirmMessage = __(this.confirmMessages.restricted_access_message, {
                             deletable: data.deletable,
@@ -145,7 +153,6 @@ define([
                 } else {
                     this.confirmMessage = __(this.confirmMessages.max_limit_message, {max_limit: data.max_limit});
                 }
-
             }
         },
 

@@ -55,12 +55,31 @@
 
     {% if transition.frontendOptions is defined and transition.frontendOptions.dialog is defined %}
         {% set data = data|merge({
-            'data-dialog-options': transition.frontendOptions.dialog|json_encode|raw
+            'dialog-options': transition.frontendOptions.dialog|json_encode|raw
         }) %}
     {% endif %}
 
-    {% set label = transition.label|trans({},'workflows') %}
+    {% set label = transition.buttonLabel|trans({},'workflows') %}
+    {% set title = transition.buttonTitle|trans({},'workflows') %}
 
+    {% if transition.frontendOptions.message is defined and transition.frontendOptions.message.content is defined %}
+        {% set frontendMessage = transition.frontendOptions.message %}
+
+        {% set transitionMessage = frontendMessage.content|trans(frontendMessage.message_parameters, 'workflows') %}
+        {% if transitionMessage and transitionMessage != frontendMessage.content %}
+            {# if no translation for message then do not show message #}
+            {% set message = frontendMessage|merge({
+                content: transitionMessage|nl2br,
+                title: frontendMessage.title|default(title),
+            }) %}
+        {% endif %}
+    {% endif %}
+    
+    {% set data = data|merge({
+        message: (message|default({}))|json_encode,
+        'transition-label': label
+    }) %}
+    
     {% set class %}
         {{ aClass }}
         icons-holder-text
@@ -77,42 +96,12 @@
         'path': 'javascript:void(0);',
         'id': 'transition-%s-%s'|format(workflow.name, transition.name),
         'iCss': iCss,
-        'title': label,
+        'title': title,
         'class': class,
         'data': data,
         'label': label,
-        'noIconText': noIconText|default(false),
+        'noIconText': noIconText|default(true),
     }) }}
-{% endmacro %}
-
-{% macro renderResetButton(data, blockId) %}
-    {% set resetButtonId = 'workflow-item-' ~ data.workflow_item_id ~ '-reset' %}
-    <a href="javascript:void(0);"
-       data-url="{{ data.url }}"
-       title="{{ data.title }}"
-       class="btn icons-holder-text btn-primary"
-       id="{{ resetButtonId }}">
-            <i class="fa-repeat"></i>
-            {{ data.title }}
-    </a>
-
-    <script type="text/javascript">
-        require(['jquery', 'oroworkflow/js/reset-handler'],
-            function($, workflowResetHandler) {
-                'use strict';
-
-                $(function() {
-                    var resetBtn = $('#{{ blockId }}').find('#{{ resetButtonId }}');
-                    resetBtn.data('executor', function() {
-                        workflowResetHandler.call(resetBtn);
-                    });
-                    resetBtn.on('click', function(e) {
-                        e.preventDefault();
-                        $(this).data('executor').call();
-                    });
-                });
-            });
-    </script>
 {% endmacro %}
 
 {% macro renderGoToTranslationsIconByLink(link, large) %}

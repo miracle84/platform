@@ -3,19 +3,35 @@
 namespace Oro\Bundle\TranslationBundle\Tests\Unit\Controller;
 
 use Oro\Bundle\TranslationBundle\Controller\Controller;
+use Oro\Bundle\TranslationBundle\Translation\Translator;
+use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
+use Symfony\Component\HttpFoundation\Request;
 
-class ControllerTest extends \PHPUnit_Framework_TestCase
+class ControllerTest extends \PHPUnit\Framework\TestCase
 {
-    protected $translations = array(
-        'jsmessages' => array(
+    /** @var Translator|\PHPUnit\Framework\MockObject\MockObject */
+    protected $translator;
+
+    /** @var EngineInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $templating;
+
+    /** @var array */
+    protected $translations = [
+        'jsmessages' => [
             'foo' => 'Foo',
             'bar' => 'Bar',
-        ),
-        'validators' => array(
+        ],
+        'validators' => [
             'int' => 'Integer',
             'string' => 'string',
-        ),
-    );
+        ],
+    ];
+
+    protected function setUp()
+    {
+        $this->translator = $this->createMock(Translator::class);
+        $this->templating = $this->createMock(EngineInterface::class);
+    }
 
     /**
      * @expectedException \InvalidArgumentException
@@ -23,56 +39,51 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
      */
     public function testConstructor()
     {
-        $templating = $this->getMockBuilder('Symfony\Bundle\FrameworkBundle\Templating\EngineInterface')
-            ->getMockForAbstractClass();
-        $translator = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Translation\Translator')
-            ->disableOriginalConstructor()
-            ->getMock();
-        new Controller($translator, $templating, '', array());
+        new Controller($this->translator, $this->templating, '', []);
     }
 
     public function testIndexAction()
     {
         $content = 'CONTENT';
-        $templating = $this->getMockBuilder('Symfony\Bundle\FrameworkBundle\Templating\EngineInterface')
-            ->getMockForAbstractClass();
-        $templating->expects($this->once())
+
+        $this->templating->expects($this->once())
             ->method('render')
             ->will($this->returnValue($content));
-        $translator = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Translation\Translator')
-            ->disableOriginalConstructor()
-            ->getMock();
-        $translator->expects($this->once())
+
+        $this->translator->expects($this->once())
             ->method('getTranslations')
-            ->will($this->returnValue(array()));
+            ->will($this->returnValue([]));
+
         $controller = new Controller(
-            $translator,
-            $templating,
+            $this->translator,
+            $this->templating,
             'OroTranslationBundle:Translation:translation.js.twig',
-            array()
+            []
         );
 
-        $request = $this->getMockBuilder('Symfony\Component\HttpFoundation\Request')
-            ->disableOriginalConstructor()
-            ->getMock();
+        /** @var Request|\PHPUnit\Framework\MockObject\MockObject $request */
+        $request = $this->createMock(Request::class);
         $request->expects($this->once())
             ->method('getMimeType')
-            ->with('js')
-            ->will($this->returnValue('JS'));
+            ->with('json')
+            ->will($this->returnValue('JSON'));
+
         $response = $controller->indexAction($request, 'en');
         $this->assertInstanceOf('Symfony\Component\HttpFoundation\Response', $response);
         $this->assertEquals($content, $response->getContent());
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('JS', $response->headers->get('Content-Type'));
+        $this->assertEquals('JSON', $response->headers->get('Content-Type'));
     }
 
     /**
      * @dataProvider dataProviderRenderJsTranslationContent
+     *
+     * @param $params
+     * @param $expected
      */
     public function testRenderJsTranslationContent($params, $expected)
     {
-        $templating = $this->createMock('Symfony\Bundle\FrameworkBundle\Templating\EngineInterface');
-        $templating
+        $this->templating
             ->expects($this->any())
             ->method('render')
             ->will(
@@ -84,69 +95,80 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
                 )
             );
 
-        $translator = $this->getMockBuilder('Oro\Bundle\TranslationBundle\Translation\Translator')
-            ->disableOriginalConstructor()
-            ->getMock();
 
-        $translations = $this->translations;
-        $translator
+        $this->translator
             ->expects($this->any())
             ->method('getTranslations')
             ->will(
                 $this->returnCallback(
-                    function ($domains) use ($translations) {
-                        return array_intersect_key($translations, array_flip($domains));
+                    function ($domains) {
+                        return array_intersect_key($this->translations, array_flip($domains));
                     }
                 )
             );
 
         $controller = new Controller(
-            $translator,
-            $templating,
+            $this->translator,
+            $this->templating,
             'OroTranslationBundle:Translation:translation.js.twig',
-            array()
+            []
         );
-        $result = call_user_func_array(array($controller, 'renderJsTranslationContent'), $params);
+        $result = call_user_func_array([$controller, 'renderJsTranslationContent'], $params);
 
         $this->assertEquals($expected, $result);
     }
 
+    /**
+     * @return array
+     */
     public function dataProviderRenderJsTranslationContent()
     {
-        return array(
-            array(
-                array(array('jsmessages', 'validators'), 'fr'),
-                array(
+        return [
+            [
+                [['jsmessages', 'validators'], 'fr'],
+                [
                     'locale' => 'fr',
-                    'defaultDomains' => array('jsmessages', 'validators'),
-                    'messages' => array(
-                        'jsmessages:foo' => 'Foo',
-                        'jsmessages:bar' => 'Bar',
-                        'validators:int' => 'Integer',
-                        'validators:string' => 'string',
-                    ),
-                ),
-            ),
-            array(
-                array(array('validators'), 'en', true),
-                array(
+                    'defaultDomain' => 'jsmessages',
+                    'translations' => [
+                        'fr' => [
+                            'jsmessages' => [
+                                'foo' => 'Foo',
+                                'bar' => 'Bar',
+                            ],
+                            'validators' => [
+                                'int' => 'Integer',
+                                'string' => 'string',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                [['validators'], 'en', true],
+                [
                     'locale' => 'en',
-                    'defaultDomains' => array('validators'),
-                    'messages' => array(
-                        'validators:int' => 'Integer',
-                        'validators:string' => 'string',
-                    ),
+                    'defaultDomain' => 'validators',
+                    'translations' => [
+                        'en' => [
+                            'validators' => [
+                                'int' => 'Integer',
+                                'string' => 'string',
+                            ],
+                        ],
+                    ],
                     'debug' => true,
-                ),
-            ),
-            array(
-                array(array(), 'ch', false),
-                array(
+                ],
+            ],
+            [
+                [[], 'ch', false],
+                [
                     'locale' => 'ch',
-                    'defaultDomains' => array(),
-                    'messages' => array(),
-                ),
-            ),
-        );
+                    'defaultDomain' => '',
+                    'translations' => [
+                        'ch' => []
+                    ],
+                ],
+            ],
+        ];
     }
 }

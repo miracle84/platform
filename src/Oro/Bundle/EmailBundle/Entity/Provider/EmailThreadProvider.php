@@ -6,9 +6,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
+use Oro\Bundle\UserBundle\Entity\User;
 
 class EmailThreadProvider
 {
@@ -56,9 +56,8 @@ class EmailThreadProvider
         if ($refs) {
             /** @var QueryBuilder $queryBuilder */
             $queryBuilder = $entityManager->getRepository('OroEmailBundle:Email')->createQueryBuilder('e');
-            $criteria = new Criteria();
-            $criteria->where($criteria->expr()->in('messageId', $refs));
-            $queryBuilder->addCriteria($criteria);
+            $queryBuilder->where($queryBuilder->expr()->in('e.messageId', ':messagesIds'))
+                ->setParameter('messagesIds', $refs);
             $result = $queryBuilder->getQuery()->getResult();
         }
 
@@ -112,6 +111,51 @@ class EmailThreadProvider
             $criteria->orderBy(['sentAt' => Criteria::DESC]);
             $queryBuilder->addCriteria($criteria);
             $result = $queryBuilder->getQuery()->getResult();
+        } else {
+            $result = [$entity];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get emails in thread by given email.
+     * Used on `My Emails` page to show emails thread with only emails being related to currently logged user.
+     *
+     * @param EntityManager $entityManager
+     * @param Email         $entity
+     * @param User          $user
+     * @param array         $mailboxes
+     * @return array
+     */
+    public function getUserThreadEmails(EntityManager $entityManager, Email $entity, User $user, $mailboxes = [])
+    {
+        $thread = $entity->getThread();
+        if ($thread) {
+            /** @var QueryBuilder $queryBuilder */
+            $queryBuilder = $entityManager->getRepository('OroEmailBundle:Email')->createQueryBuilder('e');
+            $queryBuilder->join('e.emailUsers', 'eu')
+                ->where($queryBuilder->expr()->eq('e.thread', ':thread'))
+                ->setParameter('thread', $thread)
+                ->orderBy('e.sentAt', Criteria::DESC);
+
+            if ($mailboxes) {
+                $queryBuilder->andWhere(
+                    $queryBuilder->expr()->orX(
+                        $queryBuilder->expr()->in('eu.mailboxOwner', ':mailboxes'),
+                        $queryBuilder->expr()->eq('eu.owner', ':user')
+                    )
+                )->setParameter('mailboxes', $mailboxes);
+            } else {
+                $queryBuilder->andWhere(
+                    $queryBuilder->expr()->eq('eu.owner', ':user')
+                );
+            }
+            $queryBuilder->setParameter('user', $user);
+
+            $result = $queryBuilder
+                ->getQuery()
+                ->getResult();
         } else {
             $result = [$entity];
         }

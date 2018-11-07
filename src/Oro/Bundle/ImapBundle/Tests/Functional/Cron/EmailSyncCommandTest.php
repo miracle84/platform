@@ -2,39 +2,38 @@
 
 namespace Oro\Bundle\ImapBundle\Tests\Functional\Cron;
 
-use Symfony\Component\Yaml\Yaml;
-
-use Oro\Bundle\EmailBundle\DependencyInjection\Configuration;
-use Oro\Bundle\EmailBundle\Entity\Email;
+use Oro\Bundle\EmailBundle\Tests\Functional\EmailFeatureTrait;
 use Oro\Bundle\ImapBundle\Connector\ImapConfig;
 use Oro\Bundle\ImapBundle\Connector\ImapConnector;
 use Oro\Bundle\ImapBundle\Connector\ImapConnectorFactory;
 use Oro\Bundle\ImapBundle\Connector\ImapServices;
 use Oro\Bundle\ImapBundle\Connector\ImapServicesFactory;
 use Oro\Bundle\ImapBundle\Connector\Search\SearchStringManagerInterface;
+use Oro\Bundle\ImapBundle\Mail\Storage\Imap;
 use Oro\Bundle\ImapBundle\Mail\Storage\Message;
 use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-use Oro\Bundle\ImapBundle\Mail\Storage\Imap;
+use Symfony\Component\Yaml\Yaml;
 
 /**
- * @outputBuffering enabled
  * @dbIsolationPerTest
  */
 class EmailSyncCommandTest extends WebTestCase
 {
-    /** @var ImapConnectorFactory|\PHPUnit_Framework_MockObject_MockObject */
+    use EmailFeatureTrait;
+
+    /** @var ImapConnectorFactory|\PHPUnit\Framework\MockObject\MockObject */
     protected $imapConnectorFactory;
 
-    /** @var ImapServicesFactory|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ImapServicesFactory|\PHPUnit\Framework\MockObject\MockObject */
     protected $serviceFactory;
 
-    /** @var ImapServices|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ImapServices|\PHPUnit\Framework\MockObject\MockObject */
     protected $imapServices;
 
-    /** @var Imap|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Imap|\PHPUnit\Framework\MockObject\MockObject */
     protected $imap;
 
-    /** @var SearchStringManagerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var SearchStringManagerInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $searchStringManager;
 
     protected function setUp()
@@ -81,6 +80,8 @@ class EmailSyncCommandTest extends WebTestCase
             ->will($this->returnValue($imapConnector));
 
         $this->getContainer()->set('oro_imap.connector.factory', $this->imapConnectorFactory);
+
+        $this->enableEmailFeature();
     }
 
     public function testImapSyncNoOrigins()
@@ -135,27 +136,10 @@ class EmailSyncCommandTest extends WebTestCase
 
     public function testCommandOutputWithEmailFeatureDisabled()
     {
-        $this->toggleEmailFeatureValue(false);
+        $this->disableEmailFeature();
         $result = $this->runCommand('oro:cron:imap-sync', []);
 
         $this->assertContains('The email feature is disabled. The command will not run.', $result);
-    }
-
-    /**
-     * Disable email feature toggle
-     *
-     * @param bool $value
-     */
-    protected function toggleEmailFeatureValue($value)
-    {
-        $key = Configuration::getConfigKeyByName('feature_enabled');
-
-        $configManager = $this->getContainer()->get('oro_config.manager');
-        $configManager->set($key, (bool) $value);
-        $configManager->flush();
-
-        $featureChecker = $this->getContainer()->get('oro_featuretoggle.checker.feature_checker');
-        $featureChecker->resetCache();
     }
 
     /**

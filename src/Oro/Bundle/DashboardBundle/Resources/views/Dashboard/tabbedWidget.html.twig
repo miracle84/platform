@@ -2,11 +2,21 @@
 
 {% block content %}
     <div class="tab-container">
-        <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs" role="tablist">
+            {% set tabTabId = 'tab-'|uniqid %}
+            {% set tabContentId = 'tab-content-'|uniqid %}
             {% for tab in tabs %}
-                <li{% if activeTab == tab.name %} class="active"{% endif %}><a
-                    href="javascript:void(0);" class="no-hash tab-button"
-                    data-name="{{ tab.name }}" data-url="{{ tab.url }}">
+                <li class="nav-item">
+                    <a id="{{ (loop.index == 0) ? tabTabId : tabTabId ~ loop.index }}"
+                       href="#{{ tabContentId }}"
+                       role="tab"
+                       class="no-hash tab-button nav-link {% if activeTab == tab.name %} active{% endif %}"
+                       data-name="{{ tab.name }}"
+                       data-url="{{ tab.url }}"
+                       data-toggle="tab"
+                       aria-controls="{{ tabContentId }}"
+                       aria-selected="{% if activeTab == tab.name %}true{% else %}false{% endif %}"
+                    >
                         {{ tab.label }}
                         {% if tab.afterHtml is defined %}
                             {{ tab.afterHtml|raw }}
@@ -15,7 +25,7 @@
                 </li>
             {% endfor %}
         </ul>
-        <div class="tab-content">
+        <div class="tab-content" role="tabpanel" aria-labelledby="{{ tabTabId }}">
             <div class="content">
                 {% block tab_content %}
                     {{ activeTabContent|raw }}
@@ -23,45 +33,15 @@
             </div>
         </div>
     </div>
-    <script type="text/javascript">
-        require(['jquery', 'underscore', 'oroui/js/mediator', 'oroui/js/app/views/loading-mask-view'],
-        function($, _, mediator, LoadingMask){
-            var loadingMask = null;
-            $(document).on('click', '#{{ widgetContentId }} .tab-button', function (e) {
-                var $el = $(this);
-                var $prevTab = $el.closest('.nav-tabs').find('li.active');
-                var $currentTab = $el.closest('li');
-                $prevTab.removeClass('active');
-                $currentTab.addClass('active');
 
-                var $tabContent = $el.closest('.widget-content').find('.tab-content');
-                if (!loadingMask) {
-                    loadingMask = new LoadingMask({container: $tabContent});
-                }
+    {% import 'OroUIBundle::macros.html.twig' as UI %}
 
-                loadingMask.show();
-                // add style like on standard tabs realization through tabs-component
-                $el.addClass('widget-component-processing');
-                $.ajax({
-                    url: $el.data('url'),
-                    dataType: 'html',
-                    error: function(jqXHR) {
-                        loadingMask.hide();
-                        $currentTab.removeClass('active');
-                        $prevTab.addClass('active');
-                        $el.removeClass('widget-component-processing');
-                    },
-                    success: function(data) {
-                        $tabContent.find('.content')
-                            .trigger('content:remove')
-                            .html(data)
-                            .trigger('content:changed');
-                        loadingMask.hide();
-                        $el.removeClass('widget-component-processing');
-                    }
-                });
-            });
-        });
-    </script>
+    <div {{ UI.renderPageComponentAttributes({
+        view: 'orodashboard/js/app/views/widget-tabs-view',
+        options: {
+            _sourceElement: '#' ~ widgetContentId
+        }
+    }) }}></div>
+
     {{ parent() }}
 {% endblock %}

@@ -7,10 +7,10 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\QueryBuilder;
-
+use Oro\Bundle\BatchBundle\ORM\Query\BufferedIdentityQueryResultIterator;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
-use Oro\Bundle\BatchBundle\ORM\Query\DeletionQueryResultIterator;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
 class WorkflowItemRepository extends EntityRepository
 {
@@ -110,7 +110,7 @@ class WorkflowItemRepository extends EntityRepository
             ->setParameter(1, $workflowName)
             ->orderBy('workflowItem.id');
 
-        $iterator = new DeletionQueryResultIterator($queryBuilder);
+        $iterator = new BufferedIdentityQueryResultIterator($queryBuilder);
         $iterator->setBufferSize($batchSize);
 
         if ($iterator->count() === 0) {
@@ -161,10 +161,15 @@ class WorkflowItemRepository extends EntityRepository
      * @param string $entityClass
      * @param array $entityIds
      * @param bool $withWorkflowName
+     * @param array|null $workflowNames
      * @return array
      */
-    public function getGroupedWorkflowNameAndWorkflowStepName($entityClass, array $entityIds, $withWorkflowName = true)
-    {
+    public function getGroupedWorkflowNameAndWorkflowStepName(
+        $entityClass,
+        array $entityIds,
+        $withWorkflowName = true,
+        array $workflowNames = null
+    ) {
         $entityIds = array_map(function ($item) {
             return (string)$item;
         }, $entityIds);
@@ -181,6 +186,13 @@ class WorkflowItemRepository extends EntityRepository
         if ($withWorkflowName) {
             $qb->addSelect('d.label AS workflowName');
         }
+
+        if (null !== $workflowNames) {
+            $qb->andWhere($qb->expr()->in('d.name', ':workflowNames'))
+                ->setParameter('workflowNames', $workflowNames);
+        }
+
+        $qb->addOrderBy($qb->expr()->asc('stepName'));
 
         $items = $qb->getQuery()->getArrayResult();
 
@@ -261,7 +273,7 @@ class WorkflowItemRepository extends EntityRepository
                 $entityClass,
                 'e',
                 Query\Expr\Join::WITH,
-                sprintf('CAST(wi.entityId as string) = CAST(e.%s as string)', $entityIdentifier)
+                QueryBuilderUtil::sprintf('CAST(wi.entityId as string) = CAST(e.%s as string)', $entityIdentifier)
             );
 
         $queryBuilder->where($queryBuilder->expr()->in('ws.name', ':workflowSteps'))

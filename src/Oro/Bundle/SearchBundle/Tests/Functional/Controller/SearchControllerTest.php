@@ -3,43 +3,28 @@
 namespace Oro\Bundle\SearchBundle\Tests\Functional\Controller;
 
 use Oro\Bundle\SearchBundle\Tests\Functional\Controller\DataFixtures\LoadSearchItemData;
-use Oro\Bundle\SearchBundle\Tests\Functional\SearchExtensionTrait;
 use Oro\Bundle\TestFrameworkBundle\Entity\Item;
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
+use Oro\Component\Testing\Assert\ArrayContainsConstraint;
 
 /**
  * @group search
- * @dbIsolation
+ * @dbIsolationPerTest
  */
-class SearchControllerTest extends WebTestCase
+class SearchControllerTest extends SearchBundleWebTestCase
 {
-    use SearchExtensionTrait;
-
-    /**
-     * @var bool
-     */
-    protected static $hasLoaded = false;
-
     protected function setUp()
     {
         parent::setUp();
 
-        $this->initClient([], $this->generateBasicAuthHeader(), true);
+        $this->initClient([], $this->generateBasicAuthHeader());
 
         $alias = $this->getSearchObjectMapper()->getEntityAlias(Item::class);
         $this->getSearchIndexer()->resetIndex(Item::class);
         $this->ensureItemsLoaded($alias, 0);
 
-        $this->loadFixtures([LoadSearchItemData::class], true);
+        $this->loadFixtures([LoadSearchItemData::class]);
         $this->getSearchIndexer()->reindex(Item::class);
         $this->ensureItemsLoaded($alias, LoadSearchItemData::COUNT);
-    }
-
-    protected function tearDown()
-    {
-        parent::tearDown();
-
-        $this->rollbackTransaction();
     }
 
     /**
@@ -67,14 +52,13 @@ class SearchControllerTest extends WebTestCase
             $request
         );
 
-        $result = $this->client->getResponse();
+        $actualResponse = $this->client->getResponse();
 
-        $this->assertResponseStatusCodeEquals($result, 200);
-        $content = $result->getContent();
+        $this->assertResponseStatusCodeEquals($actualResponse, 200);
 
-        foreach ($response['rest']['data'] as $item) {
-            $this->assertContains($item['record_url'], $content);
-        }
+        $actualContent = self::jsonToArray($actualResponse->getContent());
+
+        self::assertThat($actualContent['data'], new ArrayContainsConstraint($response['rest']['data'], false));
     }
 
     /**

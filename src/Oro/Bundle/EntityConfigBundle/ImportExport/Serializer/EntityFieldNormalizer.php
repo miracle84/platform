@@ -3,15 +3,13 @@
 namespace Oro\Bundle\EntityConfigBundle\ImportExport\Serializer;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
-
-use Symfony\Component\Serializer\Exception\UnexpectedValueException;
-
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityExtendBundle\Provider\FieldTypeProvider;
 use Oro\Bundle\ImportExportBundle\Serializer\Normalizer\DenormalizerInterface;
 use Oro\Bundle\ImportExportBundle\Serializer\Normalizer\NormalizerInterface;
+use Symfony\Component\Serializer\Exception\UnexpectedValueException;
 
 class EntityFieldNormalizer implements NormalizerInterface, DenormalizerInterface
 {
@@ -90,18 +88,12 @@ class EntityFieldNormalizer implements NormalizerInterface, DenormalizerInterfac
      */
     public function denormalize($data, $class, $format = null, array $context = [])
     {
-        if (!isset($data['type'], $data['fieldName'], $data['entity']['id'])) {
-            throw new UnexpectedValueException(
-                'Data does not contain required properties: type, fieldType or entity_id'
-            );
+        if (!isset($data['entity']['id'])) {
+            throw new UnexpectedValueException('Data doesn\'t contains entity id');
         }
 
-        $fieldType = $data['type'];
-        $fieldName = $data['fieldName'];
-        $entity = $this->getEntityConfigModel($data['entity']['id']);
-
-        $fieldModel = new FieldConfigModel($fieldName, $fieldType);
-        $fieldModel->setEntity($entity);
+        $fieldModel = new FieldConfigModel($data['fieldName'] ?? null, $data['type'] ?? null);
+        $fieldModel->setEntity($this->getEntityConfigModel($data['entity']['id']));
 
         $options = [];
         foreach ($data as $key => $value) {
@@ -119,9 +111,7 @@ class EntityFieldNormalizer implements NormalizerInterface, DenormalizerInterfac
      */
     protected function getEntityConfigModel($entityId)
     {
-        $entityClassName = 'Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel';
-
-        return $this->registry->getManagerForClass($entityClassName)->find($entityClassName, $entityId);
+        return $this->registry->getManagerForClass(EntityConfigModel::class)->find(EntityConfigModel::class, $entityId);
     }
 
     /**

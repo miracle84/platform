@@ -2,13 +2,9 @@
 
 namespace Oro\Bundle\WindowsBundle\Tests\Functional\Api;
 
+use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
-use Oro\Bundle\TestFrameworkBundle\Test\WebTestCase;
-
-/**
- * @dbIsolation
- */
 class WindowsStateController extends WebTestCase
 {
     /**

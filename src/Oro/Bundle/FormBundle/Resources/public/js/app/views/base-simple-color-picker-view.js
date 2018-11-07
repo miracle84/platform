@@ -1,6 +1,6 @@
 define(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/app/views/base/view',
     'oroui/js/tools/color-util', 'jquery.simplecolorpicker', 'jquery.minicolors'
-    ], function($, _, __, BaseView, colorUtil) {
+], function($, _, __, BaseView, colorUtil) {
     'use strict';
 
     var BaseSimpleColorPickerView = BaseView.extend({
@@ -11,8 +11,15 @@ define(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/app/vi
         },
 
         events: {
-            'enable': 'enable',
-            'disable': 'disable'
+            enable: 'enable',
+            disable: 'disable'
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function BaseSimpleColorPickerView() {
+            BaseSimpleColorPickerView.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -116,7 +123,7 @@ define(['jquery', 'underscore', 'orotranslation/js/translator', 'oroui/js/app/vi
          * @private
          */
         _preparePicker: function() {
-            this.$picker.siblings('.minicolors').css({'position': 'static', 'display': 'block'});
+            this.$picker.siblings('.minicolors').css({position: 'static', display: 'block'});
         },
 
         /**

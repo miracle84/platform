@@ -4,7 +4,6 @@ namespace Oro\Bundle\EmailBundle\Entity\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\EmailBundle\Entity\EmailRecipient;
 use Oro\Bundle\EmailBundle\Entity\EmailThread;
 
@@ -16,6 +15,7 @@ class EmailRecipientRepository extends EntityRepository
      * @param EmailThread $thread
      *
      * @return EmailRecipient[]
+     * @deprecated since 2.3. Use EmailGridResultHelper::addEmailRecipients instead
      */
     public function getThreadUniqueRecipients(EmailThread $thread)
     {

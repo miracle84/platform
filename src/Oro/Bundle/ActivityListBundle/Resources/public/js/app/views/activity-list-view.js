@@ -20,6 +20,8 @@ define(function(require) {
             listSelector: '.items.list-box',
             fallbackSelector: '.no-data',
             loadingSelector: '.loading-mask',
+            listWidgetSelector: '.activities-container .activity-list-widget',
+            activityListSelector: '.activity-list',
             collection: null,
             urls: {
                 viewItem: null,
@@ -28,7 +30,10 @@ define(function(require) {
             },
             messages: {},
             ignoreHead: false,
-            doNotFetch: false
+            doNotFetch: false,
+            reloadOnAdd: true,
+            reloadOnUpdate: true,
+            triggerRefreshEvent: true
         },
 
         listen: {
@@ -39,17 +44,27 @@ define(function(require) {
         },
 
         EDIT_DIALOG_CONFIGURATION_DEFAULTS: {
-            'regionEnabled': false,
-            'incrementalPosition': false,
-            'alias': 'activity_list:item:update',
-            'dialogOptions': {
-                'modal': true,
-                'resizable': true,
-                'width': 515,
-                'autoResize': true
+            regionEnabled: false,
+            incrementalPosition: false,
+            alias: 'activity_list:item:update',
+            dialogOptions: {
+                modal: true,
+                resizable: true,
+                width: 515,
+                autoResize: true
             }
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityListView() {
+            ActivityListView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
 
@@ -68,17 +83,23 @@ define(function(require) {
 
             this.template = _.template($(this.options.template).html());
             this.isFiltersEmpty = true;
-            this.gridToolbar = $('.activity-list-widget .activity-list .grid-toolbar');
+            this.gridToolbar = $(
+                this.options.listWidgetSelector + ' ' + this.options.activityListSelector + ' .grid-toolbar'
+            );
 
-            /**
-             * on adding activity item listen to "widget:doRefresh:activity-list-widget"
-             */
-            mediator.on('widget:doRefresh:activity-list-widget', this._reloadOnAdd, this);
+            if (this.options.reloadOnAdd) {
+                /**
+                 * on adding activity item listen to "widget:doRefresh:activity-list-widget"
+                 */
+                mediator.on('widget:doRefresh:activity-list-widget', this._reloadOnAdd, this);
+            }
 
-            /**
-             * on editing activity item listen to "widget_success:activity_list:item:update"
-             */
-            mediator.on('widget_success:activity_list:item:update', this._reload, this);
+            if (this.options.reloadOnUpdate) {
+                /**
+                 * on editing activity item listen to "widget_success:activity_list:item:update"
+                 */
+                mediator.on('widget_success:activity_list:item:update', this._reload, this);
+            }
 
             ActivityListView.__super__.initialize.call(this, options);
 
@@ -124,7 +145,9 @@ define(function(require) {
 
             this._reload();
 
-            mediator.trigger('widget_success:activity_list:refresh');
+            if (this.options.triggerRefreshEvent) {
+                mediator.trigger('widget_success:activity_list:refresh');
+            }
         },
 
         _initPager: function() {
@@ -219,7 +242,6 @@ define(function(require) {
             this.collection.setPageFilterDate(model.attributes[this.collection.pager.sortingField]);
             this.collection.setPageFilterIds(sameModelIds.length ? sameModelIds : [model.id]);
             this.collection.setPageFilterAction('prev');
-
         },
         _setupPageFilterForNextAction: function() {
             var model = this.collection.last();
@@ -249,19 +271,11 @@ define(function(require) {
         },
 
         _togglePrevious: function(enable) {
-            if (_.isUndefined(enable)) {
-                $('.activity-list-widget .pagination-previous').addClass('disabled');
-            } else {
-                $('.activity-list-widget .pagination-previous').removeClass('disabled');
-            }
+            $(this.options.listWidgetSelector + ' .pagination-previous').attr('disabled', enable === void 0);
         },
 
         _toggleNext: function(enable) {
-            if (_.isUndefined(enable)) {
-                $('.activity-list-widget .pagination-next').addClass('disabled');
-            } else {
-                $('.activity-list-widget .pagination-next').removeClass('disabled');
-            }
+            $(this.options.listWidgetSelector + ' .pagination-next').attr('disabled', enable === void 0);
         },
 
         _reloadOnAdd: function() {
@@ -384,7 +398,7 @@ define(function(require) {
 
         _editItem: function(model, extraOptions) {
             if (!this.itemEditDialog) {
-                var unescapeHTML = function unescapeHtml(unsafe) {
+                var unescapeHTML = function unescapeHTML(unsafe) {
                     return unsafe
                         .replace(/&nbsp;/g, ' ')
                         .replace(/&amp;/g, '&')
@@ -395,10 +409,10 @@ define(function(require) {
                 };
 
                 var dialogConfiguration = $.extend(true, {}, this.EDIT_DIALOG_CONFIGURATION_DEFAULTS, extraOptions, {
-                    'url': this._getUrl('itemEdit', model),
-                    'title': unescapeHTML(model.get('subject')),
-                    'dialogOptions': {
-                        'close': _.bind(function() {
+                    url: this._getUrl('itemEdit', model),
+                    title: unescapeHTML(model.get('subject')),
+                    dialogOptions: {
+                        close: _.bind(function() {
                             delete this.itemEditDialog;
                         }, this)
                     }
@@ -422,11 +436,11 @@ define(function(require) {
         _onItemDelete: function(model) {
             this._showLoading();
             try {
-                //in case deleting the last item on page - will show the previous one
+                // in case deleting the last item on page - will show the previous one
                 if (this.collection.getCount() === 1) {
-                    //the first page never has pageFilters
-                    //in case 2nd page and last item deletion - just reset pageFilter, this will give the 1st page
-                    //in all other cases simulate `Prev` action
+                    // the first page never has pageFilters
+                    // in case 2nd page and last item deletion - just reset pageFilter, this will give the 1st page
+                    // in all other cases simulate `Prev` action
                     if (this.collection.getPage() <= 2) {
                         this.collection.resetPageFilter();
                     } else {
@@ -468,9 +482,9 @@ define(function(require) {
          * @protected
          */
         _getUrl: function(actionKey, model) {
-            var className = model.getRelatedActivityClass();
-            var route = this.options.configuration[className].routes[actionKey];
-            return routing.generate(route, {'id': model.get('relatedActivityId')});
+            var routes = model.get('routes');
+
+            return routing.generate(routes[actionKey], {id: model.get('relatedActivityId')});
         },
 
         _getMessage: function(labelKey) {

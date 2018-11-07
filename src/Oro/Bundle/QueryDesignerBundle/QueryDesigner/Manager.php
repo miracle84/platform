@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\QueryDesignerBundle\QueryDesigner;
 
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\EntityBundle\Provider\EntityHierarchyProviderInterface;
 use Oro\Bundle\FilterBundle\Filter\FilterInterface;
 use Oro\Bundle\QueryDesignerBundle\Exception\InvalidConfigurationException;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class Manager implements FunctionProviderInterface
 {
@@ -190,7 +189,7 @@ class Manager implements FunctionProviderInterface
      *
      * @return array
      */
-    protected function getMetadataForGrouping()
+    public function getMetadataForGrouping()
     {
         return $this->config->offsetGet('grouping');
     }
@@ -202,7 +201,7 @@ class Manager implements FunctionProviderInterface
      * @param string $queryType The query type
      * @return array
      */
-    protected function getMetadataForFunctions($groupType, $queryType)
+    public function getMetadataForFunctions($groupType, $queryType)
     {
         $result       = [];
         $groupsConfig = $this->config->offsetGet($groupType);

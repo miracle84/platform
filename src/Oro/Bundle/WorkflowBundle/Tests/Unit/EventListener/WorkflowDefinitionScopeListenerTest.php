@@ -6,10 +6,9 @@ use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Event\WorkflowChangesEvent;
 use Oro\Bundle\WorkflowBundle\EventListener\WorkflowDefinitionScopeListener;
 use Oro\Bundle\WorkflowBundle\Scope\WorkflowScopeManager;
-
 use Oro\Component\Testing\Unit\EntityTrait;
 
-class WorkflowDefinitionScopeListenerTest extends \PHPUnit_Framework_TestCase
+class WorkflowDefinitionScopeListenerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
@@ -17,7 +16,7 @@ class WorkflowDefinitionScopeListenerTest extends \PHPUnit_Framework_TestCase
     const ENTITY_CLASS = 'stdClass';
     const ENTITY_ID = 42;
 
-    /** @var WorkflowScopeManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var WorkflowScopeManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $workflowScopeManager;
 
     /** @var WorkflowDefinitionScopeListener */

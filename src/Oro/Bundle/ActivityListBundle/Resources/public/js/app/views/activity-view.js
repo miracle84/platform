@@ -7,7 +7,7 @@ define(function(require) {
     var BaseView = require('oroui/js/app/views/base/view');
     var mediator = require('oroui/js/mediator');
     var routing = require('routing');
-    var dateTimeFormatter = require('orolocale/js/formatter/datetime');
+    var dateTimeFormatter = require('orolocale/js/formatter/datetime');
     var LoadingMaskView = require('oroui/js/app/views/loading-mask-view');
     var CommentComponent = require('orocomment/js/app/components/comment-component');
     var transitionHandler = require('oroworkflow/js/transition-handler');
@@ -30,14 +30,18 @@ define(function(require) {
             ignoreHead: false
         },
         attributes: {
+            'data-layout': 'separate',
             'class': 'list-item'
         },
         events: {
             'click .transition-item': 'onTransition',
             'click .item-edit-button': 'onEdit',
             'click .item-remove-button': 'onDelete',
-            'click .accordion-toggle': 'onToggle',
-            'click .accordion-heading': 'onAccordionHeaderClick'
+            'click [data-toggle="collapse"]': 'onToggle',
+            'click .accordion-heading': 'onAccordionHeaderClick',
+            'click .activity-actions > .dropdown-menu': 'onActionClick',
+            'mouseover .activity-actions > [data-toggle="dropdown"]': 'showActionsDropdown',
+            'mouseleave .activity-actions': 'hideActionsDropdown'
         },
         listen: {
             'addedToParent': function() {
@@ -51,6 +55,16 @@ define(function(require) {
             'change:isContentLoading model': '_onContentLoadingStatusChange'
         },
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityView() {
+            ActivityView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.options = _.defaults(options || {}, this.options);
             this.collapsed = true;
@@ -75,12 +89,12 @@ define(function(require) {
             // use special model's method to get activity class name with replaced slashes
             data.relatedActivityClass = _.escape(this.model.getRelatedActivityClass());
             if (data.owner_id) {
-                data.owner_url = routing.generate('oro_user_view', {'id': data.owner_id});
+                data.owner_url = routing.generate('oro_user_view', {id: data.owner_id});
             } else {
                 data.owner_url = '';
             }
             if (data.editor_id) {
-                data.editor_url = routing.generate('oro_user_view', {'id': data.editor_id});
+                data.editor_url = routing.generate('oro_user_view', {id: data.editor_id});
             } else {
                 data.editor_url = '';
             }
@@ -94,15 +108,9 @@ define(function(require) {
 
         render: function() {
             ActivityView.__super__.render.apply(this, arguments);
-            this.$('.dropdown-toggle.activity-item').on('mouseover', function() {
-                $(this).trigger('click');
-            });
-            this.$('.dropdown-menu.activity-item').on('mouseleave', function() {
-                $(this).parent().find('a.dropdown-toggle').trigger('click');
-            });
-            if (this.$('.dropdown-menu.activity-item li').children().length === 0) {
-                this.$('.dropdown-menu.activity-item').hide();
-                this.$('.dropdown-toggle.activity-item').text('');
+            if (this.$('.activity-actions > .dropdown-menu li').children().length === 0) {
+                this.$('.activity-actions > .dropdown-menu').hide();
+                this.$('.activity-actions > [data-toggle="dropdown"]').text('');
             }
             this.initLayout();
             return this;
@@ -144,6 +152,22 @@ define(function(require) {
             this.toggle();
         },
 
+        onActionClick: function(e) {
+            this.$('.activity-actions > .dropdown-menu').trigger('tohide.bs.dropdown');
+        },
+
+        showActionsDropdown: function(e) {
+            if (!this.$('.activity-actions > [data-toggle="dropdown"]').parent().hasClass('show')) {
+                this.$('.activity-actions > [data-toggle="dropdown"]').dropdown('toggle');
+            }
+        },
+
+        hideActionsDropdown: function(e) {
+            if (this.$('.activity-actions > [data-toggle="dropdown"]').parent().hasClass('show')) {
+                this.$('.activity-actions > [data-toggle="dropdown"]').dropdown('toggle');
+            }
+        },
+
         toggle: function() {
             if (!this.options.ignoreHead && this.model.get('is_head')) {
                 this.model.collection.trigger('toViewGroup', this.model);
@@ -153,7 +177,7 @@ define(function(require) {
         },
 
         getAccorditionToggle: function() {
-            return this.$('> .accordion-group > .accordion-heading .accordion-toggle');
+            return this.$('> .accordion-group > .accordion-heading [data-toggle="collapse"]');
         },
 
         getAccorditionBody: function() {
@@ -168,19 +192,21 @@ define(function(require) {
             this.$(this.options.infoBlock)
                 .trigger('content:remove') // to dispose only components related to infoBlock
                 .html(this.model.get('contentHTML'));
-            this.initLayout().done(_.bind(function() {
-                // if the activity has an EmailTreadView -- handle comment count change in own way
-                var emailTreadView = this.getEmailThreadView();
-                if (emailTreadView) {
-                    this.listenTo(emailTreadView, 'commentCountChanged', function(diff) {
-                        this.model.set('commentCount', this.model.get('commentCount') + diff);
-                    });
-                }
-                var loadingView = this.subview('loading');
-                if (loadingView) {
-                    loadingView.hide();
-                }
-            }, this));
+            this.initLayout().done(this._handleLayoutInit.bind(this));
+        },
+
+        _handleLayoutInit: function() {
+            // if the activity has an EmailTreadView -- handle comment count change in own way
+            var emailTreadView = this.getEmailThreadView();
+            if (emailTreadView) {
+                this.listenTo(emailTreadView, 'commentCountChanged', function(diff) {
+                    this.model.set('commentCount', this.model.get('commentCount') + diff);
+                });
+            }
+            var loadingView = this.subview('loading');
+            if (loadingView) {
+                loadingView.hide();
+            }
         },
 
         _onCommentCountChange: function() {

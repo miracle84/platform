@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\UserBundle\DependencyInjection;
 
+use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-
-use Oro\Bundle\ConfigBundle\DependencyInjection\SettingsBuilder;
 
 class Configuration implements ConfigurationInterface
 {
@@ -53,6 +52,8 @@ class Configuration implements ConfigurationInterface
                 'password_upper_case' => ['value' => true, 'type' => 'boolean'],
                 'password_numbers' => ['value' => true, 'type' => 'boolean'],
                 'password_special_chars' => ['value' => false, 'type' => 'boolean'],
+                'send_password_in_invitation_email' => ['type' => 'boolean', 'value' => false],
+                'case_insensitive_email_addresses_enabled' => ['type' => 'boolean', 'value' => false],
             ]
         );
 

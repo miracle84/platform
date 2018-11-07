@@ -2,14 +2,14 @@
 
 namespace Oro\Bundle\AsseticBundle\Tests\Unit\Command\Proxy;
 
-use Symfony\Component\DependencyInjection\Scope;
 use Oro\Bundle\AsseticBundle\Command\Proxy\KernelProxy;
+use Symfony\Component\DependencyInjection\Scope;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
-class KernelProxyTest extends \PHPUnit_Framework_TestCase
+class KernerProxyTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $target;
 
@@ -81,7 +81,6 @@ class KernelProxyTest extends \PHPUnit_Framework_TestCase
             ['boot', [], null],
             ['shutdown', [], null],
             ['getBundles', [], []],
-            ['isClassInActiveBundle', ['class'], true],
             ['getBundle', ['name', false], $this->createMock('Symfony\Component\HttpKernel\Bundle\BundleInterface')],
             ['locateResource', ['name', 'dir', false], 'test'],
             ['getName', [], 'test'],

@@ -2,33 +2,33 @@
 
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Intl\Locale\Locale;
-
-use Oro\Component\Testing\Unit\EntityTrait;
-use Oro\Component\Testing\Unit\FormIntegrationTestCase;
-
 use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\FormBundle\Form\Type\OroChoiceType;
 use Oro\Bundle\LocaleBundle\Entity\Localization;
 use Oro\Bundle\LocaleBundle\Form\Type\LocalizationSelectionType;
 use Oro\Bundle\LocaleBundle\Manager\LocalizationManager;
 use Oro\Bundle\LocaleBundle\Model\LocaleSettings;
 use Oro\Bundle\LocaleBundle\Provider\LocalizationChoicesProvider;
+use Oro\Component\Testing\Unit\EntityTrait;
+use Oro\Component\Testing\Unit\FormIntegrationTestCase;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class LocalizationSelectionTypeTest extends FormIntegrationTestCase
 {
     use EntityTrait;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var LocaleSettings|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LocaleSettings|\PHPUnit\Framework\MockObject\MockObject */
     protected $localeSettings;
 
-    /** @var LocalizationManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LocalizationManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $localizationManager;
 
-    /** @var LocalizationChoicesProvider|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LocalizationChoicesProvider|\PHPUnit\Framework\MockObject\MockObject */
     protected $localizationChoicesProvider;
 
     /** @var LocalizationSelectionType */
@@ -39,8 +39,6 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
      */
     protected function setUp()
     {
-        parent::setUp();
-
         $this->configManager = $this->getMockBuilder(ConfigManager::class)
             ->setMethods(['get'])
             ->disableOriginalConstructor()
@@ -53,7 +51,7 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
 
         $this->localeSettings->expects($this->any())
             ->method('getLocale')
-            ->willReturn(Locale::getDefault());
+            ->willReturn('en');
 
         $this->localizationManager = $this->getMockBuilder(LocalizationManager::class)
             ->disableOriginalConstructor()
@@ -69,6 +67,7 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
             $this->localizationManager,
             $this->localizationChoicesProvider
         );
+        parent::setUp();
     }
 
     public function testGetName()
@@ -78,12 +77,12 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
 
     public function testGetParent()
     {
-        $this->assertEquals('choice', $this->formType->getParent());
+        $this->assertEquals(OroChoiceType::class, $this->formType->getParent());
     }
 
     public function testConfigureOptions()
     {
-        /* @var $resolver OptionsResolver|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $resolver OptionsResolver|\PHPUnit\Framework\MockObject\MockObject */
         $resolver = $this->createMock(OptionsResolver::class);
         $resolver->expects($this->once())
             ->method('setDefaults')
@@ -91,7 +90,12 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
                 'choices' => function () {
                 },
                 'compact' => false,
-                'full_localization_list' => null,
+                'full_localization_list' => false,
+                'placeholder' => '',
+                'translatable_options' => false,
+                'configs' => [
+                    'placeholder' => 'oro.locale.localization.form.placeholder.select_localization',
+                ],
             ]);
 
         $this->formType->configureOptions($resolver);
@@ -107,24 +111,24 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
     {
         $this->localizationManager->method('getLocalization')
             ->will($this->returnValueMap([
-                [1, $this->getEntity(Localization::class, ['id' => 1, 'name' => 'Localization 1'])],
-                [2, $this->getEntity(Localization::class, ['id' => 2, 'name' => 'Localization 2'])],
-                [3, $this->getEntity(Localization::class, ['id' => 3, 'name' => 'Localization 3'])],
+                [1, true, $this->getEntity(Localization::class, ['id' => 1, 'name' => 'Localization 1'])],
+                [2, true, $this->getEntity(Localization::class, ['id' => 2, 'name' => 'Localization 2'])],
+                [3, true, $this->getEntity(Localization::class, ['id' => 3, 'name' => 'Localization 3'])],
             ]));
 
         $this->localizationManager->method('getLocalizations')->willReturn([
-            $this->getEntity(Localization::class, ['id' => 1, 'name' => 'Localization 1']),
-            $this->getEntity(Localization::class, ['id' => 2, 'name' => 'Localization 2']),
-            $this->getEntity(Localization::class, ['id' => 3, 'name' => 'Localization 3']),
+            1 => $this->getEntity(Localization::class, ['id' => 1, 'name' => 'Localization 1']),
+            2 => $this->getEntity(Localization::class, ['id' => 2, 'name' => 'Localization 2']),
+            3 => $this->getEntity(Localization::class, ['id' => 3, 'name' => 'Localization 3']),
         ]);
 
         $this->localizationChoicesProvider->method('getLocalizationChoices')->willReturn([
-            1 => 'Localization 1',
-            2 => 'Localization 2',
-            3 => 'Localization 3',
+            'Localization 1' => 1,
+            'Localization 2' => 2,
+            'Localization 3' => 3,
         ]);
 
-        $form = $this->factory->create($this->formType);
+        $form = $this->factory->create(LocalizationSelectionType::class);
 
         $form->submit($submittedValue);
 
@@ -153,7 +157,20 @@ class LocalizationSelectionTypeTest extends FormIntegrationTestCase
      */
     public function getExtensions()
     {
+        $choiceType = $this->getMockBuilder(OroChoiceType::class)
+            ->setMethods(['configureOptions', 'getParent'])
+            ->disableOriginalConstructor()
+            ->getMock();
+        $choiceType->expects($this->any())->method('getParent')->willReturn(ChoiceType::class);
+
         return [
+            new PreloadedExtension(
+                [
+                    LocalizationSelectionType::class => $this->formType,
+                    OroChoiceType::class => $choiceType
+                ],
+                []
+            ),
             $this->getValidatorExtension(true)
         ];
     }

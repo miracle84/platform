@@ -1,4 +1,3 @@
-/** @lends InlineEditableViewComponent */
 define(function(require) {
     'use strict';
 
@@ -20,7 +19,7 @@ define(function(require) {
      *        insertEditorMethod: 'overlay', // Possible values are 'overlay' or [any of supported by the containerMethod](https://github.com/chaplinjs/chaplin/blob/master/docs/chaplin.view.md#containerMethod)
      *        metadata: {
      *            inline_editing: {
-     *                enable: resource_granted('oro_tag_assign_unassign'),
+     *                enable: is_granted('oro_tag_assign_unassign'),
      *                save_api_accessor: {
      *                    route: 'oro_api_post_taggable',
      *                    http_method: 'POST',
@@ -37,8 +36,7 @@ define(function(require) {
      *                editor: {
      *                    view_options: {
      *                        permissions: {
-     *                            oro_tag_create: resource_granted('oro_tag_create'),
-     *                            oro_tag_unassign_global: resource_granted('oro_tag_unassign_global')
+     *                            oro_tag_create: is_granted('oro_tag_create')
      *                        }
      *                    }
      *                }
@@ -76,7 +74,7 @@ define(function(require) {
     var overlayTool = require('oroui/js/tools/overlay');
     var tools = require('oroui/js/tools');
 
-    InlineEditableViewComponent = BaseComponent.extend(/** @exports InlineEditableViewComponent.prototype */{
+    InlineEditableViewComponent = BaseComponent.extend(/** @lends InlineEditableViewComponent.prototype */{
         options: {
             overlay: {
                 zIndex: 1,
@@ -106,6 +104,13 @@ define(function(require) {
         },
 
         ESCAPE_KEY_CODE: 27,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function InlineEditableViewComponent() {
+            InlineEditableViewComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @constructor
@@ -203,9 +208,9 @@ define(function(require) {
         },
 
         getEditorOptions: function() {
-            var viewConfiguration = this.inlineEditingOptions.editor ?
-                this.inlineEditingOptions.editor.view_options :
-            {};
+            var viewConfiguration = this.inlineEditingOptions.editor
+                ? this.inlineEditingOptions.editor.view_options
+                : {};
 
             if (!this.isInsertEditorModeOverlay()) {
                 viewConfiguration.container = this.view.$el;

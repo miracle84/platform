@@ -9,10 +9,9 @@ use Oro\Bundle\EmailBundle\Entity\Email;
 use Oro\Bundle\EmailBundle\Entity\Manager\EmailActivityManager;
 use Oro\Bundle\EmailBundle\Model\Action\AddActivityTarget;
 use Oro\Bundle\UserBundle\Entity\User;
-
 use Oro\Component\ConfigExpression\ContextAccessor;
 
-class AddActivityTargetTest extends \PHPUnit_Framework_TestCase
+class AddActivityTargetTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AddActivityTarget */
     protected $action;
@@ -199,16 +198,6 @@ class AddActivityTargetTest extends \PHPUnit_Framework_TestCase
                 $this->equalTo(true)
             );
 
-        $this->activityListChainProvider->expects($this->any())
-            ->method('getActivityListEntitiesByActivityEntity')
-            ->with(
-                $this->equalTo($email)
-            )->will($this->returnValue($list = new ActivityList()));
-
-        $this->entityManager->expects($this->once())
-            ->method('persist')
-            ->with($this->equalTo($list));
-
         $this->emailActivityManager->expects($this->once())
             ->method('addAssociation')
             ->with(
@@ -245,16 +234,6 @@ class AddActivityTargetTest extends \PHPUnit_Framework_TestCase
 
         $this->contextAccessor->expects($this->never())
             ->method('setValue');
-
-        $this->activityListChainProvider->expects($this->any())
-            ->method('getActivityListEntitiesByActivityEntity')
-            ->with(
-                $this->equalTo($email)
-            )->will($this->returnValue($list = new ActivityList()));
-
-        $this->entityManager->expects($this->once())
-            ->method('persist')
-            ->with($this->equalTo($list));
 
         $this->emailActivityManager->expects($this->once())
             ->method('addAssociation')

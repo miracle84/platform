@@ -6,23 +6,22 @@ use Doctrine\Bundle\DoctrineBundle\Registry;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
-
 use Oro\Bundle\TranslationBundle\Entity\Language;
 use Oro\Bundle\TranslationBundle\Manager\TranslationManager;
 use Oro\Bundle\TranslationBundle\Translation\DatabasePersister;
 
-class DatabasePersisterTest extends \PHPUnit_Framework_TestCase
+class DatabasePersisterTest extends \PHPUnit\Framework\TestCase
 {
     /** @var DatabasePersister */
     protected $persister;
 
-    /** @var Registry|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Registry|\PHPUnit\Framework\MockObject\MockObject */
     protected $registry;
 
-    /** @var EntityManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var EntityManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $em;
 
-    /** @var TranslationManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslationManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $translationManager;
 
     /** @var array */
@@ -92,6 +91,7 @@ class DatabasePersisterTest extends \PHPUnit_Framework_TestCase
         $this->em->expects($this->never())->method('rollback');
 
         $this->translationManager->expects($this->once())->method('invalidateCache')->with($this->testLocale);
+        $this->translationManager->expects($this->once())->method('clear');
 
         $this->persister->persist($this->testLocale, $this->testData);
     }
@@ -107,6 +107,7 @@ class DatabasePersisterTest extends \PHPUnit_Framework_TestCase
         $this->em->expects($this->once())->method('rollback');
 
         $this->translationManager->expects($this->never())->method('invalidateCache');
+        $this->translationManager->expects($this->never())->method('clear');
 
         $this->persister->persist($this->testLocale, $this->testData);
     }

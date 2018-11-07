@@ -2,28 +2,42 @@ define([
     'oroui/js/app/models/base/collection',
     './activity-list-model',
     'underscore',
-    'routing',
+    'routing'
 ], function(BaseCollection, ActivityModel, _, routing) {
     'use strict';
 
-    var ActivityCollection;
+    var ActivityListCollection;
 
-    ActivityCollection = BaseCollection.extend({
+    ActivityListCollection = BaseCollection.extend({
         model: ActivityModel,
         route: '',
         routeParameters: {},
-        filter:   {},
-        pager: {
-            count:    1, //total activities count
-            current:  1, //current page
-            pagesize: 1, //items per page
-            total:    1, //total pages
-            sortingField: 'updatedAt' //the activity list item attribute being used for data sorting
+        filter: {},
+        defaultPager: {
+            count: 1, // total activities count
+            current: 1, // current page
+            pagesize: 1, // items per page
+            total: 1, // total pages
+            sortingField: 'updatedAt' // the activity list item attribute being used for data sorting
         },
         pageFilter: {
             date: null,
             ids: [],
-            action: null //'next' or 'prev' or '' (refresh action)
+            action: null // 'next' or 'prev' or '' (refresh action)
+        },
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActivityListCollection() {
+            ActivityListCollection.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
+        initialize: function() {
+            this.pager = _.clone(this.defaultPager);
         },
 
         url: function() {
@@ -77,6 +91,10 @@ define([
             this.pager.pagesize = pagesize;
         },
 
+        setSortingField: function(sortingField) {
+            this.pager.sortingField = sortingField;
+        },
+
         getPageTotal: function() {
             return parseInt(this.pager.total);
         },
@@ -109,7 +127,7 @@ define([
                 }
             }
 
-            return ActivityCollection.__super__.reset.call(this, models, options);
+            return ActivityListCollection.__super__.reset.call(this, models, options);
         },
 
         /**
@@ -139,5 +157,5 @@ define([
         }
     });
 
-    return ActivityCollection;
+    return ActivityListCollection;
 });

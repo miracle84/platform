@@ -3,7 +3,6 @@
 namespace Oro\Bundle\TranslationBundle\Migrations\Schema\v1_3;
 
 use Doctrine\DBAL\Schema\Schema;
-
 use Oro\Bundle\MigrationBundle\Migration\Migration;
 use Oro\Bundle\MigrationBundle\Migration\OrderedMigrationInterface;
 use Oro\Bundle\MigrationBundle\Migration\QueryBag;
@@ -51,6 +50,7 @@ class OroTranslationBundle implements Migration, OrderedMigrationInterface
 
     /**
      * @param Schema $schema
+     * @param QueryBag $queries
      */
     protected function updateOroTranslationTable(Schema $schema, QueryBag $queries)
     {

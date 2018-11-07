@@ -2,27 +2,27 @@
 
 namespace Oro\Bundle\TestFrameworkBundle\Behat\Isolation;
 
-use Behat\Testwork\Suite\Suite;
-use Oro\Bundle\TestFrameworkBundle\Behat\Element\SuiteAwareInterface;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Events;
 use Oro\Bundle\TestFrameworkBundle\Behat\Fixtures\FixtureLoader;
 use Oro\Bundle\TestFrameworkBundle\Behat\Fixtures\OroAliceLoader;
-use Oro\Bundle\TestFrameworkBundle\Behat\Fixtures\ReferenceRepositoryInitializer;
 use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\AfterFinishTestsEvent;
 use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\AfterIsolatedTestEvent;
 use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\BeforeIsolatedTestEvent;
 use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\BeforeStartTestsEvent;
 use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\Event\RestoreStateEvent;
+use Oro\Bundle\TestFrameworkBundle\Behat\Isolation\EventListener\RestrictFlushInitializerListener;
+use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Console\Exception\RuntimeException;
 
-class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
+/**
+ * Disables all optional listeners (except list of required listeners) before loading data fixtures and enables them
+ * again after loading data completed. It will increase performance of data fixtures, because many listeners don't
+ * required during data loading (like data audit listener).
+ */
+class DoctrineIsolator implements IsolatorInterface
 {
-    /**
-     * @var Suite
-     */
-    protected $suite;
-
     /**
      * @var KernelInterface
      */
@@ -34,9 +34,9 @@ class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
     protected $fixtureLoader;
 
     /**
-     * @var ReferenceRepositoryInitializer
+     * @var ReferenceRepositoryInitializerInterface[]
      */
-    protected $referenceRepositoryInitializer;
+    protected $initializers = [];
 
     /**
      * @var OroAliceLoader
@@ -44,21 +44,59 @@ class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
     protected $aliceLoader;
 
     /**
+     * @var array
+     */
+    protected $requiredListeners = [];
+
+    /**
      * @param KernelInterface $kernel
      * @param FixtureLoader $fixtureLoader
-     * @param ReferenceRepositoryInitializer $referenceRepositoryInitializer
      * @param OroAliceLoader $aliceLoader
      */
     public function __construct(
         KernelInterface $kernel,
         FixtureLoader $fixtureLoader,
-        ReferenceRepositoryInitializer $referenceRepositoryInitializer,
         OroAliceLoader $aliceLoader
     ) {
         $this->kernel = $kernel;
         $this->fixtureLoader = $fixtureLoader;
-        $this->referenceRepositoryInitializer = $referenceRepositoryInitializer;
         $this->aliceLoader = $aliceLoader;
+    }
+
+    /**
+     * @param ReferenceRepositoryInitializerInterface $initializer
+     */
+    public function addInitializer(ReferenceRepositoryInitializerInterface $initializer)
+    {
+        $this->initializers[] = $initializer;
+    }
+
+    /**
+     * @param array $requiredListeners
+     */
+    public function setRequiredListeners(array $requiredListeners)
+    {
+        $this->requiredListeners = $requiredListeners;
+    }
+
+    public function initReferences()
+    {
+        $doctrine = $this->kernel->getContainer()->get('doctrine');
+        $this->aliceLoader->setDoctrine($doctrine);
+
+        $referenceRepository = $this->aliceLoader->getReferenceRepository();
+        $referenceRepository->clear();
+
+        /** @var EntityManager $em */
+        $em = $doctrine->getManager();
+        $restrictListener = new RestrictFlushInitializerListener();
+        $em->getEventManager()->addEventListener([Events::preFlush], $restrictListener);
+
+        foreach ($this->initializers as $initializer) {
+            $initializer->init($doctrine, $referenceRepository);
+        }
+
+        $em->getEventManager()->removeEventListener([Events::preFlush], $restrictListener);
     }
 
     /** {@inheritdoc} */
@@ -69,10 +107,28 @@ class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
     /** {@inheritdoc} */
     public function beforeTest(BeforeIsolatedTestEvent $event)
     {
-        $this->aliceLoader->setDoctrine($this->kernel->getContainer()->get('doctrine'));
-        $this->referenceRepositoryInitializer->init();
+        $manager = $this->kernel->getContainer()->get('oro_platform.optional_listeners.manager');
+        $listenersToDisable = array_filter($manager->getListeners(), function ($listener) {
+            return !in_array($listener, $this->requiredListeners, true);
+        });
 
+        if ($listenersToDisable) {
+            $event->writeln('<info>Disabling optional listeners:</info>');
+            foreach ($listenersToDisable as $listener) {
+                $manager->disableListener($listener);
+                $event->writeln(sprintf('<comment>  => %s</comment>', $listener));
+            }
+        }
+
+        $event->writeln('<info>Load fixtures</info>');
+
+        $this->initReferences();
         $this->loadFixtures($event);
+
+        if ($listenersToDisable) {
+            $event->writeln('<info>Enabling optional listeners</info>');
+            $manager->enableListeners($listenersToDisable);
+        }
     }
 
     /** {@inheritdoc} */
@@ -110,79 +166,36 @@ class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
         return 'Doctrine';
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setSuite(Suite $suite)
+    /** {@inheritdoc} */
+    public function getTag()
     {
-        $this->suite = $suite;
+        return 'doctrine';
     }
 
     /**
-     * @param Suite $suite
      * @param array $tags
      * @return array
      */
-    protected function getFixtureFiles(Suite $suite, array $tags)
+    public function getFixtureFiles(array $tags)
     {
         if (!$tags) {
             return [];
         }
 
-        $fixturesFileNames = array_filter(array_map(function ($tag) {
-            if (strpos($tag, 'fixture-') === 0) {
-                return substr($tag, 8);
-            }
+        $fixturesFileNames = array_filter(
+            array_map(
+                function ($tag) {
+                    if (strpos($tag, 'fixture-') === 0) {
+                        return substr($tag, 8);
+                    }
 
-            return null;
-        }, $tags));
-
-        return array_map(
-            [$this, 'findFile'],
-            $fixturesFileNames,
-            array_fill(
-                0,
-                count($fixturesFileNames),
-                $suite
+                    return null;
+                },
+                $tags
             )
         );
-    }
 
-    /**
-     * @param string $filename
-     * @return string Real path to file with fuxtures
-     * @throws \InvalidArgumentException
-     */
-    public static function findFile($filename, Suite $suite)
-    {
-        $suitePaths = $suite->getSetting('paths');
-
-        if (!$file = self::findFileInPath($filename, $suitePaths)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Can\'t find "%s" in pahts "%s"',
-                $filename,
-                implode(',', $suitePaths)
-            ));
-        }
-
-        return $file;
-    }
-
-    /**
-     * @param string $filename
-     * @param array $paths
-     * @return string|null
-     */
-    public static function findFileInPath($filename, array $paths)
-    {
-        foreach ($paths as $path) {
-            $file = $path.DIRECTORY_SEPARATOR.'Fixtures'.DIRECTORY_SEPARATOR.$filename;
-            if (is_file($file)) {
-                return $file;
-            }
-        }
-
-        return null;
+        return $fixturesFileNames;
     }
 
     /**
@@ -190,11 +203,11 @@ class DoctrineIsolator implements IsolatorInterface, SuiteAwareInterface
      */
     private function loadFixtures(BeforeIsolatedTestEvent $event)
     {
-        $fixtureFiles = $this->getFixtureFiles($this->suite, $event->getTags());
+        $fixtureFiles = $this->getFixtureFiles($event->getTags());
 
         foreach ($fixtureFiles as $fixtureFile) {
             try {
-                $this->fixtureLoader->loadFile($fixtureFile);
+                $this->fixtureLoader->loadFixtureFile($fixtureFile);
             } catch (\Exception $e) {
                 throw new RuntimeException(
                     sprintf('Exception while loading "%s" fixture file', $fixtureFile),

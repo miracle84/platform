@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Datagrid\Extension\Pager;
 
-use Oro\Bundle\SearchBundle\Query\IndexerQuery;
 use Oro\Bundle\SearchBundle\Datagrid\Extension\Pager\IndexerPager;
-use Oro\Bundle\SearchBundle\Query\SearchQueryInterface;
+use Oro\Bundle\SearchBundle\Query\IndexerQuery;
 use Oro\Bundle\SearchBundle\Query\Query;
+use Oro\Bundle\SearchBundle\Query\SearchQueryInterface;
 
-class IndexerPagerTest extends \PHPUnit_Framework_TestCase
+class IndexerPagerTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var IndexerPager

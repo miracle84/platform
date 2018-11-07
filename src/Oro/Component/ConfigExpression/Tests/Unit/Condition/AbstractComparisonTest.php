@@ -3,19 +3,17 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition;
 use Oro\Component\ConfigExpression\Condition\AbstractComparison;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class AbstractComparisonTest extends \PHPUnit_Framework_TestCase
+class AbstractComparisonTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var AbstractComparison|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var AbstractComparison|\PHPUnit\Framework\MockObject\MockObject */
     protected $condition;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject
+     * @var \PHPUnit\Framework\MockObject\MockObject
      */
     protected $contextAccessor;
 

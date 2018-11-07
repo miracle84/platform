@@ -2,28 +2,29 @@
 
 namespace Oro\Bundle\AttachmentBundle\Form\Handler;
 
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\Request;
-
 use Doctrine\Common\Persistence\ObjectManager;
-
 use Oro\Bundle\AttachmentBundle\Entity\Attachment;
+use Oro\Bundle\FormBundle\Form\Handler\RequestHandlerTrait;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class AttachmentHandler
 {
-    /** @var Request */
-    protected $request;
+    use RequestHandlerTrait;
+
+    /** @var RequestStack */
+    protected $requestStack;
 
     /** @var ObjectManager */
     protected $manager;
 
     /**
-     * @param Request       $request
+     * @param RequestStack  $requestStack
      * @param ObjectManager $manager
      */
-    public function __construct(Request $request, ObjectManager $manager)
+    public function __construct(RequestStack $requestStack, ObjectManager $manager)
     {
-        $this->request = $request;
+        $this->requestStack = $requestStack;
         $this->manager = $manager;
     }
 
@@ -35,8 +36,9 @@ class AttachmentHandler
      */
     public function process(FormInterface $form)
     {
-        if (in_array($this->request->getMethod(), array('POST', 'PUT'))) {
-            $form->submit($this->request);
+        $request = $this->requestStack->getCurrentRequest();
+        if (in_array($request->getMethod(), ['POST', 'PUT'])) {
+            $this->submitPostPutRequest($form, $request);
             if ($form->isValid()) {
                 $this->onSuccess($form->getData());
                 return true;

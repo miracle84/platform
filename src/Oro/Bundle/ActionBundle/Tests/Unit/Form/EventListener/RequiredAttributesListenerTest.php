@@ -2,13 +2,12 @@
 
 namespace Oro\Bundle\ActionBundle\Tests\Unit\Form\EventListener;
 
+use Oro\Bundle\ActionBundle\Form\EventListener\RequiredAttributesListener;
+use Oro\Bundle\ActionBundle\Model\ActionData;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 
-use Oro\Bundle\ActionBundle\Form\EventListener\RequiredAttributesListener;
-use Oro\Bundle\ActionBundle\Model\ActionData;
-
-class RequiredAttributesListenerTest extends \PHPUnit_Framework_TestCase
+class RequiredAttributesListenerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var RequiredAttributesListener */
     protected $listener;
@@ -40,13 +39,9 @@ class RequiredAttributesListenerTest extends \PHPUnit_Framework_TestCase
         $values = ['test' => 'value'];
 
         $data = $this->createActionData();
-        $data->expects($this->once())->method('getValues')->with($attributeNames)->willReturn($values);
 
         $event = $this->createFormEvent();
         $event->expects($this->once())->method('getData')->willReturn($data);
-        $event->expects($this->once())
-            ->method('setData')
-            ->with($this->isInstanceOf('Oro\Bundle\ActionBundle\Model\ActionData'));
 
         $this->listener->initialize($attributeNames);
         $this->listener->onPreSetData($event);
@@ -59,9 +54,6 @@ class RequiredAttributesListenerTest extends \PHPUnit_Framework_TestCase
 
         $submitEvent = $this->createFormEvent();
         $submitEvent->expects($this->once())->method('getData')->willReturn($formData);
-        $submitEvent->expects($this->once())
-            ->method('setData')
-            ->with($this->isInstanceOf('Oro\Bundle\ActionBundle\Model\ActionData'));
 
         $this->listener->onSubmit($submitEvent);
     }
@@ -88,7 +80,7 @@ class RequiredAttributesListenerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ActionData
+     * @return \PHPUnit\Framework\MockObject\MockObject|ActionData
      */
     protected function createActionData()
     {
@@ -98,7 +90,7 @@ class RequiredAttributesListenerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|FormEvent
+     * @return \PHPUnit\Framework\MockObject\MockObject|FormEvent
      */
     protected function createFormEvent()
     {

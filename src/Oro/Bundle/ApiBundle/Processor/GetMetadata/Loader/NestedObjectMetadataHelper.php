@@ -32,6 +32,7 @@ class NestedObjectMetadataHelper
     /**
      * @param EntityMetadata              $entityMetadata
      * @param string                      $entityClass
+     * @param EntityDefinitionConfig      $config
      * @param string                      $fieldName
      * @param EntityDefinitionFieldConfig $field
      * @param string                      $targetAction
@@ -41,6 +42,7 @@ class NestedObjectMetadataHelper
     public function addNestedObjectAssociation(
         EntityMetadata $entityMetadata,
         $entityClass,
+        EntityDefinitionConfig $config,
         $fieldName,
         EntityDefinitionFieldConfig $field,
         $targetAction
@@ -51,6 +53,7 @@ class NestedObjectMetadataHelper
         $associationMetadata = $this->objectMetadataFactory->createAndAddAssociationMetadata(
             $entityMetadata,
             $entityClass,
+            $config,
             $fieldName,
             $field,
             $targetAction,

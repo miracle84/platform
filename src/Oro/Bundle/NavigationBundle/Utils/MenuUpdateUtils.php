@@ -3,14 +3,12 @@
 namespace Oro\Bundle\NavigationBundle\Utils;
 
 use Knp\Menu\ItemInterface;
-
-use Symfony\Component\PropertyAccess\PropertyAccess;
-use Symfony\Component\PropertyAccess\PropertyAccessor;
-
 use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
 use Oro\Bundle\NavigationBundle\Entity\MenuUpdateInterface;
 use Oro\Bundle\NavigationBundle\Menu\Helper\MenuUpdateHelper;
 use Oro\Bundle\ScopeBundle\Entity\Scope;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 
 class MenuUpdateUtils
 {
@@ -75,13 +73,15 @@ class MenuUpdateUtils
      * @param MenuUpdateInterface $update
      * @param ItemInterface $menu
      * @param LocalizationHelper $localizationHelper
+     * @param array $options
      */
     public static function updateMenuItem(
         MenuUpdateInterface $update,
         ItemInterface $menu,
-        LocalizationHelper $localizationHelper
+        LocalizationHelper $localizationHelper,
+        array $options = []
     ) {
-        $item = self::findOrCreateMenuItem($update, $menu);
+        $item = self::findOrCreateMenuItem($update, $menu, $options);
         if ($item === null) {
             return;
         }
@@ -99,15 +99,26 @@ class MenuUpdateUtils
         foreach ($update->getExtras() as $key => $extra) {
             $item->setExtra($key, $extra);
         }
+
+        if ($update->getDescriptions()->count()) {
+            $description = (string)$update->getDescription($localizationHelper->getCurrentLocalization());
+            if ($description) {
+                $item->setExtra('description', $description);
+            }
+        }
     }
 
     /**
      * @param MenuUpdateInterface $update
      * @param ItemInterface $menu
+     * @param array $options
      * @return ItemInterface|null
      */
-    protected static function findOrCreateMenuItem(MenuUpdateInterface $update, ItemInterface $menu)
-    {
+    protected static function findOrCreateMenuItem(
+        MenuUpdateInterface $update,
+        ItemInterface $menu,
+        array $options = []
+    ) {
         $item = self::findMenuItem($menu, $update->getKey());
         if ($item === null && !$update->isCustom()) {
             return null;
@@ -117,12 +128,12 @@ class MenuUpdateUtils
         $parentItem = $parentItem === null ? $menu : $parentItem;
 
         if ($item === null) {
-            $item = $parentItem->addChild($update->getKey());
+            $item = $parentItem->addChild($update->getKey(), $options);
         }
 
         if ($item->getParent()->getName() !== $parentItem->getName()) {
             $item->getParent()->removeChild($item->getName());
-            $item = $parentItem->addChild($item);
+            $item = $parentItem->addChild($item, $options);
         }
         return $item;
     }

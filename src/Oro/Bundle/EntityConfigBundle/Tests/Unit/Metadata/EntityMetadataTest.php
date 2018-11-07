@@ -6,7 +6,7 @@ use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
 use Oro\Bundle\EntityConfigBundle\Metadata\EntityMetadata;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\Fixture\DemoEntity;
 
-class EntityMetadataTest extends \PHPUnit_Framework_TestCase
+class EntityMetadataTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var EntityMetadata
@@ -31,6 +31,29 @@ class EntityMetadataTest extends \PHPUnit_Framework_TestCase
         $this->classMetadata->merge($newMetadata);
 
         $this->assertEquals(ConfigModel::MODE_READONLY, $this->classMetadata->mode);
+    }
+
+    public function testGetRoutes()
+    {
+        $metadata = new EntityMetadata(DemoEntity::class);
+
+        $metadata->routeView = 'test_route_view';
+        $metadata->routeName = 'test_route_name';
+        $metadata->routeCreate = 'test_route_create';
+        $metadata->routeEdit = 'test_route_edit';
+        $metadata->routeDelete = 'test_route_delete';
+        $metadata->routeTest = null;
+        $metadata->routes = ['custom' => 'test_route_custom', 'emtpy' => null];
+
+        $this->assertEquals(
+            [
+                'custom' => 'test_route_custom',
+                'view' => 'test_route_view',
+                'name' => 'test_route_name',
+                'create' => 'test_route_create',
+            ],
+            $metadata->getRoutes()
+        );
     }
 
     public function testGetRouteFromAnnotationValues()

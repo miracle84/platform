@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\ActionBundle\Configuration;
 
+use Oro\Bundle\ActionBundle\Model\OperationDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
-use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
-
-use Oro\Bundle\ActionBundle\Model\OperationDefinition;
+use Symfony\Component\Config\Definition\Processor;
 
 class OperationListConfiguration implements ConfigurationDefinitionInterface
 {
@@ -82,6 +81,9 @@ class OperationListConfiguration implements ConfigurationDefinitionInterface
                 ->defaultValue(0)
             ->end()
             ->booleanNode('enabled')
+                ->defaultTrue()
+            ->end()
+            ->booleanNode('page_reload')
                 ->defaultTrue()
             ->end()
             ->append($this->getAttributesNode())
@@ -266,6 +268,9 @@ class OperationListConfiguration implements ConfigurationDefinitionInterface
         $node = $builder->root('form_options');
         $node
             ->children()
+                ->arrayNode('validation_groups')
+                    ->prototype('scalar')->end()
+                ->end()
                 ->arrayNode('attribute_fields')
                     ->useAttributeAsKey('name')
                     ->prototype('array')

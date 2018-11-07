@@ -6,17 +6,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
-
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\ScopeBundle\Entity\Scope;
 use Oro\Bundle\ScopeBundle\Manager\ScopeManager;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Scope\WorkflowScopeManager;
-
 use Oro\Component\Testing\Unit\EntityTrait;
+use Psr\Log\LoggerInterface;
 
-class WorkflowScopeManagerTest extends \PHPUnit_Framework_TestCase
+class WorkflowScopeManagerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
@@ -24,16 +21,16 @@ class WorkflowScopeManagerTest extends \PHPUnit_Framework_TestCase
     const ENTITY_CLASS = 'stdClass';
     const ENTITY_ID = 42;
 
-    /** @var ObjectRepository|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ObjectRepository|\PHPUnit\Framework\MockObject\MockObject */
     private $repository;
 
-    /** @var ObjectManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ObjectManager|\PHPUnit\Framework\MockObject\MockObject */
     private $manager;
 
-    /** @var ScopeManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ScopeManager|\PHPUnit\Framework\MockObject\MockObject */
     private $scopeManager;
 
-    /** @var LoggerInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $logger;
 
     /** @var WorkflowScopeManager */

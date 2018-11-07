@@ -7,7 +7,7 @@ use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Criteria\ExpressionBuilder;
 use Oro\Bundle\SearchBundle\Query\Query;
 
-class CriteriaTest extends \PHPUnit_Framework_TestCase
+class CriteriaTest extends \PHPUnit\Framework\TestCase
 {
     public function testExpressionBuilder()
     {
@@ -68,6 +68,7 @@ class CriteriaTest extends \PHPUnit_Framework_TestCase
     {
         return [
             [Comparison::LIKE, Query::OPERATOR_LIKE],
+            [Comparison::NOT_LIKE, Query::OPERATOR_NOT_LIKE],
             [Comparison::CONTAINS, Query::OPERATOR_CONTAINS],
             [Comparison::NOT_CONTAINS, Query::OPERATOR_NOT_CONTAINS],
             [Comparison::NEQ, Query::OPERATOR_NOT_EQUALS],

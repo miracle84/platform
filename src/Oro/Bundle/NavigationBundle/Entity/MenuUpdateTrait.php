@@ -2,9 +2,9 @@
 
 namespace Oro\Bundle\NavigationBundle\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-
 use Oro\Bundle\LocaleBundle\Entity\FallbackTrait;
 use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 use Oro\Bundle\ScopeBundle\Entity\Scope;
@@ -114,6 +114,12 @@ trait MenuUpdateTrait
      * @ORM\Column(name="is_custom", type="boolean")
      */
     protected $custom = false;
+
+    public function __construct()
+    {
+        $this->titles = new ArrayCollection();
+        $this->descriptions = new ArrayCollection();
+    }
 
     /**
      * @return int
@@ -352,7 +358,7 @@ trait MenuUpdateTrait
      */
     public function setPriority($priority)
     {
-        $this->priority = $priority;
+        $this->priority = (int) $priority;
 
         return $this;
     }

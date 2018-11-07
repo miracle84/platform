@@ -2,11 +2,10 @@
 
 namespace Oro\Bundle\ReportBundle\Tests\Unit\Form\Type;
 
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
 use Oro\Bundle\QueryDesignerBundle\Form\Type\FieldChoiceType;
 use Oro\Bundle\ReportBundle\Form\Type\ReportChartSchemaType;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
 
 class ReportChartSchemaTypeTest extends FormIntegrationTestCase
 {
@@ -34,7 +33,7 @@ class ReportChartSchemaTypeTest extends FormIntegrationTestCase
      */
     public function testBuildForm(array $dataSchema)
     {
-        $this->factory->create($this->type, null, ['data_schema' => $dataSchema]);
+        $this->factory->create(ReportChartSchemaType::class, null, ['data_schema' => $dataSchema]);
     }
 
     /**
@@ -48,7 +47,8 @@ class ReportChartSchemaTypeTest extends FormIntegrationTestCase
                     'fieldName' => [
                         'label'    => 'label',
                         'name'     => 'name',
-                        'required' => true
+                        'required' => true,
+                        'default_type' => 'string',
                     ]
                 ]
             ]
@@ -60,11 +60,17 @@ class ReportChartSchemaTypeTest extends FormIntegrationTestCase
      */
     protected function getExtensions()
     {
-        $fieldChoiceType = new FieldChoiceType();
+        $translator = $this
+            ->getMockBuilder('Symfony\Component\Translation\TranslatorInterface')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $fieldChoiceType = new FieldChoiceType($translator);
 
         return [
             new PreloadedExtension(
                 [
+                    ReportChartSchemaType::class => $this->type,
                     $fieldChoiceType->getName() => $fieldChoiceType
                 ],
                 []

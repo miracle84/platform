@@ -4,11 +4,15 @@ namespace Oro\Bundle\SegmentBundle\Entity\Repository;
 
 use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\QueryBuilder;
-
 use Oro\Bundle\SegmentBundle\Entity\Segment;
 use Oro\Bundle\SegmentBundle\Entity\SegmentSnapshot;
+use Oro\Component\DoctrineUtils\ORM\QueryBuilderUtil;
 
+/**
+ * Doctrine repository for SegmentSnapshot entity.
+ */
 class SegmentSnapshotRepository extends EntityRepository
 {
     const DELETE_BATCH_SIZE = 20;
@@ -42,15 +46,22 @@ class SegmentSnapshotRepository extends EntityRepository
 
     /**
      * @param Segment $segment
-     *
+     * @param array $entityIds
      * @return array
      */
-    public function removeBySegment(Segment $segment)
+    public function removeBySegment(Segment $segment, array $entityIds = [])
     {
         $qb = $this->getEntityManager()->createQueryBuilder();
         $qb->delete($this->getEntityName(), 'snp')
-            ->where('snp.segment = :segment')
+            ->where($qb->expr()->eq('snp.segment', ':segment'))
             ->setParameter('segment', $segment);
+
+        if ($entityIds) {
+            $entityIdentifierField = $this->getEntityReferenceField($segment);
+
+            $qb->andWhere($qb->expr()->in('snp.' . $entityIdentifierField, ':entityIds'))
+                ->setParameter('entityIds', $entityIds);
+        }
 
         return $qb->getQuery()->execute();
     }
@@ -90,15 +101,18 @@ class SegmentSnapshotRepository extends EntityRepository
         $segmentQB->select('s.id, s.entity')->from('OroSegmentBundle:Segment', 's');
 
         foreach ($entities as $key => $entity) {
-            if (is_array($entity) && array_key_exists('id', $entity)) {
+            QueryBuilderUtil::checkIdentifier($key);
+            if (\is_array($entity) && array_key_exists('id', $entity)) {
                 $entityId  = $entity['id'];
                 $className = ClassUtils::getClass($entity['entity']);
+                $entityIdentifierField = $this->getEntityReferenceFieldByEntityClass($className);
             } else {
                 /** @var object $entity */
                 $className = ClassUtils::getClass($entity);
                 $metadata  = $entityManager->getClassMetadata($className);
                 $entityIds = $metadata->getIdentifierValues($entity);
                 $entityId  = reset($entityIds);
+                $entityIdentifierField = $this->getEntityReferenceFieldNameByMetadata($metadata);
             }
 
             if (!$entityId) {
@@ -112,6 +126,7 @@ class SegmentSnapshotRepository extends EntityRepository
             }
 
             $deleteParams[$className]['entityIds'][] = (string)$entityId;
+            $deleteParams[$className]['entityIdentifierField'] = $entityIdentifierField;
         }
 
         $segments = $segmentQB->getQuery()->getResult();
@@ -139,10 +154,17 @@ class SegmentSnapshotRepository extends EntityRepository
             }
 
             $deleteQB
-                ->orWhere($deleteQB->expr()->andX(
-                    $deleteQB->expr()->in('snp.segment', $params['segmentIds']),
-                    $deleteQB->expr()->in('snp.entityId', $params['entityIds'])
-                ));
+                ->orWhere(
+                    $deleteQB->expr()->andX(
+                        $deleteQB->expr()->in('snp.segment', ':segmentsIds'),
+                        $deleteQB->expr()->in(
+                            QueryBuilderUtil::getField('snp', $params['entityIdentifierField']),
+                            ':entityIds'
+                        )
+                    )
+                )
+                ->setParameter('segmentsIds', $params['segmentIds'])
+                ->setParameter('entityIds', $params['entityIds']);
             $returnQueryBuilder = true;
         }
 
@@ -157,20 +179,52 @@ class SegmentSnapshotRepository extends EntityRepository
      */
     public function getIdentifiersSelectQueryBuilder(Segment $segment)
     {
-        $entityMetadata = $this->getEntityManager()->getClassMetadata($segment->getEntity());
-        $idField        = $entityMetadata->getSingleIdentifierFieldName();
-        $idFieldType    = $entityMetadata->getTypeOfField($idField);
-        $fieldToSelect  = SegmentSnapshot::ENTITY_REF_FIELD;
-        if ($idFieldType == 'integer') {
-            $fieldToSelect = SegmentSnapshot::ENTITY_REF_INTEGER_FIELD;
-        }
-        $fieldToSelect = sprintf('snp.%s', $fieldToSelect);
+        $fieldToSelect = $this->getEntityReferenceField($segment);
+        $tableName = QueryBuilderUtil::generateParameterName('snp');
+        $paramName = QueryBuilderUtil::generateParameterName('segment');
+        $fieldToSelect = sprintf('%s.%s', $tableName, $fieldToSelect);
 
-        $qb = $this->createQueryBuilder('snp')
-            ->select($fieldToSelect)
-            ->where('snp.segment = :segment')
-            ->setParameter('segment', $segment);
+        $qb = $this->createQueryBuilder($tableName);
+        $qb->select($fieldToSelect)
+            ->where($qb->expr()->eq($tableName . '.segment', ':' . $paramName))
+            ->setParameter($paramName, $segment);
 
         return $qb;
+    }
+
+    /**
+     * @param Segment $segment
+     * @return string
+     */
+    private function getEntityReferenceField(Segment $segment)
+    {
+        return $this->getEntityReferenceFieldByEntityClass($segment->getEntity());
+    }
+
+    /**
+     * @param string $entityClass
+     * @return string
+     */
+    private function getEntityReferenceFieldByEntityClass($entityClass)
+    {
+        $entityMetadata = $this->getEntityManager()->getClassMetadata($entityClass);
+
+        return $this->getEntityReferenceFieldNameByMetadata($entityMetadata);
+    }
+
+    /**
+     * @param ClassMetadata $metadata
+     * @return string
+     */
+    private function getEntityReferenceFieldNameByMetadata(ClassMetadata $metadata)
+    {
+        $idField = $metadata->getSingleIdentifierFieldName();
+        $idFieldType = $metadata->getTypeOfField($idField);
+
+        if ($idFieldType === 'integer') {
+            return SegmentSnapshot::ENTITY_REF_INTEGER_FIELD;
+        }
+
+        return SegmentSnapshot::ENTITY_REF_FIELD;
     }
 }

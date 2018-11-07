@@ -2,13 +2,18 @@
 
 namespace Oro\Bundle\SearchBundle\Engine;
 
+use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
+use Oro\Bundle\SearchBundle\Query\Mode;
+use Oro\Bundle\SearchBundle\Query\Query;
+use Oro\Bundle\UIBundle\Tools\HtmlTagHelper;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
-use Oro\Bundle\SearchBundle\Provider\SearchMappingProvider;
-use Oro\Bundle\SearchBundle\Query\Query;
-use Oro\Bundle\SearchBundle\Query\Mode;
-
+/**
+ * Mapping index data from entities' data - common code.
+ *
+ * @package Oro\Bundle\SearchBundle\Engine
+ */
 abstract class AbstractMapper
 {
     /**
@@ -33,6 +38,11 @@ abstract class AbstractMapper
     protected $propertyAccessor;
 
     /**
+     * @var HtmlTagHelper
+     */
+    protected $htmlTagHelper;
+
+    /**
      * @param SearchMappingProvider $mappingProvider
      */
     public function setMappingProvider(SearchMappingProvider $mappingProvider)
@@ -46,6 +56,14 @@ abstract class AbstractMapper
     public function setPropertyAccessor(PropertyAccessorInterface $propertyAccessor)
     {
         $this->propertyAccessor = $propertyAccessor;
+    }
+
+    /**
+     * @param HtmlTagHelper $htmlTagHelper
+     */
+    public function setHtmlTagHelper(HtmlTagHelper $htmlTagHelper)
+    {
+        $this->htmlTagHelper = $htmlTagHelper;
     }
 
     /**
@@ -118,45 +136,6 @@ abstract class AbstractMapper
     }
 
     /**
-     * Set related fields values
-     *
-     * @param string $alias
-     * @param array  $objectData
-     * @param array  $relationFields
-     * @param object $relationObject
-     * @param string $parentName
-     * @param bool   $isArray
-     *
-     * @deprecated since 1.8
-     *
-     * @return array
-     */
-    protected function setRelatedFields(
-        $alias,
-        $objectData,
-        $relationFields,
-        $relationObject,
-        $parentName,
-        $isArray = false
-    ) {
-        foreach ($relationFields as $relationObjectField) {
-            $value = $this->getFieldValue($relationObject, $relationObjectField['name']);
-            if ($value) {
-                $relationObjectField['name'] = $parentName;
-                $objectData = $this->setDataValue(
-                    $alias,
-                    $objectData,
-                    $relationObjectField,
-                    $value,
-                    $isArray
-                );
-            }
-        }
-
-        return $objectData;
-    }
-
-    /**
      * Set value for meta fields by type
      *
      * @param string $alias
@@ -197,17 +176,9 @@ abstract class AbstractMapper
                     $textAllDataField = $objectData[$fieldConfig['target_type']][Indexer::TEXT_ALL_DATA_FIELD];
                 }
 
-                $clearedValue = Query::clearString($value);
-                $textAllDataField .= sprintf(' %s %s ', $value, $clearedValue);
-
-                $objectData[$fieldConfig['target_type']][Indexer::TEXT_ALL_DATA_FIELD] = implode(
-                    Query::DELIMITER,
-                    array_unique(
-                        explode(
-                            Query::DELIMITER,
-                            $textAllDataField
-                        )
-                    )
+                $objectData[$fieldConfig['target_type']][Indexer::TEXT_ALL_DATA_FIELD] = $this->buildAllDataField(
+                    $textAllDataField,
+                    $value
                 );
 
                 $objectData[$fieldConfig['target_type']] = array_map('trim', $objectData[$fieldConfig['target_type']]);
@@ -215,5 +186,36 @@ abstract class AbstractMapper
         }
 
         return $objectData;
+    }
+
+    /**
+     * @param string $fieldName
+     * @param mixed $value
+     * @return string
+     */
+    abstract protected function clearTextValue($fieldName, $value);
+
+    /**
+     * @param string $original
+     * @param string $addition
+     * @return string
+     */
+    public function buildAllDataField($original, $addition)
+    {
+        $addition = $this->clearTextValue(Indexer::TEXT_ALL_DATA_FIELD, $addition);
+        $clearedAddition = Query::clearString($addition);
+
+        $original .= sprintf(' %s %s ', $addition, $clearedAddition);
+        $original = implode(
+            Query::DELIMITER,
+            array_unique(
+                explode(
+                    Query::DELIMITER,
+                    $original
+                )
+            )
+        );
+
+        return $original;
     }
 }

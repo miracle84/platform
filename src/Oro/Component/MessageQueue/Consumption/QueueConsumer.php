@@ -1,49 +1,54 @@
 <?php
+
 namespace Oro\Component\MessageQueue\Consumption;
 
 use Oro\Component\MessageQueue\Consumption\Exception\ConsumptionInterruptedException;
+use Oro\Component\MessageQueue\Consumption\Exception\RejectMessageExceptionInterface;
+use Oro\Component\MessageQueue\Log\ConsumerState;
 use Oro\Component\MessageQueue\Transport\ConnectionInterface;
 use Oro\Component\MessageQueue\Transport\MessageConsumerInterface;
-use Oro\Component\MessageQueue\Util\VarExport;
+use Oro\Component\PhpUtils\Formatter\BytesFormatter;
 use Psr\Log\NullLogger;
 
 /**
+ * Consuming messages from a queue
+ *
  * @SuppressWarnings(PHPMD.NPathComplexity)
  */
 class QueueConsumer
 {
-    /**
-     * @var ConnectionInterface
-     */
+    const MESSAGE_PROCESSED_KEY = 'message_processed';
+
+    /** @var ConnectionInterface */
     private $connection;
 
-    /**
-     * @var ExtensionInterface|ChainExtension|null
-     */
+    /** @var ExtensionInterface */
     private $extension;
 
-    /**
-     * @var MessageProcessorInterface[]
-     */
+    /** @var MessageProcessorInterface[] */
     private $boundMessageProcessors;
 
-    /**
-     * @var int
-     */
+    /** @var int */
     private $idleMicroseconds;
+
+    /** @var ConsumerState */
+    private $consumerState;
 
     /**
      * @param ConnectionInterface $connection
-     * @param ExtensionInterface|ChainExtension|null $extension
-     * @param int $idleMicroseconds 100ms by default
+     * @param ExtensionInterface  $extension
+     * @param ConsumerState       $consumerState
+     * @param int                 $idleMicroseconds 100ms by default
      */
     public function __construct(
         ConnectionInterface $connection,
-        ExtensionInterface $extension = null,
+        ExtensionInterface $extension,
+        ConsumerState $consumerState,
         $idleMicroseconds = 100000
     ) {
         $this->connection = $connection;
         $this->extension = $extension;
+        $this->consumerState = $consumerState;
         $this->idleMicroseconds = $idleMicroseconds;
 
         $this->boundMessageProcessors = [];
@@ -81,7 +86,7 @@ class QueueConsumer
      * Runtime extension - is an extension or a collection of extensions which could be set on runtime.
      * Here's a good example: @see LimitsExtensionsCommandTrait
      *
-     * @param ExtensionInterface|ChainExtension|null $runtimeExtension
+     * @param ExtensionInterface|null $runtimeExtension
      *
      * @throws \Exception
      */
@@ -96,12 +101,12 @@ class QueueConsumer
             $messageConsumers[$queueName] = $session->createConsumer($queue);
         }
 
-        $extension = $this->extension ?: new ChainExtension([]);
-        if ($runtimeExtension) {
-            $extension = new ChainExtension([$extension, $runtimeExtension]);
-        }
-
         $context = new Context($session);
+
+        $extension = $this->extension;
+        if (null !== $runtimeExtension) {
+            $extension = new ChainExtension([$runtimeExtension, $extension]);
+        }
         $extension->onStart($context);
 
         $logger = $context->getLogger() ?: new NullLogger();
@@ -112,25 +117,26 @@ class QueueConsumer
                 foreach ($this->boundMessageProcessors as $queueName => $messageProcessor) {
                     $logger->debug(sprintf('Switch to a queue %s', $queueName));
 
-                    $messageConsumer = $messageConsumers[$queueName];
-
                     $context = new Context($session);
                     $context->setLogger($logger);
                     $context->setQueueName($queueName);
-                    $context->setMessageConsumer($messageConsumer);
+                    $context->setMessageConsumer($messageConsumers[$queueName]);
                     $context->setMessageProcessor($messageProcessor);
 
                     $this->doConsume($extension, $context);
                 }
             } catch (ConsumptionInterruptedException $e) {
-                $logger->info(sprintf('Consuming interrupted'));
-
-                $context->setExecutionInterrupted(true);
+                $logger->warning(sprintf('Consuming interrupted, reason: %s', $e->getMessage()));
 
                 $extension->onInterrupted($context);
                 $session->close();
 
                 return;
+            } catch (RejectMessageExceptionInterface $exception) {
+                $context->setException($exception);
+                $context->getMessageConsumer()->reject($context->getMessage());
+                $session->close();
+                throw $exception;
             } catch (\Exception $exception) {
                 $context->setExecutionInterrupted(true);
                 $context->setException($exception);
@@ -166,49 +172,61 @@ class QueueConsumer
         $extension->onBeforeReceive($context);
 
         if ($context->isExecutionInterrupted()) {
-            throw new ConsumptionInterruptedException();
+            throw new ConsumptionInterruptedException($context->getInterruptedReason());
         }
-
-        if ($message = $messageConsumer->receive($timeout = 1)) {
-            $logger->info('Message received');
-            $logger->debug('Headers: {headers}', ['headers' => new VarExport($message->getHeaders())]);
-            $logger->debug('Properties: {properties}', ['properties' => new VarExport($message->getProperties())]);
-            $logger->debug('Payload: {payload}', ['payload' => new VarExport($message->getBody())]);
-
+        $logger->debug('Pre receive Message');
+        $message = $messageConsumer->receive(1);
+        if (null !== $message) {
             $context->setMessage($message);
-
             $extension->onPreReceived($context);
+
+            $logger->info('Message received', [
+                'headers'    => $message->getHeaders(),
+                'properties' => $message->getProperties()
+            ]);
+
+            $executionTime = 0;
             if (!$context->getStatus()) {
+                $startTime = (int)(microtime(true) * 1000);
                 $status = $messageProcessor->process($message, $session);
+                $executionTime = (int)(microtime(true) * 1000) - $startTime;
                 $context->setStatus($status);
             }
 
             switch ($context->getStatus()) {
                 case MessageProcessorInterface::ACK:
                     $messageConsumer->acknowledge($message);
+                    $statusForLog = 'ACK';
                     break;
                 case MessageProcessorInterface::REJECT:
                     $messageConsumer->reject($message, false);
+                    $statusForLog = 'REJECT';
                     break;
                 case MessageProcessorInterface::REQUEUE:
                     $messageConsumer->reject($message, true);
+                    $statusForLog = 'REQUEUE';
                     break;
                 default:
                     throw new \LogicException(sprintf('Status is not supported: %s', $context->getStatus()));
             }
 
-            $logger->info(sprintf('Message processed: %s', $context->getStatus()));
+            $loggerContext = [
+                'status' => $statusForLog,
+                'time_taken' => $executionTime
+            ];
+            $this->addMemoryUsageInfo($loggerContext);
+            $logger->notice('Message processed: {status}. Execution time: {time_taken} ms', $loggerContext);
 
             $extension->onPostReceived($context);
         } else {
-            $logger->info(sprintf('Idle'));
+            $logger->info('Idle');
 
             usleep($this->idleMicroseconds);
             $extension->onIdle($context);
         }
 
         if ($context->isExecutionInterrupted()) {
-            throw new ConsumptionInterruptedException();
+            throw new ConsumptionInterruptedException($context->getInterruptedReason());
         }
     }
 
@@ -255,5 +273,17 @@ class QueueConsumer
         }
 
         throw $exception;
+    }
+
+    /**
+     * Add information about memory usage difference and peak memory usage
+     *
+     * @param array $loggerContext
+     */
+    protected function addMemoryUsageInfo(array &$loggerContext)
+    {
+        $memoryTaken = memory_get_usage() - $this->consumerState->getStartMemoryUsage();
+        $loggerContext['peak_memory'] = BytesFormatter::format($this->consumerState->getPeakMemory());
+        $loggerContext['memory_taken'] = BytesFormatter::format($memoryTaken);
     }
 }

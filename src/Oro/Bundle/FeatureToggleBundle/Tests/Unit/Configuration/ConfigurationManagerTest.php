@@ -5,10 +5,10 @@ namespace Oro\Bundle\FeatureToggleBundle\Tests\Unit\Configuration;
 use Oro\Bundle\FeatureToggleBundle\Configuration\ConfigurationManager;
 use Oro\Bundle\FeatureToggleBundle\Configuration\ConfigurationProvider;
 
-class ConfigurationManagerTest extends \PHPUnit_Framework_TestCase
+class ConfigurationManagerTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ConfigurationProvider|\PHPUnit_Framework_MockObject_MockObject
+     * @var ConfigurationProvider|\PHPUnit\Framework\MockObject\MockObject
      */
     protected $configurationProvider;
 
@@ -108,6 +108,15 @@ class ConfigurationManagerTest extends \PHPUnit_Framework_TestCase
             ->willReturn(['feature1' => ['toggle' => 'oro_bundle.toggle_key']]);
 
         $this->assertNull($this->configurationManager->getFeatureByToggle('wrong_toggle_key'));
+    }
+
+    public function testGetFeatureByToggleWhenNotIsset()
+    {
+        $this->configurationProvider->expects($this->once())
+            ->method('getFeaturesConfiguration')
+            ->willReturn(['feature1' => ['not_toggle' => 'oro_bundle.toggle_key']]);
+
+        $this->assertNull($this->configurationManager->getFeatureByToggle('oro_bundle.toggle_key'));
     }
 
     /**

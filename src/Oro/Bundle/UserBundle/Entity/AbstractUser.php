@@ -11,6 +11,8 @@ use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
 use Symfony\Component\Security\Core\Role\RoleInterface;
 
 /**
+ * A base class for an organization aware user.
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  * @SuppressWarnings(PHPMD.ExcessivePublicCount)
  *
@@ -134,7 +136,7 @@ abstract class AbstractUser implements
     /**
      * @var RoleInterface[]|Collection
      *
-     * @ORM\ManyToMany(targetEntity="Oro\Bundle\UserBundle\Entity\Role")
+     * @ORM\ManyToMany(targetEntity="Oro\Bundle\UserBundle\Entity\Role", inversedBy="users")
      * @ORM\JoinTable(name="oro_user_access_role",
      *      joinColumns={@ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")},
      *      inverseJoinColumns={@ORM\JoinColumn(name="role_id", referencedColumnName="id", onDelete="CASCADE")}
@@ -548,7 +550,7 @@ abstract class AbstractUser implements
     /**
      * Get organization
      *
-     * @return OrganizationInterface
+     * @return OrganizationInterface|Organization
      */
     public function getOrganization()
     {

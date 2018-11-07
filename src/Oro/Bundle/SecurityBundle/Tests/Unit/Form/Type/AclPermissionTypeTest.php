@@ -3,8 +3,9 @@
 namespace Oro\Bundle\SecurityBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\SecurityBundle\Form\Type\AclPermissionType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 
-class AclPermissionTypeTest extends \PHPUnit_Framework_TestCase
+class AclPermissionTypeTest extends \PHPUnit\Framework\TestCase
 {
     /** @var AclPermissionType */
     protected $formType;
@@ -25,18 +26,13 @@ class AclPermissionTypeTest extends \PHPUnit_Framework_TestCase
             )
         );
         $builder->expects($this->at(0))->method('add')->with('accessLevel', 'grid', array('required' => false));
-        $builder->expects($this->at(1))->method('add')->with('name', 'hidden', array('required' => false));
+        $builder->expects($this->at(1))->method('add')->with('name', HiddenType::class, array('required' => false));
         $this->formType->buildForm($builder, $options);
     }
 
-    public function testGetName()
+    public function testConfigureOptions()
     {
-        $this->assertEquals('oro_acl_permission', $this->formType->getName());
-    }
-
-    public function testSetDefaultOptions()
-    {
-        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolverInterface')
+        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -47,6 +43,6 @@ class AclPermissionTypeTest extends \PHPUnit_Framework_TestCase
                     'privileges_config' => array()
                 )
             );
-        $this->formType->setDefaultOptions($resolver);
+        $this->formType->configureOptions($resolver);
     }
 }

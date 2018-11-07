@@ -1,4 +1,3 @@
-/*global define*/
 define([
     'backbone',
     'underscore',
@@ -8,12 +7,14 @@ define([
 ], function(Backbone, _, ItemCollection) {
     'use strict';
 
+    var DashboardItemsView;
+
     /**
      * @export  orodashboard/js/items/view
      * @class   orodashboard.items.Model
      * @extends Backbone.Model
      */
-    return Backbone.View.extend({
+    DashboardItemsView = Backbone.View.extend({
         events: {
             'change .item-select': '_toggleButtons',
             'click .add-button:not(.disabled)': '_onAddClick',
@@ -21,7 +22,7 @@ define([
         },
 
         selectTplSelector: '#widget-items-item-select-template',
-        itemTplSelector:   '#widget-items-item-template',
+        itemTplSelector: '#widget-items-item-template',
 
         requiredOptions: [
             'itemsData',
@@ -32,6 +33,16 @@ define([
         filteredItems: null,
         itemSelect: null,
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function DashboardItemsView() {
+            DashboardItemsView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             _.each(this.requiredOptions, function(optionName) {
                 if (!_.has(options, optionName)) {
@@ -92,8 +103,8 @@ define([
 
         _initializeItemGrid: function(items) {
             var $itemContainer = this.$('.item-container');
-            var showedItems    = items.where({show: true});
-            var filteredItems = this.filteredItems  = new ItemCollection(showedItems, {comparator: 'order'});
+            var showedItems = items.where({show: true});
+            var filteredItems = this.filteredItems = new ItemCollection(showedItems, {comparator: 'order'});
 
             $itemContainer.itemsManagerTable({
                 itemTemplate: Backbone.$(this.itemTplSelector).html(),
@@ -135,7 +146,7 @@ define([
         },
 
         _onAddClick: function() {
-            var item  = this.itemSelect.inputWidget('val');
+            var item = this.itemSelect.inputWidget('val');
             var model = this.items.get(item);
 
             model.set('show', true);
@@ -183,4 +194,6 @@ define([
             }
         }
     });
+
+    return DashboardItemsView;
 });

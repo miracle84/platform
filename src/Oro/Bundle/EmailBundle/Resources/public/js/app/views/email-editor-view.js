@@ -11,6 +11,8 @@ define(function(require) {
     var ApplyTemplateConfirmation = require('oroemail/js/app/apply-template-confirmation');
 
     EmailEditorView = BaseView.extend({
+        templatesProvider: null,
+        editorComponentName: null,
         readyPromise: null,
         domCache: null,
 
@@ -21,12 +23,20 @@ define(function(require) {
         },
 
         /**
+         * @inheritDoc
+         */
+        constructor: function EmailEditorView() {
+            EmailEditorView.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
          * @constructor
          * @param {Object} options
          */
         initialize: function(options) {
             EmailEditorView.__super__.initialize.apply(this, arguments);
             this.templatesProvider = options.templatesProvider;
+            this.editorComponentName = options.editorComponentName;
             this.setupCache();
         },
 
@@ -60,11 +70,11 @@ define(function(require) {
             } else {
                 url = routing.generate(
                     'oro_user_profile_configuration',
-                    {'activeGroup': 'platform', 'activeSubGroup': 'email_configuration'}
+                    {activeGroup: 'platform', activeSubGroup: 'user_email_configuration'}
                 );
-                message = this.model.get('isSignatureEditable') ?
-                    __('oro.email.thread.no_signature', {url: url}) :
-                    __('oro.email.thread.no_signature_no_permission');
+                message = this.model.get('isSignatureEditable')
+                    ? __('oro.email.thread.no_signature', {url: url})
+                    : __('oro.email.thread.no_signature_no_permission');
                 mediator.execute('showFlashMessage', 'info', message);
             }
         },
@@ -115,18 +125,43 @@ define(function(require) {
                 mediator.execute('showLoading');
                 this.templatesProvider.create(templateId, this.model.get('email').get('relatedEntityId'))
                     .always(_.bind(mediator.execute, mediator, 'hideLoading'))
+                    .fail(_.bind(this.showTemplateErrorMessage, this))
                     .done(_.bind(this.fillForm, this));
             }, this));
             confirm.open();
         },
 
+        showTemplateErrorMessage: function(jqXHR) {
+            var reason = jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON.reason : '';
+            var $errorContainer = this._getErrorContainer();
+
+            $errorContainer.find('.alert-error').remove();
+
+            mediator.execute(
+                'showMessage',
+                'error',
+                reason ? reason : __('oro.email.emailtemplate.load_failed'),
+                {container: $errorContainer}
+            );
+        },
+
         fillForm: function(emailData) {
+            var editorView = this.getBodyEditorView();
+            var $errorContainer = this._getErrorContainer();
+
+            $errorContainer.find('.alert-error').remove();
+
             if (!this.model.get('parentEmailId') || !this.domCache.subject.val()) {
                 this.domCache.subject.val(emailData.subject);
             }
 
             var body = this.initBody(emailData.body, false);
             this.domCache.body.val(body);
+
+            if (editorView.enabled && editorView.tinymceInstance) {
+                editorView.tinymceInstance.setContent(body);
+            }
+
             this.domCache.type.find('input[value=' + emailData.type + ']')
                 .prop('checked', true)
                 .trigger('change');
@@ -140,7 +175,8 @@ define(function(require) {
          * Returns wysiwyg editor view
          */
         getBodyEditorView: function() {
-            return this.pageComponent('wrap_oro_email_email_body').view.pageComponent('oro_email_email_body').view;
+            return this.pageComponent('wrap_' + this.editorComponentName).view
+                .pageComponent(this.editorComponentName).view;
         },
 
         initFields: function() {
@@ -176,7 +212,6 @@ define(function(require) {
                 .parents('.control-group.taggable-field')
                 .find('label').html(__('oro.email.to'));
             this.addForgedAsterisk();
-
         },
 
         hideField: function(fieldName) {
@@ -187,7 +222,7 @@ define(function(require) {
             if (this.$('span.show' + fieldName).length > 0) {
                 return;
             }
-            this.$('.cc-bcc-holder').append('<span class="show' + fieldName + '">' + fieldName +  '</span>');
+            this.$('.cc-bcc-holder').append('<span class="show' + fieldName + '">' + fieldName + '</span>');
             this.$('.show' + fieldName).on('click', _.bind(function(e) {
                 e.stopPropagation();
                 var target = e.target;
@@ -220,6 +255,10 @@ define(function(require) {
                 body += this.model.get('bodyFooter') + '</body>';
             }
             return body;
+        },
+
+        _getErrorContainer: function() {
+            return this.$('[name$="[template]"]').parent();
         }
     });
 

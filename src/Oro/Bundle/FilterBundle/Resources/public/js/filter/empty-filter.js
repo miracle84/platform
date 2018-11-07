@@ -56,8 +56,18 @@ define([
         /**
          * @property {String}
          */
-        caret: '<span class="caret"></span>',
+        caret: '<span class="caret" aria-hidden="true"></span>',
 
+        /**
+         * @inheritDoc
+         */
+        constructor: function EmptyFilter() {
+            EmptyFilter.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             var opts = _.pick(options || {}, 'caret');
             _.extend(this, opts);
@@ -93,9 +103,17 @@ define([
             $(e.currentTarget).parent().addClass('active');
 
             var parentDiv = $(e.currentTarget).parent().parent().parent();
-            var type = $(e.currentTarget).attr('data-value');
             var choiceName = $(e.currentTarget).html();
+            choiceName += this.caret;
+            parentDiv.find('[data-toggle="dropdown"]').html(choiceName);
 
+            var type = $(e.currentTarget).attr('data-value');
+            this._onClickChoiceValueSetType(type);
+
+            e.preventDefault();
+        },
+
+        _onClickChoiceValueSetType: function(type) {
             var $typeInput = this.$(this.criteriaValueSelectors.type);
             $typeInput.each(function() {
                 var $input = $(this);
@@ -124,14 +142,11 @@ define([
                     return true;
                 }
             });
+
             this.fixSelects();
             $typeInput.trigger('change');
-            choiceName += this.caret;
-            parentDiv.find('.dropdown-toggle').html(choiceName);
-
             this._handleEmptyFilter(type);
-
-            e.preventDefault();
+            this.trigger('typeChange', this);
         },
 
         /**
@@ -205,6 +220,22 @@ define([
 
             button.removeClass(this.updateSelectorEmptyClass);
             item.show();
+        },
+
+        _updateDOMValue: function() {
+            EmptyFilter.__super__._updateDOMValue.apply(this, arguments);
+            this._updateValueFieldVisibility();
+        },
+
+        _updateValueFieldVisibility: function() {
+            var type = this.$(this.criteriaValueSelectors.type).val();
+            var $field = this.$(this.criteriaValueSelectors.value);
+
+            if (this.isEmptyType(type)) {
+                $field.hide();
+            } else {
+                $field.show();
+            }
         },
 
         /**

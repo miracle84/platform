@@ -10,14 +10,14 @@ define(function(require) {
     var Backbone = require('backbone');
     var BaseComponent = require('oroui/js/app/components/base/component');
     var PageableCollection = require('orodatagrid/js/pageable-collection');
-    var Grid = require('orodatagrid/js/datagrid/grid');
+    var GridView = require('orodatagrid/js/datagrid/grid');
     var mapActionModuleName = require('orodatagrid/js/map-action-module-name');
     var mapCellModuleName = require('orodatagrid/js/map-cell-module-name');
     var gridContentManager = require('orodatagrid/js/content-manager');
     var PluginManager = require('oroui/js/app/plugins/plugin-manager');
     var FloatingHeaderPlugin = require('orodatagrid/js/app/plugins/grid/floating-header-plugin');
     var FullscreenPlugin = require('orodatagrid/js/app/plugins/grid/fullscreen-plugin');
-    var ColumnManagerPlugin = require('orodatagrid/js/app/plugins/grid/column-manager-plugin');
+    var DatagridSettingsPlugin = require('orodatagrid/js/app/plugins/grid/datagrid-settings-plugin');
     var ToolbarMassActionPlugin = require('orodatagrid/js/app/plugins/grid/toolbar-mass-action-plugin');
     var MetadataModel = require('orodatagrid/js/datagrid/metadata-model');
     var DataGridThemeOptionsManager = require('orodatagrid/js/datagrid-theme-options-manager');
@@ -29,17 +29,35 @@ define(function(require) {
         },
         actionType: function(type) {
             return type + 'Action';
+        },
+        customType: function(type) {
+            return type + 'Custom';
         }
     };
 
     DataGridComponent = BaseComponent.extend({
         currentApperanceKey: 'grid',
+
         currentApperanceId: void 0,
+
         changeAppearanceEnabled: false,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function DataGridComponent() {
+            DataGridComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
             this.pluginManager = new PluginManager(this);
             this.changeAppearanceEnabled = 'appearanceData' in options.metadata.state;
-            if (!options.enableFilters) {
+            if (!options.enableFilters ||
+                ('filters' in options.metadata && !options.metadata.filters.length)
+            ) {
                 options.builders = _.reject(options.builders, function(module) {
                     return module === 'orofilter/js/datafilter-builder';
                 });
@@ -154,16 +172,22 @@ define(function(require) {
             this.inputName = options.inputName;
             this.data = options.data;
 
+            this.themeOptions = options.themeOptions || {};
+
+            var customModules = _.extend(options.metadata.customModules || {}, this.themeOptions.customModules);
+
             this.metadata = _.defaults(options.metadata, {
                 columns: [],
                 options: {},
                 state: {},
                 initialState: {},
                 rowActions: {},
-                massActions: {}
+                massActions: {},
+                customModules: customModules
             });
-            this.themeOptions = options.themeOptions || {};
+
             this.metadataModel = new MetadataModel(this.metadata);
+
             this.modules = {};
 
             this.collectModules();
@@ -181,7 +205,7 @@ define(function(require) {
          * @param {Object} options
          */
         insertDataGrid: function(options) {
-            this.$el = $('<div>');
+            this.$el = $('<div data-layout="separate">');
             this.$componentEl.append(this.$el);
         },
 
@@ -206,6 +230,24 @@ define(function(require) {
                 var type = action.frontend_type;
                 modules[helpers.actionType(type)] = mapActionModuleName(type);
             });
+
+            // Collect custom modules for datagrid or child components  if there are present.
+            _.each(metadata.customModules, function(module, type) {
+                if (_.isString(module)) {
+                    modules[helpers.customType(type)] = module;
+                }
+            });
+
+            // preload all action confirmation modules
+            _.each(this.data.data, function(model) {
+                _.each(model.action_configuration, function(config) {
+                    var module = config.confirmation && config.confirmation.component;
+                    if (module) {
+                        // the key does not matter, the module just added to list to have it preloaded
+                        modules[module] = module;
+                    }
+                });
+            });
         },
 
         /**
@@ -219,22 +261,22 @@ define(function(require) {
             var collectionName = this.gridName;
             var collection = gridContentManager.get(collectionName);
 
-            Grid =  modules.GridView || Grid;
-            PageableCollection = modules.PageableCollection || PageableCollection;
+            var Grid = modules.GridView || GridView;
+            var Collection = modules.PageableCollection || PageableCollection;
 
             collectionModels = {};
             if (this.data && this.data.data) {
                 collectionModels = this.data.data;
             }
 
-            collectionOptions = this.combineCollectionOptions();
+            collectionOptions = this.combineCollectionOptions(modules);
             if (this.data && this.data.options) {
                 _.extend(collectionOptions, this.data.options);
             }
 
             if (!collection) {
                 // otherwise, create collection from metadata
-                collection = new PageableCollection(collectionModels, collectionOptions);
+                collection = new Collection(collectionModels, collectionOptions);
             }
 
             // create grid
@@ -291,7 +333,7 @@ define(function(require) {
                 }, 0);
                 return;
             }
-            this.selectAppearance(appearanceOptions.type,  appearanceOptions);
+            this.selectAppearance(appearanceOptions.type, appearanceOptions);
         },
 
         selectAppearance: function(key, options) {
@@ -326,7 +368,7 @@ define(function(require) {
          *
          * @returns {Object}
          */
-        combineCollectionOptions: function() {
+        combineCollectionOptions: function(modules) {
             var options = _.extend({
                 /*
                  * gridName contains extended information "inputName + scopeName"
@@ -341,7 +383,8 @@ define(function(require) {
                     columns: {}
                 }, this.metadata.state),
                 initialState: this.metadata.initialState,
-                mode: this.metadata.mode || 'server'
+                mode: this.metadata.mode || 'server',
+                modules: modules
             }, this.metadata.options);
             return options;
         },
@@ -384,15 +427,15 @@ define(function(require) {
             var massActions = this.buildMassActionsOptions(this.metadata.massActions);
 
             if (!this.themeOptions.headerHide) {
-                if (tools.isMobile()) {
+                if (this.metadata.enableFloatingHeaderPlugin) {
                     plugins.push(FloatingHeaderPlugin);
                 } else if (this.metadata.enableFullScreenLayout) {
                     plugins.push(FullscreenPlugin);
                 }
             }
 
-            if (metadata.options.toolbarOptions.addColumnManager) {
-                plugins.push(ColumnManagerPlugin);
+            if (metadata.options.toolbarOptions.addDatagridSettingsManager) {
+                plugins.push(DatagridSettingsPlugin);
             }
 
             if (this.themeOptions.showMassActionOnToolbar) {
@@ -400,8 +443,17 @@ define(function(require) {
             }
 
             if (!this.themeOptions.disableStickedScrollbar) {
-                if (tools.isMobile() || !this.metadata.enableFullScreenLayout) {
-                    plugins.push(StickedScrollbarPlugin);
+                if (this.metadata.responsiveGrids && this.metadata.responsiveGrids.enable) {
+                    plugins.push({
+                        constructor: StickedScrollbarPlugin,
+                        options: {
+                            viewport: this.metadata.responsiveGrids.viewport || {}
+                        }
+                    });
+                } else {
+                    if (tools.isMobile() || !this.metadata.enableFullScreenLayout) {
+                        plugins.push(StickedScrollbarPlugin);
+                    }
                 }
             }
 
@@ -413,17 +465,16 @@ define(function(require) {
                     break;
                 default:
                     metadata.options.toolbarOptions.addAppearanceSwitcher = true;
-                    metadata.options.toolbarOptions.availableApperances = appearances.map(function(item) {
-                            return {
-                                key: item.type,
-                                id: item.id || 'by_type',
-                                label: item.label,
-                                className: 'btn',
-                                iconClassName: item.icon,
-                                options: item
-                            };
-                        }
-                    );
+                    metadata.options.toolbarOptions.availableAppearances = appearances.map(function(item) {
+                        return {
+                            key: item.type,
+                            id: item.id || 'by_type',
+                            label: item.label,
+                            className: 'btn',
+                            iconClassName: item.icon,
+                            options: item
+                        };
+                    });
             }
 
             return {
@@ -437,6 +488,7 @@ define(function(require) {
                 exportOptions: metadata.options.export || {},
                 routerEnabled: _.isUndefined(metadata.options.routerEnabled) ? true : metadata.options.routerEnabled,
                 multiSelectRowEnabled: metadata.options.multiSelectRowEnabled || massActions.length,
+                rowClickAction: metadata.options.rowClickAction || false,
                 metadata: this.metadata,
                 metadataModel: this.metadataModel,
                 plugins: plugins,

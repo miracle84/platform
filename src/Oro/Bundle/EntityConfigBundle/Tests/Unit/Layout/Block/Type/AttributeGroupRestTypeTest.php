@@ -2,33 +2,23 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Layout\BlockType;
 
-use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\ExpressionLanguage\Expression;
-
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroup;
-use Oro\Bundle\EntityConfigBundle\Layout\AttributeGroupRenderRegistry;
+use Oro\Bundle\EntityConfigBundle\Layout\AttributeRenderRegistry;
 use Oro\Bundle\EntityConfigBundle\Layout\Block\Type\AttributeGroupRestType;
 use Oro\Bundle\EntityConfigBundle\Layout\Block\Type\AttributeGroupType;
 use Oro\Bundle\LayoutBundle\Layout\Block\Type\ConfigurableType;
-use Oro\Bundle\LocaleBundle\Helper\LocalizationHelper;
-
 use Oro\Component\Layout\Block\Type\ContainerType;
 use Oro\Component\Layout\LayoutFactoryBuilderInterface;
 use Oro\Component\Layout\Tests\Unit\BaseBlockTypeTestCase;
+use Symfony\Component\ExpressionLanguage\Expression;
 
 class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
 {
     /**
-     * @var AttributeGroupRenderRegistry|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeRenderRegistry
      */
-    protected $attributeGroupRenderRegistry;
-
-    /**
-     * @var LocalizationHelper|\PHPUnit_Framework_MockObject_MockObject
-     */
-    protected $localizationHelper;
+    protected $attributeRenderRegistry;
 
     /**
      * {@inheritdoc}
@@ -37,12 +27,9 @@ class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
     {
         parent::initializeLayoutFactoryBuilder($layoutFactoryBuilder);
 
-        $this->attributeGroupRenderRegistry = new AttributeGroupRenderRegistry;
-        $this->localizationHelper = $this->getMockBuilder(LocalizationHelper::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->attributeRenderRegistry = new AttributeRenderRegistry;
 
-        $restBlockType = new AttributeGroupRestType($this->attributeGroupRenderRegistry, $this->localizationHelper);
+        $restBlockType = new AttributeGroupRestType($this->attributeRenderRegistry);
 
         $groupBlockTypeStub = new ConfigurableType();
         $groupBlockTypeStub->setName(AttributeGroupType::NAME);
@@ -76,12 +63,7 @@ class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
         $attributeFamily->addAttributeGroup($attributeGroup2);
         $attributeFamily->addAttributeGroup($attributeGroup3);
 
-        $this->attributeGroupRenderRegistry->setRendered($attributeFamily, $attributeGroup1);
-
-        $this->localizationHelper->expects($this->exactly(2))
-            ->method('getLocalizedValue')
-            ->with(new ArrayCollection([]))
-            ->willReturnOnConsecutiveCalls('label1', 'label2');
+        $this->attributeRenderRegistry->setGroupRendered($attributeFamily, $attributeGroup1);
 
         $view = $this->getBlockView(
             AttributeGroupRestType::NAME,
@@ -101,17 +83,6 @@ class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
         $this->assertEquals($entityValue, $thirdAttributeGroup->vars['entity']);
         $this->assertEquals($attributeFamily, $thirdAttributeGroup->vars['attribute_family']);
         $this->assertEquals('third_group', $thirdAttributeGroup->vars['group']);
-
-        $this->assertEquals([
-            [
-                'id' => 'second_group',
-                'label' => 'label1'
-            ],
-            [
-                'id' => 'third_group',
-                'label' => 'label2'
-            ]
-        ], $view->vars['tabsOptions']);
     }
 
     public function testGetBlockViewNothingToRender()
@@ -124,7 +95,7 @@ class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
         $attributeFamily->setCode('family_code');
         $attributeFamily->addAttributeGroup($attributeGroup);
 
-        $this->attributeGroupRenderRegistry->setRendered($attributeFamily, $attributeGroup);
+        $this->attributeRenderRegistry->setGroupRendered($attributeFamily, $attributeGroup);
         $view = $this->getBlockView(
             AttributeGroupRestType::NAME,
             [
@@ -134,13 +105,6 @@ class AttributeGroupRestTypeTest extends BaseBlockTypeTestCase
         );
 
         $this->assertCount(0, $view->children);
-    }
-
-    public function testGetName()
-    {
-        $type = $this->getBlockType(AttributeGroupRestType::NAME);
-
-        $this->assertSame(AttributeGroupRestType::NAME, $type->getName());
     }
 
     public function testGetParent()

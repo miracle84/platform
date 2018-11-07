@@ -3,13 +3,13 @@
 namespace Oro\Bundle\EntityConfigBundle\Attribute\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\PrePersist;
-
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
-use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareInterface;
 use Oro\Bundle\EntityBundle\EntityProperty\DatesAwareTrait;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\ConfigField;
 use Oro\Bundle\EntityConfigBundle\Model\ExtendAttributeGroup;
 use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 
@@ -78,7 +78,7 @@ class AttributeGroup extends ExtendAttributeGroup implements DatesAwareInterface
     private $attributeFamily;
 
     /**
-     * @var ArrayCollection
+     * @var Collection|AttributeGroupRelation[]
      * @ORM\OneToMany(
      *     targetEntity="AttributeGroupRelation",
      *     mappedBy="attributeGroup",

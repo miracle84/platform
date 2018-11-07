@@ -2,18 +2,17 @@
 
 namespace Oro\Bundle\UserBundle\Tests\Unit\Provider;
 
+use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Bundle\UserBundle\Provider\ScopeUserCriteriaProvider;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\UserBundle\Provider\ScopeUserCriteriaProvider;
-
-class ScopeUserCriteriaProviderTest extends \PHPUnit_Framework_TestCase
+class ScopeUserCriteriaProviderTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ScopeUserCriteriaProvider */
     private $provider;
 
-    /** @var TokenStorageInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TokenStorageInterface|\PHPUnit\Framework\MockObject\MockObject */
     private $tokenStorage;
 
     protected function setUp()
@@ -26,7 +25,7 @@ class ScopeUserCriteriaProviderTest extends \PHPUnit_Framework_TestCase
     {
         $user = new User();
 
-        /** @var TokenInterface|\PHPUnit_Framework_MockObject_MockObject $token */
+        /** @var TokenInterface|\PHPUnit\Framework\MockObject\MockObject $token */
         $token = $this->createMock(TokenInterface::class);
         $token->expects($this->once())
             ->method('getUser')
@@ -56,7 +55,7 @@ class ScopeUserCriteriaProviderTest extends \PHPUnit_Framework_TestCase
     {
         $user = new \stdClass();
 
-        /** @var TokenInterface|\PHPUnit_Framework_MockObject_MockObject $token */
+        /** @var TokenInterface|\PHPUnit\Framework\MockObject\MockObject $token */
         $token = $this->createMock(TokenInterface::class);
         $token->expects($this->once())
             ->method('getUser')
@@ -96,10 +95,6 @@ class ScopeUserCriteriaProviderTest extends \PHPUnit_Framework_TestCase
             'array_context_with_user_key' => [
                 'context' => ['user' => $user],
                 'criteria' => ['user' => $user],
-            ],
-            'array_context_with_user_key_invalid_value' => [
-                'context' => ['user' => 123],
-                'criteria' => [],
             ],
             'array_context_without_user_key' => [
                 'context' => [],

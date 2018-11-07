@@ -3,7 +3,6 @@
 namespace Oro\Bundle\TestFrameworkBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
 use Oro\Bundle\OrganizationBundle\Entity\Organization;
 use Oro\Bundle\UserBundle\Entity\User;
@@ -15,7 +14,16 @@ use Oro\Bundle\UserBundle\Entity\User;
  *      routeName="oro_test_item_index",
  *      routeView="oro_test_item_view",
  *      routeCreate="oro_test_item_create",
- *      routeUpdate="oro_test_item_update"
+ *      routeUpdate="oro_test_item_update",
+ *      defaultValues={
+ *          "ownership"={
+ *              "owner_type"="USER",
+ *              "owner_field_name"="owner",
+ *              "owner_column_name"="owner_id",
+ *              "organization_field_name"="organization",
+ *              "organization_column_name"="organization_id"
+ *          }
+ *      }
  * )
  */
 class Item implements TestFrameworkEntityInterface
@@ -143,6 +151,11 @@ class Item implements TestFrameworkEntityInterface
     public function __get($name)
     {
         return $this->$name;
+    }
+
+    public function __isset($name)
+    {
+        return isset($this->$name);
     }
 
     public function __toString()

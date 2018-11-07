@@ -4,25 +4,27 @@ namespace Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\Shared;
 
 use Oro\Bundle\ApiBundle\Processor\Subresource\Shared\ParentEntityObjectSecurityCheck;
 use Oro\Bundle\ApiBundle\Tests\Unit\Fixtures\Entity\Product;
-use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorOrmRelatedTestCase;
+use Oro\Bundle\ApiBundle\Tests\Unit\Processor\Subresource\GetSubresourceProcessorTestCase;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class ParentEntityObjectSecurityCheckTest extends GetSubresourceProcessorOrmRelatedTestCase
+class ParentEntityObjectSecurityCheckTest extends GetSubresourceProcessorTestCase
 {
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var \PHPUnit\Framework\MockObject\MockObject|AuthorizationCheckerInterface */
+    private $authorizationChecker;
 
     /** @var ParentEntityObjectSecurityCheck */
-    protected $processor;
+    private $processor;
 
-    public function setUp()
+    protected function setUp()
     {
         parent::setUp();
 
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
 
-        $this->processor = new ParentEntityObjectSecurityCheck($this->doctrineHelper, $this->securityFacade, 'VIEW');
+        $this->processor = new ParentEntityObjectSecurityCheck(
+            $this->authorizationChecker,
+            'VIEW'
+        );
     }
 
     public function testProcessWhenNoParentEntity()
@@ -30,13 +32,13 @@ class ParentEntityObjectSecurityCheckTest extends GetSubresourceProcessorOrmRela
         $this->processor->process($this->context);
     }
 
-    public function testProcessWhenAccessGrantedForManageableParentEntity()
+    public function testProcessWhenAccessGranted()
     {
         $parentEntity = new Product();
 
-        $this->securityFacade->expects($this->once())
+        $this->authorizationChecker->expects(self::once())
             ->method('isGranted')
-            ->with('VIEW', $this->identicalTo($parentEntity))
+            ->with('VIEW', self::identicalTo($parentEntity))
             ->willReturn(true);
 
         $this->context->setParentClassName(get_class($parentEntity));
@@ -47,28 +49,14 @@ class ParentEntityObjectSecurityCheckTest extends GetSubresourceProcessorOrmRela
     /**
      * @expectedException \Symfony\Component\Security\Core\Exception\AccessDeniedException
      */
-    public function testProcessWhenAccessDeniedForManageableParentEntity()
+    public function testProcessWhenAccessDenied()
     {
         $parentEntity = new Product();
 
-        $this->securityFacade->expects($this->once())
+        $this->authorizationChecker->expects(self::once())
             ->method('isGranted')
-            ->with('VIEW', $this->identicalTo($parentEntity))
+            ->with('VIEW', self::identicalTo($parentEntity))
             ->willReturn(false);
-
-        $this->context->setParentClassName(get_class($parentEntity));
-        $this->context->setParentEntity($parentEntity);
-        $this->processor->process($this->context);
-    }
-
-    public function testAccessShouldBeAlwaysGrantedForNotManageableParentEntity()
-    {
-        $parentEntity = new \stdClass();
-
-        $this->notManageableClassNames = [get_class($parentEntity)];
-
-        $this->securityFacade->expects($this->never())
-            ->method('isGranted');
 
         $this->context->setParentClassName(get_class($parentEntity));
         $this->context->setParentEntity($parentEntity);

@@ -3,21 +3,22 @@
 namespace Oro\Bundle\LocaleBundle\Tests\Unit\Form\Type;
 
 use Oro\Bundle\LocaleBundle\Form\Type\TimezoneType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 
-class TimezoneTypeTest extends \PHPUnit_Framework_TestCase
+class TimezoneTypeTest extends \PHPUnit\Framework\TestCase
 {
     public function testFormTypeWithoutCache()
     {
         $type = new TimezoneType();
-        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolverInterface')
+        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->disableOriginalConstructor()
             ->getMock();
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
-        $this->assertEquals('choice', $type->getParent(), 'Unexpected parent');
+        $this->assertEquals(ChoiceType::class, $type->getParent(), 'Unexpected parent');
         $this->assertEquals('oro_locale_timezone', $type->getName(), 'Unexpected form type name');
-        $type->setDefaultOptions($resolver);
+        $type->configureOptions($resolver);
     }
 
     /**
@@ -37,26 +38,24 @@ class TimezoneTypeTest extends \PHPUnit_Framework_TestCase
      */
     public function testFormTypeWithFilledCache()
     {
-        $timezones = array('Test' => '(UTC +0) Test');
+        $timezones = ['Test' => '(UTC +0) Test'];
 
         $cache = $this->createMock('Doctrine\Common\Cache\Cache');
-        $cache->expects($this->once())
-            ->method('contains')
-            ->with('timezones')
-            ->will($this->returnValue(true));
         $cache->expects($this->once())
             ->method('fetch')
             ->with('timezones')
             ->will($this->returnValue($timezones));
 
         $type = new TimezoneType($cache);
-        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolverInterface')
+        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->disableOriginalConstructor()
             ->getMock();
         $resolver->expects($this->once())
             ->method('setDefaults')
-            ->with(array('choices' => $timezones));
-        $type->setDefaultOptions($resolver);
+            ->with([
+                'choices' => array_flip($timezones),
+            ]);
+        $type->configureOptions($resolver);
     }
 
     /**
@@ -66,7 +65,7 @@ class TimezoneTypeTest extends \PHPUnit_Framework_TestCase
     {
         $cache = $this->createMock('Doctrine\Common\Cache\Cache');
         $cache->expects($this->once())
-            ->method('contains')
+            ->method('fetch')
             ->with('timezones')
             ->will($this->returnValue(false));
         $cache->expects($this->once())
@@ -74,13 +73,13 @@ class TimezoneTypeTest extends \PHPUnit_Framework_TestCase
             ->with('timezones', $this->isType('array'));
 
         $type = new TimezoneType($cache);
-        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolverInterface')
+        $resolver = $this->getMockBuilder('Symfony\Component\OptionsResolver\OptionsResolver')
             ->disableOriginalConstructor()
             ->getMock();
         $resolver->expects($this->once())
             ->method('setDefaults')
             ->with($this->isType('array'));
-        $type->setDefaultOptions($resolver);
+        $type->configureOptions($resolver);
     }
 
     public function testGetTimezones()

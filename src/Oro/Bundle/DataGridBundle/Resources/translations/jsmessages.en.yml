@@ -16,6 +16,7 @@
 "copy": "copy"
 "remove": "remove"
 "Status": "Status"
+"oro.datagrid.headerCell.selectAll.label": "Select rows"
 "oro.datagrid.headerCell.selectAll.all": "All"
 "oro.datagrid.headerCell.selectAll.allVisible": "All visible"
 "oro.datagrid.headerCell.selectAll.none": "None"
@@ -33,22 +34,31 @@
 "Action is not performed.": "Action is not performed."
 "Please, select item to perform action.": "Please, select item to perform action."
 "Please select view": "Please select view"
-"oro.datagrid.entityHint": "Entity"
+"oro.datagrid.entityHint": "Entities"
 "oro.datagrid.no.entities": "No records found"
-"oro.datagrid.no.results": "No {{ entityHint }} was found to match your search. Try modifying your search criteria..."
+"oro.datagrid.no.resultsTitle": "No Results Found"
+"oro.datagrid.no.results": "No {{ entityHint }} were found to match your search.<br/>Try modifying your search criteria"
 "oro.datagrid.no.columns": "No columns configured for this grid"
+"oro.datagrid.pagination.input-aria": "data grid pagination input"
 "oro.datagrid.pagination.label": "Page"
+"oro.datagrid.pagination.prev": "Prev"
+"oro.datagrid.pagination.next": "Next"
 "oro.datagrid.pagination.totalPages": "of {{ totalPages }}"
 "oro.datagrid.pagination.visibleItems": "Showing {{ count }} of {{ total }} records"
 "oro.datagrid.pagination.totalRecords": "Total of {{ totalRecords }} records"
+"oro.datagrid.pagination.totalRecordsShort": "{{ totalRecords }} total records"
 oro.datagrid.extension.export.label: "Export Grid"
 oro.datagrid.extension.export.tooltip: "With this button you will export the content of the grid as it appears to you, with filters and sorting applied. All pages will be exported."
 oro_datagrid.label_add_filter: "Manage filters"
+oro_datagrid.label_reset_button: "Reset Filter"
 oro_datagrid.action.reset: "Reset"
 oro_datagrid.action.refresh: "Refresh"
+oro_datagrid.action.appearance: "Data appearance"
 "oro.datagrid.action.save_grid_view": "Save"
 "oro.datagrid.action.rename_grid_view": "Rename"
 "oro.datagrid.name_modal.title": "Grid view"
+"oro.datagrid.row_actions.label": "Row actions"
+"oro.datagrid.card_actions.label": "Card actions"
 "oro.datagrid.action.discard_grid_view_changes": "Discard changes"
 "oro.datagrid.action.save_grid_view_as": "Save As"
 "oro.datagrid.action.share_grid_view": "Share With Others"
@@ -72,14 +82,19 @@ oro:
         loading_failed_message: "Data loading failed, try reloading the page. If the issue appears again please contact your administrator."
         toolbar_sorting:
             label: "Sorted By"
-        column_manager:
+        settings:
+            header.title: "Settings"
             title: "Grid Settings"
             tooltip: "Use drag and drop to sort items"
             select_all: "Select All"
+            unselect_all: "Unselect All"
+            deselect_all: "Deselect All"
+            reset: "Reset Grid"
             filter:
                 all: 'All'
                 selected: 'Selected'
                 select_all: 'Select All'
+                unselect_all: 'Select Default'
                 search_placeholder: "Quick Search"
                 clear_search_tooltip: "Clear Quick Search"
             column:
@@ -88,6 +103,7 @@ oro:
                 sort: "Sort"
             close_tooltip: "Close Column Manager"
             empty_list: "No columns found"
+            close.label: "Close"
         not_number: Not a number
         inline_editing:
             message:
@@ -105,10 +121,9 @@ oro:
                 </ul>
         mass_action:
             title: Mass Actions
+            button_title: "..."
             delete:
-                selected_message: >
-                    You have selected {{ selected }} records.<br/>
-                    Are you sure you want to delete them?
+                selected_message: You have selected {{ selected }} record.<br/> Are you sure you want to delete it?|You have selected {{ selected }} records.<br/> Are you sure you want to delete them?
                 max_limit_message: >
                     The maximum number of records that can be deleted at once is {{ max_limit }}.<br/>
                     Are you sure you want to delete first {{ max_limit }} records in the selection?
@@ -136,6 +151,9 @@ oro:
             decimal:
                 ascending: Low to High
                 descending: High to Low
+            datetime:
+                ascending: Oldest first
+                descending: Newest first
         export:
             success.message: Export started successfully. You will receive email notification upon completion.
             fail.message: Could not start export, please try again.

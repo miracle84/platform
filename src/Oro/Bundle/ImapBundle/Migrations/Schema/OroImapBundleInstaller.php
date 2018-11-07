@@ -3,12 +3,14 @@
 namespace Oro\Bundle\ImapBundle\Migrations\Schema;
 
 use Doctrine\DBAL\Schema\Schema;
-
-use Oro\Bundle\MigrationBundle\Migration\Installation;
-use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 use Oro\Bundle\ImapBundle\Migrations\Schema\v1_3\OroImapBundle as v13;
 use Oro\Bundle\ImapBundle\Migrations\Schema\v1_4\OroImapBundle as v14;
+use Oro\Bundle\MigrationBundle\Migration\Installation;
+use Oro\Bundle\MigrationBundle\Migration\QueryBag;
 
+/**
+ * ORO installer for ImapBundle
+ */
 class OroImapBundleInstaller implements Installation
 {
     /**
@@ -16,7 +18,7 @@ class OroImapBundleInstaller implements Installation
      */
     public function getMigrationVersion()
     {
-        return 'v1_5';
+        return 'v1_7';
     }
 
     /**
@@ -30,6 +32,7 @@ class OroImapBundleInstaller implements Installation
         $this->createOroEmailImapTable($schema);
         v13::addSmtpFieldsToOroEmailOriginTable($schema);
         v14::addAccessTokenFieldsToOroEmailOriginTable($schema);
+        $this->addOroImapWrongCredsOriginTable($schema);
 
         /** Foreign keys generation **/
         $this->addOroEmailFolderImapForeignKeys($schema);
@@ -95,7 +98,7 @@ class OroImapBundleInstaller implements Installation
             $schema->getTable('oro_email_folder'),
             ['folder_id'],
             ['id'],
-            ['onDelete' => null, 'onUpdate' => null]
+            ['onDelete' => 'CASCADE', 'onUpdate' => null]
         );
     }
 
@@ -111,14 +114,28 @@ class OroImapBundleInstaller implements Installation
             $schema->getTable('oro_email'),
             ['email_id'],
             ['id'],
-            ['onDelete' => null, 'onUpdate' => null]
+            ['onDelete' => 'CASCADE', 'onUpdate' => null]
         );
         $table->addForeignKeyConstraint(
             $schema->getTable('oro_email_folder_imap'),
             ['imap_folder_id'],
             ['id'],
-            ['onDelete' => null, 'onUpdate' => null],
+            ['onDelete' => 'CASCADE', 'onUpdate' => null],
             'FK_17E00D834F00B133'
         );
+    }
+
+    /**
+     * Add oro_imap_wrong_creds_origin table.
+     *
+     * @param Schema $schema
+     */
+    protected function addOroImapWrongCredsOriginTable(Schema $schema)
+    {
+        $table = $schema->createTable('oro_imap_wrong_creds_origin');
+        $table->addColumn('origin_id', 'integer', ['notnull' => true]);
+        $table->addColumn('owner_id', 'integer', ['notnull' => false]);
+        $table->setPrimaryKey(['origin_id']);
+        $table->addIndex(['owner_id']);
     }
 }

@@ -5,42 +5,47 @@ namespace Oro\Bundle\UserBundle\Entity\Manager;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\Common\Persistence\ObjectManager;
-
-use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
-use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Security\Core\SecurityContext;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
-
 use Oro\Bundle\SecurityBundle\Acl\Extension\AclClassInfo;
 use Oro\Bundle\SecurityBundle\Acl\Extension\AclExtensionSelector;
 use Oro\Bundle\SecurityBundle\Authentication\Token\ImpersonationToken;
 use Oro\Bundle\SecurityBundle\Authentication\Token\OrganizationContextTokenInterface;
 use Oro\Bundle\SoapBundle\Entity\Manager\ApiEntityManager;
 use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 class UserPermissionApiEntityManager extends ApiEntityManager
 {
-    /** @var SecurityContext */
-    protected $securityContext;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenStorageInterface */
+    protected $tokenStorage;
 
     /** @var AclExtensionSelector */
     protected $aclSelector;
 
     /**
-     * @param string               $class
-     * @param ObjectManager        $om
-     * @param SecurityContext      $securityContext
-     * @param AclExtensionSelector $aclSelector
+     * @param string                        $class
+     * @param ObjectManager                 $om
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenStorageInterface         $tokenStorage
+     * @param AclExtensionSelector          $aclSelector
      */
     public function __construct(
         $class,
         ObjectManager $om,
-        SecurityContext $securityContext,
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenStorageInterface $tokenStorage,
         AclExtensionSelector $aclSelector
     ) {
         parent::__construct($class, $om);
-        $this->aclSelector     = $aclSelector;
-        $this->securityContext = $securityContext;
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenStorage = $tokenStorage;
+        $this->aclSelector = $aclSelector;
     }
 
     /**
@@ -77,7 +82,7 @@ class UserPermissionApiEntityManager extends ApiEntityManager
 
                 $permissions = [];
                 foreach ($entityAclExtension->getAllowedPermissions($oid) as $permission) {
-                    if ($this->securityContext->isGranted($permission, $oid)) {
+                    if ($this->authorizationChecker->isGranted($permission, $oid)) {
                         $permissions[] = $permission;
                     }
                 }
@@ -106,7 +111,7 @@ class UserPermissionApiEntityManager extends ApiEntityManager
      */
     protected function impersonateUser(User $user)
     {
-        $currentToken = $this->securityContext->getToken();
+        $currentToken = $this->tokenStorage->getToken();
         if (!$currentToken instanceof OrganizationContextTokenInterface) {
             throw new \UnexpectedValueException('The current security token must be aware of the organization.');
         }
@@ -118,7 +123,7 @@ class UserPermissionApiEntityManager extends ApiEntityManager
             throw new AccessDeniedException();
         }
 
-        $this->securityContext->setToken(
+        $this->tokenStorage->setToken(
             new ImpersonationToken($user, $organization, $user->getRoles())
         );
 
@@ -133,7 +138,7 @@ class UserPermissionApiEntityManager extends ApiEntityManager
     protected function undoImpersonation(TokenInterface $originalToken = null)
     {
         if ($originalToken) {
-            $this->securityContext->setToken($originalToken);
+            $this->tokenStorage->setToken($originalToken);
         }
     }
 }

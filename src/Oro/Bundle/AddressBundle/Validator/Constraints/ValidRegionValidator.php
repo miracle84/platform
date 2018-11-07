@@ -2,30 +2,40 @@
 
 namespace Oro\Bundle\AddressBundle\Validator\Constraints;
 
+use Oro\Bundle\AddressBundle\Entity\AbstractAddress;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
+use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
+/**
+ * The validator for ValidRegion constraint.
+ */
 class ValidRegionValidator extends ConstraintValidator
 {
-    const ALIAS = 'oro_address_valid_region';
-
     /**
      * {@inheritdoc}
-     * @param ValidRegion $constraint
+     * @param AbstractAddress $entity
+     * @param ValidRegion     $constraint
      */
     public function validate($entity, Constraint $constraint)
     {
-        if ($entity->getCountry() && $entity->getCountry()->hasRegions() &&
-            !$entity->getRegion() && !$entity->getRegionText()
-        ) {
-            // do not allow saving text region in case when region was checked from list
-            // except when in base data region text existed
-            // another way region_text field will be null, logic are placed in form listener
-            $propertyPath = $this->context->getPropertyPath() . '.region';
-            $this->context->addViolationAt(
-                $propertyPath,
+        if (null === $entity) {
+            return;
+        }
+        if (!$entity instanceof AbstractAddress) {
+            throw new UnexpectedTypeException($entity, AbstractAddress::class);
+        }
+
+        $country = $entity->getCountry();
+        $region = $entity->getRegion();
+        if (null !== $country && null !== $region && !$country->getRegions()->contains($region)) {
+            // prevent setting for example region Berlin to country Romania
+            $this->context->addViolation(
                 $constraint->message,
-                ['{{ country }}' => $entity->getCountry()->getName()]
+                [
+                    '{{ region }}'  => $region->getName(),
+                    '{{ country }}' => $country->getName()
+                ]
             );
         }
     }

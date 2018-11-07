@@ -7,12 +7,12 @@ services:
             - { name: oro_service_link, service: oro_entity.helper.field_helper }
 
     oro_importexport.field.database_helper:
-        class: %oro_importexport.field.database_helper.class%
+        class: '%oro_importexport.field.database_helper.class%'
         arguments:
             - '@doctrine'
             - '@oro_entity.doctrine_helper'
             - '@oro_importexport.field.field_helper.link'
-            - '@oro_security.security_facade.link'
+            - '@oro_security.token_accessor'
             - '@oro_security.owner.ownership_metadata_provider.link'
         tags:
             - { name: doctrine.event_listener, event: onClear }

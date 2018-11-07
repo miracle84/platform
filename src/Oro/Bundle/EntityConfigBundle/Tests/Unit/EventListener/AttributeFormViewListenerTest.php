@@ -2,33 +2,29 @@
 
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\EventListener;
 
-use Symfony\Component\Form\FormView;
-
-use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeFamily;
+use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
+use Oro\Bundle\EntityConfigBundle\EventListener\AttributeFormViewListener;
 use Oro\Bundle\EntityConfigBundle\Manager\AttributeManager;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\Stub\AttributeGroupStub;
-use Oro\Bundle\EntityConfigBundle\EventListener\AttributeFormViewListener;
 use Oro\Bundle\LocaleBundle\Entity\LocalizedFallbackValue;
 use Oro\Bundle\TestFrameworkBundle\Entity\TestActivityTarget;
-use Oro\Bundle\UIBundle\Event\BeforeViewRenderEvent;
-use Oro\Bundle\UIBundle\Event\BeforeFormRenderEvent;
 use Oro\Bundle\UIBundle\Event\BeforeListRenderEvent;
 use Oro\Bundle\UIBundle\View\ScrollData;
-
 use Oro\Component\Testing\Unit\EntityTrait;
+use Symfony\Component\Form\FormView;
 
-class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
+class AttributeFormViewListenerTest extends \PHPUnit\Framework\TestCase
 {
     use EntityTrait;
 
     /**
-     * @var \Twig_Environment|\PHPUnit_Framework_MockObject_MockObject
+     * @var \Twig_Environment|\PHPUnit\Framework\MockObject\MockObject
      */
     private $environment;
 
     /**
-     * @var AttributeManager|\PHPUnit_Framework_MockObject_MockObject
+     * @var AttributeManager|\PHPUnit\Framework\MockObject\MockObject
      */
     private $attributeManager;
 
@@ -59,7 +55,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ->expects($this->never())
             ->method('getGroupsWithAttributes');
 
-        $this->listener->onEdit(new BeforeListRenderEvent($this->environment, new ScrollData()));
+        $this->listener->onEdit(new BeforeListRenderEvent($this->environment, new ScrollData(), new \stdClass()));
     }
 
     public function testOnViewWithoutViewRenderEvent()
@@ -68,7 +64,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ->expects($this->never())
             ->method('getGroupsWithAttributes');
 
-        $this->listener->onViewList(new BeforeListRenderEvent($this->environment, new ScrollData()));
+        $this->listener->onViewList(new BeforeListRenderEvent($this->environment, new ScrollData(), new \stdClass()));
     }
 
     /**
@@ -92,11 +88,9 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
         $entity = $this->getEntity(TestActivityTarget::class, [
             'attributeFamily' => $this->getEntity(AttributeFamily::class)
         ]);
-        $event = new BeforeFormRenderEvent($formView, [], $this->environment, $entity);
-        $this->listener->onFormRender($event);
 
         $this->environment
-            ->expects($this->exactly((int)!empty($templateHtml)))
+            ->expects($templateHtml ? $this->once() : $this->never())
             ->method('render')
             ->willReturn($templateHtml);
 
@@ -106,7 +100,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ->willReturn($groupsData);
 
         $scrollData = new ScrollData($scrollData);
-        $listEvent = new BeforeListRenderEvent($this->environment, $scrollData, $formView);
+        $listEvent = new BeforeListRenderEvent($this->environment, $scrollData, $entity, $formView);
         $this->listener->onEdit($listEvent);
 
         $this->assertEquals($expectedData, $listEvent->getScrollData()->getData());
@@ -123,6 +117,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
         $data['empty group not added']['formViewChildren'] = [];
         $data['empty group gets deleted']['formViewChildren'] = [];
         $data['new group is added']['formViewChildren']['someField'] = new FormView();
+        $data['invisible attribute not displayed']['formViewChildren']['someField'] = new FormView();
         $data['move attribute field to other group']['formViewChildren']['someField'] = (new FormView())->setRendered();
 
         return $data;
@@ -144,8 +139,6 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
         $entity = $this->getEntity(TestActivityTarget::class, [
             'attributeFamily' => $this->getEntity(AttributeFamily::class)
         ]);
-        $event = new BeforeViewRenderEvent($this->environment, [], $entity);
-        $this->listener->onViewRender($event);
 
         $this->environment
             ->expects($this->exactly((int)!empty($templateHtml)))
@@ -158,7 +151,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ->willReturn($groupsData);
 
         $scrollData = new ScrollData($scrollData);
-        $listEvent = new BeforeListRenderEvent($this->environment, $scrollData);
+        $listEvent = new BeforeListRenderEvent($this->environment, $scrollData, $entity);
         $this->listener->onViewList($listEvent);
 
         $this->assertEquals($expectedData, $listEvent->getScrollData()->getData());
@@ -166,12 +159,34 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @return array
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
     public function viewListDataProvider()
     {
         $label = $this->getEntity(LocalizedFallbackValue::class, ['string' => 'Group1Title']);
         $group1 = $this->getEntity(AttributeGroupStub::class, ['code' => 'group1', 'label' => $label]);
-        $attribute1 = $this->getEntity(FieldConfigModel::class, ['id' => 1, 'fieldName' => 'someField']);
+        $attributeVisible = $this->getEntity(
+            FieldConfigModel::class,
+            [
+                'id' => 1,
+                'fieldName' => 'someField',
+                'data' => [
+                    'view' => ['is_displayable' => true],
+                    'form' => ['is_enabled' => true]
+                ]
+            ]
+        );
+        $attributeInvisible = $this->getEntity(
+            FieldConfigModel::class,
+            [
+                'id' => 1,
+                'fieldName' => 'someField',
+                'data' => [
+                    'view' => ['is_displayable' => false],
+                    'form' => ['is_enabled' => false]
+                ]
+            ]
+        );
 
         return [
             'empty group not added' => [
@@ -199,7 +214,33 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ],
             'new group is added' => [
                 'groupsData' => [
-                    ['group' => $group1, 'attributes' => [$attribute1]]
+                    ['group' => $group1, 'attributes' => [$attributeVisible]]
+                ],
+                'scrollData' => [],
+                'templateHtml' => 'field template',
+                'expectedData' => [
+                    ScrollData::DATA_BLOCKS => [
+                        'group1' => [
+                            'title' => 'Group1Title',
+                            'useSubBlockDivider' => true,
+                            'subblocks' => [
+                                [
+                                    'data' => ['someField' => 'field template']
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+            ],
+            'invisible attribute not displayed' => [
+                'groupsData' => [
+                    [
+                        'group' => $group1,
+                        'attributes' => [
+                            $attributeVisible,
+                            $attributeInvisible
+                        ]
+                    ]
                 ],
                 'scrollData' => [],
                 'templateHtml' => 'field template',
@@ -219,7 +260,7 @@ class AttributeFormViewListenerTest extends \PHPUnit_Framework_TestCase
             ],
             'move attribute field to other group' => [
                 'groupsData' => [
-                    ['group' => $group1, 'attributes' => [$attribute1]]
+                    ['group' => $group1, 'attributes' => [$attributeVisible]]
                 ],
                 'scrollData' => [
                     ScrollData::DATA_BLOCKS => [

@@ -2,16 +2,19 @@
 
 namespace Oro\Bundle\SearchBundle\Tests\Unit\Datagrid\Filter;
 
+use Doctrine\Common\Collections\Expr\Comparison as BaseComparison;
+use Doctrine\Common\Collections\Expr\Comparison as CommonComparision;
+use Doctrine\Common\Collections\Expr\CompositeExpression;
+use Doctrine\Common\Collections\Expr\Value;
 use Oro\Bundle\FilterBundle\Datasource\FilterDatasourceAdapterInterface;
 use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Oro\Bundle\FilterBundle\Form\Type\Filter\NumberRangeFilterType;
 use Oro\Bundle\SearchBundle\Datagrid\Filter\Adapter\SearchFilterDatasourceAdapter;
 use Oro\Bundle\SearchBundle\Datagrid\Filter\SearchNumberRangeFilter;
 use Oro\Bundle\SearchBundle\Query\Criteria\Comparison;
-use Doctrine\Common\Collections\Expr\Comparison as BaseComparison;
 use Symfony\Component\Form\FormFactoryInterface;
 
-class SearchNumberRangeFilterTest extends \PHPUnit_Framework_TestCase
+class SearchNumberRangeFilterTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var SearchNumberRangeFilter
@@ -23,9 +26,9 @@ class SearchNumberRangeFilterTest extends \PHPUnit_Framework_TestCase
      */
     protected function setUp()
     {
-        /* @var $formFactory FormFactoryInterface|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $formFactory FormFactoryInterface|\PHPUnit\Framework\MockObject\MockObject */
         $formFactory = $this->createMock(FormFactoryInterface::class);
-        /* @var $filterUtility FilterUtility|\PHPUnit_Framework_MockObject_MockObject */
+        /* @var $filterUtility FilterUtility|\PHPUnit\Framework\MockObject\MockObject */
         $filterUtility = $this->createMock(FilterUtility::class);
 
         $this->filter = new SearchNumberRangeFilter($formFactory, $filterUtility);
@@ -50,7 +53,7 @@ class SearchNumberRangeFilterTest extends \PHPUnit_Framework_TestCase
 
     public function testApplyBetween()
     {
-        $fieldName = 'field';
+        $fieldName = 'decimal.field';
 
         $ds = $this->getMockBuilder(SearchFilterDatasourceAdapter::class)
             ->disableOriginalConstructor()
@@ -59,8 +62,8 @@ class SearchNumberRangeFilterTest extends \PHPUnit_Framework_TestCase
         $ds->expects($this->exactly(2))
             ->method('addRestriction')
             ->withConsecutive(
-                [new BaseComparison("decimal.".$fieldName, Comparison::GTE, 123), FilterUtility::CONDITION_AND, false],
-                [new BaseComparison("decimal.".$fieldName, Comparison::LTE, 155), FilterUtility::CONDITION_AND, false]
+                [new BaseComparison($fieldName, Comparison::GTE, 123), FilterUtility::CONDITION_AND, false],
+                [new BaseComparison($fieldName, Comparison::LTE, 155), FilterUtility::CONDITION_AND, false]
             );
 
         $this->filter->init('test', [FilterUtility::DATA_NAME_KEY => $fieldName]);
@@ -78,17 +81,30 @@ class SearchNumberRangeFilterTest extends \PHPUnit_Framework_TestCase
 
     public function testApplyNotBetween()
     {
-        $fieldName = 'field';
+        $fieldName = 'decimal.field';
 
         $ds = $this->getMockBuilder(SearchFilterDatasourceAdapter::class)
             ->disableOriginalConstructor()
             ->getMock();
 
-        $ds->expects($this->exactly(2))
+        $ds->expects($this->exactly(1))
             ->method('addRestriction')
-            ->withConsecutive(
-                [new BaseComparison("decimal.".$fieldName, Comparison::LTE, 123), FilterUtility::CONDITION_AND, false],
-                [new BaseComparison("decimal.".$fieldName, Comparison::GTE, 155), FilterUtility::CONDITION_AND, false]
+            ->with(
+                new CompositeExpression(
+                    FilterUtility::CONDITION_OR,
+                    [
+                        new CommonComparision(
+                            'decimal.field',
+                            Comparison::LTE,
+                            new Value(123)
+                        ),
+                        new CommonComparision(
+                            'decimal.field',
+                            Comparison::GTE,
+                            new Value(155)
+                        ),
+                    ]
+                )
             );
 
         $this->filter->init('test', [FilterUtility::DATA_NAME_KEY => $fieldName]);

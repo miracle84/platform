@@ -4,7 +4,6 @@ namespace Oro\Bundle\EntityBundle\ORM;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadataFactory;
-
 use Oro\Bundle\EntityBundle\DataCollector\OrmLogger;
 
 class OroClassMetadataFactory extends ClassMetadataFactory
@@ -20,14 +19,54 @@ class OroClassMetadataFactory extends ClassMetadataFactory
     /** @var OrmLogger */
     protected $logger;
 
+    /** @var bool */
+    private $disconnected = false;
+
+    /**
+     * Indicates whether this metadata factory is in the disconnected state.
+     *
+     * @internal this method is intended to be used only to memory usage oprimization of the message queue consumer
+     *
+     * @return bool
+     */
+    public function isDisconnected()
+    {
+        return $this->disconnected;
+    }
+
+    /**
+     * Switches this metadata factory to the disconnected or connected state.
+     *
+     * @internal this method is intended to be used only to memory usage oprimization of the message queue consumer
+     *
+     * @param $disconnected
+     */
+    public function setDisconnected($disconnected)
+    {
+        $this->disconnected = $disconnected;
+    }
+
+    /**
+     * Gets an instance of EntityManager connected to this this metadata factory.
+     *
+     * @internal this method is intended to be used only to memory usage oprimization of the message queue consumer
+     *
+     * @return EntityManagerInterface|null
+     */
+    public function getEntityManager()
+    {
+        return $this->entityManager;
+    }
+
     /**
      * {@inheritdoc}
      */
     public function setEntityManager(EntityManagerInterface $em)
     {
-        parent::setEntityManager($em);
-
-        $this->entityManager = $em;
+        if (!$this->disconnected) {
+            parent::setEntityManager($em);
+            $this->entityManager = $em;
+        }
     }
 
     /**

@@ -1,14 +1,17 @@
 <?php
+
 namespace Oro\Bundle\SearchBundle\Engine\Orm;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
-
+use Doctrine\ORM\QueryBuilder;
 use Oro\Bundle\SearchBundle\Query\Criteria\Criteria;
 use Oro\Bundle\SearchBundle\Query\Query;
 
+/**
+ * PostgreSQL DB driver used to run search queries for ORM search engine
+ */
 class PdoPgsql extends BaseDriver
 {
     /** @var array */
@@ -55,7 +58,7 @@ class PdoPgsql extends BaseDriver
      * Add text search to qb
      *
      * @param \Doctrine\ORM\QueryBuilder $qb
-     * @param integer                    $index
+     * @param string                     $index
      * @param array                      $searchCondition
      * @param boolean                    $setOrderBy
      *
@@ -65,11 +68,17 @@ class PdoPgsql extends BaseDriver
     {
         $useFieldName = $searchCondition['fieldName'] !== '*';
         $condition = $searchCondition['condition'];
+
         $fieldValue = $this->filterTextFieldValue($searchCondition['fieldName'], $searchCondition['fieldValue']);
 
         switch ($condition) {
             case Query::OPERATOR_LIKE:
                 $searchString = parent::createContainsStringQuery($index, $useFieldName);
+                $setOrderBy = false;
+                break;
+
+            case Query::OPERATOR_NOT_LIKE:
+                $searchString = parent::createNotContainsStringQuery($index, $useFieldName);
                 $setOrderBy = false;
                 break;
 
@@ -110,7 +119,7 @@ class PdoPgsql extends BaseDriver
     /**
      * Create search string for string parameters (contains)
      *
-     * @param integer $index
+     * @param string $index
      * @param bool    $useFieldName
      * @param string  $operator
      *
@@ -131,7 +140,7 @@ class PdoPgsql extends BaseDriver
     /**
      * Create fulltext search string for string parameters (contains)
      *
-     * @param integer $index
+     * @param string $index
      * @param bool    $useFieldName
      *
      * @return string
@@ -200,7 +209,7 @@ class PdoPgsql extends BaseDriver
     /**
      * Create search string for string parameters (not contains)
      *
-     * @param integer $index
+     * @param string $index
      * @param bool    $useFieldName
      *
      * @return string
@@ -222,13 +231,13 @@ class PdoPgsql extends BaseDriver
      * Set string parameter for qb
      *
      * @param \Doctrine\ORM\QueryBuilder $qb
-     * @param integer                    $index
+     * @param string                     $index
      * @param string                     $fieldValue
      * @param string                     $searchCondition
      */
     protected function setFieldValueStringParameter(QueryBuilder $qb, $index, $fieldValue, $searchCondition)
     {
-        if (in_array($searchCondition, [Query::OPERATOR_CONTAINS, Query::OPERATOR_NOT_CONTAINS], true)) {
+        if (in_array($searchCondition, [Query::OPERATOR_CONTAINS, Query::OPERATOR_NOT_CONTAINS], true) && $fieldValue) {
             $searchArray = explode(Query::DELIMITER, $fieldValue);
 
             foreach ($searchArray as $key => $string) {
@@ -245,7 +254,7 @@ class PdoPgsql extends BaseDriver
             }
         } elseif ($searchCondition === Query::OPERATOR_STARTS_WITH) {
             $qb->setParameter('value' . $index, $fieldValue . '%');
-        } elseif ($searchCondition === Query::OPERATOR_LIKE) {
+        } elseif ($searchCondition === Query::OPERATOR_LIKE || $searchCondition === Query::OPERATOR_NOT_LIKE) {
             $qb->setParameter('value' . $index, '%' . $fieldValue . '%');
         } else {
             $qb->setParameter('value' . $index, $fieldValue);
@@ -256,14 +265,21 @@ class PdoPgsql extends BaseDriver
      * Set fulltext range order by
      *
      * @param QueryBuilder $qb
-     * @param int $index
+     * @param string $index
      */
     protected function setTextOrderBy(QueryBuilder $qb, $index)
     {
         $joinAlias = $this->getJoinAlias(Query::TYPE_TEXT, $index);
 
-        $qb->addSelect(sprintf('TsRank(%s.value, :value%s) as rankField%s', $joinAlias, $index, $index))
+        $qb->addSelect(
+            sprintf('TsRank(%s.value, :quotedValue%s) * search.weight as rankField%s', $joinAlias, $index, $index)
+        )
            ->addOrderBy(sprintf('rankField%s', $index), Criteria::DESC);
+
+        $parameter = $qb->getParameter(sprintf('value%s', $index));
+        $quotedValue = sprintf('\'%s\'', $parameter->getValue());
+
+        $qb->setParameter(sprintf('quotedValue%s', $index), $quotedValue);
     }
 
     /**

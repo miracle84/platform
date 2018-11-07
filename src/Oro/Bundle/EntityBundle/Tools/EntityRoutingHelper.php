@@ -2,14 +2,13 @@
 
 namespace Oro\Bundle\EntityBundle\Tools;
 
+use Oro\Bundle\EntityBundle\Exception\NotManageableEntityException;
+use Oro\Bundle\EntityBundle\Exception\RecordNotFoundException;
+use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-
-use Oro\Bundle\EntityBundle\Exception\RecordNotFoundException;
-use Oro\Bundle\EntityBundle\Exception\NotManageableEntityException;
-use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
 
 /**
  * The helper class intended to use in controllers that works with entities
@@ -43,20 +42,6 @@ class EntityRoutingHelper
         $this->entityClassNameHelper = $entityClassNameHelper;
         $this->doctrineHelper        = $doctrineHelper;
         $this->urlGenerator          = $urlGenerator;
-    }
-
-    /**
-     * Encodes the class name into the format that can be used in route parameters
-     *
-     * @param string $className The class name
-     *
-     * @return string The encoded class name
-     *
-     * @deprecated since 1.8, use getUrlSafeClassName
-     */
-    public function encodeClassName($className)
-    {
-        return $this->entityClassNameHelper->getUrlSafeClassName($className);
     }
 
     /**

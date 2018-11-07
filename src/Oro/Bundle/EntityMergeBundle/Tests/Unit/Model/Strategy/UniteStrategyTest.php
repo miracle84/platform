@@ -3,7 +3,6 @@
 namespace Oro\Bundle\EntityMergeBundle\Tests\Unit\Model\Strategy;
 
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
-
 use Oro\Bundle\EntityMergeBundle\Data\EntityData;
 use Oro\Bundle\EntityMergeBundle\Data\FieldData;
 use Oro\Bundle\EntityMergeBundle\Metadata\DoctrineMetadata;
@@ -17,7 +16,7 @@ use Oro\Bundle\EntityMergeBundle\Model\Strategy\UniteStrategy;
 use Oro\Bundle\EntityMergeBundle\Tests\Unit\Stub\CollectionItemStub;
 use Oro\Bundle\EntityMergeBundle\Tests\Unit\Stub\EntityStub;
 
-class UniteStrategyTest extends \PHPUnit_Framework_TestCase
+class UniteStrategyTest extends \PHPUnit\Framework\TestCase
 {
     public function testNotSupports()
     {

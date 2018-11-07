@@ -13,8 +13,8 @@ define(function(require) {
          * @property {Object}
          */
         options: {
-            screenType: 'any',
-            component: 'oroui/js/app/components/view-component',
+            viewport: {},
+            component: null,
             componentOptions: {}
         },
 
@@ -31,11 +31,31 @@ define(function(require) {
         /**
          * @inheritDoc
          */
+        constructor: function ViewportComponent() {
+            ViewportComponent.__super__.constructor.apply(this, arguments);
+        },
+
+        /**
+         * @inheritDoc
+         */
         initialize: function(options) {
-            this.options = _.extend({}, this.options, _.pick(options, ['screenType', 'component']));
+            this.options = _.extend({}, this.options, _.pick(options, ['viewport', 'component']));
             this.options.componentOptions = _.omit(options, _.keys(this.options));
 
+            this.resolveComponent();
+
             tools.loadModules(this.options.component, _.bind(this.onComponentLoaded, this));
+        },
+
+        resolveComponent: function() {
+            if (this.options.component) {
+                return;
+            }
+            if (this.options.componentOptions.view) {
+                this.options.component = 'oroui/js/app/components/view-component';
+            } else if (this.options.componentOptions.widgetModule) {
+                this.options.component = 'oroui/js/app/components/jquery-widget-component';
+            }
         },
 
         /**
@@ -56,7 +76,7 @@ define(function(require) {
         },
 
         onViewportChange: function(viewport) {
-            if (viewport.screenTypes[this.options.screenType]) {
+            if (viewport.isApplicable(this.options.viewport)) {
                 this.initializeComponent();
             } else {
                 this.disposeComponent();
@@ -79,5 +99,4 @@ define(function(require) {
     });
 
     return ViewportComponent;
-
 });

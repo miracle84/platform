@@ -3,13 +3,11 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition\HasElements;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class HasElementsTest extends \PHPUnit_Framework_TestCase
+class HasElementsTest extends \PHPUnit\Framework\TestCase
 {
     /** @var HasElements */
     protected $condition;

@@ -3,21 +3,22 @@
 namespace Oro\Bundle\NavigationBundle\Form\Type;
 
 use Knp\Menu\ItemInterface;
+use Oro\Bundle\FormBundle\Form\Type\OroIconType;
+use Oro\Bundle\LocaleBundle\Form\Type\LocalizedFallbackValueCollectionType;
+use Oro\Bundle\NavigationBundle\Entity\MenuUpdateInterface;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
-use Oro\Bundle\LocaleBundle\Form\Type\LocalizedFallbackValueCollectionType;
-use Oro\Bundle\NavigationBundle\Entity\MenuUpdate;
-
 class MenuUpdateType extends AbstractType
 {
-    const NAME = 'oro_navigation_menu_update';
-
     /**
      * {@inheritdoc}
      */
@@ -29,7 +30,7 @@ class MenuUpdateType extends AbstractType
             [
                 'required' => true,
                 'label' => 'oro.navigation.menuupdate.title.label',
-                'options' => ['constraints' => [new NotBlank()]]
+                'entry_options' => ['constraints' => [new NotBlank()]]
             ]
         );
 
@@ -39,11 +40,11 @@ class MenuUpdateType extends AbstractType
                 $form = $event->getForm();
                 /** @var ItemInterface $menuItem */
                 $menuItem = $options['menu_item'];
-                /** @var MenuUpdate $menuUpdate */
+                /** @var MenuUpdateInterface $menuUpdate */
                 $menuUpdate = $event->getData();
                 $form->add(
                     'uri',
-                    'text',
+                    TextType::class,
                     [
                         'disabled' => false === $menuUpdate->isCustom(),
                         'required' => false !== $menuUpdate->isCustom(),
@@ -53,7 +54,7 @@ class MenuUpdateType extends AbstractType
                 if (null !== $options['menu_item'] && !empty($menuItem->getExtra('acl_resource_id'))) {
                     $form->add(
                         'aclResourceId',
-                        'text',
+                        TextType::class,
                         [
                             'label' => 'oro.navigation.menuupdate.acl_resource_id.label',
                             'mapped' => false,
@@ -67,7 +68,7 @@ class MenuUpdateType extends AbstractType
 
         $builder->add(
             'icon',
-            'oro_icon_select',
+            OroIconType::class,
             [
                 'required' => false,
             ]
@@ -79,7 +80,7 @@ class MenuUpdateType extends AbstractType
             [
                 'required' => false,
                 'label' => 'oro.navigation.menuupdate.description.label',
-                'type' => 'textarea',
+                'entry_type' => TextareaType::class,
                 'field' => 'text',
             ]
         );
@@ -92,11 +93,18 @@ class MenuUpdateType extends AbstractType
     {
         $resolver->setDefaults(
             [
-                'data_class' => MenuUpdate::class,
+                'data_class' => function (Options $options) {
+                    // for loading apropriate validation metadata we need to specify exact entity class in data_class
+                    if ($options['data'] instanceof MenuUpdateInterface) {
+                        return get_class($options['data']);
+                    }
+
+                    return null;
+                },
                 'menu_item' => null,
                 'validation_groups' => function (FormInterface $form) {
                     $groups = ['Default'];
-                    /** @var MenuUpdate $menuUpdate */
+                    /** @var MenuUpdateInterface $menuUpdate */
                     $menuUpdate = $form->getData();
                     if (null === $menuUpdate || true === $menuUpdate->isCustom()) {
                         $groups[] = 'UserDefined';
@@ -106,13 +114,5 @@ class MenuUpdateType extends AbstractType
                 }
             ]
         );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getName()
-    {
-        return self::NAME;
     }
 }

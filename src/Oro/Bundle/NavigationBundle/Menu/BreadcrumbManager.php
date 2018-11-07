@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\NavigationBundle\Menu;
 
-use Symfony\Component\Routing\Router;
-
 use Knp\Menu\ItemInterface;
+use Knp\Menu\Matcher\Matcher;
 use Knp\Menu\Provider\MenuProviderInterface;
 use Knp\Menu\Util\MenuManipulator;
-use Knp\Menu\Matcher\Matcher;
+use Symfony\Component\Routing\Router;
 
 class BreadcrumbManager implements BreadcrumbManagerInterface
 {
@@ -39,10 +38,14 @@ class BreadcrumbManager implements BreadcrumbManagerInterface
     }
 
     /** {@inheritdoc} */
-    public function getBreadcrumbs($menuName, $isInverse = true)
+    public function getBreadcrumbs($menuName, $isInverse = true, $route = null)
     {
         $menu = $this->getMenu($menuName);
-        $currentItem = $this->getCurrentMenuItem($menu);
+        if ($route === null) {
+            $currentItem = $this->getCurrentMenuItem($menu);
+        } else {
+            $currentItem = $this->getMenuItemByRoute($menu, $route);
+        }
 
         if ($currentItem) {
             return $this->getBreadcrumbArray($menuName, $currentItem, $isInverse);
@@ -55,7 +58,7 @@ class BreadcrumbManager implements BreadcrumbManagerInterface
     public function getMenu($menu, array $pathName = [], array $options = [])
     {
         if (!$menu instanceof ItemInterface) {
-            $menu = $this->provider->get((string) $menu, array_merge($options, ['check_access' => false]));
+            $menu = $this->provider->get((string) $menu, array_merge($options, ['check_access_not_logged_in' => true]));
         }
         foreach ($pathName as $child) {
             $menu = $menu->getChild($child);

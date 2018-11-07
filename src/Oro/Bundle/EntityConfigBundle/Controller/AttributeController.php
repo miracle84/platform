@@ -3,20 +3,17 @@
 namespace Oro\Bundle\EntityConfigBundle\Controller;
 
 use Oro\Bundle\EntityBundle\ORM\EntityAliasResolver;
-use Oro\Bundle\EntityConfigBundle\Attribute\Entity\AttributeGroupRelation;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigModelManager;
 use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Helper\EntityConfigProviderHelper;
 use Oro\Bundle\EntityConfigBundle\Provider\ConfigProvider;
-
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
-
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 /**
  * @Route("/attribute")
@@ -63,6 +60,7 @@ class AttributeController extends Controller
         $redirectUrl = $this->generateUrl('oro_attribute_create', ['alias' => $alias]);
         $successMessage = $this->get('translator')->trans('oro.entity_config.attribute.successfully_saved');
         $formAction = $this->generateUrl('oro_attribute_save', ['alias' => $alias]);
+
         $options['attribute'] = ['is_attribute' => true];
 
         $response = $this
@@ -197,7 +195,7 @@ class AttributeController extends Controller
     {
         $entityConfigModel = $this->getEntityByAlias($alias);
         $this->ensureEntityConfigSupported($entityConfigModel);
-        list ($layoutActions) = $this->getConfigProviderHelper()->getLayoutParams($entityConfigModel, 'attribute');
+        list($layoutActions) = $this->getConfigProviderHelper()->getLayoutParams($entityConfigModel, 'attribute');
 
         $response = [
             'entity' => $entityConfigModel,
@@ -225,14 +223,9 @@ class AttributeController extends Controller
 
         $successMessage = $this->get('translator')->trans('oro.entity_config.attribute.successfully_deleted');
 
-        $id = $field->getId();
         $response = $this
             ->get('oro_entity_config.form.handler.remove_restore_field_handler')
             ->handleRemove($field, $successMessage);
-
-        $this->get('oro_entity.doctrine_helper')
-            ->getEntityRepository(AttributeGroupRelation::class)
-            ->removeByFieldId($id);
 
         return $response;
     }

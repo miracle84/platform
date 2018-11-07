@@ -1,10 +1,10 @@
 <?php
 namespace Oro\Bundle\UIBundle\Tests\Unit\DependencyInjection;
 
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Oro\Bundle\UIBundle\DependencyInjection\Configuration;
+use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+class ConfigurationTest extends \PHPUnit\Framework\TestCase
 {
     public function testConfigTreeBuilder()
     {

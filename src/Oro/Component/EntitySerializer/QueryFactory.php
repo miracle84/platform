@@ -5,35 +5,51 @@ namespace Oro\Component\EntitySerializer;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
-
-use Oro\Component\DoctrineUtils\ORM\QueryHintResolverInterface;
-use Oro\Component\DoctrineUtils\ORM\QueryUtils;
+use Oro\Component\DoctrineUtils\ORM\QueryUtil;
+use Oro\Component\DoctrineUtils\ORM\ResultSetMappingUtil;
 use Oro\Component\DoctrineUtils\ORM\SqlQueryBuilder;
 
+/**
+ * A set of methods to build queries used by the entity serializer to retrieve data.
+ */
 class QueryFactory
 {
     /**
      * this value is used to optimize (avoid redundant call parseQuery) UNION ALL queries
      * for the getRelatedItemsIds() method
      */
-    const FAKE_ID = '__fake_id__';
+    private const FAKE_ID = '__fake_id__';
 
     /** @var DoctrineHelper */
-    protected $doctrineHelper;
+    private $doctrineHelper;
 
-    /** @var QueryHintResolverInterface */
-    protected $queryHintResolver;
+    /** @var QueryResolver */
+    private $queryResolver;
 
     /**
-     * @param DoctrineHelper             $doctrineHelper
-     * @param QueryHintResolverInterface $queryHintResolver
+     * @param DoctrineHelper $doctrineHelper
+     * @param QueryResolver  $queryResolver
      */
     public function __construct(
         DoctrineHelper $doctrineHelper,
-        QueryHintResolverInterface $queryHintResolver
+        QueryResolver $queryResolver
     ) {
-        $this->doctrineHelper    = $doctrineHelper;
-        $this->queryHintResolver = $queryHintResolver;
+        $this->doctrineHelper = $doctrineHelper;
+        $this->queryResolver = $queryResolver;
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param EntityConfig $config
+     *
+     * @return Query
+     */
+    public function getQuery(QueryBuilder $qb, EntityConfig $config)
+    {
+        $query = $qb->getQuery();
+        $this->queryResolver->resolveQuery($query, $config);
+
+        return $query;
     }
 
     /**
@@ -125,7 +141,7 @@ class QueryFactory
      * @return SqlQueryBuilder
      * @throws Query\QueryException
      */
-    protected function getRelatedItemsUnionAllQuery(
+    private function getRelatedItemsUnionAllQuery(
         $associationMapping,
         array $entityIds,
         EntityConfig $config,
@@ -133,9 +149,9 @@ class QueryFactory
     ) {
         $subQueryTemplate = $this->getRelatedItemsIdsQuery($associationMapping, [self::FAKE_ID], $config);
         $subQueryTemplate->setMaxResults($relatedRecordsLimit);
-        $parsedSubQuery = QueryUtils::parseQuery($subQueryTemplate);
+        $parsedSubQuery = QueryUtil::parseQuery($subQueryTemplate);
         // we should wrap all subqueries with brackets for PostgreSQL queries with UNION and LIMIT
-        $subQuerySqlTemplate = '(' . QueryUtils::getExecutableSql($subQueryTemplate, $parsedSubQuery) . ')';
+        $subQuerySqlTemplate = '(' . QueryUtil::getExecutableSql($subQueryTemplate, $parsedSubQuery) . ')';
 
         // we should build subquery for each parent entity id because the limit of related records
         // should by applied for each parent entity individually
@@ -151,11 +167,11 @@ class QueryFactory
         $subQueryMapping = $parsedSubQuery->getResultSetMapping();
         $selectStmt = sprintf(
             'entity.%s AS entityId, entity.%s AS relatedEntityId',
-            QueryUtils::getColumnNameByAlias($subQueryMapping, 'entityId'),
-            QueryUtils::getColumnNameByAlias($subQueryMapping, 'relatedEntityId')
+            ResultSetMappingUtil::getColumnNameByAlias($subQueryMapping, 'entityId'),
+            ResultSetMappingUtil::getColumnNameByAlias($subQueryMapping, 'relatedEntityId')
         );
 
-        $rsm = QueryUtils::createResultSetMapping(
+        $rsm = ResultSetMappingUtil::createResultSetMapping(
             $subQueryTemplate->getEntityManager()->getConnection()->getDatabasePlatform()
         );
         $rsm
@@ -177,7 +193,7 @@ class QueryFactory
      *
      * @return Query
      */
-    protected function getRelatedItemsIdsQuery($associationMapping, $entityIds, EntityConfig $config)
+    private function getRelatedItemsIdsQuery($associationMapping, $entityIds, EntityConfig $config)
     {
         $qb = $this->getToManyAssociationQueryBuilder($associationMapping, $entityIds)
             ->addSelect(
@@ -188,19 +204,5 @@ class QueryFactory
             );
 
         return $this->getQuery($qb, $config);
-    }
-
-    /**
-     * @param QueryBuilder $qb
-     * @param EntityConfig $config
-     *
-     * @return Query
-     */
-    public function getQuery(QueryBuilder $qb, EntityConfig $config)
-    {
-        $query = $qb->getQuery();
-        $this->queryHintResolver->resolveHints($query, $config->getHints());
-
-        return $query;
     }
 }

@@ -52,8 +52,19 @@ define([
             sortingDropdown: '[data-grid-sorting]'
         },
 
+        /** @property */
         themeOptions: {
             optionPrefix: 'toolbar'
+        },
+
+        /** @property */
+        hideItemsCounter: true,
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function Toolbar() {
+            Toolbar.__super__.constructor.apply(this, arguments);
         },
 
         /**
@@ -73,9 +84,12 @@ define([
 
             this.collection = options.collection;
 
+            var optionsiIemsCounter = _.defaults({collection: this.collection}, options.itemsCounter);
+            options.columns.trigger('configureInitializeOptions', this.itemsCounter, optionsiIemsCounter);
+
             this.subviews = {
                 pagination: new this.pagination(_.defaults({collection: this.collection}, options.pagination)),
-                itemsCounter: new this.itemsCounter(_.defaults({collection: this.collection}, options.itemsCounter)),
+                itemsCounter: new this.itemsCounter(optionsiIemsCounter),
                 actionsPanel: new this.actionsPanel(_.extend({className: ''}, options.actionsPanel)),
                 extraActionsPanel: new this.extraActionsPanel()
             };
@@ -85,12 +99,10 @@ define([
             }
 
             if (options.addSorting) {
-                this.subviews.sortingDropdown = new this.sortingDropdown(
-                    _.defaults({
-                        collection: this.collection,
-                        columns: options.columns
-                    }, options.addSorting)
-                );
+                this.subviews.sortingDropdown = new this.sortingDropdown({
+                    collection: this.collection,
+                    columns: options.columns
+                });
             }
 
             if (options.actions) {
@@ -111,6 +123,10 @@ define([
                 this.template = options.template;
             } else if (options.template || this.template) {
                 this.template = _.template($(options.template || this.template).html());
+            }
+
+            if (!_.isUndefined(options.hideItemsCounter)) {
+                this.hideItemsCounter = options.hideItemsCounter;
             }
 
             Toolbar.__super__.initialize.call(this, options);
@@ -152,7 +168,7 @@ define([
         render: function() {
             var $pagination;
             this.$el.empty();
-            this.$el.append(this.template());
+            this.$el.append(this.template({toolbarPosition: this.$el.data('gridToolbar')}));
 
             $pagination = this.subviews.pagination.render().$el;
             $pagination.attr('class', this.$(this.selector.pagination).attr('class'));
@@ -164,7 +180,10 @@ define([
             this.$(this.selector.actionsPanel).append(this.subviews.actionsPanel.render().$el);
 
             this.$(this.selector.itemsCounter).replaceWith(this.subviews.itemsCounter.render().$el);
-            this.subviews.itemsCounter.$el.hide();
+
+            if (this.hideItemsCounter) {
+                this.subviews.itemsCounter.$el.hide();
+            }
 
             if (this.subviews.sortingDropdown) {
                 this.$(this.selector.sortingDropdown).append(this.subviews.sortingDropdown.render().$el);

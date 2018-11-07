@@ -26,6 +26,8 @@ class FeatureContext extends OroFeatureContext implements
 
     /**
      * @BeforeScenario
+     *
+     * @param BeforeScenarioScope $scope
      */
     public function gatherContexts(BeforeScenarioScope $scope)
     {
@@ -46,13 +48,24 @@ class FeatureContext extends OroFeatureContext implements
     }
 
     /**
+     * Logout user
+     *
+     * @Given I am logged out
+     */
+    public function iAmLoggedOut()
+    {
+        $uri = $this->getContainer()->get('router')->generate('oro_user_security_logout');
+        $this->visitPath($uri);
+    }
+
+    /**
      * Load "user.yml" alice fixture from UserBundle suite
      *
      * @Given (Charlie Sheen) (active) user exists in the system
      */
     public function charlieUserInTheSystem()
     {
-        $this->fixtureLoader->loadFixtureFile('user.yml');
+        $this->fixtureLoader->loadFixtureFile('OroUserBundle:user.yml');
     }
 
     /**
@@ -62,12 +75,13 @@ class FeatureContext extends OroFeatureContext implements
      */
     public function charlieCanLogin()
     {
-        $this->getMink()->setDefaultSessionName('second_session');
+        self::assertFalse($this->getMink()->isSessionStarted('system_session'));
+        $this->getMink()->setDefaultSessionName('system_session');
         $this->oroMainContext->loginAsUserWithPassword('charlie');
         $this->waitForAjax();
 
         $this->oroMainContext->assertPage('Admin Dashboard');
-        $this->getSession('second_session')->stop();
+        $this->getSession('system_session')->stop();
         $this->getMink()->setDefaultSessionName('first_session');
     }
 
@@ -78,12 +92,48 @@ class FeatureContext extends OroFeatureContext implements
      */
     public function charlieCantLogin()
     {
-        $this->getMink()->setDefaultSessionName('second_session');
+        self::assertFalse($this->getMink()->isSessionStarted('system_session'));
+        $this->getMink()->setDefaultSessionName('system_session');
         $this->oroMainContext->loginAsUserWithPassword('charlie');
-        $this->waitForAjax();
+
+        $error = $this->spin(function (FeatureContext $context) {
+            return $context->getPage()->find('css', 'div.alert-error');
+        }, 5);
+
+        self::assertNotNull($error, 'Expect to find error on page, but it not found');
+        self::assertEquals('Account is locked.', $error->getText());
 
         $this->oroMainContext->assertPage('Login');
-        $this->getSession('second_session')->stop();
+        $this->getSession('system_session')->stop();
         $this->getMink()->setDefaultSessionName('first_session');
+    }
+
+    /**
+     * Click on button "Reset" in modal window or reset page and skip wait ajax
+     *
+     * @When /^(?:|I )confirm reset password$/
+     */
+    public function iConfirmResetPassword()
+    {
+        $modalWindow = $this->oroMainContext->getPage()->findVisible('css', 'div.modal, div[role="dialog"]');
+        if ($modalWindow) {
+            $this->oroMainContext->pressButtonInModalWindow('Reset');
+        } else {
+            $this->oroMainContext->pressButton('Request');
+        }
+
+        // need to be skiped ajax wait, because we have redirect to login page and no ajax requests
+        $this->oroMainContext->applySkipWait();
+    }
+
+    /**
+     * @When /^(?:|I )confirm login$/
+     */
+    public function iConfirmLogin()
+    {
+        $this->oroMainContext->pressButton('Log in');
+
+        // need to be skiped ajax wait, because we have redirect to login page and no ajax requests
+        $this->oroMainContext->applySkipWait();
     }
 }

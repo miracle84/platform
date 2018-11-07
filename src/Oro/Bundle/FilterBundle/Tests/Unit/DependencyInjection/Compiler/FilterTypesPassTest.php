@@ -2,12 +2,11 @@
 
 namespace Oro\Bundle\FilterBundle\Tests\Unit\DependencyInjection\Compiler;
 
+use Oro\Bundle\FilterBundle\DependencyInjection\Compiler\FilterTypesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 
-use Oro\Bundle\FilterBundle\DependencyInjection\Compiler\FilterTypesPass;
-
-class FilterTypesPassTest extends \PHPUnit_Framework_TestCase
+class FilterTypesPassTest extends \PHPUnit\Framework\TestCase
 {
     const TEST_TAG_ATTRIBUTE_TYPE = 'TEST_TAG_ATTRIBUTE_TYPE';
     const TEST_SERVICE_ID = 'TEST_SERVICE_ID';
@@ -18,12 +17,12 @@ class FilterTypesPassTest extends \PHPUnit_Framework_TestCase
     protected $filterTypePass;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|ContainerBuilder
+     * @var \PHPUnit\Framework\MockObject\MockObject|ContainerBuilder
      */
     protected $containerMock;
 
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Definition
+     * @var \PHPUnit\Framework\MockObject\MockObject|Definition
      */
     protected $definitionMock;
 

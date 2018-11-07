@@ -3,39 +3,48 @@
 namespace Oro\Bundle\ApiBundle\Processor\Config\Shared;
 
 use Doctrine\ORM\Mapping\ClassMetadata;
-
-use Oro\Component\ChainProcessor\ContextInterface;
-use Oro\Component\ChainProcessor\ProcessorInterface;
 use Oro\Bundle\ApiBundle\Config\ConfigExtraInterface;
 use Oro\Bundle\ApiBundle\Config\ConfigExtraSectionInterface;
 use Oro\Bundle\ApiBundle\Config\EntityDefinitionConfig;
 use Oro\Bundle\ApiBundle\Config\ExpandRelatedEntitiesConfigExtra;
+use Oro\Bundle\ApiBundle\Exception\NotSupportedConfigOperationException;
 use Oro\Bundle\ApiBundle\Processor\Config\ConfigContext;
 use Oro\Bundle\ApiBundle\Provider\ConfigProvider;
+use Oro\Bundle\ApiBundle\Provider\EntityOverrideProviderRegistry;
 use Oro\Bundle\ApiBundle\Request\RequestType;
 use Oro\Bundle\ApiBundle\Util\ConfigUtil;
 use Oro\Bundle\ApiBundle\Util\DoctrineHelper;
+use Oro\Component\ChainProcessor\ContextInterface;
+use Oro\Component\ChainProcessor\ProcessorInterface;
 
 /**
  * Loads full configuration of the target entity for associations were requested to expand.
- * For example, in JSON.API the "include" parameter can be used to request related entities.
+ * For example, in JSON.API the "include" filter can be used to request related entities.
  */
 class ExpandRelatedEntities implements ProcessorInterface
 {
     /** @var DoctrineHelper */
-    protected $doctrineHelper;
+    private $doctrineHelper;
 
     /** @var ConfigProvider */
-    protected $configProvider;
+    private $configProvider;
+
+    /** @var EntityOverrideProviderRegistry */
+    private $entityOverrideProviderRegistry;
 
     /**
-     * @param DoctrineHelper $doctrineHelper
-     * @param ConfigProvider $configProvider
+     * @param DoctrineHelper                 $doctrineHelper
+     * @param ConfigProvider                 $configProvider
+     * @param EntityOverrideProviderRegistry $entityOverrideProviderRegistry
      */
-    public function __construct(DoctrineHelper $doctrineHelper, ConfigProvider $configProvider)
-    {
+    public function __construct(
+        DoctrineHelper $doctrineHelper,
+        ConfigProvider $configProvider,
+        EntityOverrideProviderRegistry $entityOverrideProviderRegistry
+    ) {
         $this->doctrineHelper = $doctrineHelper;
         $this->configProvider = $configProvider;
+        $this->entityOverrideProviderRegistry = $entityOverrideProviderRegistry;
     }
 
     /**
@@ -52,6 +61,10 @@ class ExpandRelatedEntities implements ProcessorInterface
         }
 
         $entityClass = $context->getClassName();
+        if (!$definition->isInclusionEnabled()) {
+            throw new NotSupportedConfigOperationException($entityClass, ExpandRelatedEntitiesConfigExtra::NAME);
+        }
+
         if ($this->doctrineHelper->isManageableEntityClass($entityClass)) {
             $this->completeEntityAssociations(
                 $this->doctrineHelper->getEntityMetadataForClass($entityClass),
@@ -80,7 +93,7 @@ class ExpandRelatedEntities implements ProcessorInterface
      * @param RequestType            $requestType
      * @param ConfigExtraInterface[] $extras
      */
-    protected function completeEntityAssociations(
+    private function completeEntityAssociations(
         ClassMetadata $metadata,
         EntityDefinitionConfig $definition,
         $expandedEntities,
@@ -88,33 +101,60 @@ class ExpandRelatedEntities implements ProcessorInterface
         RequestType $requestType,
         array $extras
     ) {
+        $entityOverrideProvider = $this->entityOverrideProviderRegistry->getEntityOverrideProvider($requestType);
         $associations = $this->splitExpandedEntities($expandedEntities);
-        foreach ($associations as $fieldName => $childExpandedEntities) {
-            $propertyPath = null;
-            if ($definition->hasField($fieldName)) {
-                $propertyPath = $definition->getField($fieldName)->getPropertyPath();
-            }
-            if (!$propertyPath) {
-                $propertyPath = $fieldName;
-            }
-            if (!$metadata->hasAssociation($propertyPath)) {
-                continue;
+        foreach ($associations as $fieldName => $targetExpandedEntities) {
+            $propertyPath = $this->getPropertyPath($fieldName, $definition);
+
+            $lastDelimiter = strrpos($propertyPath, '.');
+            if (false === $lastDelimiter) {
+                $targetMetadata = $metadata;
+                $targetFieldName = $propertyPath;
+            } else {
+                $targetMetadata = $this->doctrineHelper->findEntityMetadataByPath(
+                    $metadata->name,
+                    substr($propertyPath, 0, $lastDelimiter)
+                );
+                $targetFieldName = substr($propertyPath, $lastDelimiter + 1);
             }
 
-            $this->completeAssociation(
-                $definition,
-                $fieldName,
-                $metadata->getAssociationTargetClass($propertyPath),
-                $childExpandedEntities,
-                $version,
-                $requestType,
-                $extras
-            );
-            $field = $definition->getField($fieldName);
-            if (null !== $field && $field->getTargetClass()) {
-                $field->setTargetType(
-                    $this->getAssociationTargetType($metadata->isCollectionValuedAssociation($propertyPath))
+            if (null !== $targetMetadata && $targetMetadata->hasAssociation($targetFieldName)) {
+                $targetClass = $targetMetadata->getAssociationTargetClass($targetFieldName);
+                $substituteTargetClass = $entityOverrideProvider->getSubstituteEntityClass($targetClass);
+                if ($substituteTargetClass) {
+                    $targetClass = $substituteTargetClass;
+                }
+                $this->completeAssociation(
+                    $definition,
+                    $fieldName,
+                    $targetClass,
+                    $targetExpandedEntities,
+                    $version,
+                    $requestType,
+                    $extras
                 );
+                $field = $definition->getField($fieldName);
+                if (null !== $field && $field->getTargetClass()) {
+                    $field->setTargetType(
+                        $this->getAssociationTargetType(
+                            $targetMetadata->isCollectionValuedAssociation($targetFieldName)
+                        )
+                    );
+                }
+            } elseif ($definition->hasField($fieldName)) {
+                $field = $definition->getField($fieldName);
+                $targetClass = $field->getTargetClass();
+                if ($targetClass && $field->hasTargetType() && !$field->hasDataType()) {
+                    $this->completeAssociation(
+                        $definition,
+                        $fieldName,
+                        $targetClass,
+                        $targetExpandedEntities,
+                        $version,
+                        $requestType,
+                        $extras
+                    );
+                }
             }
         }
     }
@@ -126,7 +166,7 @@ class ExpandRelatedEntities implements ProcessorInterface
      * @param RequestType            $requestType
      * @param ConfigExtraInterface[] $extras
      */
-    protected function completeObjectAssociations(
+    private function completeObjectAssociations(
         EntityDefinitionConfig $definition,
         $expandedEntities,
         $version,
@@ -134,25 +174,22 @@ class ExpandRelatedEntities implements ProcessorInterface
         array $extras
     ) {
         $associations = $this->splitExpandedEntities($expandedEntities);
-        foreach ($associations as $fieldName => $childExpandedEntities) {
+        foreach ($associations as $fieldName => $targetExpandedEntities) {
             $field = $definition->getField($fieldName);
-            if (!$field) {
-                continue;
+            if (null !== $field) {
+                $targetClass = $field->getTargetClass();
+                if ($targetClass) {
+                    $this->completeAssociation(
+                        $definition,
+                        $fieldName,
+                        $targetClass,
+                        $targetExpandedEntities,
+                        $version,
+                        $requestType,
+                        $extras
+                    );
+                }
             }
-            $targetClass = $field->getTargetClass();
-            if (!$targetClass) {
-                continue;
-            }
-
-            $this->completeAssociation(
-                $definition,
-                $fieldName,
-                $targetClass,
-                $childExpandedEntities,
-                $version,
-                $requestType,
-                $extras
-            );
         }
     }
 
@@ -160,31 +197,25 @@ class ExpandRelatedEntities implements ProcessorInterface
      * @param EntityDefinitionConfig $definition
      * @param string                 $fieldName
      * @param string                 $targetClass
-     * @param string[]               $childExpandedEntities
+     * @param string[]               $targetExpandedEntities
      * @param string                 $version
      * @param RequestType            $requestType
      * @param ConfigExtraInterface[] $extras
      */
-    protected function completeAssociation(
+    private function completeAssociation(
         EntityDefinitionConfig $definition,
         $fieldName,
         $targetClass,
-        $childExpandedEntities,
+        $targetExpandedEntities,
         $version,
         RequestType $requestType,
         array $extras
     ) {
-        $targetExtras = $extras;
-        if (!empty($childExpandedEntities)) {
-            $targetExtras[] = new ExpandRelatedEntitiesConfigExtra($childExpandedEntities);
+        if (!empty($targetExpandedEntities)) {
+            $extras[] = new ExpandRelatedEntitiesConfigExtra($targetExpandedEntities);
         }
 
-        $config = $this->configProvider->getConfig(
-            $targetClass,
-            $version,
-            $requestType,
-            $targetExtras
-        );
+        $config = $this->configProvider->getConfig($targetClass, $version, $requestType, $extras);
         if ($config->hasDefinition()) {
             $targetEntity = $config->getDefinition();
             foreach ($extras as $extra) {
@@ -206,7 +237,7 @@ class ExpandRelatedEntities implements ProcessorInterface
      *
      * @return array
      */
-    protected function splitExpandedEntities($expandedEntities)
+    private function splitExpandedEntities($expandedEntities)
     {
         $result = [];
         foreach ($expandedEntities as $expandedEntity) {
@@ -227,8 +258,23 @@ class ExpandRelatedEntities implements ProcessorInterface
      *
      * @return string
      */
-    protected function getAssociationTargetType($isCollection)
+    private function getAssociationTargetType($isCollection)
     {
         return $isCollection ? 'to-many' : 'to-one';
+    }
+
+    /**
+     * @param string                 $fieldName
+     * @param EntityDefinitionConfig $definition
+     *
+     * @return string
+     */
+    private function getPropertyPath($fieldName, EntityDefinitionConfig $definition)
+    {
+        if (!$definition->hasField($fieldName)) {
+            return $fieldName;
+        }
+
+        return $definition->getField($fieldName)->getPropertyPath($fieldName);
     }
 }

@@ -2,8 +2,23 @@
 
 namespace Oro\Bundle\EntityExtendBundle\Tools;
 
+use Oro\Component\PhpUtils\ClassLoader;
+
+/**
+ * A set of reusable static methods related to extended entity proxy classes registration.
+ */
 class ExtendClassLoadingUtils
 {
+    /**
+     * Returns the class namespace of extended entities.
+     *
+     * @return string
+     */
+    public static function getEntityNamespace()
+    {
+        return 'Extend\Entity';
+    }
+
     /**
      * Returns base cache directory where all data for extended entities should be located.
      *
@@ -12,7 +27,7 @@ class ExtendClassLoadingUtils
      */
     public static function getEntityBaseCacheDir($cacheDir)
     {
-        return $cacheDir . '/oro_entities/Extend';
+        return $cacheDir . DIRECTORY_SEPARATOR . 'oro_entities' . DIRECTORY_SEPARATOR. 'Extend';
     }
 
     /**
@@ -23,7 +38,7 @@ class ExtendClassLoadingUtils
      */
     public static function getEntityCacheDir($cacheDir)
     {
-        return $cacheDir . '/oro_entities/Extend/Entity';
+        return self::getEntityBaseCacheDir($cacheDir) . DIRECTORY_SEPARATOR . 'Entity';
     }
 
     /**
@@ -34,23 +49,31 @@ class ExtendClassLoadingUtils
      */
     public static function getAliasesPath($cacheDir)
     {
-        return self::getEntityCacheDir($cacheDir) . '/alias.data';
+        return self::getEntityCacheDir($cacheDir) . DIRECTORY_SEPARATOR . 'alias.data';
     }
 
     /**
-     * Registers the extended entity namespace in the autoloader.
+     * Checks if a configuration file contains class aliases for extended entities exists.
+     *
+     * @param string $cacheDir
+     * @return bool
+     */
+    public static function aliasesExist($cacheDir)
+    {
+        return file_exists(self::getAliasesPath($cacheDir));
+    }
+
+    /**
+     * Registers the namespace of extended entities on the SPL autoload stack.
      *
      * @param string $cacheDir
      */
     public static function registerClassLoader($cacheDir)
     {
-        // we have to use a loader that extends Doctrine's ClassLoader here rather than
-        // Symfony's UniversalClassLoader because in other case Doctrine cannot find our proxies
-        // if a class name does not conform Doctrine's conventions for entity class names,
-        // for example if a class name contains underscore characters
-        // the problem is in Doctrine\Common\ClassLoader::classExists; this method known nothing
-        // about Symfony's UniversalClassLoader
-        $loader = new ExtendClassLoader('Extend\Entity', $cacheDir . '/oro_entities');
+        $loader = new ClassLoader(
+            self::getEntityNamespace() . '\\',
+            $cacheDir . DIRECTORY_SEPARATOR . 'oro_entities'
+        );
         $loader->register();
     }
 

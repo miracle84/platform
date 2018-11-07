@@ -2,12 +2,8 @@
 
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Helper;
 
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Oro\Bundle\WorkflowBundle\Acl\AclManager;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowItem;
@@ -21,16 +17,19 @@ use Oro\Bundle\WorkflowBundle\Model\Workflow;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowManager;
 use Oro\Bundle\WorkflowBundle\Restriction\RestrictionManager;
 use Oro\Bundle\WorkflowBundle\Tests\Unit\Model\Stub\EntityWithWorkflow;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Translation\TranslatorInterface;
 
-class WorkflowDataHelperTest extends \PHPUnit_Framework_TestCase
+class WorkflowDataHelperTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $authorizationChecker;
 
-    /** @var TranslatorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var TranslatorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var UrlGeneratorInterface|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var UrlGeneratorInterface|\PHPUnit\Framework\MockObject\MockObject */
     protected $router;
 
     /** @var WorkflowDataHelper */
@@ -41,15 +40,19 @@ class WorkflowDataHelperTest extends \PHPUnit_Framework_TestCase
      */
     public function setUp()
     {
-        $this->securityFacade = $this->getMockBuilder(SecurityFacade::class)->disableOriginalConstructor()->getMock();
-        $this->securityFacade->expects($this->any())->method('isGranted')->willReturn(true);
-        $this->translator = $this->getMockBuilder(TranslatorInterface::class)->disableOriginalConstructor()->getMock();
-        $this->router = $this->getMockBuilder(UrlGeneratorInterface::class)->disableOriginalConstructor()->getMock();
-        $this->router->expects($this->any())->method('generate')->willReturnCallback(
-            function ($route, array $params) {
+        $this->authorizationChecker = $this->createMock(AuthorizationCheckerInterface::class);
+        $this->translator = $this->createMock(TranslatorInterface::class);
+        $this->router = $this->createMock(UrlGeneratorInterface::class);
+
+        $this->authorizationChecker->expects($this->any())
+            ->method('isGranted')
+            ->willReturn(true);
+
+        $this->router->expects($this->any())
+            ->method('generate')
+            ->willReturnCallback(function ($route, array $params) {
                 return sprintf('%s/%s', $route, implode('/', $params));
-            }
-        );
+            });
     }
 
     /**
@@ -173,7 +176,7 @@ class WorkflowDataHelperTest extends \PHPUnit_Framework_TestCase
 
         $workflowDataHelper = new WorkflowDataHelper(
             $this->getWorkflowManager($entity, $workflowsData),
-            $this->securityFacade,
+            $this->authorizationChecker,
             $this->translator,
             $this->router
         );
@@ -310,7 +313,7 @@ class WorkflowDataHelperTest extends \PHPUnit_Framework_TestCase
         $step->setName('Start');
         $step->setAllowedTransitions($allowed);
 
-        /** @var StepManager|\PHPUnit_Framework_MockObject_MockObject $stepManager */
+        /** @var StepManager|\PHPUnit\Framework\MockObject\MockObject $stepManager */
         $stepManager = $this->getMockBuilder(StepManager::class)
             ->disableOriginalConstructor()
             ->getMock();
@@ -329,7 +332,7 @@ class WorkflowDataHelperTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        /** @var RestrictionManager|\PHPUnit_Framework_MockObject_MockObject $restrictionManager */
+        /** @var RestrictionManager|\PHPUnit\Framework\MockObject\MockObject $restrictionManager */
         $restrictionManager = $this->getMockBuilder(RestrictionManager::class)
             ->disableOriginalConstructor()
             ->getMock();

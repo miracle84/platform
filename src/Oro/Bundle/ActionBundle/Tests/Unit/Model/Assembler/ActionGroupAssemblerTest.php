@@ -7,11 +7,10 @@ use Oro\Bundle\ActionBundle\Model\ActionGroupDefinition;
 use Oro\Bundle\ActionBundle\Model\Assembler\ActionGroupAssembler;
 use Oro\Bundle\ActionBundle\Model\Assembler\ParameterAssembler;
 use Oro\Bundle\EntityBundle\ORM\DoctrineHelper;
-
 use Oro\Component\Action\Action\ActionFactory;
 use Oro\Component\ConfigExpression\ExpressionFactory as ConditionFactory;
 
-class ActionGroupAssemblerTest extends \PHPUnit_Framework_TestCase
+class ActionGroupAssemblerTest extends \PHPUnit\Framework\TestCase
 {
     /** @var ActionGroupAssembler */
     protected $assembler;
@@ -182,7 +181,7 @@ class ActionGroupAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ActionFactory
+     * @return \PHPUnit\Framework\MockObject\MockObject|ActionFactory
      */
     protected function getActionFactory()
     {
@@ -190,7 +189,7 @@ class ActionGroupAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|ConditionFactory
+     * @return \PHPUnit\Framework\MockObject\MockObject|ConditionFactory
      */
     protected function getConditionFactory()
     {
@@ -200,7 +199,7 @@ class ActionGroupAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|DoctrineHelper
+     * @return \PHPUnit\Framework\MockObject\MockObject|DoctrineHelper
      */
     protected function getDoctrineHelper()
     {
@@ -218,7 +217,7 @@ class ActionGroupAssemblerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @return ActionGroup\ParametersResolver|\PHPUnit_Framework_MockObject_MockObject
+     * @return ActionGroup\ParametersResolver|\PHPUnit\Framework\MockObject\MockObject
      */
     private function getParametersResolver()
     {

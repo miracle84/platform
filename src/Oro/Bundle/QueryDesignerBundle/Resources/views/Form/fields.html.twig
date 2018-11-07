@@ -1,16 +1,7 @@
 {% block oro_field_choice_row %}
     {{ block('form_row') }}
+{% endblock %}
 
-    {% set fieldConditionOptions = {
-        select2: {
-            placeholder: placeholder|trans
-        },
-        fieldsLoaderSelector: entity_choice_selector
-    } %}
-    <script type="text/javascript">
-        require(['oroentity/js/field-choice'], function ($) {
-            var $field = $('#{{ id }}');
-            $field.fieldChoice({{ fieldConditionOptions|json_encode|raw }});
-        });
-    </script>
+{% block oro_date_field_choice_row %}
+    {{ block('form_row') }}
 {% endblock %}

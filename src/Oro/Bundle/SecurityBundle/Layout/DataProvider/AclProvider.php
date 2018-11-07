@@ -2,28 +2,35 @@
 
 namespace Oro\Bundle\SecurityBundle\Layout\DataProvider;
 
-use Doctrine\ORM\EntityManager;
 use Doctrine\Common\Persistence\ManagerRegistry;
-
-use Symfony\Component\Security\Core\Util\ClassUtils;
-
-use Oro\Bundle\SecurityBundle\SecurityFacade;
+use Doctrine\ORM\EntityManager;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Symfony\Component\Security\Acl\Util\ClassUtils;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 class AclProvider
 {
-    /** @var SecurityFacade */
-    protected $securityFacade;
+    /** @var AuthorizationCheckerInterface */
+    protected $authorizationChecker;
+
+    /** @var TokenAccessorInterface */
+    protected $tokenAccessor;
 
     /** @var ManagerRegistry */
     protected $doctrine;
 
     /**
-     * @param SecurityFacade  $securityFacade
-     * @param ManagerRegistry $doctrine
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param TokenAccessorInterface        $tokenAccessor
+     * @param ManagerRegistry               $doctrine
      */
-    public function __construct(SecurityFacade $securityFacade, ManagerRegistry $doctrine)
-    {
-        $this->securityFacade = $securityFacade;
+    public function __construct(
+        AuthorizationCheckerInterface $authorizationChecker,
+        TokenAccessorInterface $tokenAccessor,
+        ManagerRegistry $doctrine
+    ) {
+        $this->authorizationChecker = $authorizationChecker;
+        $this->tokenAccessor = $tokenAccessor;
         $this->doctrine = $doctrine;
     }
 
@@ -34,7 +41,7 @@ class AclProvider
      */
     public function isGranted($attributes, $object = null)
     {
-        if (!$this->securityFacade->hasLoggedUser()) {
+        if (!$this->tokenAccessor->hasUser()) {
             return false;
         }
 
@@ -49,6 +56,6 @@ class AclProvider
             }
         }
 
-        return $this->securityFacade->isGranted($attributes, $object);
+        return $this->authorizationChecker->isGranted($attributes, $object);
     }
 }

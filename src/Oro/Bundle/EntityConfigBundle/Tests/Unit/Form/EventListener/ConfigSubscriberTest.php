@@ -3,9 +3,6 @@
 namespace Oro\Bundle\EntityConfigBundle\Tests\Unit\Form\EventListener;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Form\FormEvents;
-
 use Oro\Bundle\EntityConfigBundle\Config\Config;
 use Oro\Bundle\EntityConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EntityConfigBundle\Config\Id\EntityConfigId;
@@ -14,19 +11,20 @@ use Oro\Bundle\EntityConfigBundle\Entity\EntityConfigModel;
 use Oro\Bundle\EntityConfigBundle\Entity\FieldConfigModel;
 use Oro\Bundle\EntityConfigBundle\Form\EventListener\ConfigSubscriber;
 use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigContainer;
-use Oro\Bundle\EntityConfigBundle\Translation\ConfigTranslationHelper;
 use Oro\Bundle\EntityConfigBundle\Tests\Unit\ReflectionUtil;
+use Oro\Bundle\EntityConfigBundle\Translation\ConfigTranslationHelper;
 use Oro\Bundle\TranslationBundle\Translation\Translator;
+use Symfony\Component\Form\FormEvents;
 
-class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
+class ConfigSubscriberTest extends \PHPUnit\Framework\TestCase
 {
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $configManager;
 
-    /** @var Translator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Translator|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var ConfigTranslationHelper|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigTranslationHelper|\PHPUnit\Framework\MockObject\MockObject */
     protected $translationHelper;
 
     /** @var ConfigSubscriber */
@@ -34,15 +32,9 @@ class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->configManager = $this->getMockBuilder(ConfigManager::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->translator = $this->getMockBuilder(Translator::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        $this->translationHelper = $this->getMockBuilder(ConfigTranslationHelper::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        $this->configManager = $this->createMock(ConfigManager::class);
+        $this->translator = $this->createMock(Translator::class);
+        $this->translationHelper = $this->createMock(ConfigTranslationHelper::class);
 
         $this->subscriber = new ConfigSubscriber(
             $this->translationHelper,
@@ -170,9 +162,10 @@ class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
         array $expectedTrans
     ) {
         $extendProvider = $this->getConfigProvider('extend', [], false);
+        $config = new Config(new EntityConfigId('extend'));
         $extendProvider->expects($this->once())
             ->method('getConfigById')
-            ->will($this->returnValue(new Config(new EntityConfigId('extend'))));
+            ->will($this->returnValue($config));
 
         $provider1 = $this->getConfigProvider(
             'entity',
@@ -264,6 +257,11 @@ class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
             $this->configManager->expects($this->never())
                 ->method('flush');
         }
+
+        $this->configManager->expects($this->any())->method('calculateConfigChangeSet')->with($config1);
+        $this->configManager->expects($this->any())->method('getConfigChangeSet')->with($config1)->willReturn([
+            'state' => ['Active', 'Requires update']
+        ]);
 
         $this->subscriber->postSubmit($event);
     }
@@ -566,14 +564,34 @@ class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
                     'label_key' => 'translated label',
                 ]
             ],
+            'existing model updated field' => [
+                [
+                    'entity' => [
+                        'label' => 'translated label',
+                        'icon'  => 'testIcon',
+                        'state' => 'Active',
+                    ]
+                ],
+                true,
+                $existingConfigModel,
+                [
+                    'label_key' => 'translated label'
+                ],
+                [
+                    'label' => 'label_key',
+                    'icon'  => 'testIcon',
+                    'state' => 'Requires update',
+                ],
+                []
+            ],
         ];
     }
 
     /**
      * @param array                                    $data
      * @param ConfigModel                              $model
-     * @param \PHPUnit_Framework_MockObject_MockObject $form
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @param \PHPUnit\Framework\MockObject\MockObject $form
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getFormEvent($data, $model, $form = null)
     {
@@ -607,7 +625,7 @@ class ConfigSubscriberTest extends \PHPUnit_Framework_TestCase
      * @param string $scope
      * @param array  $configs
      * @param bool   $isGetPropertyConfigExpected
-     * @return \PHPUnit_Framework_MockObject_MockObject
+     * @return \PHPUnit\Framework\MockObject\MockObject
      */
     protected function getConfigProvider($scope, $configs, $isGetPropertyConfigExpected)
     {

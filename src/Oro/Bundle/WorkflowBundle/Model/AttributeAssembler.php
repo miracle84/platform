@@ -3,18 +3,15 @@
 namespace Oro\Bundle\WorkflowBundle\Model;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\Translation\TranslatorInterface;
-
 use Oro\Bundle\ActionBundle\Button\ButtonSearchContext;
 use Oro\Bundle\ActionBundle\Model\Attribute as BaseAttribute;
 use Oro\Bundle\ActionBundle\Model\AttributeGuesser;
 use Oro\Bundle\WorkflowBundle\Configuration\WorkflowConfiguration;
 use Oro\Bundle\WorkflowBundle\Entity\WorkflowDefinition;
 use Oro\Bundle\WorkflowBundle\Helper\WorkflowTranslationHelper;
-
 use Oro\Component\Action\Exception\AssemblerException;
 use Oro\Component\Action\Model\AbstractAssembler as BaseAbstractAssembler;
+use Symfony\Component\Translation\TranslatorInterface;
 
 class AttributeAssembler extends BaseAbstractAssembler
 {
@@ -39,7 +36,7 @@ class AttributeAssembler extends BaseAbstractAssembler
     }
 
     /**
-     * @param WorkflowDefinition $definition,
+     * @param WorkflowDefinition $definition
      * @param array $configuration
      * @param array $transitionConfigurations
      *
@@ -95,6 +92,20 @@ class AttributeAssembler extends BaseAbstractAssembler
     {
         if (!empty($options['property_path'])) {
             $options = $this->guessOptions($options, $definition->getRelatedEntity(), $options['property_path']);
+            if (empty($options['type'])) {
+                throw new AssemblerException(
+                    sprintf(
+                        'Workflow "%s": Option "type" for attribute "%s" with property path "%s" can not be guessed',
+                        $this->translator->trans(
+                            $definition->getLabel(),
+                            [],
+                            WorkflowTranslationHelper::TRANSLATION_DOMAIN
+                        ),
+                        $name,
+                        $options['property_path']
+                    )
+                );
+            }
         }
 
         $this->assertOptions($options, array('label', 'type'));
@@ -134,7 +145,7 @@ class AttributeAssembler extends BaseAbstractAssembler
             return $options;
         }
 
-        $attributeParameters = $this->attributeGuesser->guessAttributeParameters($rootClass, $propertyPath);
+        $attributeParameters = $this->attributeGuesser->guessParameters($rootClass, $propertyPath);
         if ($attributeParameters) {
             foreach ($guessedOptions as $option) {
                 if (!empty($attributeParameters[$option])) {
@@ -191,10 +202,11 @@ class AttributeAssembler extends BaseAbstractAssembler
     {
         $this->assertAttributeHasValidType($attribute);
 
-        if ($attribute->getType() == 'object' || $attribute->getType() == 'entity') {
-            $this->assertAttributeHasClassOption($attribute);
+        $attributeType = $attribute->getType();
+        if ('object' === $attributeType || 'entity' === $attributeType) {
+            $this->assertParameterHasClassOption($attribute);
         } else {
-            $this->assertAttributeHasNoOptions($attribute, 'class');
+            $this->assertParameterHasNoOptions($attribute, ['class']);
         }
     }
 
@@ -213,60 +225,6 @@ class AttributeAssembler extends BaseAbstractAssembler
                     'Invalid attribute type "%s", allowed types are "%s"',
                     $attributeType,
                     implode('", "', $allowedTypes)
-                )
-            );
-        }
-    }
-
-    /**
-     * @param BaseAttribute $attribute
-     * @param string|array $optionNames
-     * @throws AssemblerException If attribute is invalid
-     */
-    protected function assertAttributeHasOptions(BaseAttribute $attribute, $optionNames)
-    {
-        $optionNames = (array)$optionNames;
-
-        foreach ($optionNames as $optionName) {
-            if (!$attribute->hasOption($optionName)) {
-                throw new AssemblerException(
-                    sprintf('Option "%s" is required in attribute "%s"', $optionName, $attribute->getName())
-                );
-            }
-        }
-    }
-
-    /**
-     * @param BaseAttribute $attribute
-     * @param string|array $optionNames
-     * @throws AssemblerException If attribute is invalid
-     */
-    protected function assertAttributeHasNoOptions(BaseAttribute $attribute, $optionNames)
-    {
-        $optionNames = (array)$optionNames;
-
-        foreach ($optionNames as $optionName) {
-            if ($attribute->hasOption($optionName)) {
-                throw new AssemblerException(
-                    sprintf('Option "%s" cannot be used in attribute "%s"', $optionName, $attribute->getName())
-                );
-            }
-        }
-    }
-
-    /**
-     * @param BaseAttribute $attribute
-     * @throws AssemblerException If attribute is invalid
-     */
-    protected function assertAttributeHasClassOption(BaseAttribute $attribute)
-    {
-        $this->assertAttributeHasOptions($attribute, 'class');
-        if (!class_exists($attribute->getOption('class'))) {
-            throw new AssemblerException(
-                sprintf(
-                    'Class "%s" referenced by "class" option in attribute "%s" not found',
-                    $attribute->getOption('class'),
-                    $attribute->getName()
                 )
             );
         }

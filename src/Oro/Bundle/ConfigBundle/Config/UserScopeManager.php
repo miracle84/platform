@@ -2,9 +2,8 @@
 
 namespace Oro\Bundle\ConfigBundle\Config;
 
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-
 use Oro\Bundle\UserBundle\Entity\User;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 /**
  * User config scope
@@ -50,6 +49,8 @@ class UserScopeManager extends AbstractScopeManager
      */
     public function setScopeId($scopeId)
     {
+        $this->dispatchScopeIdChangeEvent();
+
         $this->scopeId = $scopeId;
     }
 
@@ -76,7 +77,7 @@ class UserScopeManager extends AbstractScopeManager
      */
     protected function ensureScopeIdInitialized()
     {
-        if (null === $this->scopeId) {
+        if (!$this->scopeId) {
             $scopeId = 0;
 
             $token = $this->securityContext->getToken();

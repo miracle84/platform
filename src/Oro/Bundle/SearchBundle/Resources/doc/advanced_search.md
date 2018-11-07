@@ -1,15 +1,13 @@
 API advanced search
 ====================
 
-REST and SOAP APIs allow to create advanced search queries.
+REST API allow to create advanced search queries.
 
 Parameters for APIs requests:
 
  - **query** - search string
 
 REST API url: http://domail.com/api/rest/latest/search/advanced
-
-SOAP function name: advancedSearch
 
 REST API work with get request only.
 
@@ -95,6 +93,23 @@ order_by field_type field_name direction
 If field type was not set, then text field will be assigned. Direction - `ASC`, `DESC`.
 If direction is not assigned then will be used `ASC` direction.
 
+### aggregate
+
+Allow to provide aggregated data based on a search query, as an additional "aggregated_data" section in the search
+result. To build aggregated data you need to call separated function of search query.
+
+Syntax:
+```
+aggregate field_type field_name aggregate_function aggregating_name
+```
+
+Supported next aggregation functions:
+* **count**
+* **sum**
+* **max**
+* **min**
+* **avg**
+
 Field types
 -----------
 
@@ -130,6 +145,13 @@ Examples:
 ```
 name like value
 name like "string value"
+```
+
+* **notlike** - operator `notlike` is used for finding records without specified substring in any position (`NOT LIKE %value%` statement behaviour). If the search value is a multi-word string that contains whitespaces, it should be enclosed in quotes.
+Examples:
+```
+name notlike value
+name notlike "string value"
 ```
 
 ### For numeric fields
@@ -171,7 +193,7 @@ integer count !in (1, 3, 5)
 decimal price !in (2.1, 55, 45.4)
 ```
 
-###Query brackets.
+### Query brackets.
 
 User can combine operators in search query with brackets.
 

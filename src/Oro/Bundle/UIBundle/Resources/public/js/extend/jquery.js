@@ -1,4 +1,4 @@
-/*global Window, HTMLDocument*/
+/* global Window, HTMLDocument */
 define(['jquery'], function($) {
     'use strict';
 
@@ -9,6 +9,15 @@ define(['jquery'], function($) {
     });
     $.expr[':'].parents = function(a, i, m) {
         return $(a).parents(m[3]).length < 1;
+    };
+
+    $.Deferred.getStackHook = function() {
+        // Throw an error so we can extract the stack from the Error
+        try {
+            throw new Error('Exception in jQuery.Deferred');
+        } catch (err) {
+            return err.stack;
+        }
     };
 
     $.fn.extend({
@@ -67,7 +76,7 @@ define(['jquery'], function($) {
          */
         focusFirstInput: function() {
             var $input = this.find(':input:visible, [data-focusable]')
-                    .not(':checkbox, :radio, :button, :submit, :disabled, :file');
+                .not(':checkbox, :radio, :button, :submit, :disabled, :file');
             var $autoFocus = $input.filter('[autofocus]');
             if ($autoFocus.length || $input.length) {
                 var $element = ($autoFocus.length ? $autoFocus : $input).first();
@@ -201,7 +210,7 @@ define(['jquery'], function($) {
                 data = {};
                 $.each(els, function() {
                     if (this.name && !this.disabled && (
-                            this.checked ||
+                        this.checked ||
                             /select|textarea/i.test(this.nodeName) ||
                             /text|hidden|password/i.test(this.type))
                     ) {
@@ -218,7 +227,7 @@ define(['jquery'], function($) {
                         var names = data[this.name];
                         var $this = $(this);
                         if (Object.prototype.toString.call(names) !== '[object Array]') {
-                            names = [names]; //backwards compat to old version of this code
+                            names = [names]; // backwards compat to old version of this code
                         }
                         if (this.type === 'checkbox' || this.type === 'radio') {
                             var val = $this.val();

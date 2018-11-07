@@ -24,17 +24,23 @@ class ActivityList extends Element
      */
     public function getCollapsedItem()
     {
-        $item = $this->find('css', 'div.accordion-body.in');
+        $item = $this->spin(function (ActivityList $activityList) {
+            return $activityList->find('css', 'div.accordion-body.show');
+        }, 3);
         self::assertNotNull($item, 'Not found collapsed items in activity list');
 
         return $this->elementFactory->wrapElement('ActivityListItem', $item);
     }
 
     /**
-     * @return NodeElement[]
+     * @return ActivityListItem[]
      */
     public function getItems()
     {
-        return $this->findAll('css', 'div.list-item');
+        $itemElements = $this->findAll('css', 'div.list-item');
+
+        return array_map(function (NodeElement $element) {
+            return $this->elementFactory->wrapElement('ActivityListItem', $element);
+        }, $itemElements);
     }
 }

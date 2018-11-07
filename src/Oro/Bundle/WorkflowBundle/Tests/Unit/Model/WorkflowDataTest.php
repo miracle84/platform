@@ -3,13 +3,11 @@
 namespace Oro\Bundle\WorkflowBundle\Tests\Unit\Model;
 
 use Doctrine\ORM\EntityNotFoundException;
-
 use Oro\Bundle\ActionBundle\Model\Attribute;
 use Oro\Bundle\WorkflowBundle\Model\WorkflowData;
-
 use Symfony\Component\PropertyAccess\PropertyPath;
 
-class WorkflowDataTest extends \PHPUnit_Framework_TestCase
+class WorkflowDataTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var WorkflowData

@@ -6,8 +6,8 @@
     "homepage": "https://github.com/laboro/EntityBundle",
     "license": "MIT",
     "require": {
-        "php": ">=5.6",
-        "symfony/symfony": "2.8.*, !=2.8.10",
+        "php": "7.1.*",
+        "symfony/symfony": "^3.4",
         "oro/entity-config-bundle": "dev-master",
         "oro/ui-bundle": "dev-master",
         "oro/grid-bundle": "dev-master",
@@ -15,7 +15,7 @@
         "oro/data-audit-bundle": "dev-master",
         "oro/form-bundle": "dev-master",
         "oro/user-bundle": "dev-master",
-        "oro/doctrine-extensions": "1.0.x-dev"
+        "oro/doctrine-extensions": "1.1.*"
     },
     "autoload": {
         "psr-0": { "Oro\\Bundle\\EntityBundle": "" }

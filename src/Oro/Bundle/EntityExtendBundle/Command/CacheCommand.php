@@ -3,17 +3,16 @@
 namespace Oro\Bundle\EntityExtendBundle\Command;
 
 use Doctrine\Common\Cache\ClearableCache;
-
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-use Symfony\Bundle\FrameworkBundle\Console\Application as ConsoleApplication;
-
 use Oro\Bundle\CacheBundle\Provider\DirectoryAwareFileCacheInterface;
 use Oro\Bundle\EntityBundle\ORM\EntityAliasResolver;
+use Oro\Bundle\EntityBundle\Tools\SafeDatabaseChecker;
 use Oro\Bundle\EntityExtendBundle\Extend\EntityProxyGenerator;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendClassLoadingUtils;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendConfigDumper;
+use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Bundle\FrameworkBundle\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 abstract class CacheCommand extends ContainerAwareCommand
 {
@@ -47,11 +46,15 @@ abstract class CacheCommand extends ContainerAwareCommand
      */
     protected function warmup(OutputInterface $output)
     {
-        $this->warmupExtendedEntityCache($output);
-        // Doctrine metadata, proxies and dependent caches might be invalid after extended entities cache generation
-        $this->warmupMetadataCache($output);
-        $this->warmupProxies($output);
-        $this->warmupEntityAliasesCache($output);
+        $callable = function () use ($output) {
+            $this->warmupExtendedEntityCache($output);
+            // Doctrine metadata, proxies and dependent caches might be invalid after extended entities cache generation
+            $this->warmupMetadataCache($output);
+            $this->warmupProxies($output);
+            $this->warmupEntityAliasesCache($output);
+        };
+
+        SafeDatabaseChecker::safeDatabaseCallable($callable);
     }
 
     /**

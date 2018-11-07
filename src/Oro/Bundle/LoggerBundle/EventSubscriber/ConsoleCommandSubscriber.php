@@ -3,13 +3,15 @@
 namespace Oro\Bundle\LoggerBundle\EventSubscriber;
 
 use Monolog\Logger;
-
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
-use Symfony\Component\Console\Event\ConsoleExceptionEvent;
+use Symfony\Component\Console\Event\ConsoleErrorEvent;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
+/**
+ * Handles console command exceptions and events
+ */
 class ConsoleCommandSubscriber implements EventSubscriberInterface
 {
     /** @var Logger */
@@ -30,7 +32,7 @@ class ConsoleCommandSubscriber implements EventSubscriberInterface
     {
         return [
             ConsoleEvents::COMMAND => [['onConsoleCommand', -1]],
-            ConsoleEvents::EXCEPTION => [['onConsoleException', -1]]
+            ConsoleEvents::ERROR => [['onConsoleError', -1]]
         ];
     }
 
@@ -50,19 +52,18 @@ class ConsoleCommandSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * @param ConsoleExceptionEvent $event
+     * @param ConsoleErrorEvent $event
      */
-    public function onConsoleException(ConsoleExceptionEvent $event)
+    public function onConsoleError(ConsoleErrorEvent $event)
     {
         $input = $event->getInput();
-
         $this->logger->error(
             sprintf(
                 'An error occurred while running command "%s". %s',
                 (string) $input,
-                $event->getException()->getMessage()
+                $event->getError()->getMessage()
             ),
-            $this->getContext($input, ['exit_code' => $event->getExitCode()])
+            $this->getContext($input, ['exit_code' => $event->getExitCode(), 'exception' => $event->getError()])
         );
     }
 

@@ -2,16 +2,19 @@
 
 namespace Oro\Bundle\IntegrationBundle\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Oro\Component\Config\Common\ConfigObject;
-use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
-use Oro\Bundle\UserBundle\Entity\User;
-use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Doctrine\ORM\Mapping as ORM;
 use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
+use Oro\Bundle\OrganizationBundle\Entity\BusinessUnit;
+use Oro\Bundle\OrganizationBundle\Entity\Organization;
+use Oro\Bundle\OrganizationBundle\Entity\OrganizationAwareInterface;
+use Oro\Bundle\OrganizationBundle\Entity\OrganizationInterface;
+use Oro\Bundle\UserBundle\Entity\User;
+use Oro\Component\Config\Common\ConfigObject;
 
 /**
+ * Responsibility of channel is to split on groups transport/connectors by third party application type.
+ *
  * @ORM\Table(
  *      name="oro_integration_channel",
  *      indexes={
@@ -44,7 +47,7 @@ use Oro\Bundle\EntityConfigBundle\Metadata\Annotation\Config;
  *      }
  * )
  */
-class Channel
+class Channel implements OrganizationAwareInterface
 {
     /** This mode allow to do any changes(including removing) with channel */
     const EDIT_MODE_ALLOW = 3;
@@ -82,7 +85,7 @@ class Channel
      * @var Transport
      *
      * @ORM\OneToOne(targetEntity="Oro\Bundle\IntegrationBundle\Entity\Transport",
-     *     cascade={"all"}, orphanRemoval=true
+     *     cascade={"all"}, orphanRemoval=true, inversedBy="channel"
      * )
      */
     protected $transport;
@@ -362,26 +365,6 @@ class Channel
     }
 
     /**
-     * @deprecated Deprecated since 1.7.0 in favor of getLastStatusForConnector because of performance impact.
-     * @see \Oro\Bundle\IntegrationBundle\Entity\Repository\ChannelRepository::getLastStatusForConnector
-     * @param string $connector
-     * @param int|null $codeFilter
-     *
-     * @return ArrayCollection
-     */
-    public function getStatusesForConnector($connector, $codeFilter = null)
-    {
-        return $this->statuses->filter(
-            function (Status $status) use ($connector, $codeFilter) {
-                $connectorFilter = $status->getConnector() === $connector;
-                $codeFilter      = $codeFilter === null ? true : $status->getCode() == $codeFilter;
-
-                return $connectorFilter && $codeFilter;
-            }
-        );
-    }
-
-    /**
      * @param User $owner
      *
      * @return $this
@@ -402,11 +385,11 @@ class Channel
     }
 
     /**
-     * @param Organization $organization
+     * @param OrganizationInterface $organization
      *
      * @return $this
      */
-    public function setOrganization($organization)
+    public function setOrganization(OrganizationInterface $organization)
     {
         $this->organization = $organization;
 
@@ -414,7 +397,7 @@ class Channel
     }
 
     /**
-     * @return Organization
+     * @return OrganizationInterface
      */
     public function getOrganization()
     {
@@ -431,16 +414,6 @@ class Channel
         $this->enabled = $enabled;
 
         return $this;
-    }
-
-    /**
-     *
-     * @deprecated in favor of isEnabled since 1.4.1 will be removed in 1.6
-     * @return boolean
-     */
-    public function getEnabled()
-    {
-        return $this->isEnabled();
     }
 
     /**

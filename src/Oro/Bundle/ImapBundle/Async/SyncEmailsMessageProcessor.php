@@ -1,8 +1,6 @@
 <?php
 namespace Oro\Bundle\ImapBundle\Async;
 
-use Psr\Log\LoggerInterface;
-
 use Oro\Bundle\ImapBundle\Sync\ImapEmailSynchronizer;
 use Oro\Component\MessageQueue\Client\MessageProducerInterface;
 use Oro\Component\MessageQueue\Client\TopicSubscriberInterface;
@@ -10,6 +8,7 @@ use Oro\Component\MessageQueue\Consumption\MessageProcessorInterface;
 use Oro\Component\MessageQueue\Transport\MessageInterface;
 use Oro\Component\MessageQueue\Transport\SessionInterface;
 use Oro\Component\MessageQueue\Util\JSON;
+use Psr\Log\LoggerInterface;
 
 class SyncEmailsMessageProcessor implements MessageProcessorInterface, TopicSubscriberInterface
 {
@@ -41,10 +40,7 @@ class SyncEmailsMessageProcessor implements MessageProcessorInterface, TopicSubs
         $body = JSON::decode($message->getBody());
 
         if (! isset($body['ids']) || ! is_array($body['ids'])) {
-            $this->logger->critical(
-                sprintf('Got invalid message. "%s"', $message->getBody()),
-                ['message' => $message]
-            );
+            $this->logger->critical('Got invalid message');
 
             return self::REJECT;
         }

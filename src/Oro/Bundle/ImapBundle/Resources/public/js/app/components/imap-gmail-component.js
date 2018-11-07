@@ -1,4 +1,4 @@
-/*global gapi */
+/* global gapi */
 define(function(require) {
     'use strict';
 
@@ -15,6 +15,13 @@ define(function(require) {
         ViewType: ImapGmailView,
 
         scopes: ['https://mail.google.com/', 'https://www.googleapis.com/auth/userinfo.email'],
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ImapGmailComponent() {
+            ImapGmailComponent.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * @constructor
@@ -75,15 +82,17 @@ define(function(require) {
                 this.view.render();
             } else {
                 this._wrapFirstWindowOpen(args);
-                args.deferred = gapi.auth.authorize({
-                        'client_id': data.clientId,
-                        'scope': this.scopes.join(' '),
-                        'immediate': false,
-                        'login_hint': emailAddress,
-                        'access_type': 'offline',
-                        'response_type': 'code',
-                        'approval_prompt': 'force'
-                    }, _.bind(this.handleResponseGoogleAuthCode, this)
+                args.deferred = gapi.auth.authorize(
+                    {
+                        client_id: data.clientId,
+                        scope: this.scopes.join(' '),
+                        immediate: false,
+                        login_hint: emailAddress,
+                        access_type: 'offline',
+                        response_type: 'code',
+                        approval_prompt: 'force'
+                    },
+                    _.bind(this.handleResponseGoogleAuthCode, this)
                 ).then(
                     null,
                     function(reason) {
@@ -126,7 +135,8 @@ define(function(require) {
                 method: 'POST',
                 data: {code: code},
                 success: _.bind(this.prepareAuthorization, this),
-                error:  _.bind(this.requestError, this)
+                errorHandlerMessage: false,
+                error: _.bind(this.requestError, this)
             });
         },
 
@@ -211,7 +221,8 @@ define(function(require) {
                 method: 'POST',
                 data: data,
                 success: _.bind(this.renderFormGetFolder, this),
-                error:  _.bind(this.requestError, this)
+                errorHandlerMessage: false,
+                error: _.bind(this.requestError, this)
             });
         },
 
@@ -249,6 +260,7 @@ define(function(require) {
                 method: 'POST',
                 data: data,
                 success: _.bind(this.handlerGetFolders, this),
+                errorHandlerMessage: false,
                 error: _.bind(this.requestError, this)
             });
         },

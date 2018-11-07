@@ -3,14 +3,11 @@
 namespace Oro\Bundle\LayoutBundle\Assetic;
 
 use Assetic\Factory\Resource\ResourceInterface;
-
-use Psr\Log\LoggerInterface;
-
-use Symfony\Component\Filesystem\Filesystem;
-
 use Oro\Component\Layout\Extension\Theme\Model\Theme;
 use Oro\Component\Layout\Extension\Theme\Model\ThemeManager;
 use Oro\Component\PhpUtils\ArrayUtil;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 class LayoutResource implements ResourceInterface
 {
@@ -222,7 +219,7 @@ class LayoutResource implements ResourceInterface
         }
         $inputs = array_merge($settingsInputs, $variablesInputs, $restInputs);
 
-        $file = realpath($this->outputDir) . '/' . $output . '.'. $extension;
+        $file = $this->outputDir . '/' . $output . '.'. $extension;
 
         $mtime = $this->getLastModified($inputs);
         if (!array_key_exists($file, $this->mtimeOutputs) || $this->mtimeOutputs[$file] < $mtime) {

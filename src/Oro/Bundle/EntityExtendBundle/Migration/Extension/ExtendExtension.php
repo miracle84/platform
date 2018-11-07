@@ -7,21 +7,25 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\SchemaException;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
-
 use Oro\Bundle\EntityBundle\EntityConfig\DatagridScope;
 use Oro\Bundle\EntityConfigBundle\Config\Id\FieldConfigId;
 use Oro\Bundle\EntityConfigBundle\Entity\ConfigModel;
+use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigBag;
+use Oro\Bundle\EntityConfigBundle\Provider\PropertyConfigContainer;
 use Oro\Bundle\EntityExtendBundle\EntityConfig\ExtendScope;
+use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
 use Oro\Bundle\EntityExtendBundle\Migration\EntityMetadataHelper;
 use Oro\Bundle\EntityExtendBundle\Migration\ExtendOptionsManager;
 use Oro\Bundle\EntityExtendBundle\Migration\OroOptions;
-use Oro\Bundle\EntityExtendBundle\Extend\RelationType;
+use Oro\Bundle\EntityExtendBundle\Migration\Schema\ExtendTable;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendDbIdentifierNameGenerator;
 use Oro\Bundle\EntityExtendBundle\Tools\ExtendHelper;
-use Oro\Bundle\MigrationBundle\Tools\DbIdentifierNameGenerator;
 use Oro\Bundle\MigrationBundle\Migration\Extension\NameGeneratorAwareInterface;
+use Oro\Bundle\MigrationBundle\Tools\DbIdentifierNameGenerator;
 
 /**
+ * Provides an ability to create extended enum tables and fields, add relations between tables.
+ *
  * @SuppressWarnings(PHPMD.ExcessiveClassLength)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
@@ -43,15 +47,23 @@ class ExtendExtension implements NameGeneratorAwareInterface
     protected $nameGenerator;
 
     /**
+     * @var PropertyConfigBag
+     */
+    protected $propertyConfigBag;
+
+    /**
      * @param ExtendOptionsManager $extendOptionsManager
      * @param EntityMetadataHelper $entityMetadataHelper
+     * @param PropertyConfigBag    $propertyConfigBag
      */
     public function __construct(
         ExtendOptionsManager $extendOptionsManager,
-        EntityMetadataHelper $entityMetadataHelper
+        EntityMetadataHelper $entityMetadataHelper,
+        PropertyConfigBag $propertyConfigBag
     ) {
         $this->extendOptionsManager = $extendOptionsManager;
         $this->entityMetadataHelper = $entityMetadataHelper;
+        $this->propertyConfigBag = $propertyConfigBag;
     }
 
     /**
@@ -153,7 +165,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $options = []
     ) {
         if ($enumCode !== ExtendHelper::buildEnumCode($enumCode)) {
-            new \InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 sprintf(
                     'The enum code "%s" must contain only lower alphabetical symbols, numbers and underscore.',
                     $enumCode
@@ -369,7 +381,9 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $options = [],
         $fieldType = RelationType::ONE_TO_MANY
     ) {
+        $this->validateOptions($options, $fieldType);
         $this->ensureExtendFieldSet($options);
+        $options['extend']['bidirectional'] = true; // has to be bidirectional
 
         $selfTableName = $this->getTableName($table);
         $selfTable     = $this->getTable($table, $schema);
@@ -425,6 +439,8 @@ class ExtendExtension implements NameGeneratorAwareInterface
      * @param string       $targetAssociationName The name of a relation field on the inverse side
      * @param string       $titleColumnName       A column name is used to show owning side entity
      * @param array        $options               Entity config options. [scope => [name => value, ...], ...]
+     *
+     * @deprecated since 2.1, cause oneToMany relation has to be bidirectional always
      */
     public function addOneToManyInverseRelation(
         Schema $schema,
@@ -435,6 +451,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         $titleColumnName,
         array $options = []
     ) {
+        $this->ensureTargetNotHidden($table, $associationName);
         $this->ensureExtendFieldSet($options);
 
         $selfTableName = $this->getTableName($table);
@@ -521,6 +538,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $options = [],
         $fieldType = RelationType::MANY_TO_MANY
     ) {
+        $this->validateOptions($options, $fieldType);
         $this->ensureExtendFieldSet($options);
 
         $selfTableName = $this->getTableName($table);
@@ -619,6 +637,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $gridColumnNames,
         array $options = []
     ) {
+        $this->ensureTargetNotHidden($table, $associationName);
         $this->ensureExtendFieldSet($options);
 
         $selfTableName = $this->getTableName($table);
@@ -651,6 +670,12 @@ class ExtendExtension implements NameGeneratorAwareInterface
         $this->extendOptionsManager->setTableOptions(
             $selfTableName,
             $selfTableOptions
+        );
+
+        $this->extendOptionsManager->mergeColumnOptions(
+            $selfTableName,
+            $associationName,
+            ['extend' => ['bidirectional' => true]]
         );
 
         $targetTableOptions['extend']['relation.' . $targetRelationKey . '.field_id'] = $targetFieldId;
@@ -699,6 +724,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $options = [],
         $fieldType = RelationType::MANY_TO_ONE
     ) {
+        $this->validateOptions($options, $fieldType);
         $this->ensureExtendFieldSet($options);
 
         $selfTableName        = $this->getTableName($table);
@@ -714,11 +740,6 @@ class ExtendExtension implements NameGeneratorAwareInterface
         $this->checkColumnsExist($targetTable, [$targetTitleColumnName]);
 
         $relation = $options['extend'];
-        if (array_key_exists('on_delete', $relation)) {
-            $onDelete = $relation['on_delete'];
-        } else {
-            $onDelete = 'SET NULL';
-        }
 
         if (array_key_exists('nullable', $relation)) {
             $notnull = !$relation['nullable'];
@@ -731,7 +752,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
             $selfColumnName,
             $targetTable,
             ['notnull' => $notnull],
-            ['onDelete' => $onDelete]
+            ['onDelete' => $this->getOnDeleteAction($relation)]
         );
 
         $options[ExtendOptionsManager::TARGET_OPTION] = [
@@ -751,7 +772,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
      *
      * @param Schema       $schema
      * @param Table|string $table                 A Table object or table name of owning side entity
-     * @param string       $associationName       The name of a relation field
+     * @param string       $associationName       The name of a relation field. This field can't be hidden
      * @param Table|string $targetTable           A Table object or table name of inverse side entity
      * @param string       $targetAssociationName The name of a relation field on the inverse side
      * @param string[]     $titleColumnNames      Column names are used to show a title of owning side entity
@@ -770,6 +791,7 @@ class ExtendExtension implements NameGeneratorAwareInterface
         array $gridColumnNames,
         array $options = []
     ) {
+        $this->ensureTargetNotHidden($table, $associationName);
         $this->ensureExtendFieldSet($options);
 
         $selfTableName = $this->getTableName($table);
@@ -799,9 +821,17 @@ class ExtendExtension implements NameGeneratorAwareInterface
         );
 
         $selfTableOptions['extend']['relation.' . $selfRelationKey . '.target_field_id'] = $targetFieldId;
+        $selfTableOptions['extend']['relation.' . $selfRelationKey . '.on_delete']
+            = $this->getOnDeleteAction($options['extend']);
         $this->extendOptionsManager->setTableOptions(
             $selfTableName,
             $selfTableOptions
+        );
+
+        $this->extendOptionsManager->mergeColumnOptions(
+            $selfTableName,
+            $associationName,
+            ['extend' => ['bidirectional' => true]]
         );
 
         $targetTableOptions['extend']['relation.' . $targetRelationKey . '.field_id'] = $targetFieldId;
@@ -836,7 +866,16 @@ class ExtendExtension implements NameGeneratorAwareInterface
      */
     public function getEntityClassByTableName($tableName)
     {
-        return $this->entityMetadataHelper->getEntityClassByTableName($tableName);
+        $classes = $this->entityMetadataHelper->getEntityClassesByTableName($tableName);
+
+        if (count($classes) > 1) {
+            throw new \RuntimeException(sprintf(
+                'Table "%s" has more than 1 class. This is not supported by ExtendExtension',
+                $tableName
+            ));
+        }
+
+        return reset($classes) ?: null;
     }
 
     /**
@@ -1032,8 +1071,74 @@ class ExtendExtension implements NameGeneratorAwareInterface
         if (!isset($options['extend']['owner'])) {
             $options['extend']['owner'] = ExtendScope::OWNER_SYSTEM;
         }
+        if (!isset($options['extend']['bidirectional'])) {
+            $options['extend']['bidirectional'] = false;
+        }
         if (!isset($options[ExtendOptionsManager::MODE_OPTION])) {
             $options[ExtendOptionsManager::MODE_OPTION] = ConfigModel::MODE_READONLY;
         }
+    }
+
+    /**
+     * @param array  $options
+     * @param string $fieldType
+     * @throws \UnexpectedValueException
+     */
+    private function validateOptions(array $options, $fieldType)
+    {
+        foreach ($options as $scope => $scopeOptions) {
+            /** @var PropertyConfigContainer $scopeConfig */
+            $scopeConfig = $this->propertyConfigBag->getPropertyConfig($scope);
+
+            if (!is_array($scopeOptions) || count($scopeConfig->getConfig()) === 0) {
+                continue;
+            }
+
+            foreach ($scopeOptions as $optionName => $optionValue) {
+                if (!isset($scopeConfig->getConfig()['field']['items'][$optionName]['options']['allowed_type'])) {
+                    continue;
+                }
+
+                $allowedTypes = $scopeConfig->getConfig()['field']['items'][$optionName]['options']['allowed_type'];
+
+                if (!in_array($fieldType, $allowedTypes)) {
+                    throw new \UnexpectedValueException(sprintf(
+                        'Option `%s|%s` is not allowed for field type `%s`. Allowed types [%s]',
+                        $scope,
+                        $optionName,
+                        $fieldType,
+                        implode(', ', $allowedTypes)
+                    ));
+                }
+            }
+        }
+    }
+
+    /**
+     * @param string|ExtendTable $table
+     * @param string $associationName
+     */
+    private function ensureTargetNotHidden($table, $associationName)
+    {
+        $options = $this->extendOptionsManager->getExtendOptions();
+        $tableName = $this->getTableName($table);
+        $keyName = $tableName.'!'.$associationName;
+        if (!empty($options[$keyName][ExtendOptionsManager::MODE_OPTION])
+            && $options[$keyName][ExtendOptionsManager::MODE_OPTION] === ConfigModel::MODE_HIDDEN) {
+            throw new \InvalidArgumentException('Target field can\'t be hidden.');
+        }
+    }
+
+    /**
+     * @param array $relation
+     * @return mixed|string
+     */
+    private function getOnDeleteAction(array $relation)
+    {
+        if (array_key_exists('on_delete', $relation)) {
+            return $relation['on_delete'];
+        }
+
+        return 'SET NULL';
     }
 }

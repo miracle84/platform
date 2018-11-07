@@ -2,10 +2,9 @@
 
 namespace Oro\Bundle\FilterBundle\Grid\Extension;
 
+use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-
-use Oro\Bundle\FilterBundle\Filter\FilterUtility;
 
 class Configuration implements ConfigurationInterface
 {
@@ -54,7 +53,21 @@ class Configuration implements ConfigurationInterface
                             ->booleanNode(FilterUtility::VISIBLE_KEY)->defaultTrue()->end()
                             ->booleanNode(FilterUtility::TRANSLATABLE_KEY)->defaultTrue()->end()
                             ->booleanNode(FilterUtility::FORCE_LIKE_KEY)->defaultFalse()->end()
+                            ->booleanNode(FilterUtility::CASE_INSENSITIVE_KEY)->defaultTrue()->end()
+                            ->variableNode(FilterUtility::VALUE_CONVERSION_KEY)
+                                ->validate()
+                                ->always(function ($v) {
+                                    if (is_string($v) || is_array($v)) {
+                                        return $v;
+                                    }
+                                    throw new \InvalidArgumentException(
+                                        'Invalid filter type "%s". Only callbacks are allowed'
+                                    );
+                                })
+                                ->end()
+                            ->end()
                             ->integerNode(FilterUtility::MIN_LENGTH_KEY)->min(0)->defaultValue(0)->end()
+                            ->integerNode(FilterUtility::MAX_LENGTH_KEY)->min(1)->defaultValue(PHP_INT_MAX)->end()
                         ->end()
                     ->end()
                 ->end()

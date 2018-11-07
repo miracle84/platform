@@ -12,7 +12,7 @@ use Oro\Component\MessageQueue\Util\JSON;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
-class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCase
+class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit\Framework\TestCase
 {
     public function testCouldBeConstructedWithRequiredAttributes()
     {
@@ -49,14 +49,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
         $logger
             ->expects($this->once())
             ->method('error')
-            ->with(
-                'Message is not valid.',
-                ['message' => [
-                    'offset' => 123,
-                    'limit' => 1000,
-                    'jobId' => 12345,
-                ]]
-            );
+            ->with('Message is not valid.');
 
         $producer = $this->createSearchIndexerMock();
 
@@ -92,13 +85,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
             ->expects($this->once())
             ->method('error')
             ->with(
-                'Message is not valid.',
-                ['message' => [
-                        'entityClass' => 'entity-name',
-                        'limit' => 6789,
-                        'jobId' => 12345,
-                    ]
-                ]
+                'Message is not valid.'
             )
         ;
 
@@ -137,14 +124,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
             ->expects($this->once())
             ->method('error')
             ->with(
-                'Message is not valid.',
-                [
-                    'message' => [
-                        'entityClass' => 'entity-name',
-                        'offset' => 6789,
-                        'jobId' => 12345,
-                    ]
-                ]
+                'Message is not valid.'
             )
         ;
 
@@ -189,14 +169,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
             ->expects($this->once())
             ->method('error')
             ->with(
-                'Entity manager is not defined for class: "entity-name"',
-                ['message' => [
-                        'entityClass' => 'entity-name',
-                        'offset' => 1235,
-                        'limit' => 6789,
-                        'jobId' => 12345,
-                    ]
-                ]
+                'Entity manager is not defined for class: "entity-name"'
             )
         ;
 
@@ -219,7 +192,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|JobRunner
+     * @return \PHPUnit\Framework\MockObject\MockObject|JobRunner
      */
     private function createJobRunnerMock()
     {
@@ -227,7 +200,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|IndexerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|IndexerInterface
      */
     protected function createSearchIndexerMock()
     {
@@ -235,7 +208,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|RegistryInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|RegistryInterface
      */
     protected function createDoctrineMock()
     {
@@ -243,7 +216,7 @@ class IndexEntitiesByRangeMessageProcessorTest extends \PHPUnit_Framework_TestCa
     }
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|LoggerInterface
+     * @return \PHPUnit\Framework\MockObject\MockObject|LoggerInterface
      */
     protected function createLoggerMock()
     {

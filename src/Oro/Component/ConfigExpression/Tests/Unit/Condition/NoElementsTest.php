@@ -3,13 +3,11 @@
 namespace Oro\Component\ConfigExpression\Tests\Unit\Condition;
 
 use Doctrine\Common\Collections\ArrayCollection;
-
-use Symfony\Component\PropertyAccess\PropertyPath;
-
 use Oro\Component\ConfigExpression\Condition\NoElements;
 use Oro\Component\ConfigExpression\ContextAccessor;
+use Symfony\Component\PropertyAccess\PropertyPath;
 
-class NoElementsTest extends \PHPUnit_Framework_TestCase
+class NoElementsTest extends \PHPUnit\Framework\TestCase
 {
     /** @var NoElements */
     protected $condition;

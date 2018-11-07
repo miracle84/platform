@@ -1,10 +1,9 @@
-define([
-    'underscore',
-    'backbone'
-], function(_, Backbone) {
+define(function(require) {
     'use strict';
 
     var ActionsPanel;
+    var _ = require('underscore');
+    var Backbone = require('backbone');
 
     /**
      * Panel with action buttons
@@ -22,6 +21,13 @@ define([
 
         /** @property {Array.<orodatagrid.datagrid.ActionLauncher>} */
         launchers: [],
+
+        /**
+         * @inheritDoc
+         */
+        constructor: function ActionsPanel() {
+            ActionsPanel.__super__.constructor.apply(this, arguments);
+        },
 
         /**
          * Initialize view

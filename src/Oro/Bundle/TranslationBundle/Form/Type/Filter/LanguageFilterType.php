@@ -2,12 +2,12 @@
 
 namespace Oro\Bundle\TranslationBundle\Form\Type\Filter;
 
-use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\Form\FormView;
-
 use Oro\Bundle\FilterBundle\Form\Type\Filter\EntityFilterType;
 use Oro\Bundle\LocaleBundle\Formatter\LanguageCodeFormatter;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\ChoiceList\View\ChoiceView;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 
 class LanguageFilterType extends AbstractType
 {
@@ -45,7 +45,7 @@ class LanguageFilterType extends AbstractType
      */
     public function getParent()
     {
-        return EntityFilterType::NAME;
+        return EntityFilterType::class;
     }
 
     /**
@@ -56,5 +56,9 @@ class LanguageFilterType extends AbstractType
         foreach ($view->children['value']->vars['choices'] as $choiceView) {
             $choiceView->label = $this->formatter->formatLocale($choiceView->label);
         }
+
+        usort($view->children['value']->vars['choices'], function (ChoiceView $a, ChoiceView $b) {
+            return strnatcmp($a->label, $b->label);
+        });
     }
 }

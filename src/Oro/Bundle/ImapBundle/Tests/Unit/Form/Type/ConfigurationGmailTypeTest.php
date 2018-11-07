@@ -2,30 +2,30 @@
 
 namespace Oro\Bundle\ImapBundle\Tests\Unit\Form\Type;
 
-use Symfony\Bundle\FrameworkBundle\Translation\Translator;
-use Symfony\Component\Form\PreloadedExtension;
-use Symfony\Component\Form\Test\FormIntegrationTestCase;
-
-use Oro\Bundle\ImapBundle\Form\Type\ConfigurationGmailType;
-use Oro\Bundle\ImapBundle\Mail\Storage\GmailImap;
+use Oro\Bundle\ConfigBundle\Config\ConfigManager;
 use Oro\Bundle\EmailBundle\Form\Type\EmailFolderTreeType;
 use Oro\Bundle\FormBundle\Form\Extension\TooltipFormExtension;
 use Oro\Bundle\ImapBundle\Form\Type\CheckButtonType;
-use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Oro\Bundle\ConfigBundle\Config\ConfigManager;
+use Oro\Bundle\ImapBundle\Form\Type\ConfigurationGmailType;
+use Oro\Bundle\ImapBundle\Mail\Storage\GmailImap;
+use Oro\Bundle\SecurityBundle\Authentication\TokenAccessorInterface;
+use Oro\Component\Testing\Unit\PreloadedExtension;
+use Symfony\Bundle\FrameworkBundle\Translation\Translator;
+use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Symfony\Component\Form\Test\FormIntegrationTestCase;
 
 class ConfigurationGmailTypeTest extends FormIntegrationTestCase
 {
-    /** @var SecurityFacade|\PHPUnit_Framework_MockObject_MockObject */
-    protected $securityFacade;
+    /** @var TokenAccessorInterface|\PHPUnit\Framework\MockObject\MockObject */
+    protected $tokenAccessor;
 
-    /** @var Translator|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var Translator|\PHPUnit\Framework\MockObject\MockObject */
     protected $translator;
 
-    /** @var \PHPUnit_Framework_MockObject_MockObject */
+    /** @var \PHPUnit\Framework\MockObject\MockObject */
     protected $configProvider;
 
-    /** @var ConfigManager|\PHPUnit_Framework_MockObject_MockObject */
+    /** @var ConfigManager|\PHPUnit\Framework\MockObject\MockObject */
     protected $userConfigManager;
 
     protected function setUp()
@@ -40,15 +40,11 @@ class ConfigurationGmailTypeTest extends FormIntegrationTestCase
             ->method('getOrganization')
             ->willReturn($organization);
 
-        $this->securityFacade = $this->getMockBuilder('Oro\Bundle\SecurityBundle\SecurityFacade')
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $this->securityFacade->expects($this->any())
-            ->method('getLoggedUser')
+        $this->tokenAccessor = $this->createMock(TokenAccessorInterface::class);
+        $this->tokenAccessor->expects($this->any())
+            ->method('getUser')
             ->willReturn($user);
-
-        $this->securityFacade->expects($this->any())
+        $this->tokenAccessor->expects($this->any())
             ->method('getOrganization')
             ->willReturn($organization);
 
@@ -71,16 +67,19 @@ class ConfigurationGmailTypeTest extends FormIntegrationTestCase
 
     protected function getExtensions()
     {
+        $type = new ConfigurationGmailType($this->translator, $this->userConfigManager, $this->tokenAccessor);
+
         return array_merge(
             parent::getExtensions(),
             [
                 new PreloadedExtension(
                     [
-                        'oro_imap_configuration_check' => new CheckButtonType(),
-                        'oro_email_email_folder_tree' => new EmailFolderTreeType(),
+                        CheckButtonType::class => new CheckButtonType(),
+                        EmailFolderTreeType::class => new EmailFolderTreeType(),
+                        ConfigurationGmailType::class => $type
                     ],
                     [
-                        'form' => [new TooltipFormExtension($this->configProvider, $this->translator)],
+                        FormType::class => [new TooltipFormExtension($this->configProvider, $this->translator)],
                     ]
                 ),
             ]
@@ -92,8 +91,7 @@ class ConfigurationGmailTypeTest extends FormIntegrationTestCase
      */
     public function testDefaultData()
     {
-        $type = new ConfigurationGmailType($this->translator, $this->userConfigManager, $this->securityFacade);
-        $form = $this->factory->create($type);
+        $form = $this->factory->create(ConfigurationGmailType::class);
 
         $expectedViewData = [
             'imapHost' => GmailImap::DEFAULT_GMAIL_HOST,
@@ -118,8 +116,7 @@ class ConfigurationGmailTypeTest extends FormIntegrationTestCase
      */
     public function testBindValidData($formData, $expectedViewData, $expectedModelData)
     {
-        $type = new ConfigurationGmailType($this->translator, $this->userConfigManager, $this->securityFacade);
-        $form = $this->factory->create($type);
+        $form = $this->factory->create(ConfigurationGmailType::class);
         if ($expectedViewData) {
             $form->submit($formData);
             foreach ($expectedViewData as $name => $value) {
@@ -183,14 +180,5 @@ class ConfigurationGmailTypeTest extends FormIntegrationTestCase
                 ],
             ],
         ];
-    }
-
-    /**
-     * Test name of type
-     */
-    public function testGetName()
-    {
-        $type = new ConfigurationGMailType($this->translator, $this->userConfigManager, $this->securityFacade);
-        $this->assertEquals(ConfigurationGMailType::NAME, $type->getName());
     }
 }
